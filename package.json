@@ -14,6 +14,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "bun prisma/seed.ts",
     "seed:laws": "bun database/scripts/seed-laws.ts",
+    "verify": "node scripts/verify-setup.js",
+    "setup:check": "node scripts/verify-setup.js",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "eslint src --ext .ts",

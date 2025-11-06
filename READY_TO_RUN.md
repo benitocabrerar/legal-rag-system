@@ -1,6 +1,6 @@
 # 🎉 ¡TU PROYECTO ESTÁ LISTO PARA EJECUTAR!
 
-Todo está configurado. Solo ejecuta estos comandos en orden:
+Todo está configurado y la base de datos inicializada correctamente.
 
 ---
 
@@ -9,52 +9,53 @@ Todo está configurado. Solo ejecuta estos comandos en orden:
 - ✅ Archivos `.env` con tus credenciales de Supabase
 - ✅ `frontend/.env.local` configurado
 - ✅ Código completo del backend y frontend
-- ✅ Scripts de base de datos listos
-- ✅ Funciones SQL vectoriales preparadas
-- ✅ Toda la documentación
+- ✅ **Base de datos inicializada: 12 tablas creadas**
+- ✅ **Extensiones PostgreSQL habilitadas** (uuid-ossp, vector, pg_trgm)
+- ✅ **Índices vectoriales configurados** (IVFFlat, 1536 dimensiones)
+- ✅ **6 funciones de búsqueda semántica creadas**
+- ✅ Toda la documentación completa
 
 **Proyecto:** `upqbwtgokdordetwjzuj`
 **URL:** `https://upqbwtgokdordetwjzuj.supabase.co`
+**Embeddings:** text-embedding-3-small (1536 dimensiones)
 
 ---
 
-## 🚀 COMANDOS PARA EJECUTAR (Copiar y Pegar)
+## 🚀 PASOS FINALES
 
-### 1️⃣ Inicializar Base de Datos
+### 1️⃣ Crear Buckets de Storage
+
+Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/storage/buckets
+
+**Crear 2 buckets:**
+
+1. **case-documents** (privado)
+   - Name: `case-documents`
+   - Public: No
+   - File size limit: 10MB
+
+2. **avatars** (público)
+   - Name: `avatars`
+   - Public: Yes
+   - File size limit: 2MB
+
+### 2️⃣ Agregar OpenAI API Key
+
+Edita el archivo `.env` y agrega tu API Key de OpenAI:
 
 ```bash
-psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres" \
-  -f database/init-schema.sql
+OPENAI_API_KEY="sk-..."
 ```
 
-**Qué hace:** Crea todas las tablas, extensiones e índices
+Puedes obtener una en: https://platform.openai.com/api-keys
 
-### 2️⃣ Crear Funciones de Búsqueda Vectorial
+### 3️⃣ Verificar Setup (Opcional)
 
 ```bash
-psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres" \
-  -f database/supabase-functions.sql
+npm run verify
 ```
 
-**Qué hace:** Crea las 6 funciones de búsqueda vectorial (match_legal_documents, etc.)
-
-### 3️⃣ Crear Buckets de Storage (Alternativa Manual)
-
-Si los comandos anteriores funcionan, salta al paso 4.
-
-**Opción A - Supabase Dashboard:**
-1. Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/storage/buckets
-2. Click "New bucket"
-3. Crear bucket `case-documents` (privado, 10MB limit)
-4. Crear bucket `avatars` (público, 2MB limit)
-
-**Opción B - Ejecutar desde SQL Editor en Supabase:**
-
-1. Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/sql/new
-2. Copia y pega el contenido de `database/init-schema.sql`
-3. Click "Run"
-4. Luego copia y pega el contenido de `database/supabase-functions.sql`
-5. Click "Run"
+Este comando verifica que toda la configuración esté correcta.
 
 ---
 
