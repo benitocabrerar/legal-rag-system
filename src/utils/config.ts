@@ -13,15 +13,16 @@ export const config = {
   port: parseInt(process.env.PORT || '8000', 10),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
 
-  // Database
-  databaseUrl: process.env.DATABASE_URL || '',
-  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
-
-  // JWT
-  jwt: {
-    secret: process.env.JWT_SECRET || 'super-secret-jwt-key',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  // Supabase
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    anonKey: process.env.SUPABASE_ANON_KEY || '',
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   },
+
+  // Database (Prisma with Supabase PostgreSQL)
+  databaseUrl: process.env.DATABASE_URL || '',
+  redisUrl: process.env.REDIS_URL || '',
 
   // OpenAI
   openai: {
@@ -43,12 +44,10 @@ export const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
 
-  // AWS S3
-  aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-    s3Bucket: process.env.AWS_S3_BUCKET || 'legal-rag-documents',
-    region: process.env.AWS_REGION || 'us-east-1',
+  // Supabase Storage buckets
+  storage: {
+    caseDocuments: 'case-documents',
+    avatars: 'avatars',
   },
 
   // Rate Limiting
@@ -88,8 +87,8 @@ export const config = {
 // Validation
 export function validateConfig() {
   const required = {
-    DATABASE_URL: config.databaseUrl,
-    JWT_SECRET: config.jwt.secret,
+    SUPABASE_URL: config.supabase.url,
+    SUPABASE_SERVICE_ROLE_KEY: config.supabase.serviceKey,
   };
 
   const missing = Object.entries(required)
@@ -107,6 +106,10 @@ export function validateConfig() {
 
   if (!config.redisUrl) {
     console.warn('⚠️  REDIS_URL not set - caching will be disabled');
+  }
+
+  if (!config.supabase.anonKey) {
+    console.warn('⚠️  SUPABASE_ANON_KEY not set - some features may not work');
   }
 }
 
