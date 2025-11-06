@@ -1,16 +1,14 @@
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  extensions = [vector, uuid_ossp(map: "uuid-ossp"), pg_trgm]
 }
 
 model User {
-  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id            String    @id @default(uuid())
   email         String    @unique
   name          String?
   passwordHash  String    @map("password_hash")
@@ -20,93 +18,53 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   cases         Case[]
-  sessions      Session[]
+  documents     Document[]
 
   @@map("users")
 }
 
-model Session {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  token     String   @unique
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
 model Case {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
   title       String
   description String?
+  clientName  String?  @map("client_name")
+  caseNumber  String?  @map("case_number")
   status      String   @default("active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents   Document[]
-  queries     Query[]
 
   @@map("cases")
 }
 
 model Document {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  caseId      String   @map("case_id") @db.Uuid
+  id          String   @id @default(uuid())
+  caseId      String   @map("case_id")
+  userId      String   @map("user_id")
   title       String
-  content     String
-  type        String
-  url         String?
-  metadata    Json?
+  content     String   @db.Text
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunks      DocumentChunk[]
 
   @@map("documents")
 }
 
 model DocumentChunk {
-  id          String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  documentId  String                     @map("document_id") @db.Uuid
-  content     String
-  chunkIndex  Int                        @map("chunk_index")
-  embedding   Unsupported("vector(1536)")?
-  metadata    Json?
-  createdAt   DateTime                   @default(now()) @map("created_at")
-
-  document    Document                   @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@map("document_chunks")
-}
-
-model Query {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  caseId      String   @map("case_id") @db.Uuid
-  query       String
-  response    String?
-  metadata    Json?
+  id          String   @id @default(uuid())
+  documentId  String   @map("document_id")
+  content     String   @db.Text
+  chunkIndex  Int      @map("chunk_index")
+  embedding   Json?
   createdAt   DateTime @default(now()) @map("created_at")
 
-  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  @@map("queries")
-}
-
-model LegalDocument {
-  id          String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title       String
-  content     String
-  type        String
-  jurisdiction String?
-  date        DateTime?
-  url         String?
-  metadata    Json?
-  embedding   Unsupported("vector(1536)")?
-  createdAt   DateTime                   @default(now()) @map("created_at")
-
-  @@map("legal_documents")
+  @@map("document_chunks")
 }

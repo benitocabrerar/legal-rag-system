@@ -38,7 +38,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       const user = await prisma.user.create({
         data: {
           email: body.email,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           name: body.name,
         },
       });
@@ -80,7 +80,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       // Verify password
-      const validPassword = await bcrypt.compare(body.password, user.password);
+      const validPassword = await bcrypt.compare(body.password, user.passwordHash);
 
       if (!validPassword) {
         return reply.code(401).send({ error: 'Invalid credentials' });
