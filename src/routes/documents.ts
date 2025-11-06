@@ -2,15 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { OpenAI } from 'openai';
-import { Pinecone } from '@pinecone-database/pinecone';
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
-
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY || '',
 });
 
 const uploadSchema = z.object({
