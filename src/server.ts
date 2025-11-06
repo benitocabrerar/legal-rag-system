@@ -5,6 +5,10 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import { authRoutes } from './routes/auth.js';
+import { caseRoutes } from './routes/cases.js';
+import { documentRoutes } from './routes/documents.js';
+import { queryRoutes } from './routes/query.js';
 
 dotenv.config();
 
@@ -28,21 +32,25 @@ await app.register(rateLimit, {
   timeWindow: '15 minutes',
 });
 
+// Authentication decorator
+app.decorate('authenticate', async function(request: any, reply: any) {
+  try {
+    await request.jwtVerify();
+  } catch (err) {
+    reply.code(401).send({ error: 'Unauthorized' });
+  }
+});
+
 // Health check
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// API routes placeholder
-app.get('/api/v1/cases', async (request, reply) => {
-  // Placeholder - will be implemented
-  return { cases: [] };
-});
-
-app.post('/api/v1/query', async (request, reply) => {
-  // Placeholder - RAG query endpoint
-  return { response: 'RAG endpoint - to be implemented' };
-});
+// Register API routes
+await app.register(authRoutes, { prefix: '/api/v1' });
+await app.register(caseRoutes, { prefix: '/api/v1' });
+await app.register(documentRoutes, { prefix: '/api/v1' });
+await app.register(queryRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {
