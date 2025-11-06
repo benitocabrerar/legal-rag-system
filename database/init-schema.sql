@@ -200,16 +200,16 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation
 CREATE INDEX IF NOT EXISTS idx_usage_metrics_user_id ON usage_metrics(user_id, metric_type, recorded_at);
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 
--- Vector indexes using HNSW
+-- Vector indexes using IVFFlat (supports more dimensions than HNSW)
 CREATE INDEX IF NOT EXISTS legal_document_chunks_embedding_idx
 ON legal_document_chunks
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 
 CREATE INDEX IF NOT EXISTS case_document_chunks_embedding_idx
 ON case_document_chunks
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
 
 -- Full-text search indexes
 CREATE INDEX IF NOT EXISTS legal_document_chunks_content_fts_idx
