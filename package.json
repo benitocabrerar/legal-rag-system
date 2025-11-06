@@ -5,9 +5,10 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/server.ts",
-    "build": "bun build src/server.ts --outdir dist --target node",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
     "start": "node dist/server.js",
+    "start:prod": "node --loader ts-node/esm src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -30,7 +31,8 @@
     "@pinecone-database/pinecone": "^2.0.0",
     "redis": "^4.6.13",
     "zod": "^3.22.4",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "tsx": "^4.7.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.19",

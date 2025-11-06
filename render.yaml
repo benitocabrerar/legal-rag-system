@@ -24,7 +24,7 @@ services:
     region: oregon
     plan: starter
     buildCommand: npm install && npx prisma generate
-    startCommand: npm start
+    startCommand: npx tsx src/server.ts
     envVars:
       - key: NODE_ENV
         value: production
