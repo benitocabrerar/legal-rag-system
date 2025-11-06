@@ -27,8 +27,8 @@ export const config = {
   // OpenAI
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-    embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-3-large',
-    embeddingDimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '3072', 10),
+    embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+    embeddingDimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
     chatModel: 'gpt-4-turbo-preview',
   },
 

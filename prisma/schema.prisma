@@ -197,8 +197,8 @@ model LegalDocumentChunk {
   content         String   @db.Text
   chunkIndex      Int      @map("chunk_index")
 
-  // Embeddings - usando text-embedding-3-large (3072 dimensions)
-  embedding       Unsupported("vector(3072)")?
+  // Embeddings - usando text-embedding-3-small (1536 dimensions)
+  embedding       Unsupported("vector(1536)")?
 
   // Metadata
   metadata        Json     @default("{}")
@@ -303,8 +303,8 @@ model CaseDocumentChunk {
   content         String   @db.Text
   chunkIndex      Int      @map("chunk_index")
 
-  // Embeddings - usando text-embedding-3-large (3072 dimensions)
-  embedding       Unsupported("vector(3072)")?
+  // Embeddings - usando text-embedding-3-small (1536 dimensions)
+  embedding       Unsupported("vector(1536)")?
 
   // Metadata
   metadata        Json     @default("{}")

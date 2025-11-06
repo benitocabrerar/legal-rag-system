@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS legal_document_chunks (
   document_id UUID NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   chunk_index INTEGER NOT NULL,
-  embedding vector(3072),
+  embedding vector(1536),
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS case_document_chunks (
   document_id UUID NOT NULL REFERENCES case_documents(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   chunk_index INTEGER NOT NULL,
-  embedding vector(3072),
+  embedding vector(1536),
   metadata JSONB DEFAULT '{}',
   page_number INTEGER,
   created_at TIMESTAMP DEFAULT NOW()

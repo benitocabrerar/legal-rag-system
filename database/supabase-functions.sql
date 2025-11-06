@@ -8,7 +8,7 @@
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION match_legal_documents(
-  query_embedding vector(3072),
+  query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 5,
   filter_jurisdiction text DEFAULT NULL,
@@ -52,7 +52,7 @@ $$;
 
 -- Example usage:
 -- SELECT * FROM match_legal_documents(
---   query_embedding := '[0.1, 0.2, ...]'::vector(3072),
+--   query_embedding := '[0.1, 0.2, ...]'::vector(1536),
 --   match_threshold := 0.75,
 --   match_count := 10,
 --   filter_jurisdiction := 'Ecuador'
@@ -64,7 +64,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION match_case_documents(
   case_id uuid,
-  query_embedding vector(3072),
+  query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 5
 )
@@ -104,7 +104,7 @@ $$;
 -- Example usage:
 -- SELECT * FROM match_case_documents(
 --   case_id := '123e4567-e89b-12d3-a456-426614174000',
---   query_embedding := '[0.1, 0.2, ...]'::vector(3072),
+--   query_embedding := '[0.1, 0.2, ...]'::vector(1536),
 --   match_threshold := 0.75,
 --   match_count := 5
 -- );
@@ -115,7 +115,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION hybrid_search_legal_documents(
   query_text text,
-  query_embedding vector(3072),
+  query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 5,
   vector_weight float DEFAULT 0.7  -- 0.7 vector, 0.3 full-text
@@ -174,7 +174,7 @@ $$;
 -- Example usage:
 -- SELECT * FROM hybrid_search_legal_documents(
 --   query_text := 'derecho laboral ecuatoriano',
---   query_embedding := '[0.1, 0.2, ...]'::vector(3072),
+--   query_embedding := '[0.1, 0.2, ...]'::vector(1536),
 --   match_threshold := 0.70,
 --   match_count := 10,
 --   vector_weight := 0.7
@@ -221,7 +221,7 @@ $$;
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION search_legal_documents_advanced(
-  query_embedding vector(3072),
+  query_embedding vector(1536),
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 10,
   filter_jurisdiction text DEFAULT NULL,
