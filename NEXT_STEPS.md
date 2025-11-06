@@ -8,7 +8,7 @@ Tu proyecto está **95% configurado**. Solo necesitas ejecutar estos comandos fi
 
 - ✅ Archivos `.env` con tus credenciales de Supabase
 - ✅ `frontend/.env.local` configurado
-- ✅ Supabase URL: `https://upqbwtgokdordetwjzuj.supabase.co`
+- ✅ Supabase URL: `https://kmpujsompmtfcudtxjah.supabase.co`
 - ✅ Database URL configurada
 - ✅ Código completo del proyecto
 - ✅ Dependencias en `package.json`
@@ -51,7 +51,7 @@ Esto creará todas las tablas en tu base de datos de Supabase.
 
 **Opción A: Supabase Dashboard (Recomendado)**
 
-1. Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj
+1. Ve a: https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah
 2. Click en **SQL Editor** en el menú izquierdo
 3. Click en **New query**
 4. Copia y pega TODO el contenido de: `database/supabase-functions.sql`
@@ -61,7 +61,7 @@ Esto creará todas las tablas en tu base de datos de Supabase.
 **Opción B: CLI (si tienes psql instalado)**
 
 ```bash
-psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres" \
+psql "postgresql://postgres:Benitomz2025$@db.kmpujsompmtfcudtxjah.supabase.co:5432/postgres" \
   -f database/supabase-functions.sql
 ```
 
@@ -69,7 +69,7 @@ psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:54
 
 **En Supabase Dashboard:**
 
-1. Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj
+1. Ve a: https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah
 2. Click en **Storage** en el menú izquierdo
 3. Click en **Create a new bucket**
 
@@ -207,7 +207,7 @@ node
 // Copiar y pegar esto:
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(
-  'https://upqbwtgokdordetwjzuj.supabase.co',
+  'https://kmpujsompmtfcudtxjah.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwcWJ3dGdva2RvcmRldHdqenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzMDcwMDYsImV4cCI6MjA2ODg4MzAwNn0.KjYMrpBVkfDKAoba5AyUtkXdChElX7LCIty-8TqaPuI'
 );
 

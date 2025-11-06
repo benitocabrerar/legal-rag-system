@@ -15,8 +15,8 @@ Todo está configurado y la base de datos inicializada correctamente.
 - ✅ **6 funciones de búsqueda semántica creadas**
 - ✅ Toda la documentación completa
 
-**Proyecto:** `upqbwtgokdordetwjzuj`
-**URL:** `https://upqbwtgokdordetwjzuj.supabase.co`
+**Proyecto:** `kmpujsompmtfcudtxjah`
+**URL:** `https://kmpujsompmtfcudtxjah.supabase.co`
 **Embeddings:** text-embedding-3-small (1536 dimensiones)
 
 ---
@@ -25,7 +25,7 @@ Todo está configurado y la base de datos inicializada correctamente.
 
 ### 1️⃣ Crear Buckets de Storage
 
-Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/storage/buckets
+Ve a: https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah/storage/buckets
 
 **Crear 2 buckets:**
 
@@ -129,7 +129,7 @@ Debe mostrar la landing page del Legal RAG System.
 
 ## 📊 ESTRUCTURA CREADA EN SUPABASE
 
-### Tablas Creadas (11 tablas):
+### Tablas Creadas (12 tablas):
 - ✅ `users` - Usuarios del sistema
 - ✅ `organizations` - Organizaciones
 - ✅ `subscriptions` - Suscripciones y planes
@@ -152,7 +152,7 @@ Debe mostrar la landing page del Legal RAG System.
 - ✅ `get_document_search_stats()` - Estadísticas de documentos
 
 ### Índices Creados:
-- ✅ Índices HNSW para búsqueda vectorial rápida
+- ✅ Índices IVFFlat para búsqueda vectorial rápida (1536 dimensiones)
 - ✅ Índices GIN para full-text search en español
 - ✅ Índices B-tree para queries comunes
 
@@ -181,16 +181,16 @@ npm install
 
 ### Error: "relation does not exist"
 ```bash
-# Ejecutar init-schema.sql de nuevo
-psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres" \
-  -f database/init-schema.sql
+# Mejor usar SQL Editor en Supabase Dashboard:
+# https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah/sql/new
+# Copia y pega el contenido de database/init-schema.sql
 ```
 
 ### Error: "function match_legal_documents does not exist"
 ```bash
-# Ejecutar supabase-functions.sql de nuevo
-psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres" \
-  -f database/supabase-functions.sql
+# Mejor usar SQL Editor en Supabase Dashboard:
+# https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah/sql/new
+# Copia y pega el contenido de database/supabase-functions.sql
 ```
 
 ### Error: "Connection refused"
@@ -200,7 +200,7 @@ psql "postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:54
 
 ### No puedo conectar con psql
 **Alternativa:** Usa SQL Editor en Supabase Dashboard
-1. https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/sql/new
+1. https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah/sql/new
 2. Copia y pega el contenido de los archivos SQL
 3. Click "Run"
 
@@ -239,7 +239,7 @@ Una vez que tengas backend y frontend corriendo:
 ```bash
 # Desde SQL Editor o backend, probar:
 SELECT * FROM match_legal_documents(
-  query_embedding := array_fill(0.1, ARRAY[3072])::vector(3072),
+  query_embedding := array_fill(0.1, ARRAY[1536])::vector(1536),
   match_threshold := 0.5,
   match_count := 5
 );
@@ -270,7 +270,7 @@ Backend:   Fastify + TypeScript
 Database:  Supabase PostgreSQL + pgvector
 Auth:      Supabase Auth
 Storage:   Supabase Storage
-AI:        OpenAI GPT-4 + text-embedding-3-large
+AI:        OpenAI GPT-4 + text-embedding-3-small (1536 dims)
 Real-time: Supabase Real-time (WebSockets)
 ```
 
@@ -282,7 +282,7 @@ Si todo funciona, verás:
 
 - ✅ Backend corriendo en http://localhost:8000
 - ✅ Frontend corriendo en http://localhost:3000
-- ✅ Base de datos con 11 tablas
+- ✅ Base de datos con 12 tablas
 - ✅ 6 funciones de búsqueda vectorial
 - ✅ Autenticación lista (Supabase)
 - ✅ Storage configurado

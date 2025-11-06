@@ -13,7 +13,7 @@ La base de datos Supabase está **100% configurada**:
 
 ### 1. Crear Buckets de Storage (Si no lo has hecho)
 
-Ve a: https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj/storage/buckets
+Ve a: https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah/storage/buckets
 
 **Bucket 1: case-documents (privado)**
 ```
@@ -53,10 +53,10 @@ Ya tienes configurados los archivos `.env` y `frontend/.env.local`. Solo falta a
 **Edita el archivo `.env` en la raíz del proyecto:**
 ```bash
 # Supabase (YA CONFIGURADO)
-SUPABASE_URL="https://upqbwtgokdordetwjzuj.supabase.co"
+SUPABASE_URL="https://kmpujsompmtfcudtxjah.supabase.co"
 SUPABASE_ANON_KEY="eyJ..."
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
-DATABASE_URL="postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.kmpujsompmtfcudtxjah.supabase.co:5432/postgres"
 
 # OpenAI (NECESITAS AGREGAR ESTO)
 OPENAI_API_KEY="sk-..."  # <-- Agrega tu API key aquí
@@ -73,6 +73,8 @@ NODE_ENV="development"
 PORT="8000"
 CORS_ORIGIN="http://localhost:3000"
 ```
+
+**Nota:** El archivo `.env` ya está configurado con tus credenciales reales.
 
 ### 3. Instalar Dependencias
 
@@ -234,7 +236,7 @@ npm run dev -- -p 3001
 
 ## 📚 Recursos
 
-- **Supabase Dashboard:** https://supabase.com/dashboard/project/upqbwtgokdordetwjzuj
+- **Supabase Dashboard:** https://supabase.com/dashboard/project/kmpujsompmtfcudtxjah
 - **Documentación Backend:** http://localhost:8000/documentation
 - **Prisma Studio:** http://localhost:5555 (después de ejecutar `npx prisma studio`)
 

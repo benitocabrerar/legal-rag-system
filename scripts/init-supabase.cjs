@@ -10,10 +10,10 @@ const fs = require('fs');
 const { Client } = require('pg');
 
 // Configuración de Supabase
-const SUPABASE_URL = 'https://upqbwtgokdordetwjzuj.supabase.co';
+const SUPABASE_URL = 'https://kmpujsompmtfcudtxjah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwcWJ3dGdva2RvcmRldHdqenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzMDcwMDYsImV4cCI6MjA2ODg4MzAwNn0.KjYMrpBVkfDKAoba5AyUtkXdChElX7LCIty-8TqaPuI';
 const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVwcWJ3dGdva2RvcmRldHdqenVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzMwNzAwNiwiZXhwIjoyMDY4ODgzMDA2fQ.TXhStQ6OS9SF9Ff-gj2lg0jMqxfZKqQl7c_ItQB38-g';
-const DATABASE_URL = 'postgresql://postgres:Benitomz2025$@db.upqbwtgokdordetwjzuj.supabase.co:5432/postgres';
+const DATABASE_URL = 'postgresql://postgres:Benitomz2025$@db.kmpujsompmtfcudtxjah.supabase.co:5432/postgres';
 
 console.log('🚀 Legal RAG System - Inicialización de Supabase\n');
 
