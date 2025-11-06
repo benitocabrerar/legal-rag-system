@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    // Type Checking
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+
+    // Modules
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    // Emit
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // Interop Constraints
+    "isolatedModules": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Language and Environment
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Type Roots
+    "types": ["bun-types"],
+    "typeRoots": ["./node_modules/@types"],
+
+    // Paths
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@routes/*": ["./src/routes/*"],
+      "@services/*": ["./src/services/*"],
+      "@plugins/*": ["./src/plugins/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@types/*": ["./src/types/*"],
+      "@middleware/*": ["./src/middleware/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "prisma/**/*"],
+  "exclude": ["node_modules", "dist", "build"]
+}

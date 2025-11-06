@@ -1,0 +1,412 @@
+// Legal RAG System - Database Schema
+// PostgreSQL with pgvector extension
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [vector, uuidOssp(map: "uuid-ossp"), pgTrgm(map: "pg_trgm")]
+}
+
+// ============================================================================
+// AUTHENTICATION & USERS
+// ============================================================================
+
+model User {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  role          UserRole @default(USER)
+
+  // Profile
+  phoneNumber   String?  @map("phone_number")
+  avatarUrl     String?  @map("avatar_url")
+
+  // Organization relationship
+  organizationId String? @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
+  // Relations
+  cases         Case[]
+  conversations Conversation[]
+  subscription  Subscription?
+  usageMetrics  UsageMetric[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Organization {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String
+  slug        String   @unique
+  domain      String?  // For SSO
+
+  // Settings
+  settings    Json     @default("{}")
+
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users       User[]
+  subscription Subscription?
+
+  @@map("organizations")
+}
+
+// ============================================================================
+// SUBSCRIPTIONS & BILLING
+// ============================================================================
+
+model Subscription {
+  id              String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String?          @unique @map("user_id") @db.Uuid
+  organizationId  String?          @unique @map("organization_id") @db.Uuid
+
+  // Plan details
+  plan            SubscriptionPlan @default(FREE)
+  status          SubscriptionStatus @default(ACTIVE)
+
+  // Stripe
+  stripeCustomerId       String? @unique @map("stripe_customer_id")
+  stripeSubscriptionId   String? @unique @map("stripe_subscription_id")
+  stripePriceId          String? @map("stripe_price_id")
+
+  // Billing
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  canceledAt      DateTime? @map("canceled_at")
+
+  // Relations
+  user            User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PROFESSIONAL
+  TEAM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+}
+
+model UsageMetric {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+
+  // Metrics
+  metricType  String   @map("metric_type") // cases_created, documents_uploaded, chat_messages, searches
+  value       Int
+  metadata    Json     @default("{}")
+
+  // Timestamps
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricType, recordedAt])
+  @@map("usage_metrics")
+}
+
+// ============================================================================
+// LEGAL KNOWLEDGE BASE (System-wide documents)
+// ============================================================================
+
+model LegalDocument {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Document metadata
+  title         String
+  type          LegalDocumentType
+  jurisdiction  String   @default("Ecuador") // País/jurisdicción
+  category      String   // Código Civil, Penal, Tributario, etc.
+
+  // Content
+  content       String   @db.Text
+  summary       String?  @db.Text
+
+  // Source
+  sourceUrl     String?  @map("source_url")
+  officialCode  String?  @map("official_code") // e.g., "Ley No. 123"
+  publicationDate DateTime? @map("publication_date")
+  effectiveDate DateTime? @map("effective_date")
+
+  // Search optimization
+  searchVector  Unsupported("tsvector")? @map("search_vector")
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  chunks        LegalDocumentChunk[]
+
+  @@index([type, jurisdiction, category])
+  @@map("legal_documents")
+}
+
+enum LegalDocumentType {
+  CONSTITUTION   // Constitución
+  LAW            // Ley
+  REGULATION     // Reglamento
+  DECREE         // Decreto
+  RESOLUTION     // Resolución
+  JURISPRUDENCE  // Jurisprudencia
+  DOCTRINE       // Doctrina
+}
+
+model LegalDocumentChunk {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  documentId      String   @map("document_id") @db.Uuid
+
+  // Chunk details
+  content         String   @db.Text
+  chunkIndex      Int      @map("chunk_index")
+
+  // Embeddings - usando text-embedding-3-large (3072 dimensions)
+  embedding       Unsupported("vector(3072)")?
+
+  // Metadata
+  metadata        Json     @default("{}")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document        LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("legal_document_chunks")
+}
+
+// ============================================================================
+// CASES (User-specific legal cases)
+// ============================================================================
+
+model Case {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+
+  // Case details
+  title         String
+  caseNumber    String?  @map("case_number") // Número de expediente
+  caseType      String   @map("case_type") // Civil, Penal, Laboral, etc.
+  status        CaseStatus @default(ACTIVE)
+
+  // Parties
+  plaintiff     String?  // Demandante
+  defendant     String?  // Demandado
+
+  // Dates
+  filingDate    DateTime? @map("filing_date")
+  closureDate   DateTime? @map("closure_date")
+
+  // Description
+  description   String?  @db.Text
+  notes         String?  @db.Text
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents     CaseDocument[]
+  conversations Conversation[]
+
+  @@index([userId, status])
+  @@map("cases")
+}
+
+enum CaseStatus {
+  ACTIVE
+  IN_PROGRESS
+  CLOSED
+  ARCHIVED
+}
+
+model CaseDocument {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  caseId        String   @map("case_id") @db.Uuid
+
+  // Document metadata
+  filename      String
+  originalName  String   @map("original_name")
+  mimeType      String   @map("mime_type")
+  fileSize      Int      @map("file_size") // bytes
+
+  // Storage
+  storageUrl    String   @map("storage_url") // S3 or local path
+
+  // Processing
+  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
+  extractedText String?  @db.Text @map("extracted_text")
+
+  // Timestamps
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+  processedAt   DateTime? @map("processed_at")
+
+  // Relations
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chunks        CaseDocumentChunk[]
+
+  @@index([caseId])
+  @@map("case_documents")
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model CaseDocumentChunk {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  documentId      String   @map("document_id") @db.Uuid
+
+  // Chunk details
+  content         String   @db.Text
+  chunkIndex      Int      @map("chunk_index")
+
+  // Embeddings - usando text-embedding-3-large (3072 dimensions)
+  embedding       Unsupported("vector(3072)")?
+
+  // Metadata
+  metadata        Json     @default("{}")
+  pageNumber      Int?     @map("page_number")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  document        CaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("case_document_chunks")
+}
+
+// ============================================================================
+// CHAT & CONVERSATIONS
+// ============================================================================
+
+model Conversation {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  caseId        String?  @map("case_id") @db.Uuid // Optional: chat can be case-specific
+
+  // Conversation metadata
+  title         String   @default("New Conversation")
+
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case          Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  messages      Message[]
+
+  @@index([userId])
+  @@index([caseId])
+  @@map("conversations")
+}
+
+model Message {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+
+  // Message content
+  role            MessageRole
+  content         String   @db.Text
+
+  // RAG context
+  sources         Json     @default("[]") // Array of source documents/chunks used
+  model           String?  // GPT-4, Claude, etc.
+
+  // Token usage
+  promptTokens    Int?     @map("prompt_tokens")
+  completionTokens Int?    @map("completion_tokens")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ============================================================================
+// API KEYS (For API access)
+// ============================================================================
+
+model ApiKey {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+
+  // Key details
+  name        String
+  keyHash     String   @unique @map("key_hash") // Hashed API key
+  prefix      String   // First 8 chars for display (e.g., "sk_live_")
+
+  // Permissions
+  scopes      String[] @default([]) // read, write, delete
+
+  // Status
+  isActive    Boolean  @default(true) @map("is_active")
+
+  // Usage
+  lastUsedAt  DateTime? @map("last_used_at")
+
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime? @map("expires_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
+}
