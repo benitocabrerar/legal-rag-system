@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Migration Guide - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .alert-critical {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .alert-critical h3 {
+            color: #721c24;
+        }
+
+        .alert-success h3 {
+            color: #155724;
+        }
+
+        .method {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .method h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .method-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .steps {
+            counter-reset: step-counter;
+        }
+
+        .step {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            position: relative;
+            padding-left: 60px;
+        }
+
+        .step::before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .step h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .link-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .link-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .link-button.secondary {
+            background: #6c757d;
+        }
+
+        .link-button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .checklist {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .checklist-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-item input {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .status-complete {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Database Migration Guide</h1>
+            <p>Legal RAG System - Final Setup Step</p>
+        </div>
+
+        <div class="content">
+            <div class="alert alert-critical">
+                <h3>⚠️ CRITICAL: Action Required</h3>
+                <p>Your Legal RAG System is <strong>95% complete</strong>. The database migrations need to be applied to complete the setup and make all API endpoints functional.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <h3>✅ What's Working Now</h3>
+                <div style="margin-top: 15px;">
+                    <span class="status-badge status-complete">Backend API Live</span>
+                    <span class="status-badge status-complete">Frontend Live</span>
+                    <span class="status-badge status-complete">Database Available</span>
+                    <span class="status-badge status-complete">Code Deployed</span>
+                    <span class="status-badge status-pending">Migrations Pending</span>
+                </div>
+            </div>
+
+            <!-- Method 1: Update Build Command -->
+            <div class="method">
+                <h2>Method 1: Update Build Command <span class="method-badge">RECOMMENDED</span></h2>
+                <p style="margin-bottom: 20px;">This method automatically applies migrations on every deployment. Set it up once and forget about it!</p>
+
+                <div class="steps">
+                    <div class="step">
+                        <h4>Open Render Dashboard Settings</h4>
+                        <p>Click the button below to open your service settings:</p>
+                        <a href="https://dashboard.render.com/web/srv-d46ibnfdiees73crug50/settings" target="_blank" class="link-button">
+                            🔗 Open Service Settings
+                        </a>
+                    </div>
+
+                    <div class="step">
+                        <h4>Find Build Command Section</h4>
+                        <p>Scroll down to the "Build & Deploy" section and locate the "Build Command" field.</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>Update the Command</h4>
+                        <p><strong>Current command:</strong></p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyToClipboard('old-command')">Copy</button>
+                            <code id="old-command">npm install && npx prisma generate</code>
+                        </div>
+
+                        <p><strong>New command (copy this):</strong></p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyToClipboard('new-command')">Copy</button>
+                            <code id="new-command">npm install && npx prisma generate && npx prisma migrate deploy</code>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <h4>Save and Deploy</h4>
+                        <p>Click the "Save Changes" button. This will automatically trigger a new deployment that will apply the database migrations.</p>
+                    </div>
+
+                    <div class="step">
+                        <h4>Verify Deployment</h4>
+                        <p>Wait 2-3 minutes for the deployment to complete, then check the logs:</p>
+                        <a href="https://dashboard.render.com/web/srv-d46ibnfdiees73crug50/logs" target="_blank" class="link-button secondary">
+                            📋 View Deployment Logs
+                        </a>
+                        <p style="margin-top: 15px;">Look for messages like: <code>✔ Migrations applied successfully</code></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method 2: Manual Shell -->
+            <div class="method">
+                <h2>Method 2: Run in Render Shell</h2>
+                <p style="margin-bottom: 20px;">Apply migrations manually without changing the build command.</p>
+
+                <div class="steps">
+                    <div class="step">
+                        <h4>Open Render Shell</h4>
+                        <p>Click the button below to open the shell:</p>
+                        <a href="https://dashboard.render.com/web/srv-d46ibnfdiees73crug50" target="_blank" class="link-button">
+                            🖥️ Open Service Dashboard
+                        </a>
+                        <p style="margin-top: 10px;"><em>Then click on the "Shell" tab</em></p>
+                    </div>
+
+                    <div class="step">
+                        <h4>Run Migration Command</h4>
+                        <p>Copy and paste this command in the shell:</p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyToClipboard('shell-command')">Copy</button>
+                            <code id="shell-command">npx prisma migrate deploy</code>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <h4>Wait for Completion</h4>
+                        <p>The command will apply all pending migrations. You should see output indicating which migrations were applied.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What Gets Created -->
+            <div class="method">
+                <h2>📊 What These Migrations Create</h2>
+                <p style="margin-bottom: 20px;">The migrations will create the following database tables:</p>
+
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <input type="checkbox" disabled> <strong>users</strong> - User accounts with authentication (passwordHash, email, JWT support)
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" disabled> <strong>cases</strong> - Legal case management (title, clientName, caseNumber, status)
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" disabled> <strong>documents</strong> - Document storage with full content
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" disabled> <strong>document_chunks</strong> - Document chunks with AI embeddings (JSON format, 1536 dimensions)
+                    </div>
+                </div>
+            </div>
+
+            <!-- After Migrations -->
+            <div class="method">
+                <h2>🎉 After Migrations Complete</h2>
+                <p style="margin-bottom: 20px;">Once migrations are applied, you can:</p>
+
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <input type="checkbox"> Test user registration endpoint
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox"> Login with your credentials
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox"> Create your first case
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox"> Upload documents with AI embeddings
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox"> Query documents using RAG + GPT-4
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox"> Access all 15 API endpoints
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3>Test the API Now:</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyToClipboard('test-health')">Copy</button>
+                        <code id="test-health">curl https://legal-rag-api-qnew.onrender.com/health</code>
+                    </div>
+
+                    <h3 style="margin-top: 20px;">After migrations, test registration:</h3>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyToClipboard('test-register')">Copy</button>
+                        <code id="test-register">curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "securepass123",
+    "name": "Test User"
+  }'</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div style="margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 12px;">
+                <h2 style="margin-bottom: 20px;">📚 Documentation & Resources</h2>
+                <a href="https://dashboard.render.com/web/srv-d46ibnfdiees73crug50" target="_blank" class="link-button">
+                    🔗 Backend Dashboard
+                </a>
+                <a href="https://dashboard.render.com/web/srv-d46ibnfdiees73crug50/logs" target="_blank" class="link-button secondary">
+                    📋 View Logs
+                </a>
+                <a href="https://dashboard.render.com/d/dpg-d46iarje5dus73ar46c0-a" target="_blank" class="link-button secondary">
+                    🗄️ Database Dashboard
+                </a>
+
+                <p style="margin-top: 20px; color: #6c757d;">
+                    <strong>Tip:</strong> After applying migrations, check the full documentation in <code>DEPLOYMENT.md</code> and <code>PROJECT_STATUS.md</code> files.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Legal RAG System</strong> - Generated with Claude Code</p>
+            <p style="margin-top: 10px;">Need help? Check <code>MIGRATION_INSTRUCTIONS.md</code> for detailed steps.</p>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.parentElement.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.style.background = '#28a745';
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#667eea';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
