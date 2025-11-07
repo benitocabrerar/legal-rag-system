@@ -11,6 +11,7 @@
     "start:prod": "node --loader ts-node/esm src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed:laws": "bun run scripts/seed-laws.ts",
     "test": "bun test",

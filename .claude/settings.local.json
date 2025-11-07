@@ -20,7 +20,17 @@
       "mcp__render__list_deploys",
       "mcp__render__get_service",
       "mcp__render__list_services",
-      "mcp__render__update_web_service"
+      "mcp__render__update_web_service",
+      "Bash(timeout /t 15 /nobreak)",
+      "Bash(nul)",
+      "Bash(ping:*)",
+      "Bash(timeout /t 45 /nobreak)",
+      "Bash(curl:*)",
+      "Bash(timeout /t 60 /nobreak)",
+      "Bash(del nul)",
+      "Bash(timeout /t 30 /nobreak)",
+      "mcp__render__list_postgres_instances",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
