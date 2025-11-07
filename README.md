@@ -4,7 +4,9 @@
 
 ![Legal RAG System](https://img.shields.io/badge/Legal%20RAG-AI%20Powered-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-MVP%20Development-yellow?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-95%25%20Complete-yellow?style=for-the-badge)
+![Backend](https://img.shields.io/badge/Backend-Live-brightgreen?style=for-the-badge)
+![Database](https://img.shields.io/badge/Database-Migration%20Required-orange?style=for-the-badge)
 
 **Sistema de asistencia legal potenciado por IA utilizando Retrieval-Augmented Generation (RAG)**
 
@@ -17,14 +19,36 @@
 
 ---
 
+## 🚨 Estado Actual: Migración de Base de Datos Requerida
+
+El sistema está **95% completado** y completamente desplegado en producción. Para completar la configuración:
+
+### Opción 1: Guía Interactiva (Recomendada)
+Abre `apply-migrations-guide.html` en tu navegador para instrucciones paso a paso con botones de copiar.
+
+### Opción 2: Actualizar Build Command
+1. Ve a: https://dashboard.render.com/web/srv-d46ibnfdiees73crug50/settings
+2. Cambia el "Build Command" a:
+   ```bash
+   npm install && npx prisma generate && npx prisma migrate deploy
+   ```
+
+### Opción 3: Shell de Render
+1. Abre: https://dashboard.render.com/web/srv-d46ibnfdiees73crug50
+2. Click en la pestaña "Shell"
+3. Ejecuta: `npx prisma migrate deploy`
+
+---
+
 ## Descripción
 
 Legal RAG System es una plataforma de asistencia legal inteligente que combina búsqueda semántica, procesamiento de lenguaje natural y generación aumentada por recuperación para ayudar a profesionales legales a:
 
-- Buscar y analizar documentos legales de Ecuador
-- Generar documentos legales con asistencia de IA
-- Gestionar casos y documentación de manera eficiente
-- Obtener respuestas precisas basadas en legislación vigente
+- 📝 Organizar casos y documentos legales
+- 🤖 Consultar documentos usando lenguaje natural
+- 🔍 Obtener respuestas instantáneas con GPT-4
+- 📊 Rastrear progreso de casos e historial
+- 🔐 Autenticación segura de usuarios
 
 ## Características Principales
 
