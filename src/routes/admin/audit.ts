@@ -353,7 +353,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     try {
       // Get table sizes from PostgreSQL
-      const tableStats = await prisma.$queryRaw<any[]>`
+      const tableStatsRaw = await prisma.$queryRaw<any[]>`
         SELECT
           schemaname,
           relname AS tablename,
@@ -369,6 +369,16 @@ export async function adminAuditRoutes(fastify: FastifyInstance) {
         WHERE schemaname = 'public'
         ORDER BY pg_total_relation_size(schemaname||'.'||relname) DESC
       `;
+
+      // Convert BigInt values to Number for JSON serialization
+      const tableStats = tableStatsRaw.map(row => ({
+        ...row,
+        size_bytes: Number(row.size_bytes),
+        inserts: Number(row.inserts),
+        updates: Number(row.updates),
+        deletes: Number(row.deletes),
+        live_tuples: Number(row.live_tuples),
+      }));
 
       // Get row counts for each table
       const [
