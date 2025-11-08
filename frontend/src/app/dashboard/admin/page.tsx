@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { legalDocumentsAPI, parseApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface LegalDocument {
   id: string;
@@ -26,6 +27,7 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [extracting, setExtracting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -48,6 +50,11 @@ export default function AdminPage() {
     }
   }, [user, selectedCategory]);
 
+  useEffect(() => {
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }, []);
+
   const loadDocuments = async () => {
     try {
       setLoading(true);
@@ -57,6 +64,50 @@ export default function AdminPage() {
       console.error('Error loading legal documents:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Por favor selecciona un archivo PDF válido');
+      return;
+    }
+
+    setError('');
+    setExtracting(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+
+      // Extract text from all pages
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      // Auto-fill title from filename if empty
+      if (!formData.title) {
+        const fileName = file.name.replace('.pdf', '');
+        setFormData({ ...formData, content: fullText.trim(), title: fileName });
+      } else {
+        setFormData({ ...formData, content: fullText.trim() });
+      }
+
+      setSuccess(`PDF procesado exitosamente: ${pdf.numPages} páginas extraídas`);
+    } catch (err) {
+      console.error('Error extracting PDF:', err);
+      setError('Error al procesar el PDF. Por favor intenta con otro archivo.');
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -218,6 +269,22 @@ export default function AdminPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cargar PDF (opcional)
+                </label>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handlePdfUpload}
+                  disabled={extracting}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {extracting && (
+                  <p className="mt-2 text-sm text-blue-600">Extrayendo texto del PDF...</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Contenido
                 </label>
                 <textarea
@@ -226,6 +293,7 @@ export default function AdminPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={12}
                   required
+                  placeholder="Selecciona un PDF arriba o pega el contenido aquí directamente..."
                 />
               </div>
 
