@@ -12,6 +12,10 @@ const nextConfig = {
       },
     ];
   },
+  // Force new build ID to invalidate cache
+  generateBuildId: async () => {
+    return `build-${Date.now()}`;
+  },
 };
 
 export default nextConfig;
