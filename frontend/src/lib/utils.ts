@@ -5,16 +5,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString('es-ES', {
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return 'N/A';
+
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) return 'N/A';
+
+  return dateObj.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 }
 
-export function formatDateTime(date: string | Date): string {
-  return new Date(date).toLocaleString('es-ES', {
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return 'N/A';
+
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) return 'N/A';
+
+  return dateObj.toLocaleString('es-ES', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
