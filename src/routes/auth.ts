@@ -54,6 +54,8 @@ export async function authRoutes(fastify: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          planTier: user.planTier,
         },
         token,
       });
@@ -97,6 +99,8 @@ export async function authRoutes(fastify: FastifyInstance) {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          planTier: user.planTier,
         },
         token,
       });
@@ -119,6 +123,8 @@ export async function authRoutes(fastify: FastifyInstance) {
           id: true,
           email: true,
           name: true,
+          role: true,
+          planTier: true,
           createdAt: true,
         },
       });
