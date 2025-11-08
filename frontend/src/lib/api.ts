@@ -1,3 +1,4 @@
+// Version: 2.0.0 - Force rebuild
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com/api/v1';

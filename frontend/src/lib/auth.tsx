@@ -1,5 +1,6 @@
 'use client';
 
+// Version: 2.0.0 - Force rebuild
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authAPI } from './api';
 
