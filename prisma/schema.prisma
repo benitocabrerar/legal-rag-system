@@ -35,6 +35,10 @@ model User {
   auditLogs       AuditLog[]
   queryLogs       QueryLog[]
   storageUsage    StorageUsage[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  paymentProofs   PaymentProof[]
+  reviewedPaymentProofs PaymentProof[] @relation("ReviewedPaymentProofs")
 
   @@map("users")
 }
@@ -318,4 +322,118 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// Subscription Plans - Available pricing tiers
+model SubscriptionPlan {
+  id                String   @id @default(uuid())
+  code              String   @unique
+  name              String
+  nameEnglish       String   @map("name_english")
+  description       String?  @db.Text
+  priceMonthlyUSD   Float    @map("price_monthly_usd")
+  priceYearlyUSD    Float    @map("price_yearly_usd")
+  storageGB         Float    @map("storage_gb")
+  documentsLimit    Int      @map("documents_limit")
+  monthlyQueries    Int      @map("monthly_queries")
+  apiCallsLimit     Int      @map("api_calls_limit")
+  features          Json?
+  isActive          Boolean  @default(true) @map("is_active")
+  displayOrder      Int      @default(0) @map("display_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions     Subscription[]
+
+  @@map("subscription_plans")
+}
+
+// User Subscriptions - Active user subscriptions
+model Subscription {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  planId            String   @map("plan_id")
+  status            String   @default("pending") // pending, active, suspended, cancelled, expired
+  billingCycle      String   @default("monthly") @map("billing_cycle") // monthly, yearly
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  cancelAtPeriodEnd  Boolean  @default(false) @map("cancel_at_period_end")
+  cancelledAt        DateTime? @map("cancelled_at")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  stripeCustomerId     String? @map("stripe_customer_id")
+  paypalSubscriptionId String? @unique @map("paypal_subscription_id")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments          Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// Payments - All payment transactions
+model Payment {
+  id                String   @id @default(uuid())
+  subscriptionId    String?  @map("subscription_id")
+  userId            String   @map("user_id")
+  amount            Float
+  currency          String   @default("USD")
+  method            String   // stripe, paypal, bank_transfer, cash_deposit
+  status            String   @default("pending") // pending, processing, completed, failed, refunded
+  externalId        String?  @map("external_id") // Stripe/PayPal transaction ID
+  description       String?
+  metadata          Json?
+  processingFee     Float?   @map("processing_fee")
+  netAmount         Float?   @map("net_amount")
+  paidAt            DateTime? @map("paid_at")
+  failedAt          DateTime? @map("failed_at")
+  refundedAt        DateTime? @map("refunded_at")
+  errorMessage      String?  @map("error_message")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentProof      PaymentProof?
+
+  @@index([userId])
+  @@index([status])
+  @@index([method])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+// Payment Proofs - Manual payment verification (bank transfers, deposits)
+model PaymentProof {
+  id                String   @id @default(uuid())
+  paymentId         String   @unique @map("payment_id")
+  userId            String   @map("user_id")
+  fileUrl           String   @map("file_url")
+  fileName          String   @map("file_name")
+  fileSize          Int      @map("file_size")
+  mimeType          String   @map("mime_type")
+  bankName          String?  @map("bank_name")
+  accountNumber     String?  @map("account_number")
+  referenceNumber   String?  @map("reference_number")
+  depositDate       DateTime? @map("deposit_date")
+  notes             String?  @db.Text
+  status            String   @default("pending") // pending, approved, rejected
+  reviewedBy        String?  @map("reviewed_by")
+  reviewedAt        DateTime? @map("reviewed_at")
+  reviewNotes       String?  @map("review_notes") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer          User?    @relation("ReviewedPaymentProofs", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payment_proofs")
 }

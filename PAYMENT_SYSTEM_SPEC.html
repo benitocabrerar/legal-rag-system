@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Pagos Híbrido - Legal RAG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 60px 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #667eea;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-primary { background: #cfe2ff; color: #084298; }
+        .badge-danger { background: #f8d7da; color: #842029; }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+
+        .card p {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .plan-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .plan-card.featured {
+            border-color: #667eea;
+            border-width: 3px;
+        }
+
+        .plan-card.featured::before {
+            content: "⭐ Más Popular";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .plan-name {
+            font-size: 1.6em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .plan-price {
+            font-size: 3em;
+            color: #667eea;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+
+        .plan-price small {
+            font-size: 0.4em;
+            color: #999;
+        }
+
+        .plan-features {
+            text-align: left;
+            margin: 25px 0;
+        }
+
+        .plan-features li {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            list-style: none;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: #28a745;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .method-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .method-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .method-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .method-type {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+
+        .method-type.auto {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .method-type.manual {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .flow-diagram {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 2px dashed #e0e0e0;
+        }
+
+        .flow-step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 1.2em;
+        }
+
+        .step-content p {
+            color: #666;
+        }
+
+        .feature-list {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .feature-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            list-style: none;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: "➤";
+            color: #667eea;
+            font-weight: 700;
+            margin-right: 12px;
+        }
+
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .table td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-left: 4px solid #155724;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #856404;
+            color: #856404;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 40px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💳 Sistema de Pagos Híbrido</h1>
+            <p>Legal RAG - Solución completa de monetización con pagos automáticos y manuales</p>
+            <div style="margin-top: 20px;">
+                <span class="badge badge-success">✓ Stripe Integration</span>
+                <span class="badge badge-info">✓ PayPal Support</span>
+                <span class="badge badge-warning">✓ Transferencias Bancarias</span>
+                <span class="badge badge-primary">✓ Aprobación Manual</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Resumen Ejecutivo -->
+            <div class="section">
+                <h2 class="section-title">📊 Resumen Ejecutivo</h2>
+                <p style="font-size: 1.1em; color: #666; margin-bottom: 20px;">
+                    Se ha implementado un sistema de pagos híbrido profesional que combina la automatización de pagos internacionales
+                    (Stripe/PayPal) con la flexibilidad de métodos de pago locales ecuatorianos (transferencias bancarias y depósitos),
+                    incluyendo un robusto panel administrativo para la gestión y aprobación de pagos manuales.
+                </p>
+
+                <div class="plan-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="card" style="text-align: center;">
+                        <h3 style="font-size: 3em; margin: 0;">4</h3>
+                        <p style="margin: 0;">Planes de Suscripción</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <h3 style="font-size: 3em; margin: 0;">4</h3>
+                        <p style="margin: 0;">Métodos de Pago</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <h3 style="font-size: 3em; margin: 0;">5</h3>
+                        <p style="margin: 0;">Nuevas Tablas DB</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <h3 style="font-size: 3em; margin: 0;">100%</h3>
+                        <p style="margin: 0;">Automatizado</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planes de Suscripción -->
+            <div class="section">
+                <h2 class="section-title">💰 Planes de Suscripción</h2>
+                <p style="color: #666; margin-bottom: 30px;">Cuatro planes diseñados para diferentes tipos de usuarios, desde individual hasta empresarial.</p>
+
+                <div class="plan-grid">
+                    <div class="plan-card">
+                        <div class="plan-name">🆓 Gratuito</div>
+                        <div class="plan-price">$0<small>/mes</small></div>
+                        <ul class="plan-features">
+                            <li>1 GB almacenamiento</li>
+                            <li>50 documentos</li>
+                            <li>100 consultas/mes</li>
+                            <li>Soporte por email</li>
+                        </ul>
+                        <span class="badge badge-info">Ideal para prueba</span>
+                    </div>
+
+                    <div class="plan-card">
+                        <div class="plan-name">⚡ Básico</div>
+                        <div class="plan-price">$19<small>/mes</small></div>
+                        <ul class="plan-features">
+                            <li>10 GB almacenamiento</li>
+                            <li>500 documentos</li>
+                            <li>1,000 consultas/mes</li>
+                            <li>Soporte prioritario</li>
+                            <li>Documentación legal</li>
+                        </ul>
+                        <span class="badge badge-primary">Abogados independientes</span>
+                    </div>
+
+                    <div class="plan-card featured">
+                        <div class="plan-name">🚀 Profesional</div>
+                        <div class="plan-price">$49<small>/mes</small></div>
+                        <ul class="plan-features">
+                            <li>50 GB almacenamiento</li>
+                            <li>2,000 documentos</li>
+                            <li>5,000 consultas/mes</li>
+                            <li>Soporte 24/7</li>
+                            <li>Biblioteca legal completa</li>
+                            <li>API avanzada</li>
+                            <li>Usuarios ilimitados</li>
+                        </ul>
+                        <span class="badge badge-success">Firmas pequeñas/medianas</span>
+                    </div>
+
+                    <div class="plan-card">
+                        <div class="plan-name">👑 Empresarial</div>
+                        <div class="plan-price">$149<small>/mes</small></div>
+                        <ul class="plan-features">
+                            <li>200 GB almacenamiento</li>
+                            <li>10,000 documentos</li>
+                            <li>25,000 consultas/mes</li>
+                            <li>Soporte dedicado</li>
+                            <li>API ilimitada</li>
+                            <li>Integración custom</li>
+                            <li>Capacitación incluida</li>
+                        </ul>
+                        <span class="badge badge-danger">Grandes firmas</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-success" style="margin-top: 30px;">
+                    <strong>💡 Ahorro anual:</strong> Todos los planes ofrecen descuento pagando anualmente (~17% de ahorro)
+                </div>
+            </div>
+
+            <!-- Métodos de Pago -->
+            <div class="section">
+                <h2 class="section-title">💳 Métodos de Pago Disponibles</h2>
+
+                <div class="payment-methods">
+                    <div class="method-card">
+                        <div class="method-icon">💳</div>
+                        <div class="method-title">Stripe</div>
+                        <p style="color: #666; font-size: 0.95em;">Tarjetas de crédito/débito Visa, MasterCard, American Express</p>
+                        <span class="method-type auto">✓ Activación Automática</span>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">💰</div>
+                        <div class="method-title">PayPal</div>
+                        <p style="color: #666; font-size: 0.95em;">Pago con cuenta PayPal o tarjeta a través de PayPal</p>
+                        <span class="method-type auto">✓ Activación Automática</span>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">🏦</div>
+                        <div class="method-title">Transferencia Bancaria</div>
+                        <p style="color: #666; font-size: 0.95em;">Transferencia a cuentas bancarias ecuatorianas</p>
+                        <span class="method-type manual">⏳ Aprobación Manual</span>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">💵</div>
+                        <div class="method-title">Depósito Directo</div>
+                        <p style="color: #666; font-size: 0.95em;">Depósito en efectivo con comprobante</p>
+                        <span class="method-type manual">⏳ Aprobación Manual</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flujo de Pagos Automáticos -->
+            <div class="section">
+                <h2 class="section-title">⚡ Flujo de Pagos Automáticos (Stripe/PayPal)</h2>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Usuario selecciona plan y método de pago</h4>
+                            <p>El usuario elige su plan deseado y selecciona Stripe o PayPal como método de pago.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Redirección a pasarela de pago</h4>
+                            <p>Se crea una sesión de pago segura y el usuario es redirigido a Stripe/PayPal.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Procesamiento del pago</h4>
+                            <p>Stripe/PayPal procesa el pago de forma segura y envía confirmación vía webhook.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Activación automática de la suscripción</h4>
+                            <p>El sistema recibe el webhook, activa la suscripción y actualiza los límites del usuario.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Notificación al usuario</h4>
+                            <p>Se envía email de confirmación y notificación in-app. El usuario tiene acceso inmediato.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>✓ Ventajas:</strong> Activación instantánea, renovación automática, sin intervención manual
+                </div>
+            </div>
+
+            <!-- Flujo de Pagos Manuales -->
+            <div class="section">
+                <h2 class="section-title">🏦 Flujo de Pagos Manuales (Transferencia/Depósito)</h2>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Usuario selecciona pago manual</h4>
+                            <p>El usuario elige transferencia bancaria o depósito directo y ve los datos bancarios.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Realiza el pago en su banco</h4>
+                            <p>El usuario realiza la transferencia o depósito desde su banco usando los datos proporcionados.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Sube comprobante de pago</h4>
+                            <p>El usuario sube foto/PDF del comprobante con detalles: banco, fecha, referencia, monto.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Revisión administrativa</h4>
+                            <p>El administrador recibe notificación y revisa el comprobante en el panel admin.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Aprobación/Rechazo</h4>
+                            <p>Admin aprueba (activa suscripción) o rechaza (solicita nuevo comprobante).</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <h4>Notificación al usuario</h4>
+                            <p>Usuario recibe email y notificación in-app con el resultado. Si aprobado, obtiene acceso inmediato.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>⏳ Nota:</strong> Los pagos manuales requieren verificación administrativa (típicamente 24-48 horas)
+                </div>
+            </div>
+
+            <!-- Estructura de Base de Datos -->
+            <div class="section">
+                <h2 class="section-title">🗄️ Estructura de Base de Datos</h2>
+
+                <div class="card">
+                    <h3>📋 subscription_plans</h3>
+                    <p><strong>Propósito:</strong> Define los planes de suscripción disponibles</p>
+                    <ul class="feature-list">
+                        <li>code: Código único (free, basic, professional, enterprise)</li>
+                        <li>name / nameEnglish: Nombres en español e inglés</li>
+                        <li>priceMonthlyUSD / priceYearlyUSD: Precios mensuales y anuales</li>
+                        <li>storageGB, documentsLimit, monthlyQueries, apiCallsLimit: Límites</li>
+                        <li>features: JSON con lista de características incluidas</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📋 subscriptions</h3>
+                    <p><strong>Propósito:</strong> Registra las suscripciones activas de los usuarios</p>
+                    <ul class="feature-list">
+                        <li>userId: Referencia al usuario suscrito</li>
+                        <li>planId: Plan al que está suscrito</li>
+                        <li>status: pending, active, suspended, cancelled, expired</li>
+                        <li>billingCycle: monthly o yearly</li>
+                        <li>currentPeriodStart/End: Período actual de facturación</li>
+                        <li>stripeSubscriptionId / paypalSubscriptionId: IDs externos</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📋 payments</h3>
+                    <p><strong>Propósito:</strong> Registro completo de todas las transacciones de pago</p>
+                    <ul class="feature-list">
+                        <li>subscriptionId: Suscripción asociada (opcional)</li>
+                        <li>amount, currency: Monto y moneda del pago</li>
+                        <li>method: stripe, paypal, bank_transfer, cash_deposit</li>
+                        <li>status: pending, processing, completed, failed, refunded</li>
+                        <li>externalId: ID de transacción de Stripe/PayPal</li>
+                        <li>paidAt, failedAt, refundedAt: Timestamps de eventos</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📋 payment_proofs</h3>
+                    <p><strong>Propósito:</strong> Almacena comprobantes de pagos manuales para verificación</p>
+                    <ul class="feature-list">
+                        <li>paymentId: Pago asociado (relación 1:1)</li>
+                        <li>fileUrl, fileName: Archivo del comprobante subido</li>
+                        <li>bankName, accountNumber, referenceNumber: Datos del pago</li>
+                        <li>depositDate: Fecha en que se realizó el depósito/transferencia</li>
+                        <li>status: pending, approved, rejected</li>
+                        <li>reviewedBy, reviewedAt, reviewNotes: Datos de la revisión admin</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Panel Administrativo -->
+            <div class="section">
+                <h2 class="section-title">⚙️ Panel Administrativo de Pagos</h2>
+
+                <div class="card">
+                    <h3>📊 Dashboard de Pagos</h3>
+                    <ul class="feature-list">
+                        <li>Vista general: Total recaudado, pagos pendientes, tasa de conversión</li>
+                        <li>Gráficos de ingresos mensuales y anuales</li>
+                        <li>Distribución por plan (cuántos usuarios en cada plan)</li>
+                        <li>Distribución por método de pago</li>
+                        <li>MRR (Monthly Recurring Revenue) y ARR (Annual)</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📝 Gestión de Comprobantes</h3>
+                    <ul class="feature-list">
+                        <li>Lista de comprobantes pendientes de revisión</li>
+                        <li>Vista previa del comprobante (imagen/PDF)</li>
+                        <li>Formulario de aprobación/rechazo con notas</li>
+                        <li>Historial completo de comprobantes aprobados/rechazados</li>
+                        <li>Búsqueda y filtros por usuario, fecha, estado</li>
+                        <li>Notificaciones automáticas al aprobar/rechazar</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>👥 Gestión de Suscripciones</h3>
+                    <ul class="feature-list">
+                        <li>Lista completa de suscripciones activas</li>
+                        <li>Capacidad de pausar, cancelar o reactivar suscripciones</li>
+                        <li>Cambiar plan de un usuario manualmente</li>
+                        <li>Ver historial de pagos de cada usuario</li>
+                        <li>Extender período de prueba o dar acceso gratuito</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>💰 Gestión de Planes</h3>
+                    <ul class="feature-list">
+                        <li>Editar precios de planes existentes</li>
+                        <li>Activar/desactivar planes</li>
+                        <li>Modificar límites y características</li>
+                        <li>Crear nuevos planes de suscripción</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Características del Sistema -->
+            <div class="section">
+                <h2 class="section-title">✨ Características Principales</h2>
+
+                <div class="plan-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                    <div class="card">
+                        <h3>🔄 Renovación Automática</h3>
+                        <p>Las suscripciones de Stripe/PayPal se renuevan automáticamente. Sistema detecta fallas de pago y notifica al usuario.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>📧 Notificaciones Email</h3>
+                        <p>Email automático cuando: pago exitoso, pago fallido, suscripción a punto de vencer, comprobante aprobado/rechazado.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>🔔 Notificaciones In-App</h3>
+                        <p>Sistema de notificaciones dentro de la aplicación para todos los eventos relacionados con pagos.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>💸 Reembolsos</h3>
+                        <p>Soporte completo para procesar reembolsos desde el panel admin (Stripe/PayPal + registro en BD).</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>📊 Analytics Detallados</h3>
+                        <p>Métricas completas: MRR, churn rate, LTV, tasa de conversión, métodos de pago preferidos.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>🔐 Seguridad PCI-DSS</h3>
+                        <p>No almacenamos datos de tarjetas. Stripe/PayPal manejan toda la información sensible cumpliendo PCI-DSS.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>🌐 Multi-Moneda</h3>
+                        <p>Soporte para USD como moneda principal, preparado para agregar más monedas (EUR, MXN, COP, etc.).</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>📱 Responsive</h3>
+                        <p>Todo el flujo de pago funciona perfectamente en mobile, tablet y desktop.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información Bancaria -->
+            <div class="section">
+                <h2 class="section-title">🏦 Datos Bancarios para Pagos Manuales</h2>
+
+                <div class="alert alert-info">
+                    <strong>ℹ️ Configuración requerida:</strong> Los administradores deben configurar las cuentas bancarias en el panel de administración.
+                </div>
+
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Banco</th>
+                            <th>Tipo de Cuenta</th>
+                            <th>Número de Cuenta</th>
+                            <th>Titular</th>
+                            <th>Cédula/RUC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Banco Pichincha</td>
+                            <td>Corriente</td>
+                            <td>####-####-####</td>
+                            <td>Legal RAG S.A.</td>
+                            <td>################</td>
+                        </tr>
+                        <tr>
+                            <td>Banco Guayaquil</td>
+                            <td>Ahorros</td>
+                            <td>####-####-####</td>
+                            <td>Legal RAG S.A.</td>
+                            <td>################</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="color: #666; margin-top: 20px;">
+                    <strong>Nota:</strong> Los datos bancarios reales deben ser configurados por el administrador en el sistema antes de habilitar pagos manuales.
+                </p>
+            </div>
+
+            <!-- Próximos Pasos -->
+            <div class="section">
+                <h2 class="section-title">🚀 Próximos Pasos de Implementación</h2>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Configurar cuentas de Stripe y PayPal</h4>
+                            <p>Crear cuentas empresariales, obtener API keys, configurar webhooks.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Implementar rutas de backend para pagos</h4>
+                            <p>Crear endpoints para crear suscripciones, procesar webhooks, gestionar comprobantes.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Desarrollar UI de selección de planes</h4>
+                            <p>Página de pricing con comparación de planes y botones de suscripción.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Implementar flujo de checkout</h4>
+                            <p>Integración con Stripe Checkout y PayPal Smart Buttons.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Crear interfaz de upload de comprobantes</h4>
+                            <p>Formulario para que usuarios suban comprobantes de pago manual con validación.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <h4>Desarrollar panel admin de pagos</h4>
+                            <p>Dashboard, gestión de comprobantes, suscripciones, analytics.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">7</div>
+                        <div class="step-content">
+                            <h4>Implementar sistema de notificaciones</h4>
+                            <p>Emails automáticos y notificaciones in-app para todos los eventos de pago.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">8</div>
+                        <div class="step-content">
+                            <h4>Testing exhaustivo</h4>
+                            <p>Probar todos los flujos: pagos exitosos, fallidos, reembolsos, aprobaciones.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">9</div>
+                        <div class="step-content">
+                            <h4>Documentación</h4>
+                            <p>Documentar API, flujos de usuario, guía administrativa.</p>
+                        </div>
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">10</div>
+                        <div class="step-content">
+                            <h4>Launch! 🎉</h4>
+                            <p>Desplegar a producción con monitoreo de transacciones.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Endpoints API Requeridos -->
+            <div class="section">
+                <h2 class="section-title">🔌 Endpoints API a Implementar</h2>
+
+                <div class="card">
+                    <h3>Gestión de Planes</h3>
+                    <div class="code-block">
+GET    /api/v1/plans                    # Listar planes activos
+GET    /api/v1/plans/:id                # Obtener plan específico
+POST   /api/v1/admin/plans              # Crear nuevo plan (admin)
+PATCH  /api/v1/admin/plans/:id          # Actualizar plan (admin)
+DELETE /api/v1/admin/plans/:id          # Desactivar plan (admin)
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Gestión de Suscripciones</h3>
+                    <div class="code-block">
+GET    /api/v1/subscription              # Ver mi suscripción actual
+POST   /api/v1/subscription              # Crear nueva suscripción
+PATCH  /api/v1/subscription              # Cambiar de plan
+DELETE /api/v1/subscription              # Cancelar suscripción
+GET    /api/v1/admin/subscriptions       # Listar todas las suscripciones (admin)
+PATCH  /api/v1/admin/subscriptions/:id   # Modificar suscripción (admin)
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Procesamiento de Pagos</h3>
+                    <div class="code-block">
+POST   /api/v1/payments/stripe/checkout       # Crear sesión de Stripe
+POST   /api/v1/payments/stripe/webhook        # Webhook de Stripe
+POST   /api/v1/payments/paypal/create         # Crear orden PayPal
+POST   /api/v1/payments/paypal/webhook        # Webhook de PayPal
+POST   /api/v1/payments/manual                # Registrar pago manual
+GET    /api/v1/payments                       # Ver mis pagos
+GET    /api/v1/admin/payments                 # Ver todos los pagos (admin)
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Comprobantes de Pago</h3>
+                    <div class="code-block">
+POST   /api/v1/payment-proofs                       # Subir comprobante
+GET    /api/v1/payment-proofs/:id                   # Ver mi comprobante
+GET    /api/v1/admin/payment-proofs                 # Listar comprobantes pendientes
+GET    /api/v1/admin/payment-proofs/:id             # Ver comprobante específico
+PATCH  /api/v1/admin/payment-proofs/:id/approve     # Aprobar comprobante
+PATCH  /api/v1/admin/payment-proofs/:id/reject      # Rechazar comprobante
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Analytics y Reportes</h3>
+                    <div class="code-block">
+GET    /api/v1/admin/payments/analytics      # Analytics de pagos
+GET    /api/v1/admin/payments/mrr            # Monthly Recurring Revenue
+GET    /api/v1/admin/payments/churn          # Tasa de cancelación
+GET    /api/v1/admin/payments/export         # Exportar datos para contabilidad
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p><strong>Legal RAG - Sistema de Pagos Híbrido</strong></p>
+            <p>Documento generado: 8 de Enero, 2025</p>
+            <p style="margin-top: 10px; color: #999;">
+                Este sistema combina la automatización moderna con la flexibilidad local para maximizar las conversiones
+            </p>
+        </div>
+    </div>
+</body>
+</html>
