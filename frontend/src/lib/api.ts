@@ -125,7 +125,7 @@ export const documentsAPI = {
   },
   listByCase: async (caseId: string) => {
     const response = await api.get(`/documents/case/${caseId}`);
-    return response.data;
+    return response.data.documents || [];
   },
   get: async (id: string) => {
     const response = await api.get(`/documents/${id}`);
