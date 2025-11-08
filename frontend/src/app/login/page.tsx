@@ -1,5 +1,6 @@
 'use client';
 
+// Force rebuild with new chunk hashes - v2
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
