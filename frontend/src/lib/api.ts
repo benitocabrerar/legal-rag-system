@@ -145,7 +145,7 @@ export const queryAPI = {
   },
   getHistory: async (caseId: string) => {
     const response = await api.get(`/query/history/${caseId}`);
-    return response.data;
+    return response.data.queries || [];
   },
 };
 
