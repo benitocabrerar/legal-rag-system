@@ -9,6 +9,7 @@ import { authRoutes } from './routes/auth.js';
 import { caseRoutes } from './routes/cases.js';
 import { documentRoutes } from './routes/documents.js';
 import { queryRoutes } from './routes/query.js';
+import { legalDocumentRoutes } from './routes/legal-documents.js';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ await app.register(authRoutes, { prefix: '/api/v1' });
 await app.register(caseRoutes, { prefix: '/api/v1' });
 await app.register(documentRoutes, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });
+await app.register(legalDocumentRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {

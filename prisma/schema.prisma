@@ -19,6 +19,7 @@ model User {
 
   cases         Case[]
   documents     Document[]
+  legalDocuments LegalDocument[]
 
   @@map("users")
 }
@@ -67,4 +68,34 @@ model DocumentChunk {
   document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@map("document_chunks")
+}
+
+model LegalDocument {
+  id          String   @id @default(uuid())
+  title       String
+  category    String
+  content     String   @db.Text
+  metadata    Json?
+  uploadedBy  String   @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  uploader    User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks      LegalDocumentChunk[]
+
+  @@map("legal_documents")
+}
+
+model LegalDocumentChunk {
+  id               String   @id @default(uuid())
+  legalDocumentId  String   @map("legal_document_id")
+  content          String   @db.Text
+  chunkIndex       Int      @map("chunk_index")
+  embedding        Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  legalDocument    LegalDocument @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([legalDocumentId])
+  @@map("legal_document_chunks")
 }
