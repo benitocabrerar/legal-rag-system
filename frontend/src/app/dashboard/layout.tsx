@@ -47,6 +47,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   Casos
                 </Link>
+                {user.role === 'admin' && (
+                  <Link
+                    href="/dashboard/admin"
+                    className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                  >
+                    Administración
+                  </Link>
+                )}
               </div>
             </div>
 

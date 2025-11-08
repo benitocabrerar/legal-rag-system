@@ -148,3 +148,33 @@ export const queryAPI = {
     return response.data;
   },
 };
+
+// Legal Documents API (Admin)
+export const legalDocumentsAPI = {
+  upload: async (data: {
+    title: string;
+    category: 'constitution' | 'law' | 'code' | 'regulation' | 'jurisprudence';
+    content: string;
+    metadata?: {
+      year?: number;
+      number?: string;
+      jurisdiction?: string;
+    };
+  }) => {
+    const response = await api.post('/legal-documents/upload', data);
+    return response.data;
+  },
+  list: async (category?: string) => {
+    const params = category ? { category } : {};
+    const response = await api.get('/legal-documents', { params });
+    return response.data.documents || [];
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/legal-documents/${id}`);
+    return response.data.document;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/legal-documents/${id}`);
+    return response.data;
+  },
+};
