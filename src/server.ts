@@ -14,6 +14,8 @@ import { adminUserRoutes } from './routes/admin/users.js';
 import { adminSpecialtyRoutes } from './routes/admin/specialties.js';
 import { adminAuditRoutes } from './routes/admin/audit.js';
 import { adminQuotaRoutes } from './routes/admin/quotas.js';
+import { adminPlanRoutes } from './routes/admin/plans.js';
+import { paymentRoutes } from './routes/payments.js';
 
 dotenv.config();
 
@@ -57,12 +59,14 @@ await app.register(caseRoutes, { prefix: '/api/v1' });
 await app.register(documentRoutes, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutes, { prefix: '/api/v1' });
+await app.register(paymentRoutes, { prefix: '/api/v1' });
 
 // Register admin routes
 await app.register(adminUserRoutes, { prefix: '/api/v1' });
 await app.register(adminSpecialtyRoutes, { prefix: '/api/v1' });
 await app.register(adminAuditRoutes, { prefix: '/api/v1' });
 await app.register(adminQuotaRoutes, { prefix: '/api/v1' });
+await app.register(adminPlanRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {
