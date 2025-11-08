@@ -8,18 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String?
-  passwordHash  String    @map("password_hash")
-  role          String    @default("user")
-  planTier      String    @default("free") @map("plan_tier")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String?
+  passwordHash    String    @map("password_hash")
+  role            String    @default("user")
+  planTier        String    @default("free") @map("plan_tier")
+  isActive        Boolean   @default(true) @map("is_active")
+  lastLogin       DateTime? @map("last_login")
+  storageUsedMB   Float     @default(0) @map("storage_used_mb")
+  totalQueries    Int       @default(0) @map("total_queries")
+  avatarUrl       String?   @map("avatar_url")
+  phoneNumber     String?   @map("phone_number")
+  address         String?
+  city            String?
+  country         String?   @default("Ecuador")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  cases         Case[]
-  documents     Document[]
-  legalDocuments LegalDocument[]
+  cases           Case[]
+  documents       Document[]
+  legalDocuments  LegalDocument[]
+  quota           UserQuota?
+  apiKeys         ApiKey[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  queryLogs       QueryLog[]
+  storageUsage    StorageUsage[]
 
   @@map("users")
 }
@@ -77,11 +92,15 @@ model LegalDocument {
   content     String   @db.Text
   metadata    Json?
   uploadedBy  String   @map("uploaded_by")
+  isActive    Boolean  @default(true) @map("is_active")
+  viewCount   Int      @default(0) @map("view_count")
+  downloadCount Int    @default(0) @map("download_count")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   uploader    User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
   chunks      LegalDocumentChunk[]
+  specialties DocumentSpecialty[]
 
   @@map("legal_documents")
 }
@@ -98,4 +117,205 @@ model LegalDocumentChunk {
 
   @@index([legalDocumentId])
   @@map("legal_document_chunks")
+}
+
+// Legal Specialties - Hierarchical structure for legal areas
+model LegalSpecialty {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  nameEnglish     String?  @map("name_english")
+  description     String?  @db.Text
+  parentId        String?  @map("parent_id")
+  level           Int      @default(1)
+  displayOrder    Int      @default(0) @map("display_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  icon            String?
+  color           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  parent          LegalSpecialty?  @relation("SpecialtyHierarchy", fields: [parentId], references: [id])
+  children        LegalSpecialty[] @relation("SpecialtyHierarchy")
+  documents       DocumentSpecialty[]
+
+  @@index([parentId])
+  @@index([code])
+  @@map("legal_specialties")
+}
+
+// Join table for LegalDocument and LegalSpecialty (many-to-many)
+model DocumentSpecialty {
+  id              String   @id @default(uuid())
+  documentId      String   @map("document_id")
+  specialtyId     String   @map("specialty_id")
+  isPrimary       Boolean  @default(false) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  document        LegalDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  specialty       LegalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, specialtyId])
+  @@index([documentId])
+  @@index([specialtyId])
+  @@map("document_specialties")
+}
+
+// Audit Log - Tracks all admin actions
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  action      String
+  entity      String
+  entityId    String?  @map("entity_id")
+  changes     Json?
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  success     Boolean  @default(true)
+  errorMessage String? @map("error_message")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Query Log - Tracks RAG queries for analytics
+model QueryLog {
+  id              String   @id @default(uuid())
+  userId          String?  @map("user_id")
+  query           String   @db.Text
+  response        String?  @db.Text
+  documentsFound  Int      @default(0) @map("documents_found")
+  responseTime    Int      @map("response_time")
+  tokensUsed      Int      @default(0) @map("tokens_used")
+  model           String?
+  success         Boolean  @default(true)
+  errorMessage    String?  @map("error_message")
+  ipAddress       String?  @map("ip_address")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("query_logs")
+}
+
+// User Quota - Storage and usage limits per user
+model UserQuota {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  storageGB         Float    @default(5.0) @map("storage_gb")
+  storageUsedGB     Float    @default(0.0) @map("storage_used_gb")
+  documentsLimit    Int      @default(100) @map("documents_limit")
+  documentsUsed     Int      @default(0) @map("documents_used")
+  monthlyQueries    Int      @default(1000) @map("monthly_queries")
+  queriesUsedMonth  Int      @default(0) @map("queries_used_month")
+  apiCallsLimit     Int      @default(10000) @map("api_calls_limit")
+  apiCallsUsed      Int      @default(0) @map("api_calls_used")
+  resetDate         DateTime @map("reset_date")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_quotas")
+}
+
+// Storage Usage - Detailed storage tracking per user
+model StorageUsage {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  category        String
+  sizeMB          Float    @map("size_mb")
+  fileCount       Int      @default(0) @map("file_count")
+  lastCalculated  DateTime @default(now()) @map("last_calculated")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@map("storage_usage")
+}
+
+// System Metrics - Platform-wide statistics
+model SystemMetric {
+  id              String   @id @default(uuid())
+  metricName      String   @map("metric_name")
+  metricValue     Float    @map("metric_value")
+  metricUnit      String?  @map("metric_unit")
+  category        String
+  timestamp       DateTime @default(now())
+  metadata        Json?
+
+  @@index([metricName])
+  @@index([category])
+  @@index([timestamp])
+  @@map("system_metrics")
+}
+
+// Database Stats - PostgreSQL database statistics
+model DatabaseStats {
+  id              String   @id @default(uuid())
+  tableName       String   @map("table_name")
+  rowCount        Int      @map("row_count")
+  sizeMB          Float    @map("size_mb")
+  indexSizeMB     Float    @default(0) @map("index_size_mb")
+  lastVacuum      DateTime? @map("last_vacuum")
+  lastAnalyze     DateTime? @map("last_analyze")
+  timestamp       DateTime @default(now())
+
+  @@index([tableName])
+  @@index([timestamp])
+  @@map("database_stats")
+}
+
+// API Keys - For programmatic access
+model ApiKey {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  name            String
+  keyHash         String   @unique @map("key_hash")
+  lastUsed        DateTime? @map("last_used")
+  expiresAt       DateTime? @map("expires_at")
+  isActive        Boolean  @default(true) @map("is_active")
+  permissions     Json?
+  usageCount      Int      @default(0) @map("usage_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// Notifications - System notifications for users
+model Notification {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  type            String
+  title           String
+  message         String   @db.Text
+  priority        String   @default("normal")
+  isRead          Boolean  @default(false) @map("is_read")
+  readAt          DateTime? @map("read_at")
+  actionUrl       String?  @map("action_url")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }

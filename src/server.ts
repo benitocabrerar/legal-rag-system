@@ -10,6 +10,10 @@ import { caseRoutes } from './routes/cases.js';
 import { documentRoutes } from './routes/documents.js';
 import { queryRoutes } from './routes/query.js';
 import { legalDocumentRoutes } from './routes/legal-documents.js';
+import { adminUserRoutes } from './routes/admin/users.js';
+import { adminSpecialtyRoutes } from './routes/admin/specialties.js';
+import { adminAuditRoutes } from './routes/admin/audit.js';
+import { adminQuotaRoutes } from './routes/admin/quotas.js';
 
 dotenv.config();
 
@@ -53,6 +57,12 @@ await app.register(caseRoutes, { prefix: '/api/v1' });
 await app.register(documentRoutes, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutes, { prefix: '/api/v1' });
+
+// Register admin routes
+await app.register(adminUserRoutes, { prefix: '/api/v1' });
+await app.register(adminSpecialtyRoutes, { prefix: '/api/v1' });
+await app.register(adminAuditRoutes, { prefix: '/api/v1' });
+await app.register(adminQuotaRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {

@@ -80,8 +80,8 @@ export default function AdminPage() {
       // Dynamic import of pdfjs-dist to avoid SSR issues
       const pdfjsLib = await import('pdfjs-dist');
 
-      // Configure worker
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      // Configure worker - use local file instead of CDN to avoid 404 errors
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;

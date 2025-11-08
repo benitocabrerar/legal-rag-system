@@ -45,12 +45,16 @@ export default function UsersPage() {
 
   const loadUsers = async () => {
     try {
-      // This endpoint would need to be created in the backend
-      // const response = await api.get('/admin/users');
-      // setUsers(response.data);
-
-      // Placeholder data
-      setUsers([]);
+      const response = await api.get('/admin/users', {
+        params: {
+          page: 1,
+          limit: 100,
+          role: filterRole !== 'all' ? filterRole : undefined,
+          isActive: filterStatus !== 'all' ? filterStatus === 'active' : undefined,
+          search: searchQuery || undefined,
+        },
+      });
+      setUsers(response.data.users || []);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -67,7 +71,12 @@ export default function UsersPage() {
     if (!selectedUser) return;
 
     try {
-      // await api.put(`/admin/users/${selectedUser.id}`, selectedUser);
+      await api.patch(`/admin/users/${selectedUser.id}`, {
+        name: selectedUser.name,
+        email: selectedUser.email,
+        role: selectedUser.role,
+        planTier: selectedUser.subscriptionPlan,
+      });
       alert('Usuario actualizado exitosamente');
       setShowEditModal(false);
       loadUsers();
@@ -79,7 +88,7 @@ export default function UsersPage() {
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      // await api.patch(`/admin/users/${userId}/status`, { isActive: !currentStatus });
+      await api.patch(`/admin/users/${userId}`, { isActive: !currentStatus });
       alert(`Usuario ${!currentStatus ? 'activado' : 'desactivado'} exitosamente`);
       loadUsers();
     } catch (error) {

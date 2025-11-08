@@ -55,6 +55,30 @@ export function getAdminNavItems(user: User | null) {
       description: 'Gestión de usuarios y permisos',
     },
     {
+      name: 'Quotas',
+      href: '/admin/quotas',
+      icon: '💾',
+      description: 'Gestión de límites y almacenamiento',
+    },
+    {
+      name: 'Especialidades',
+      href: '/admin/specialties',
+      icon: '⚖️',
+      description: 'Especialidades legales (penal, civil, constitucional)',
+    },
+    {
+      name: 'Auditoría',
+      href: '/admin/audit',
+      icon: '🔍',
+      description: 'Logs de auditoría y consultas IA',
+    },
+    {
+      name: 'Base de Datos',
+      href: '/admin/database',
+      icon: '🗄️',
+      description: 'Estadísticas de PostgreSQL',
+    },
+    {
       name: 'Embeddings',
       href: '/admin/embeddings',
       icon: '🧠',

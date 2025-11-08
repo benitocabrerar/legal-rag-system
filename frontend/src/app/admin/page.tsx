@@ -4,10 +4,54 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getAdminNavItems } from '@/lib/admin-middleware';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
+
+interface DashboardStats {
+  users: {
+    totalUsers: number;
+    activeUsers: number;
+    byRole: { role: string; _count: number }[];
+  };
+  queries: {
+    queriesLast24h: number;
+    totalQueries: number;
+  };
+  database: {
+    rowCounts: {
+      legalDocuments: number;
+    };
+  };
+}
 
 export default function AdminPage() {
   const { user } = useAuth();
   const navItems = getAdminNavItems(user);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const [userStats, queryStats, dbStats] = await Promise.all([
+        api.get('/admin/users/stats'),
+        api.get('/admin/queries/stats'),
+        api.get('/admin/database/stats'),
+      ]);
+
+      setStats({
+        users: userStats.data,
+        queries: queryStats.data,
+        database: dbStats.data,
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -22,7 +66,9 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Documentos Legales</p>
-              <p className="text-3xl font-bold text-indigo-600">0</p>
+              <p className="text-3xl font-bold text-indigo-600">
+                {loading ? '...' : stats?.database.rowCounts.legalDocuments || 0}
+              </p>
             </div>
             <div className="text-4xl">📚</div>
           </div>
@@ -32,7 +78,9 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Usuarios Activos</p>
-              <p className="text-3xl font-bold text-purple-600">0</p>
+              <p className="text-3xl font-bold text-purple-600">
+                {loading ? '...' : stats?.users.activeUsers || 0}
+              </p>
             </div>
             <div className="text-4xl">👥</div>
           </div>
@@ -42,7 +90,9 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Consultas IA Hoy</p>
-              <p className="text-3xl font-bold text-pink-600">0</p>
+              <p className="text-3xl font-bold text-pink-600">
+                {loading ? '...' : stats?.queries.queriesLast24h || 0}
+              </p>
             </div>
             <div className="text-4xl">🤖</div>
           </div>
@@ -51,8 +101,10 @@ export default function AdminPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Embeddings</p>
-              <p className="text-3xl font-bold text-green-600">0</p>
+              <p className="text-sm text-gray-600 mb-1">Total Consultas</p>
+              <p className="text-3xl font-bold text-green-600">
+                {loading ? '...' : stats?.queries.totalQueries || 0}
+              </p>
             </div>
             <div className="text-4xl">🧠</div>
           </div>
