@@ -356,9 +356,9 @@ export async function adminAuditRoutes(fastify: FastifyInstance) {
       const tableStats = await prisma.$queryRaw<any[]>`
         SELECT
           schemaname,
-          tablename,
-          pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
-          pg_total_relation_size(schemaname||'.'||tablename) AS size_bytes,
+          relname AS tablename,
+          pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS size,
+          pg_total_relation_size(schemaname||'.'||relname) AS size_bytes,
           n_tup_ins AS inserts,
           n_tup_upd AS updates,
           n_tup_del AS deletes,
@@ -367,7 +367,7 @@ export async function adminAuditRoutes(fastify: FastifyInstance) {
           last_analyze
         FROM pg_stat_user_tables
         WHERE schemaname = 'public'
-        ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+        ORDER BY pg_total_relation_size(schemaname||'.'||relname) DESC
       `;
 
       // Get row counts for each table
