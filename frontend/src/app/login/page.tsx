@@ -23,21 +23,30 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      const errorData = err.response?.data;
       let errorMessage = 'Error al iniciar sesión';
 
-      if (errorData?.error) {
-        if (Array.isArray(errorData.error)) {
-          // Zod validation errors
-          errorMessage = errorData.error.map((e: any) => e.message).join(', ');
-        } else if (typeof errorData.error === 'string') {
-          errorMessage = errorData.error;
+      try {
+        const errorData = err.response?.data;
+
+        if (errorData?.error) {
+          if (Array.isArray(errorData.error)) {
+            // Zod validation errors
+            errorMessage = errorData.error.map((e: any) => e.message).join(', ');
+          } else if (typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          } else {
+            // Fallback for unexpected error format
+            errorMessage = String(errorData.error);
+          }
+        } else if (errorData?.message) {
+          errorMessage = String(errorData.message);
         }
-      } else if (errorData?.message) {
-        errorMessage = errorData.message;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+        errorMessage = 'Error al iniciar sesión';
       }
 
-      setError(errorMessage);
+      setError(String(errorMessage));
     } finally {
       setLoading(false);
     }

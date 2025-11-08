@@ -35,21 +35,30 @@ export default function RegisterPage() {
       await register(email, password, name);
       router.push('/dashboard');
     } catch (err: any) {
-      const errorData = err.response?.data;
       let errorMessage = 'Error al registrarse';
 
-      if (errorData?.error) {
-        if (Array.isArray(errorData.error)) {
-          // Zod validation errors
-          errorMessage = errorData.error.map((e: any) => e.message).join(', ');
-        } else if (typeof errorData.error === 'string') {
-          errorMessage = errorData.error;
+      try {
+        const errorData = err.response?.data;
+
+        if (errorData?.error) {
+          if (Array.isArray(errorData.error)) {
+            // Zod validation errors
+            errorMessage = errorData.error.map((e: any) => e.message).join(', ');
+          } else if (typeof errorData.error === 'string') {
+            errorMessage = errorData.error;
+          } else {
+            // Fallback for unexpected error format
+            errorMessage = String(errorData.error);
+          }
+        } else if (errorData?.message) {
+          errorMessage = String(errorData.message);
         }
-      } else if (errorData?.message) {
-        errorMessage = errorData.message;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+        errorMessage = 'Error al registrarse';
       }
 
-      setError(errorMessage);
+      setError(String(errorMessage));
     } finally {
       setLoading(false);
     }
