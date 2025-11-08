@@ -78,7 +78,7 @@ export const authAPI = {
 export const casesAPI = {
   list: async () => {
     const response = await api.get('/cases');
-    return response.data;
+    return response.data.cases || [];
   },
   get: async (id: string) => {
     const response = await api.get(`/cases/${id}`);
