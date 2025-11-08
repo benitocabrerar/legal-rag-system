@@ -1,7 +1,33 @@
-// Version: 2.0.0 - Force rebuild
+// Version: 3.0.0 - Complete rebuild with defensive error handling
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com/api/v1';
+
+// Helper function to safely handle API errors
+export const parseApiError = (error: any): string => {
+  try {
+    const errorData = error?.response?.data;
+
+    if (!errorData) {
+      return 'Error de conexión con el servidor';
+    }
+
+    if (errorData.error) {
+      if (Array.isArray(errorData.error)) {
+        return errorData.error.map((e: any) => e.message || String(e)).join(', ');
+      }
+      return String(errorData.error);
+    }
+
+    if (errorData.message) {
+      return String(errorData.message);
+    }
+
+    return 'Error al procesar la solicitud';
+  } catch {
+    return 'Error al procesar la solicitud';
+  }
+};
 
 export const api = axios.create({
   baseURL: API_URL,

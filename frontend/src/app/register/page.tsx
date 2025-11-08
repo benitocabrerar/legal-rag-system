@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { parseApiError } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,30 +36,8 @@ export default function RegisterPage() {
       await register(email, password, name);
       router.push('/dashboard');
     } catch (err: any) {
-      let errorMessage = 'Error al registrarse';
-
-      try {
-        const errorData = err.response?.data;
-
-        if (errorData?.error) {
-          if (Array.isArray(errorData.error)) {
-            // Zod validation errors
-            errorMessage = errorData.error.map((e: any) => e.message).join(', ');
-          } else if (typeof errorData.error === 'string') {
-            errorMessage = errorData.error;
-          } else {
-            // Fallback for unexpected error format
-            errorMessage = String(errorData.error);
-          }
-        } else if (errorData?.message) {
-          errorMessage = String(errorData.message);
-        }
-      } catch (parseError) {
-        console.error('Error parsing error response:', parseError);
-        errorMessage = 'Error al registrarse';
-      }
-
-      setError(String(errorMessage));
+      const errorMessage = parseApiError(err);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

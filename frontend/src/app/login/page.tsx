@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { parseApiError } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,11 +24,8 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      console.log('Login error:', err);
-      console.log('Error response:', err.response);
-      console.log('Error data:', err.response?.data);
-
-      setError('Error al iniciar sesión. Por favor verifica tus credenciales.');
+      const errorMessage = parseApiError(err);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
