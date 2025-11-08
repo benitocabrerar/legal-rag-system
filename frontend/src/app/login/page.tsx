@@ -22,7 +22,21 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+      const errorData = err.response?.data;
+      let errorMessage = 'Error al iniciar sesión';
+
+      if (errorData?.error) {
+        if (Array.isArray(errorData.error)) {
+          // Zod validation errors
+          errorMessage = errorData.error.map((e: any) => e.message).join(', ');
+        } else if (typeof errorData.error === 'string') {
+          errorMessage = errorData.error;
+        }
+      } else if (errorData?.message) {
+        errorMessage = errorData.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
