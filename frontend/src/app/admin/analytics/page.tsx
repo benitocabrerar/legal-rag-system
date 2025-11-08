@@ -184,12 +184,12 @@ export default function AnalyticsPage() {
             <div className="text-right">
               <p className="text-green-100 text-sm mb-1">Costos del Mes</p>
               <p className="text-4xl font-bold">
-                ${data.costs.totalCostsThisMonth.toFixed(2)}
+                ${(data.costs.totalCostsThisMonth ?? 0).toFixed(2)}
               </p>
             </div>
           </div>
           <p className="text-green-100 text-sm">
-            ${data.costs.averageCostPerQuery.toFixed(4)} por consulta
+            ${(data.costs.averageCostPerQuery ?? 0).toFixed(4)} por consulta
           </p>
         </div>
 
@@ -331,7 +331,7 @@ export default function AnalyticsPage() {
                     }}
                   >
                     <span className="text-white text-xs font-semibold">
-                      ${item.amount.toFixed(2)}
+                      ${(item.amount ?? 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
