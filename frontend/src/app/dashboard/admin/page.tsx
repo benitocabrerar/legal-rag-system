@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { legalDocumentsAPI, parseApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
-import * as pdfjsLib from 'pdfjs-dist';
+
+// Force dynamic rendering to avoid build-time errors with pdfjs
+export const dynamic = 'force-dynamic';
 
 interface LegalDocument {
   id: string;
@@ -50,11 +52,6 @@ export default function AdminPage() {
     }
   }, [user, selectedCategory]);
 
-  useEffect(() => {
-    // Configure PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  }, []);
-
   const loadDocuments = async () => {
     try {
       setLoading(true);
@@ -80,6 +77,12 @@ export default function AdminPage() {
     setExtracting(true);
 
     try {
+      // Dynamic import of pdfjs-dist to avoid SSR issues
+      const pdfjsLib = await import('pdfjs-dist');
+
+      // Configure worker
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let fullText = '';
