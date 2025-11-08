@@ -132,10 +132,10 @@ export default function QuotasPage() {
               <span className="text-2xl">💾</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">
-              {stats.storage.totalUsed.toFixed(2)} GB
+              {(stats.storage.totalUsed ?? 0).toFixed(2)} GB
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              de {stats.storage.totalAllocated.toFixed(2)} GB ({stats.storage.usagePercent.toFixed(1)}%)
+              de {(stats.storage.totalAllocated ?? 0).toFixed(2)} GB ({(stats.storage.usagePercent ?? 0).toFixed(1)}%)
             </p>
           </div>
 
@@ -231,9 +231,9 @@ export default function QuotasPage() {
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className={`font-medium ${getUsageColor(quota.storageUsagePercent || 0)}`}>
-                            {quota.storageUsedGB.toFixed(2)} / {quota.storageGB} GB
+                            {(quota.storageUsedGB ?? 0).toFixed(2)} / {quota.storageGB} GB
                           </span>
-                          <span className="text-gray-500">{quota.storageUsagePercent?.toFixed(1)}%</span>
+                          <span className="text-gray-500">{(quota.storageUsagePercent ?? 0).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
@@ -249,7 +249,7 @@ export default function QuotasPage() {
                           <span className={`font-medium ${getUsageColor(quota.documentsUsagePercent || 0)}`}>
                             {quota.documentsUsed} / {quota.documentsLimit}
                           </span>
-                          <span className="text-gray-500">{quota.documentsUsagePercent?.toFixed(1)}%</span>
+                          <span className="text-gray-500">{(quota.documentsUsagePercent ?? 0).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
@@ -265,7 +265,7 @@ export default function QuotasPage() {
                           <span className={`font-medium ${getUsageColor(quota.queriesUsagePercent || 0)}`}>
                             {quota.queriesUsedMonth} / {quota.monthlyQueries}
                           </span>
-                          <span className="text-gray-500">{quota.queriesUsagePercent?.toFixed(1)}%</span>
+                          <span className="text-gray-500">{(quota.queriesUsagePercent ?? 0).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
@@ -281,7 +281,7 @@ export default function QuotasPage() {
                           <span className={`font-medium ${getUsageColor(quota.apiCallsUsagePercent || 0)}`}>
                             {quota.apiCallsUsed} / {quota.apiCallsLimit}
                           </span>
-                          <span className="text-gray-500">{quota.apiCallsUsagePercent?.toFixed(1)}%</span>
+                          <span className="text-gray-500">{(quota.apiCallsUsagePercent ?? 0).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
