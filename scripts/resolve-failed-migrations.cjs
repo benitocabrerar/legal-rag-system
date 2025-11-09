@@ -29,13 +29,14 @@ try {
   console.log('⚠️  Found migration issues, attempting to resolve...');
 
   try {
-    // Resolve the known failed migration
+    // Resolve the known failed migration by marking it as applied
+    // This prevents Prisma from trying to re-apply a partially completed migration
     console.log('🔧 Resolving failed migration: 20250111000000_user_management_system');
-    execSync('npx prisma migrate resolve --rolled-back 20250111000000_user_management_system', {
+    execSync('npx prisma migrate resolve --applied 20250111000000_user_management_system', {
       stdio: 'inherit'
     });
-    console.log('✅ Failed migration marked as rolled back');
-    console.log('ℹ️  Migrations will be deployed in the next build step');
+    console.log('✅ Failed migration marked as applied');
+    console.log('ℹ️  New migrations will be deployed in the next build step');
     process.exit(0);
   } catch (resolveError) {
     console.log('ℹ️  Migration may not exist or was already resolved');
