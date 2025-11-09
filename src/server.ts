@@ -55,6 +55,30 @@ app.decorate('authenticate', async function(request: any, reply: any) {
   }
 });
 
+// Root route - API information
+app.get('/', async () => {
+  return {
+    name: 'Legal RAG System API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api/v1',
+      documentation: '/api/v1/docs (coming soon)'
+    },
+    features: [
+      'Authentication & OAuth',
+      'Case Management',
+      'Document Processing',
+      'AI Query System',
+      'Legal Document Library',
+      'User Management & Subscriptions',
+      'Billing & Payments',
+      'Admin Panel'
+    ]
+  };
+});
+
 // Health check
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() };
