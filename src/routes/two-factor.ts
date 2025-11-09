@@ -133,7 +133,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
         },
       });
 
-      if (!user) {
+      if (!user || !user.passwordHash) {
         return reply.code(404).send({ error: 'User not found' });
       }
 

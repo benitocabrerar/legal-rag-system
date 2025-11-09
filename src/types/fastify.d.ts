@@ -4,11 +4,14 @@ declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: any) => Promise<void>;
   }
+}
 
-  interface FastifyRequest {
-    user?: {
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: {
       id: string;
       email: string;
+      role: string;
     };
   }
 }

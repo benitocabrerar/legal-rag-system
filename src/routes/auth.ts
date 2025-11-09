@@ -87,7 +87,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       });
 
-      if (!user) {
+      if (!user || !user.passwordHash) {
         return reply.code(401).send({ error: 'Invalid credentials' });
       }
 

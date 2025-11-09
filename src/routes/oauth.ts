@@ -75,7 +75,7 @@ export async function oauthRoutes(fastify: FastifyInstance) {
         throw new Error('Failed to exchange code for tokens');
       }
 
-      const tokens: GoogleTokenResponse = await tokenResponse.json();
+      const tokens = await tokenResponse.json() as GoogleTokenResponse;
 
       // Get user info from Google
       const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -88,7 +88,7 @@ export async function oauthRoutes(fastify: FastifyInstance) {
         throw new Error('Failed to get user info');
       }
 
-      const googleUser: GoogleUserInfo = await userInfoResponse.json();
+      const googleUser = await userInfoResponse.json() as GoogleUserInfo;
 
       // Find or create user
       let user = await prisma.user.findUnique({
