@@ -84,7 +84,7 @@ export const casesAPI = {
   },
   get: async (id: string) => {
     const response = await api.get(`/cases/${id}`);
-    return response.data;
+    return response.data.case;
   },
   create: async (data: {
     title: string;

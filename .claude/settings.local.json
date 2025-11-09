@@ -50,7 +50,8 @@
       "Bash(dir:*)",
       "Bash(if not exist \"prisma\\migrations\\20250108_add_admin_panel\" mkdir \"prisma\\migrations\\20250108_add_admin_panel\")",
       "Bash(npm run build:*)",
-      "Bash(if not exist \"prisma\\migrations\\20250108_payment_system\" mkdir \"prisma\\migrations\\20250108_payment_system\")"
+      "Bash(if not exist \"prisma\\migrations\\20250108_payment_system\" mkdir \"prisma\\migrations\\20250108_payment_system\")",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
