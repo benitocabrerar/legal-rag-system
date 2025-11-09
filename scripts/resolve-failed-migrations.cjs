@@ -28,24 +28,36 @@ try {
 } catch (error) {
   console.log('⚠️  Found migration issues, attempting to resolve...');
 
-  try {
-    // Mark migrations as applied since they were partially completed
-    console.log('🔧 Resolving migration: 20250111000000_user_management_system');
-    execSync('npx prisma migrate resolve --applied 20250111000000_user_management_system', {
-      stdio: 'inherit'
-    });
+  const migrationsToResolve = [
+    '20250111000000_user_management_system',
+    '20250111000001_user_management_system'
+  ];
 
-    console.log('🔧 Resolving migration: 20250111000001_user_management_system');
-    execSync('npx prisma migrate resolve --applied 20250111000001_user_management_system', {
-      stdio: 'inherit'
-    });
+  let resolvedCount = 0;
+  let alreadyAppliedCount = 0;
 
-    console.log('✅ Failed migrations marked as applied');
-    console.log('ℹ️  New migrations will be deployed in the next build step');
-    process.exit(0);
-  } catch (resolveError) {
-    console.log('ℹ️  Migration resolution may have already been completed');
-    console.log('ℹ️  Continuing with build...');
-    process.exit(0);
+  for (const migration of migrationsToResolve) {
+    try {
+      console.log(`🔧 Resolving migration: ${migration}`);
+      execSync(`npx prisma migrate resolve --applied ${migration}`, {
+        stdio: 'pipe'
+      });
+      console.log(`✅ Marked ${migration} as applied`);
+      resolvedCount++;
+    } catch (resolveError) {
+      const errorOutput = resolveError.stderr?.toString() || resolveError.stdout?.toString() || '';
+
+      // P3008 means already applied - this is OK
+      if (errorOutput.includes('P3008') || errorOutput.includes('already recorded as applied')) {
+        console.log(`ℹ️  ${migration} already marked as applied`);
+        alreadyAppliedCount++;
+      } else {
+        console.log(`⚠️  Could not resolve ${migration}: ${errorOutput.substring(0, 200)}`);
+      }
+    }
   }
+
+  console.log(`\n✅ Resolution complete: ${resolvedCount} resolved, ${alreadyAppliedCount} already applied`);
+  console.log('ℹ️  Continuing with migration deployment...');
+  process.exit(0);
 }
