@@ -1,7 +1,9 @@
 // Version: 3.0.0 - Complete rebuild with defensive error handling
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
+  : 'https://legal-rag-api-qnew.onrender.com/api/v1';
 
 // Helper function to safely handle API errors
 export const parseApiError = (error: any): string => {
