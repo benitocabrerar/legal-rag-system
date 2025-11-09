@@ -1,0 +1,3 @@
+-- This migration was partially applied and then failed
+-- It has been marked as applied via prisma migrate resolve
+-- The actual schema changes are in migration 20250111000002_resolve_and_apply_user_management
