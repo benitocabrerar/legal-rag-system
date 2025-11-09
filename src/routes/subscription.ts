@@ -14,7 +14,7 @@ interface CancelRequestBody {
 
 export async function subscriptionRoutes(app: FastifyInstance) {
   // GET /api/v1/user/subscription - Get current user subscription
-  app.get('/', {
+  app.get('/user/subscription', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -53,7 +53,7 @@ export async function subscriptionRoutes(app: FastifyInstance) {
   });
 
   // GET /api/v1/user/subscription/plans - Get available subscription plans
-  app.get('/plans', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/user/subscription/plans', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const plans = await prisma.subscriptionPlan.findMany({
         where: { isActive: true },
@@ -69,7 +69,7 @@ export async function subscriptionRoutes(app: FastifyInstance) {
   });
 
   // POST /api/v1/user/subscription/upgrade - Upgrade/downgrade subscription
-  app.post<{ Body: UpgradeRequestBody }>('/upgrade', {
+  app.post<{ Body: UpgradeRequestBody }>('/user/subscription/upgrade', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -175,7 +175,7 @@ export async function subscriptionRoutes(app: FastifyInstance) {
   });
 
   // POST /api/v1/user/subscription/cancel - Cancel subscription
-  app.post<{ Body: CancelRequestBody }>('/cancel', {
+  app.post<{ Body: CancelRequestBody }>('/user/subscription/cancel', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {

@@ -10,7 +10,7 @@ interface TrackUsageBody {
 
 export async function usageRoutes(app: FastifyInstance) {
   // GET /api/v1/user/usage - Get current usage statistics
-  app.get('/', {
+  app.get('/user/usage', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -67,7 +67,7 @@ export async function usageRoutes(app: FastifyInstance) {
   });
 
   // GET /api/v1/user/usage/history - Get usage history
-  app.get('/history', {
+  app.get('/user/usage/history', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -130,7 +130,7 @@ export async function usageRoutes(app: FastifyInstance) {
   });
 
   // POST /api/v1/user/usage/track - Track usage (internal endpoint)
-  app.post<{ Body: TrackUsageBody }>('/track', {
+  app.post<{ Body: TrackUsageBody }>('/user/usage/track', {
     onRequest: [app.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
