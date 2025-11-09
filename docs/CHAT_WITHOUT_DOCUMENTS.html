@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Sin Documentos - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .problem-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .solution-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .code-block .keyword { color: #c678dd; }
+        .code-block .function { color: #61afef; }
+        .code-block .string { color: #98c379; }
+        .code-block .number { color: #d19a66; }
+        .code-block .comment { color: #5c6370; font-style: italic; }
+        .code-block .operator { color: #56b6c2; }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .before, .after {
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .before {
+            background: #fee;
+            border: 2px solid #e74c3c;
+        }
+
+        .after {
+            background: #efe;
+            border: 2px solid #2ecc71;
+        }
+
+        .before h4, .after h4 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flowchart {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .flow-step {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: '↓';
+            display: block;
+            text-align: center;
+            font-size: 24px;
+            color: #3498db;
+            margin: 10px 0 -10px 0;
+        }
+
+        .flow-step:last-child::after {
+            content: '';
+        }
+
+        .flow-step-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .flow-step-desc {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .dual-mode {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .mode-card {
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .mode-rag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #5a67d8;
+        }
+
+        .mode-general {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-color: #e53e3e;
+        }
+
+        .mode-card h4 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .mode-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .mode-card li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .mode-card li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .screenshot {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+            margin: 20px 0;
+        }
+
+        .screenshot img {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+
+        .commit-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+
+        .commit-info .hash {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .commit-info .message {
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .commit-info .files {
+            color: #27ae60;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔓 Habilitación de Chat Sin Documentos - Legal RAG System</h1>
+
+        <div class="info-box">
+            <strong>📋 Documento Técnico de Implementación</strong><br>
+            Este documento explica los cambios implementados para permitir que los usuarios utilicen el asistente de chat IA sin necesidad de subir documentos previamente, implementando un sistema dual inteligente.
+        </div>
+
+        <section id="problem" class="section">
+            <h2>❌ Problema Identificado</h2>
+
+            <div class="problem-box">
+                <h3>🚫 Restricción Innecesaria</h3>
+                <p>El sistema requería que los usuarios subieran documentos antes de poder usar el chat, lo que creaba una barrera de entrada y limitaba la utilidad del asistente legal IA.</p>
+            </div>
+
+            <h3>Síntomas del Problema:</h3>
+            <ul>
+                <li>✗ El campo de texto del chat aparecía <strong>deshabilitado</strong> sin documentos</li>
+                <li>✗ Mensaje: <em>"Sube documentos para empezar a consultar..."</em></li>
+                <li>✗ Botón "Enviar" deshabilitado cuando <code>documents.length === 0</code></li>
+                <li>✗ Los usuarios no podían hacer preguntas legales generales</li>
+                <li>✗ Mala experiencia de usuario al entrar a un caso nuevo</li>
+            </ul>
+
+            <h3>Código Frontend Original (Problemático):</h3>
+            <div class="code-block">
+<span class="comment">// Textarea deshabilitado sin documentos</span>
+&lt;textarea
+  <span class="keyword">disabled</span>={querying <span class="operator">||</span> documents.length <span class="operator">===</span> <span class="number">0</span>}
+  <span class="keyword">placeholder</span>={
+    documents.length <span class="operator">===</span> <span class="number">0</span>
+      ? <span class="string">'Sube documentos para empezar a consultar...'</span>
+      : <span class="string">'Escribe tu consulta legal...'</span>
+  }
+/&gt;
+
+<span class="comment">// Botón deshabilitado sin documentos</span>
+&lt;button
+  <span class="keyword">disabled</span>={querying <span class="operator">||</span> !query.trim() <span class="operator">||</span> documents.length <span class="operator">===</span> <span class="number">0</span>}
+&gt;
+  Enviar
+&lt;/button&gt;
+            </div>
+
+            <h3>Impacto en la Experiencia del Usuario:</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Escenario</th>
+                        <th>Comportamiento Anterior</th>
+                        <th>Problema</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Usuario crea nuevo caso</td>
+                        <td>Chat bloqueado, debe subir documentos</td>
+                        <td>No puede hacer preguntas generales</td>
+                    </tr>
+                    <tr>
+                        <td>Pregunta legal general</td>
+                        <td>Imposible sin documentos</td>
+                        <td>Limita utilidad del asistente IA</td>
+                    </tr>
+                    <tr>
+                        <td>Consulta rápida</td>
+                        <td>Requiere upload innecesario</td>
+                        <td>Fricción en el flujo de trabajo</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="solution" class="section">
+            <h2>✅ Solución Implementada</h2>
+
+            <div class="solution-box">
+                <h3>🎯 Sistema Dual Inteligente</h3>
+                <p>Se implementó un sistema que detecta automáticamente si hay documentos disponibles y adapta el comportamiento del asistente:</p>
+                <ul>
+                    <li><strong>CON documentos:</strong> Modo RAG (Retrieval Augmented Generation) con análisis específico</li>
+                    <li><strong>SIN documentos:</strong> Modo Asistente Legal General con información de derecho</li>
+                </ul>
+            </div>
+
+            <div class="dual-mode">
+                <div class="mode-card mode-rag">
+                    <h4>📚 Modo RAG (Con Documentos)</h4>
+                    <ul>
+                        <li>Vectorización de documentos</li>
+                        <li>Búsqueda por similitud</li>
+                        <li>Respuestas basadas en contexto</li>
+                        <li>Citación de fuentes específicas</li>
+                        <li>Análisis detallado del caso</li>
+                    </ul>
+                </div>
+                <div class="mode-card mode-general">
+                    <h4>🤖 Modo General (Sin Documentos)</h4>
+                    <ul>
+                        <li>Asistente legal general</li>
+                        <li>Respuestas de información legal</li>
+                        <li>Principios y guías legales</li>
+                        <li>Sugerencia de subir documentos</li>
+                        <li>Disclaimer de asesoría general</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Cambios en el Frontend:</h3>
+
+            <div class="comparison">
+                <div class="before">
+                    <h4>❌ ANTES</h4>
+                    <div class="code-block" style="font-size: 12px;">
+<span class="comment">// Deshabilitado</span>
+disabled={
+  querying <span class="operator">||</span>
+  documents.length <span class="operator">===</span> <span class="number">0</span>
+}
+
+<span class="comment">// Placeholder condicional</span>
+placeholder={
+  documents.length <span class="operator">===</span> <span class="number">0</span>
+    ? <span class="string">'Sube documentos...'</span>
+    : <span class="string">'Escribe tu consulta...'</span>
+}
+                    </div>
+                </div>
+
+                <div class="after">
+                    <h4>✅ DESPUÉS</h4>
+                    <div class="code-block" style="font-size: 12px;">
+<span class="comment">// Solo deshabilitar si está procesando</span>
+disabled={querying}
+
+<span class="comment">// Placeholder siempre positivo</span>
+placeholder={
+  <span class="string">'Escribe tu consulta legal...'</span>
+}
+                    </div>
+                </div>
+            </div>
+
+            <h3>Archivo: frontend/src/app/dashboard/cases/[id]/page.tsx</h3>
+
+            <h4>1. Eliminación de Restricción en Textarea:</h4>
+            <div class="code-block">
+<span class="comment">// ANTES: disabled={querying || documents.length === 0}</span>
+<span class="comment">// DESPUÉS:</span>
+
+&lt;textarea
+  value={query}
+  <span class="function">onChange</span>={(e) <span class="operator">=&gt;</span> <span class="function">setQuery</span>(e.target.value)}
+  <span class="keyword">disabled</span>={querying}  <span class="comment">// ← Solo deshabilitar durante query</span>
+  <span class="keyword">placeholder</span>=<span class="string">"Escribe tu consulta legal..."</span>
+  rows={<span class="number">3</span>}
+  className=<span class="string">"w-full px-4 py-3 border border-gray-300..."</span>
+/&gt;
+            </div>
+
+            <h4>2. Eliminación de Restricción en Botón Enviar:</h4>
+            <div class="code-block">
+<span class="comment">// ANTES: disabled={querying || !query.trim() || documents.length === 0}</span>
+<span class="comment">// DESPUÉS:</span>
+
+&lt;button
+  <span class="keyword">type</span>=<span class="string">"submit"</span>
+  <span class="keyword">disabled</span>={querying <span class="operator">||</span> !query.<span class="function">trim</span>()}  <span class="comment">// ← Sin verificación de documentos</span>
+  className=<span class="string">"px-6 py-3 bg-gradient-to-r from-indigo-600..."</span>
+&gt;
+  &lt;Send className=<span class="string">"w-5 h-5"</span> /&gt;
+  Enviar
+&lt;/button&gt;
+            </div>
+
+            <h4>3. Actualización de Mensajes de Bienvenida:</h4>
+            <div class="code-block">
+<span class="comment">// Header del chat</span>
+&lt;p className=<span class="string">"text-sm text-gray-600 mt-1"</span>&gt;
+  {documents.length <span class="operator">&gt;</span> <span class="number">0</span>
+    ? `Analizando ${documents.length} documento${documents.length <span class="operator">&gt;</span> <span class="number">1</span> ? <span class="string">'s'</span> : <span class="string">''</span>}`
+    : <span class="string">'Listo para responder tus consultas legales'</span>}  <span class="comment">// ← Mensaje positivo</span>
+&lt;/p&gt;
+
+<span class="comment">// Mensaje de bienvenida inicial</span>
+&lt;p className=<span class="string">"text-gray-600 mb-6 max-w-md mx-auto"</span>&gt;
+  Pregúntame lo que necesites. Puedo ayudarte con análisis de documentos,
+  referencias legales, redacción y estrategia legal.
+  Sube documentos para análisis específicos.  <span class="comment">// ← Sugiere, no requiere</span>
+&lt;/p&gt;
+            </div>
+        </section>
+
+        <section id="backend" class="section">
+            <h2>⚙️ Cambios en el Backend</h2>
+
+            <h3>Archivo: src/routes/query.ts</h3>
+
+            <div class="info-box">
+                <strong>🔄 Sistema Dual de Prompts</strong><br>
+                El backend ahora detecta si hay documentos disponibles y ajusta el comportamiento de GPT-4 automáticamente.
+            </div>
+
+            <h4>Implementación del Sistema Dual:</h4>
+
+            <div class="code-block">
+<span class="comment">// Detectar si hay documentos disponibles</span>
+<span class="keyword">const</span> hasDocuments = allChunks.length <span class="operator">&gt;</span> <span class="number">0</span>;
+
+<span class="comment">// System Prompt adaptativo</span>
+<span class="keyword">const</span> systemPrompt = hasDocuments
+  ? <span class="comment">// MODO RAG: Con documentos</span>
+    `You are a legal assistant helping with case analysis.
+You have access to relevant documents from the case files.
+Use the provided context to answer the user's question accurately.
+If the context doesn't contain enough information to answer the question, say so clearly.
+Always cite which documents you're referencing in your answer.`
+
+  : <span class="comment">// MODO GENERAL: Sin documentos</span>
+    `You are a legal assistant helping with general legal questions.
+Answer the user's legal questions to the best of your ability.
+Provide general legal information, principles, and guidance.
+Note: Remind the user they can upload case documents for more specific analysis.
+Always clarify that your answers are general legal information and not specific legal advice.`;
+
+<span class="comment">// User Prompt adaptativo</span>
+<span class="keyword">const</span> userPrompt = hasDocuments
+  ? `Context from case documents:\n\n${context}\n\n---\n\nQuestion: ${body.query}\n\nPlease provide a detailed answer based on the context above.`
+  : `Question: ${body.query}\n\nPlease provide a helpful answer with general legal information and guidance.`;
+            </div>
+
+            <h3>Flujo de Decisión del Backend:</h3>
+
+            <div class="flowchart">
+                <div class="flow-step">
+                    <div class="flow-step-title">1️⃣ Recibir Query del Usuario</div>
+                    <div class="flow-step-desc">POST /query con caseId y pregunta</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">2️⃣ Validar Acceso al Caso</div>
+                    <div class="flow-step-desc">Verificar que userId sea dueño del caso</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">3️⃣ Generar Embedding de la Pregunta</div>
+                    <div class="flow-step-desc">OpenAI text-embedding-ada-002</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">4️⃣ Buscar Documentos del Caso</div>
+                    <div class="flow-step-desc">SELECT * FROM document_chunks WHERE caseId = ?</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">5️⃣ Detectar Modo de Operación</div>
+                    <div class="flow-step-desc">
+                        <strong>Si allChunks.length > 0:</strong> Modo RAG<br>
+                        <strong>Si allChunks.length === 0:</strong> Modo General
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">6️⃣ Construir Prompts Apropiados</div>
+                    <div class="flow-step-desc">systemPrompt y userPrompt según el modo</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">7️⃣ Llamar a GPT-4</div>
+                    <div class="flow-step-desc">Generar respuesta con el contexto apropiado</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">8️⃣ Devolver Respuesta al Usuario</div>
+                    <div class="flow-step-desc">JSON con answer, sources (si aplica), metadata</div>
+                </div>
+            </div>
+
+            <h3>Comparación de System Prompts:</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Modo RAG (Con Docs)</th>
+                        <th>Modo General (Sin Docs)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Fuente de Información</strong></td>
+                        <td>Documentos del caso</td>
+                        <td>Conocimiento general GPT-4</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tipo de Respuestas</strong></td>
+                        <td>Específicas al caso</td>
+                        <td>Información legal general</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Citaciones</strong></td>
+                        <td>✅ Referencias a documentos</td>
+                        <td>❌ Sin fuentes específicas</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Búsqueda Vectorial</strong></td>
+                        <td>✅ Similitud coseno</td>
+                        <td>❌ No necesaria</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Contexto</strong></td>
+                        <td>Top N chunks similares</td>
+                        <td>Solo la pregunta</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Disclaimer</strong></td>
+                        <td>Análisis específico</td>
+                        <td>⚠️ Información general, no asesoría</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="benefits" class="section">
+            <h2>🎁 Beneficios de la Implementación</h2>
+
+            <div class="solution-box">
+                <h3>Mejoras en la Experiencia del Usuario:</h3>
+                <ol>
+                    <li><strong>🚀 Acceso Inmediato:</strong> Los usuarios pueden empezar a usar el chat sin barreras</li>
+                    <li><strong>💡 Mayor Utilidad:</strong> El asistente responde preguntas generales de derecho</li>
+                    <li><strong>🔄 Transición Suave:</strong> El sistema cambia automáticamente a modo RAG al subir documentos</li>
+                    <li><strong>📚 Mejor Onboarding:</strong> Nueva experiencia más acogedora para usuarios nuevos</li>
+                    <li><strong>⚡ Flujo Natural:</strong> Permite consultas rápidas sin preparación</li>
+                </ol>
+            </div>
+
+            <h3>Casos de Uso Habilitados:</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Escenario</th>
+                        <th>Antes</th>
+                        <th>Ahora</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"¿Qué es un amparo?"</td>
+                        <td><span class="badge badge-danger">Bloqueado</span></td>
+                        <td><span class="badge badge-success">Respuesta General</span></td>
+                    </tr>
+                    <tr>
+                        <td>"¿Cómo redactar una demanda?"</td>
+                        <td><span class="badge badge-danger">Requiere documentos</span></td>
+                        <td><span class="badge badge-success">Guía General</span></td>
+                    </tr>
+                    <tr>
+                        <td>"Analiza este contrato"</td>
+                        <td><span class="badge badge-warning">Debe subir primero</span></td>
+                        <td><span class="badge badge-info">Sugiere subir documento</span></td>
+                    </tr>
+                    <tr>
+                        <td>Usuario sube documento</td>
+                        <td><span class="badge badge-success">Modo RAG</span></td>
+                        <td><span class="badge badge-success">Modo RAG automático</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Ventajas Técnicas:</h3>
+            <ul>
+                <li>✅ <strong>Código más limpio:</strong> Menos condicionales en el frontend</li>
+                <li>✅ <strong>Backend inteligente:</strong> Detección automática de contexto</li>
+                <li>✅ <strong>Mejor mantenibilidad:</strong> Lógica centralizada en el backend</li>
+                <li>✅ <strong>Escalabilidad:</strong> Fácil agregar más modos (ej: modo híbrido)</li>
+                <li>✅ <strong>Experiencia consistente:</strong> Siempre hay una respuesta útil</li>
+            </ul>
+        </section>
+
+        <section id="testing" class="section">
+            <h2>🧪 Escenarios de Prueba</h2>
+
+            <h3>1. Usuario Sin Documentos</h3>
+            <div class="code-block">
+<span class="comment">// Request</span>
+POST /api/v1/query
+{
+  <span class="string">"caseId"</span>: <span class="string">"caso-sin-documentos-uuid"</span>,
+  <span class="string">"query"</span>: <span class="string">"¿Qué es la prescripción en derecho civil?"</span>
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"answer"</span>: <span class="string">"La prescripción es una figura jurídica que..."</span>,
+  <span class="string">"sources"</span>: [],  <span class="comment">// Vacío porque no hay documentos</span>
+  <span class="string">"query"</span>: <span class="string">"¿Qué es la prescripción en derecho civil?"</span>,
+  <span class="string">"caseId"</span>: <span class="string">"caso-sin-documentos-uuid"</span>
+}
+            </div>
+
+            <h3>2. Usuario Con Documentos</h3>
+            <div class="code-block">
+<span class="comment">// Request</span>
+POST /api/v1/query
+{
+  <span class="string">"caseId"</span>: <span class="string">"caso-con-documentos-uuid"</span>,
+  <span class="string">"query"</span>: <span class="string">"¿Cuál es el plazo del contrato?"</span>
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"answer"</span>: <span class="string">"Según el Contrato de Arrendamiento (Chunk 1), el plazo es de 12 meses..."</span>,
+  <span class="string">"sources"</span>: [
+    {
+      <span class="string">"documentId"</span>: <span class="string">"doc-uuid"</span>,
+      <span class="string">"documentTitle"</span>: <span class="string">"Contrato de Arrendamiento"</span>,
+      <span class="string">"chunkIndex"</span>: <span class="number">0</span>,
+      <span class="string">"similarity"</span>: <span class="number">0.89</span>,
+      <span class="string">"content"</span>: <span class="string">"El presente contrato se celebra por un plazo de 12 meses..."</span>
+    }
+  ],
+  <span class="string">"query"</span>: <span class="string">"¿Cuál es el plazo del contrato?"</span>,
+  <span class="string">"caseId"</span>: <span class="string">"caso-con-documentos-uuid"</span>
+}
+            </div>
+
+            <h3>3. Transición de Modo General a RAG</h3>
+            <div class="info-box">
+                <strong>Flujo Completo:</strong>
+                <ol>
+                    <li>Usuario entra a caso nuevo (sin documentos)</li>
+                    <li>Hace pregunta general → Recibe respuesta en <strong>Modo General</strong></li>
+                    <li>Usuario sube un documento → Sistema lo vectoriza</li>
+                    <li>Usuario hace nueva pregunta → Recibe respuesta en <strong>Modo RAG</strong></li>
+                    <li>Transición automática y transparente para el usuario</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="deployment" class="section">
+            <h2>🚀 Información de Despliegue</h2>
+
+            <div class="commit-info">
+                <div class="hash">Commit: 2f7e692</div>
+                <div class="message">
+                    feat: Allow chat queries without uploading documents first
+                    <br><br>
+                    - Remove document requirement from frontend chat interface<br>
+                    - Update placeholder text to be more general and welcoming<br>
+                    - Implement dual-mode backend query system:<br>
+                    &nbsp;&nbsp;* RAG mode with document context when documents exist<br>
+                    &nbsp;&nbsp;* General legal assistant mode when no documents uploaded<br>
+                    - Improve user experience by enabling chat immediately<br>
+                    - Backend now provides appropriate prompts for both scenarios
+                </div>
+                <div class="files">
+                    Modified files:<br>
+                    • frontend/src/app/dashboard/cases/[id]/page.tsx (21 changes)<br>
+                    • src/routes/query.ts (14 changes)
+                </div>
+            </div>
+
+            <h3>Pasos de Deployment:</h3>
+            <ol>
+                <li>✅ Cambios commiteados en Git</li>
+                <li>✅ Push a GitHub → Trigger automático en Render</li>
+                <li>✅ Build del frontend (Next.js)</li>
+                <li>✅ Build del backend (TypeScript)</li>
+                <li>✅ Deploy en Render.com (3-5 minutos)</li>
+                <li>✅ Verificación: Chat funciona sin documentos</li>
+            </ol>
+
+            <div class="solution-box">
+                <strong>🎉 Deployment Exitoso</strong><br>
+                Los cambios están en producción y disponibles para todos los usuarios.
+                El sistema ahora permite usar el chat inmediatamente al entrar a un caso.
+            </div>
+        </section>
+
+        <section id="future" class="section">
+            <h2>🔮 Mejoras Futuras Potenciales</h2>
+
+            <h3>Modo Híbrido:</h3>
+            <div class="info-box">
+                Combinar búsqueda en documentos del caso + búsqueda en biblioteca legal global para respuestas más completas.
+            </div>
+
+            <div class="code-block">
+<span class="comment">// Concepto: Modo Híbrido</span>
+<span class="keyword">if</span> (hasDocuments) {
+  <span class="comment">// Buscar en documentos del caso</span>
+  <span class="keyword">const</span> caseChunks = <span class="function">searchCaseDocuments</span>(query);
+
+  <span class="comment">// TAMBIÉN buscar en documentos legales globales</span>
+  <span class="keyword">const</span> legalChunks = <span class="function">searchLegalLibrary</span>(query);
+
+  <span class="comment">// Combinar ambos contextos</span>
+  <span class="keyword">const</span> hybridContext = <span class="function">mergeContexts</span>(caseChunks, legalChunks);
+
+  <span class="comment">// GPT-4 recibe contexto completo</span>
+  <span class="keyword">return</span> <span class="function">generateAnswer</span>(hybridContext, query);
+}
+            </div>
+
+            <h3>Otras Mejoras:</h3>
+            <ul>
+                <li>🔍 <strong>Búsqueda en Biblioteca Legal Global:</strong> Siempre buscar en constituciones, leyes, códigos</li>
+                <li>💬 <strong>Conversación Contextual:</strong> Mantener historial de conversación para follow-ups</li>
+                <li>📊 <strong>Analytics:</strong> Tracking de queries sin documentos vs con documentos</li>
+                <li>🎯 <strong>Sugerencias Inteligentes:</strong> Sugerir documentos relevantes según la pregunta</li>
+                <li>⚙️ <strong>Configuración de Modo:</strong> Permitir al usuario elegir modo manual</li>
+            </ul>
+        </section>
+
+        <div class="info-box" style="margin-top: 40px;">
+            <strong>📝 Documento Generado:</strong> 2025-01-15<br>
+            <strong>📍 Feature:</strong> Chat Sin Documentos<br>
+            <strong>🔧 Versión:</strong> 1.1.0<br>
+            <strong>👨‍💻 Commits:</strong> 2f7e692, 856a593
+        </div>
+    </div>
+</body>
+</html>
