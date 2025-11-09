@@ -90,5 +90,17 @@ export function getAdminNavItems(user: User | null) {
       icon: '📊',
       description: 'Métricas y estadísticas',
     },
+    {
+      name: 'Planes',
+      href: '/admin/plans',
+      icon: '💳',
+      description: 'Gestión de planes de suscripción',
+    },
+    {
+      name: 'Pagos',
+      href: '/admin/payments',
+      icon: '💰',
+      description: 'Revisión de comprobantes de pago',
+    },
   ];
 }
