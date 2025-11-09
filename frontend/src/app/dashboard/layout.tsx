@@ -53,6 +53,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   Planes
                 </Link>
+                <Link
+                  href="/dashboard/settings"
+                  className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                >
+                  Seguridad
+                </Link>
                 {user.role === 'admin' && (
                   <Link
                     href="/admin"

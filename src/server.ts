@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import { authRoutes } from './routes/auth.js';
+import { twoFactorRoutes } from './routes/two-factor.js';
 import { caseRoutes } from './routes/cases.js';
 import { documentRoutes } from './routes/documents.js';
 import { queryRoutes } from './routes/query.js';
@@ -55,6 +56,7 @@ app.get('/health', async () => {
 
 // Register API routes
 await app.register(authRoutes, { prefix: '/api/v1' });
+await app.register(twoFactorRoutes, { prefix: '/api/v1' });
 await app.register(caseRoutes, { prefix: '/api/v1' });
 await app.register(documentRoutes, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });

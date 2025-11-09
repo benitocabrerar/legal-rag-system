@@ -26,6 +26,12 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // Two-Factor Authentication
+  twoFactorEnabled      Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret       String?   @map("two_factor_secret")
+  twoFactorBackupCodes  String[]  @map("two_factor_backup_codes")
+  twoFactorVerifiedAt   DateTime? @map("two_factor_verified_at")
+
   cases           Case[]
   documents       Document[]
   legalDocuments  LegalDocument[]

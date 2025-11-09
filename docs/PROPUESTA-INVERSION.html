@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Legal RAG - Propuesta de Inversión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .page {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            page-break-after: always;
+        }
+
+        /* Cover Page */
+        .cover {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            text-align: center;
+            padding: 60px;
+        }
+
+        .cover h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .cover .subtitle {
+            font-size: 2em;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .cover .tagline {
+            font-size: 1.5em;
+            max-width: 800px;
+            line-height: 1.8;
+            margin-bottom: 60px;
+            opacity: 0.9;
+        }
+
+        .cover .date {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        /* Content Pages */
+        .content {
+            padding: 80px 60px;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 40px 60px;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            color: #1e3a8a;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #3b82f6;
+            padding-bottom: 15px;
+        }
+
+        .header-section h2 {
+            color: white;
+            border: none;
+        }
+
+        h3 {
+            font-size: 1.8em;
+            color: #3b82f6;
+            margin: 30px 0 20px 0;
+        }
+
+        p {
+            font-size: 1.15em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+            text-align: justify;
+        }
+
+        /* Value Proposition Boxes */
+        .value-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+
+        .value-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+
+        .value-box:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.3);
+        }
+
+        .value-box .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .value-box h4 {
+            font-size: 1.4em;
+            color: #1e3a8a;
+            margin-bottom: 15px;
+        }
+
+        .value-box p {
+            font-size: 1em;
+            color: #334155;
+            text-align: left;
+        }
+
+        /* Statistics */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+
+        .stat-number {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Financial Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        thead {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        th, td {
+            padding: 18px;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+            background: #eff6ff;
+            font-weight: bold;
+        }
+
+        /* Highlights */
+        .highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 5px solid #f59e0b;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .highlight h4 {
+            color: #92400e;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .highlight p {
+            color: #78350f;
+            font-size: 1.1em;
+        }
+
+        /* Success Boxes */
+        .success-box {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-left: 5px solid #10b981;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .success-box h4 {
+            color: #065f46;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        /* Lists */
+        ul {
+            margin: 20px 0;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        li {
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+
+        li::before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-right: 15px;
+        }
+
+        /* Revenue Model */
+        .revenue-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #10b981;
+            margin: 30px 0;
+        }
+
+        .revenue-box h4 {
+            color: #065f46;
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .revenue-box .price {
+            font-size: 4em;
+            color: #059669;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .revenue-box .price-label {
+            text-align: center;
+            color: #047857;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        /* Call to Action */
+        .cta {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+            border-radius: 20px;
+            margin: 40px 0;
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+        }
+
+        .cta h3 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .cta p {
+            font-size: 1.4em;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        /* Roles Section */
+        .roles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .role-card {
+            padding: 40px;
+            border-radius: 15px;
+            border: 3px solid;
+        }
+
+        .role-card.partner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #f59e0b;
+        }
+
+        .role-card.tech {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-color: #3b82f6;
+        }
+
+        .role-card h4 {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .role-card.partner h4 {
+            color: #92400e;
+        }
+
+        .role-card.tech h4 {
+            color: #1e40af;
+        }
+
+        .role-card ul {
+            margin: 0;
+        }
+
+        .role-card li {
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 1em;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1e293b;
+            color: white;
+            padding: 40px 60px;
+            text-align: center;
+        }
+
+        .footer p {
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+            }
+            .value-box, .stat-card {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: #e2e8f0;
+            height: 40px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 30px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        /* Competitive Advantage */
+        .advantage-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+
+        .advantage-card:hover {
+            border-color: #3b82f6;
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .advantage-card h5 {
+            color: #1e3a8a;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .advantage-card p {
+            color: #475569;
+            font-size: 1em;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- COVER PAGE -->
+    <div class="page cover">
+        <h1>💼 Sistema Legal RAG</h1>
+        <p class="subtitle">Plataforma de Asistencia Legal con Inteligencia Artificial</p>
+        <p class="tagline">
+            Revolucionando la gestión legal con tecnología GPT-4 para ofrecer respuestas
+            instantáneas basadas en documentos legales reales
+        </p>
+        <p class="date">Propuesta de Inversión | Enero 2025</p>
+        <div style="margin-top: 60px; font-size: 1.1em; opacity: 0.9;">
+            <p><strong>Confidencial</strong></p>
+            <p>Este documento contiene información confidencial y propietaria</p>
+        </div>
+    </div>
+
+    <!-- PAGE 1: RESUMEN EJECUTIVO -->
+    <div class="page">
+        <div class="header-section">
+            <h2>📊 Resumen Ejecutivo</h2>
+        </div>
+        <div class="content">
+            <h3>La Oportunidad</h3>
+            <p>
+                El sector legal está experimentando una transformación digital sin precedentes. Los despachos
+                de abogados y profesionales legales necesitan herramientas que les permitan gestionar grandes
+                volúmenes de información de manera eficiente y proporcionar respuestas rápidas a sus clientes.
+            </p>
+
+            <p>
+                <strong>Sistema Legal RAG</strong> es una plataforma SaaS (Software como Servicio) que combina
+                gestión de casos legales con inteligencia artificial de última generación (GPT-4 de OpenAI)
+                para permitir que abogados y profesionales legales:
+            </p>
+
+            <ul>
+                <li>Gestionen casos de clientes de forma organizada</li>
+                <li>Carguen y procesen documentos legales automáticamente</li>
+                <li>Realicen consultas en lenguaje natural sobre sus documentos</li>
+                <li>Obtengan respuestas precisas con referencias a las fuentes</li>
+                <li>Accedan a una biblioteca global de legislación y jurisprudencia</li>
+            </ul>
+
+            <div class="highlight">
+                <h4>🎯 Propuesta de Valor Única</h4>
+                <p>
+                    Reducimos de <strong>horas a segundos</strong> el tiempo que toma encontrar información
+                    relevante en documentos legales, permitiendo a los abogados enfocarse en el análisis
+                    estratégico en lugar de la búsqueda manual de información.
+                </p>
+            </div>
+
+            <h3>Estado del Proyecto</h3>
+
+            <div class="progress-container">
+                <div class="progress-bar" style="width: 95%;">
+                    95% Completo - Listo para Comercialización
+                </div>
+            </div>
+
+            <div class="success-box">
+                <h4>✓ Producto Funcional en Producción</h4>
+                <p style="font-size: 1.1em; line-height: 1.8;">
+                    El sistema está <strong>completamente desarrollado y desplegado</strong> en servidores
+                    de producción (Render.com), listo para comenzar a recibir clientes inmediatamente.
+                    Cuenta con todas las funcionalidades core implementadas y probadas.
+                </p>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Funcional</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">20+</span>
+                    <span class="stat-label">Endpoints API</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">5-8s</span>
+                    <span class="stat-label">Respuesta IA</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">$59</span>
+                    <span class="stat-label">Costo Mensual Base</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 2: PROBLEMA Y SOLUCIÓN -->
+    <div class="page">
+        <div class="header-section">
+            <h2>🎯 Problema y Solución</h2>
+        </div>
+        <div class="content">
+            <h3>El Problema</h3>
+
+            <div class="value-grid">
+                <div class="value-box">
+                    <div class="icon">⏰</div>
+                    <h4>Tiempo Perdido</h4>
+                    <p>
+                        Los abogados pierden entre <strong>30-40% de su tiempo</strong> buscando información
+                        en documentos legales en lugar de ejercer su labor profesional.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">📚</div>
+                    <h4>Sobrecarga de Información</h4>
+                    <p>
+                        Cada caso puede tener <strong>cientos de documentos</strong>, haciendo imposible
+                        recordar dónde está cada detalle importante.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">💰</div>
+                    <h4>Costos Operativos Altos</h4>
+                    <p>
+                        El tiempo dedicado a búsqueda manual representa un <strong>costo de oportunidad</strong>
+                        significativo que reduce la rentabilidad del despacho.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">❌</div>
+                    <h4>Errores Humanos</h4>
+                    <p>
+                        La búsqueda manual puede pasar por alto información crítica, generando
+                        <strong>riesgos legales</strong> para los clientes.
+                    </p>
+                </div>
+            </div>
+
+            <h3>Nuestra Solución</h3>
+
+            <p style="font-size: 1.2em; background: #f0f9ff; padding: 30px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                <strong>Sistema Legal RAG</strong> utiliza inteligencia artificial (GPT-4) para leer, entender
+                y analizar todos los documentos de un caso, permitiendo que los abogados hagan preguntas en
+                lenguaje natural y reciban respuestas precisas en <strong>segundos</strong>, con referencias
+                exactas a los documentos fuente.
+            </p>
+
+            <h3>¿Cómo Funciona?</h3>
+
+            <div style="background: #f8fafc; padding: 30px; border-radius: 10px; margin: 30px 0;">
+                <ol style="list-style: decimal; padding-left: 40px;">
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <strong>El abogado crea un caso</strong> en la plataforma (ejemplo: "Contrato ABC Corp")
+                    </li>
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <strong>Sube documentos</strong> relacionados (contratos, demandas, evidencias, etc.)
+                    </li>
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <strong>El sistema procesa automáticamente</strong> los documentos usando IA para extraer y comprender el contenido
+                    </li>
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <strong>El abogado hace preguntas</strong> como: "¿Cuáles son los términos de pago?" o "¿Qué dice el contrato sobre terminación anticipada?"
+                    </li>
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <strong>Obtiene respuestas instantáneas</strong> con referencias exactas a los documentos que respaldan la información
+                    </li>
+                </ol>
+            </div>
+
+            <div class="highlight">
+                <h4>💡 Ejemplo Real de Uso</h4>
+                <p style="margin-bottom: 15px;">
+                    <strong>Pregunta:</strong> "¿Cuáles son las cláusulas de penalización por incumplimiento?"
+                </p>
+                <p style="margin-bottom: 15px;">
+                    <strong>Respuesta (5 segundos):</strong> "Según el Contrato de Servicios (Sección 8.2),
+                    las penalizaciones por incumplimiento son: 1) Pago del 1.5% mensual sobre montos vencidos,
+                    2) Derecho de terminación inmediata después de 30 días de mora..."
+                </p>
+                <p>
+                    <strong>Fuentes:</strong> Contrato de Servicios - Chunk 12 (Similaridad: 89%)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 3: MERCADO OBJETIVO -->
+    <div class="page">
+        <div class="header-section">
+            <h2>🎯 Mercado Objetivo y Oportunidad</h2>
+        </div>
+        <div class="content">
+            <h3>Segmentos de Cliente</h3>
+
+            <div class="value-grid">
+                <div class="value-box">
+                    <div class="icon">👔</div>
+                    <h4>Despachos Jurídicos</h4>
+                    <p>
+                        Despachos pequeños y medianos (2-50 abogados) que manejan múltiples casos
+                        simultáneamente y necesitan eficiencia operativa.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">⚖️</div>
+                    <h4>Abogados Independientes</h4>
+                    <p>
+                        Profesionales que trabajan de forma independiente y buscan herramientas
+                        profesionales accesibles para competir con despachos grandes.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🏢</div>
+                    <h4>Departamentos Legales</h4>
+                    <p>
+                        Departamentos legales corporativos que necesitan gestionar contratos,
+                        compliance y asuntos legales internos.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🎓</div>
+                    <h4>Consultoría Legal</h4>
+                    <p>
+                        Consultores legales especializados que requieren acceso rápido a
+                        legislación y jurisprudencia para asesorar clientes.
+                    </p>
+                </div>
+            </div>
+
+            <h3>Tamaño del Mercado</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Segmento</th>
+                        <th>Tamaño Estimado</th>
+                        <th>Penetración Objetivo (Año 1)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Despachos Pequeños (2-10 abogados)</td>
+                        <td>50,000+ en Latinoamérica</td>
+                        <td>0.1% = 50 clientes</td>
+                    </tr>
+                    <tr>
+                        <td>Despachos Medianos (11-50 abogados)</td>
+                        <td>10,000+ en Latinoamérica</td>
+                        <td>0.2% = 20 clientes</td>
+                    </tr>
+                    <tr>
+                        <td>Abogados Independientes</td>
+                        <td>200,000+ en Latinoamérica</td>
+                        <td>0.05% = 100 clientes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Año 1 (Conservador)</strong></td>
+                        <td><strong>260,000+ potenciales</strong></td>
+                        <td><strong>170 clientes</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="success-box">
+                <h4>📈 Potencial de Crecimiento</h4>
+                <p style="font-size: 1.05em;">
+                    Con solo capturar el <strong>0.1% del mercado latinoamericano</strong> en el primer año,
+                    podemos alcanzar 170+ clientes de pago. El mercado total representa una oportunidad de
+                    <strong>$260 millones de dólares anuales</strong> en ingresos recurrentes potenciales.
+                </p>
+            </div>
+
+            <h3>Ventajas Competitivas</h3>
+
+            <div class="advantage-card">
+                <h5>🚀 Tecnología de Punta</h5>
+                <p>
+                    Utilizamos GPT-4, el modelo de IA más avanzado del mundo, combinado con técnicas
+                    RAG (Retrieval-Augmented Generation) para garantizar respuestas precisas y contextuales.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>💰 Precio Competitivo</h5>
+                <p>
+                    Nuestro modelo de precios es accesible para despachos de todos los tamaños, con
+                    planes desde $49/mes, significativamente más bajo que soluciones empresariales
+                    tradicionales ($500-$2000/mes).
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>⚡ Listo para Vender HOY</h5>
+                <p>
+                    A diferencia de startups en fase de desarrollo, nuestro producto está 100% funcional
+                    y desplegado en producción. Podemos comenzar a adquirir clientes inmediatamente.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🔒 Seguridad y Privacidad</h5>
+                <p>
+                    Sistema diseñado con seguridad empresarial: encriptación SSL/TLS, autenticación JWT,
+                    aislamiento de datos por usuario, cumplimiento con estándares de la industria.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🌐 Acceso Global</h5>
+                <p>
+                    Plataforma basada en la nube (SaaS) accesible desde cualquier dispositivo con
+                    internet, sin necesidad de instalación ni infraestructura propia.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 4: MODELO DE NEGOCIO -->
+    <div class="page">
+        <div class="header-section">
+            <h2>💰 Modelo de Negocio y Proyecciones</h2>
+        </div>
+        <div class="content">
+            <h3>Modelo de Ingresos: SaaS (Suscripción Mensual)</h3>
+
+            <div class="value-grid">
+                <div class="revenue-box">
+                    <h4>Plan Básico</h4>
+                    <div class="price">$49</div>
+                    <div class="price-label">por usuario/mes</div>
+                    <ul>
+                        <li>5 casos activos</li>
+                        <li>100 documentos/mes</li>
+                        <li>500 consultas IA/mes</li>
+                        <li>Soporte por email</li>
+                    </ul>
+                </div>
+
+                <div class="revenue-box">
+                    <h4>Plan Profesional</h4>
+                    <div class="price">$99</div>
+                    <div class="price-label">por usuario/mes</div>
+                    <ul>
+                        <li>Casos ilimitados</li>
+                        <li>500 documentos/mes</li>
+                        <li>2,000 consultas IA/mes</li>
+                        <li>Soporte prioritario</li>
+                        <li>Biblioteca legal global</li>
+                    </ul>
+                </div>
+
+                <div class="revenue-box">
+                    <h4>Plan Empresarial</h4>
+                    <div class="price">$249</div>
+                    <div class="price-label">por usuario/mes</div>
+                    <ul>
+                        <li>Todo ilimitado</li>
+                        <li>Consultas IA ilimitadas</li>
+                        <li>API personalizada</li>
+                        <li>Soporte 24/7</li>
+                        <li>Capacitación incluida</li>
+                        <li>Gerente de cuenta dedicado</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Proyección de Ingresos (Conservadora) - Año 1</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Nuevos Clientes</th>
+                        <th>Total Clientes</th>
+                        <th>Ingreso Mensual</th>
+                        <th>Ingreso Acumulado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Mes 1-3</td>
+                        <td>5/mes</td>
+                        <td>15</td>
+                        <td>$1,110</td>
+                        <td>$3,330</td>
+                    </tr>
+                    <tr>
+                        <td>Mes 4-6</td>
+                        <td>10/mes</td>
+                        <td>45</td>
+                        <td>$3,330</td>
+                        <td>$13,320</td>
+                    </tr>
+                    <tr>
+                        <td>Mes 7-9</td>
+                        <td>15/mes</td>
+                        <td>90</td>
+                        <td>$6,660</td>
+                        <td>$33,300</td>
+                    </tr>
+                    <tr>
+                        <td>Mes 10-12</td>
+                        <td>20/mes</td>
+                        <td>150</td>
+                        <td>$11,100</td>
+                        <td>$66,600</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fin Año 1</strong></td>
+                        <td><strong>150 total</strong></td>
+                        <td><strong>150 clientes</strong></td>
+                        <td><strong>$11,100/mes</strong></td>
+                        <td><strong>$116,550</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p style="font-size: 0.95em; color: #64748b; margin-top: 10px;">
+                * Proyección basada en precio promedio de $74/usuario (mix de planes Básico y Profesional)
+            </p>
+
+            <h3>Proyección Año 2-3</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Año</th>
+                        <th>Clientes</th>
+                        <th>Ingreso Mensual</th>
+                        <th>Ingreso Anual</th>
+                        <th>Margen Neto Est.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Año 1</td>
+                        <td>150</td>
+                        <td>$11,100</td>
+                        <td>$116,550</td>
+                        <td>60% = $69,930</td>
+                    </tr>
+                    <tr>
+                        <td>Año 2</td>
+                        <td>400</td>
+                        <td>$29,600</td>
+                        <td>$355,200</td>
+                        <td>65% = $230,880</td>
+                    </tr>
+                    <tr>
+                        <td>Año 3</td>
+                        <td>1,000</td>
+                        <td>$74,000</td>
+                        <td>$888,000</td>
+                        <td>70% = $621,600</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight">
+                <h4>📊 Métricas Clave del Negocio</h4>
+                <p><strong>CAC (Costo de Adquisición de Cliente):</strong> $200 - $400 estimado</p>
+                <p><strong>LTV (Valor de Vida del Cliente):</strong> $2,664 (3 años promedio a $74/mes)</p>
+                <p><strong>Ratio LTV/CAC:</strong> 6.6x - 13.3x (excelente, objetivo es >3x)</p>
+                <p><strong>Tasa de Retención Objetivo:</strong> 85% (estándar SaaS B2B)</p>
+                <p><strong>Margen Bruto:</strong> 75-80% (típico de SaaS)</p>
+            </div>
+
+            <h3>Estructura de Costos</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th>Costo Fijo Mensual</th>
+                        <th>Costo Variable (por cliente)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Infraestructura (Render + DB)</td>
+                        <td>$28</td>
+                        <td>$2-5 (escalamiento)</td>
+                    </tr>
+                    <tr>
+                        <td>OpenAI (GPT-4 + Embeddings)</td>
+                        <td>$0</td>
+                        <td>$15-25 por cliente/mes</td>
+                    </tr>
+                    <tr>
+                        <td>Marketing y Ventas</td>
+                        <td>$500-1,000</td>
+                        <td>$200-400 CAC</td>
+                    </tr>
+                    <tr>
+                        <td>Soporte al Cliente</td>
+                        <td>$0 (inicio)</td>
+                        <td>$5-10 por cliente/mes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Estimado</strong></td>
+                        <td><strong>$528-1,028</strong></td>
+                        <td><strong>$22-40/cliente</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p style="font-size: 0.95em; color: #64748b; margin-top: 10px;">
+                Con 150 clientes: Ingreso $11,100/mes - Costos $4,028 = <strong style="color: #059669;">Utilidad Neta $7,072/mes</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- PAGE 5: PROPUESTA DE SOCIEDAD -->
+    <div class="page">
+        <div class="header-section">
+            <h2>🤝 Propuesta de Sociedad</h2>
+        </div>
+        <div class="content">
+            <h3>División de Roles y Responsabilidades</h3>
+
+            <div class="roles-grid">
+                <div class="role-card partner">
+                    <h4>👔 SOCIO INVERSIONISTA / COMERCIAL</h4>
+                    <ul>
+                        <li>Búsqueda y adquisición de clientes</li>
+                        <li>Estrategia de marketing y ventas</li>
+                        <li>Gestión de relaciones con clientes</li>
+                        <li>Desarrollo de alianzas estratégicas</li>
+                        <li>Expansión de mercado</li>
+                        <li>Inversión en marketing y publicidad</li>
+                        <li>Capacitación a clientes (demos, onboarding)</li>
+                        <li>Cierre de contratos empresariales</li>
+                    </ul>
+                </div>
+
+                <div class="role-card tech">
+                    <h4>💻 SOCIO TÉCNICO / OPERACIONES</h4>
+                    <ul>
+                        <li>Mantenimiento del sistema 24/7</li>
+                        <li>Corrección de bugs y errores</li>
+                        <li>Desarrollo de nuevas funcionalidades</li>
+                        <li>Optimización de rendimiento</li>
+                        <li>Seguridad y actualizaciones</li>
+                        <li>Soporte técnico nivel 2 y 3</li>
+                        <li>Gestión de infraestructura cloud</li>
+                        <li>Monitoreo y alertas del sistema</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Estructura de Sociedad Propuesta</h3>
+
+            <div class="value-grid">
+                <div class="value-box">
+                    <div class="icon">📊</div>
+                    <h4>Participación Accionaria</h4>
+                    <p>
+                        <strong>50% / 50%</strong> - Sociedad equitativa que refleja la importancia
+                        crítica tanto de las ventas como de la operación técnica.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">💵</div>
+                    <h4>Distribución de Utilidades</h4>
+                    <p>
+                        <strong>50% / 50%</strong> mensualmente sobre utilidades netas después de
+                        reinversión acordada (20-30% para crecimiento).
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🎯</div>
+                    <h4>Inversión Inicial</h4>
+                    <p>
+                        <strong>Socio Comercial:</strong> $3,000-5,000 USD para marketing inicial,
+                        materiales de venta, y primeros 3-6 meses de operación.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">⚖️</div>
+                    <h4>Derechos de Decisión</h4>
+                    <p>
+                        Decisiones estratégicas por <strong>consenso</strong>. Socio comercial lidera
+                        estrategia de mercado. Socio técnico lidera roadmap de producto.
+                    </p>
+                </div>
+            </div>
+
+            <h3>Plan de Trabajo Primer Año</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fase</th>
+                        <th>Periodo</th>
+                        <th>Objetivos Clave</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Fase 1: Lanzamiento</strong></td>
+                        <td>Mes 1-3</td>
+                        <td>
+                            • Primeros 15 clientes<br>
+                            • Validación product-market fit<br>
+                            • Ajustes basados en feedback<br>
+                            • Establecer canales de venta
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fase 2: Tracción</strong></td>
+                        <td>Mes 4-6</td>
+                        <td>
+                            • Llegar a 45 clientes<br>
+                            • Casos de éxito documentados<br>
+                            • Optimización de onboarding<br>
+                            • Expansión de marketing
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fase 3: Crecimiento</strong></td>
+                        <td>Mes 7-9</td>
+                        <td>
+                            • Alcanzar 90 clientes<br>
+                            • Programa de referidos<br>
+                            • Contenido de marketing escalable<br>
+                            • Automatización de ventas
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fase 4: Escalamiento</strong></td>
+                        <td>Mes 10-12</td>
+                        <td>
+                            • Meta: 150 clientes<br>
+                            • Equipo de soporte expandido<br>
+                            • Plan año 2 definido<br>
+                            • Rentabilidad sostenible
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="success-box">
+                <h4>✓ Ventajas de Esta Sociedad</h4>
+                <ul>
+                    <li><strong>Producto ya construido:</strong> No hay riesgo de desarrollo, el sistema funciona HOY</li>
+                    <li><strong>Bajos costos operativos:</strong> $59/mes base permite márgenes altos desde el inicio</li>
+                    <li><strong>Escalabilidad automática:</strong> Infraestructura cloud crece con la demanda</li>
+                    <li><strong>Mercado gigante:</strong> Millones de abogados en Latinoamérica sin solución similar</li>
+                    <li><strong>Modelo recurrente:</strong> Ingresos predecibles y crecientes mes a mes</li>
+                    <li><strong>Complementariedad perfecta:</strong> Ventas + Técnica = Éxito garantizado</li>
+                </ul>
+            </div>
+
+            <h3>Pacto de Socios (Puntos Clave)</h3>
+
+            <div class="advantage-card">
+                <h5>🔒 Compromiso y Dedicación</h5>
+                <p>
+                    Ambos socios se comprometen a dedicar mínimo 20-30 horas semanales durante el primer
+                    año. Socio comercial enfocado 100% en ventas, socio técnico en operaciones.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>💰 Reinversión Acordada</h5>
+                <p>
+                    20-30% de utilidades se reinvierten automáticamente en: marketing, infraestructura,
+                    desarrollo de producto, hasta alcanzar $50K USD/mes en ingresos recurrentes.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>📈 KPIs y Seguimiento</h5>
+                <p>
+                    Reunión mensual para revisar: clientes nuevos, churn rate, ingresos, costos,
+                    roadmap de producto, estrategia de marketing. Dashboard compartido en tiempo real.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🚪 Cláusula de Salida</h5>
+                <p>
+                    Opción de compra mutua a valor de mercado (3x ingresos anuales recurrentes) después
+                    de 2 años. Derecho de primera oferta si algún socio quiere vender su participación.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 6: ROADMAP Y SIGUIENTES PASOS -->
+    <div class="page">
+        <div class="header-section">
+            <h2>🗺️ Roadmap de Producto y Siguientes Pasos</h2>
+        </div>
+        <div class="content">
+            <h3>Funcionalidades Actuales (Listas para Vender)</h3>
+
+            <ul>
+                <li>Gestión completa de casos legales</li>
+                <li>Carga de documentos PDF, DOCX, TXT</li>
+                <li>Procesamiento automático con IA (GPT-4)</li>
+                <li>Consultas en lenguaje natural</li>
+                <li>Respuestas con referencias a fuentes</li>
+                <li>Biblioteca global de documentos legales (admin)</li>
+                <li>Panel de administración completo</li>
+                <li>Autenticación segura y roles de usuario</li>
+                <li>Interfaz moderna y responsive</li>
+                <li>Sistema de búsqueda semántica avanzada</li>
+            </ul>
+
+            <h3>Mejoras Planificadas (3-6 meses)</h3>
+
+            <div class="value-grid">
+                <div class="value-box">
+                    <div class="icon">⚡</div>
+                    <h4>Optimización de Rendimiento</h4>
+                    <p>
+                        Implementar pgvector para búsquedas 10-100x más rápidas. Reducir costo de
+                        consultas IA mediante caché inteligente.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">📊</div>
+                    <h4>Dashboard Analítico</h4>
+                    <p>
+                        Reportes de uso, estadísticas de consultas, análisis de documentos más
+                        consultados, insights para abogados.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">📧</div>
+                    <h4>Notificaciones y Alertas</h4>
+                    <p>
+                        Notificaciones por email de actualizaciones de casos, recordatorios,
+                        alertas de vencimientos extraídas de documentos.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">👥</div>
+                    <h4>Colaboración en Equipo</h4>
+                    <p>
+                        Compartir casos entre múltiples abogados del mismo despacho, comentarios,
+                        asignación de tareas.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🔍</div>
+                    <h4>OCR Avanzado</h4>
+                    <p>
+                        Extraer texto de documentos escaneados y fotos, expandiendo los tipos
+                        de documentos procesables.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">📱</div>
+                    <h4>App Móvil</h4>
+                    <p>
+                        Aplicaciones nativas iOS y Android para consultar casos desde
+                        cualquier lugar, en audiencias, reuniones, etc.
+                    </p>
+                </div>
+            </div>
+
+            <h3>Visión a Largo Plazo (12-24 meses)</h3>
+
+            <div class="advantage-card">
+                <h5>🌎 Expansión Regional</h5>
+                <p>
+                    Localización completa para México, Colombia, Argentina, Chile. Biblioteca legal
+                    específica por país. Soporte multi-idioma completo.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🤖 IA Predictiva</h5>
+                <p>
+                    Predicción de resultados de casos basados en jurisprudencia histórica. Sugerencias
+                    proactivas de estrategias legales. Identificación automática de precedentes relevantes.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🔗 Integraciones</h5>
+                <p>
+                    API pública para integrar con software de contabilidad, CRM, sistemas de gestión
+                    de despachos. Conectores con juzgados virtuales y sistemas gubernamentales.
+                </p>
+            </div>
+
+            <div class="advantage-card">
+                <h5>📚 Marketplace de Plantillas</h5>
+                <p>
+                    Biblioteca de plantillas legales (contratos, demandas, escritos) personalizables
+                    mediante IA. Marketplace donde abogados pueden vender sus plantillas.
+                </p>
+            </div>
+
+            <h3>Próximos Pasos Inmediatos</h3>
+
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 40px; border-radius: 15px; margin: 30px 0;">
+                <h4 style="color: #92400e; font-size: 1.6em; margin-bottom: 25px; text-align: center;">
+                    🚀 Plan de Acción - Primeras 2 Semanas
+                </h4>
+
+                <ol style="list-style: decimal; padding-left: 30px; color: #78350f;">
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <strong>Día 1-3: Formalización</strong>
+                        <ul style="margin-top: 10px; list-style: disc; padding-left: 20px;">
+                            <li>Firma de acuerdo de confidencialidad</li>
+                            <li>Demo completa del sistema</li>
+                            <li>Revisión de proyecciones financieras</li>
+                            <li>Definición de estructura societaria</li>
+                        </ul>
+                    </li>
+
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <strong>Día 4-7: Preparación Comercial</strong>
+                        <ul style="margin-top: 10px; list-style: disc; padding-left: 20px;">
+                            <li>Creación de materiales de venta (presentación, casos de uso)</li>
+                            <li>Definición de precios finales y paquetes</li>
+                            <li>Configuración de sistema de pagos (Stripe)</li>
+                            <li>Preparación de demos personalizadas</li>
+                        </ul>
+                    </li>
+
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <strong>Día 8-10: Marketing Inicial</strong>
+                        <ul style="margin-top: 10px; list-style: disc; padding-left: 20px;">
+                            <li>Creación de landing page comercial</li>
+                            <li>Setup de campañas Google Ads y LinkedIn</li>
+                            <li>Preparación de contenido para redes sociales</li>
+                            <li>Identificación de primeros prospectos</li>
+                        </ul>
+                    </li>
+
+                    <li style="margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <strong>Día 11-14: Primeras Ventas</strong>
+                        <ul style="margin-top: 10px; list-style: disc; padding-left: 20px;">
+                            <li>Contacto con primeros 20-30 prospectos</li>
+                            <li>Demos personalizadas a interesados</li>
+                            <li>Objetivo: cerrar primeros 3-5 clientes piloto</li>
+                            <li>Recolección de feedback inicial</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="cta">
+                <h3>⏰ Momento Perfecto para Entrar</h3>
+                <p style="margin-bottom: 20px;">
+                    El mercado legal está en plena transformación digital. Los que adopten IA primero
+                    tendrán ventaja competitiva sobre los demás por años.
+                </p>
+                <p>
+                    <strong>Este es el momento de ser pioneros.</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 7: RIESGOS Y MITIGACIÓN -->
+    <div class="page">
+        <div class="header-section">
+            <h2>⚠️ Análisis de Riesgos y Estrategias de Mitigación</h2>
+        </div>
+        <div class="content">
+            <h3>Riesgos Identificados y Planes de Mitigación</h3>
+
+            <div class="advantage-card">
+                <h5>🎯 Riesgo: Adopción lenta del mercado</h5>
+                <p><strong>Probabilidad:</strong> Media | <strong>Impacto:</strong> Alto</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Ofrecer período de prueba gratuito de 14 días</li>
+                    <li>Casos de éxito documentados desde el día 1</li>
+                    <li>Demos personalizadas para mostrar valor inmediato</li>
+                    <li>Testimoniales y referencias de primeros clientes</li>
+                    <li>Garantía de devolución de dinero 30 días</li>
+                </ul>
+            </div>
+
+            <div class="advantage-card">
+                <h5>💰 Riesgo: Costos de IA más altos de lo proyectado</h5>
+                <p><strong>Probabilidad:</strong> Media | <strong>Impacto:</strong> Medio</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Implementar límites de consultas por plan</li>
+                    <li>Sistema de caché inteligente para reducir llamadas a OpenAI</li>
+                    <li>Monitoreo constante de uso real vs. proyectado</li>
+                    <li>Ajuste de precios si es necesario en primeros 3 meses</li>
+                    <li>Explorar modelos alternativos más económicos para funciones básicas</li>
+                </ul>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🏢 Riesgo: Competencia de grandes empresas</h5>
+                <p><strong>Probabilidad:</strong> Media-Baja | <strong>Impacto:</strong> Alto</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Moverse rápido: capturar mercado antes que entren competidores grandes</li>
+                    <li>Enfoque en nicho específico (despachos pequeños/medianos)</li>
+                    <li>Servicio personalizado que grandes no pueden ofrecer</li>
+                    <li>Precio accesible vs. soluciones empresariales costosas</li>
+                    <li>Relaciones cercanas con clientes y comunidad legal</li>
+                </ul>
+            </div>
+
+            <div class="advantage-card">
+                <h5>🔒 Riesgo: Problemas de seguridad o privacidad</h5>
+                <p><strong>Probabilidad:</strong> Baja | <strong>Impacto:</strong> Muy Alto</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Sistema ya construido con seguridad empresarial (JWT, SSL, bcrypt)</li>
+                    <li>Auditorías de seguridad trimestrales</li>
+                    <li>Seguro de responsabilidad cibernética</li>
+                    <li>Cumplimiento con regulaciones de protección de datos</li>
+                    <li>Plan de respuesta a incidentes documentado</li>
+                </ul>
+            </div>
+
+            <div class="advantage-card">
+                <h5>⚡ Riesgo: Fallas técnicas o downtime</h5>
+                <p><strong>Probabilidad:</strong> Baja | <strong>Impacto:</strong> Alto</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Infraestructura en Render.com con 99.9% uptime garantizado</li>
+                    <li>Backups automáticos diarios de base de datos</li>
+                    <li>Monitoreo 24/7 con alertas automáticas</li>
+                    <li>Plan de disaster recovery documentado</li>
+                    <li>SLA (Service Level Agreement) claro con clientes</li>
+                </ul>
+            </div>
+
+            <div class="advantage-card">
+                <h5>👥 Riesgo: Alta tasa de cancelación (churn)</h5>
+                <p><strong>Probabilidad:</strong> Media | <strong>Impacto:</strong> Alto</p>
+                <p><strong>Mitigación:</strong></p>
+                <ul style="margin-top: 10px;">
+                    <li>Onboarding estructurado para asegurar adopción temprana</li>
+                    <li>Check-ins mensuales con clientes nuevos</li>
+                    <li>Programa de customer success proactivo</li>
+                    <li>Métricas de engagement monitoreadas semanalmente</li>
+                    <li>Intervención temprana cuando se detecta bajo uso</li>
+                    <li>Solicitar feedback antes de cada cancelación</li>
+                </ul>
+            </div>
+
+            <h3>Fortalezas que Reducen Riesgos</h3>
+
+            <div class="success-box">
+                <h4>✓ Ventajas Competitivas que Minimizan Riesgos</h4>
+                <ul>
+                    <li><strong>Producto ya funcional:</strong> Sin riesgo de desarrollo o retrasos técnicos</li>
+                    <li><strong>Tecnología probada:</strong> OpenAI GPT-4 es el estándar de la industria</li>
+                    <li><strong>Mercado validado:</strong> Abogados ya usan herramientas SaaS (Clio, MyCase, etc.)</li>
+                    <li><strong>Modelo de negocio probado:</strong> SaaS B2B es modelo con mayor tasa de éxito</li>
+                    <li><strong>Barreras de entrada:</strong> Requiere expertise técnico + conocimiento legal</li>
+                    <li><strong>Network effects:</strong> Más usuarios = mejor biblioteca legal = más valor</li>
+                </ul>
+            </div>
+
+            <h3>Plan de Contingencia</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Escenario</th>
+                        <th>Plan B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>No se alcanzan 50 clientes en 6 meses</td>
+                        <td>
+                            Pivotar a modelo freemium con funciones limitadas gratis.
+                            Intensificar marketing de contenidos y SEO.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Costos de OpenAI exceden presupuesto</td>
+                        <td>
+                            Implementar modelo híbrido con búsqueda tradicional + IA solo
+                            para queries complejas. Explorar Claude/Gemini como alternativas.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Churn rate > 20% mensual</td>
+                        <td>
+                            Pausa en adquisición para enfocarse en retención. Programa intensivo
+                            de customer success. Encuestas profundas de satisfacción.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Competidor grande entra al mercado</td>
+                        <td>
+                            Duplicar esfuerzos en nichos específicos (ej: abogados laboralistas).
+                            Diferenciación por servicio personalizado y comunidad.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PAGE 8: LLAMADO A LA ACCIÓN -->
+    <div class="page">
+        <div class="header-section">
+            <h2>🚀 Llamado a la Acción</h2>
+        </div>
+        <div class="content">
+            <div style="text-align: center; padding: 60px 40px;">
+                <h3 style="font-size: 3em; color: #1e3a8a; margin-bottom: 30px;">
+                    Construyamos el Futuro de la Práctica Legal
+                </h3>
+
+                <p style="font-size: 1.4em; line-height: 2; max-width: 900px; margin: 0 auto 50px; text-align: center;">
+                    Tenemos un <strong>producto funcional</strong>, un <strong>mercado gigante</strong>,
+                    y un <strong>modelo de negocio probado</strong>. Solo falta el ingrediente final:
+                    <strong>alguien con pasión por las ventas</strong> para llevar esta tecnología a
+                    los abogados que la necesitan.
+                </p>
+
+                <div class="value-grid" style="margin: 60px 0;">
+                    <div class="stat-card">
+                        <span class="stat-number">$888K</span>
+                        <span class="stat-label">Potencial Año 3</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">70%</span>
+                        <span class="stat-label">Margen Neto</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">50/50</span>
+                        <span class="stat-label">Sociedad Equitativa</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">HOY</span>
+                        <span class="stat-label">Listo para Vender</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3>¿Por Qué Esta es una Oportunidad Única?</h3>
+
+            <div class="value-grid">
+                <div class="value-box">
+                    <div class="icon">✅</div>
+                    <h4>Producto Terminado</h4>
+                    <p>
+                        A diferencia del 90% de startups, <strong>no hay que construir nada</strong>.
+                        El sistema funciona, está probado, y está en producción. Podemos facturar desde mañana.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">💎</div>
+                    <h4>Tecnología de Punta</h4>
+                    <p>
+                        Usamos GPT-4, el modelo de IA más avanzado del mundo. Esto nos da
+                        <strong>2-3 años de ventaja</strong> sobre competidores que usen tecnología inferior.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🌊</div>
+                    <h4>Mercado Virgen</h4>
+                    <p>
+                        El 95% de abogados en Latinoamérica <strong>NO tienen</strong> una solución
+                        como esta. Somos pioneros en un océano azul.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">📈</div>
+                    <h4>Modelo Escalable</h4>
+                    <p>
+                        SaaS es el modelo de negocio con <strong>mayor retorno de inversión</strong>
+                        del mundo tech. Ingresos predecibles y crecientes mes a mes.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">⚖️</div>
+                    <h4>Sociedad Balanceada</h4>
+                    <p>
+                        50/50 refleja que <strong>ambos somos igualmente críticos</strong>. Sin ventas
+                        no hay negocio, sin tecnología no hay producto.
+                    </p>
+                </div>
+
+                <div class="value-box">
+                    <div class="icon">🎯</div>
+                    <h4>Timing Perfecto</h4>
+                    <p>
+                        La IA está en <strong>peak de hype</strong>. Los abogados están buscando
+                        activamente soluciones. Es AHORA o nunca.
+                    </p>
+                </div>
+            </div>
+
+            <div class="cta">
+                <h3>🤝 ¿Listo para Cambiar el Juego?</h3>
+                <p style="margin-bottom: 30px;">
+                    Si tienes experiencia en ventas B2B, conoces el sector legal, o simplemente
+                    tienes hambre de construir algo grande...
+                </p>
+                <p style="font-size: 1.6em; font-weight: bold; margin-bottom: 30px;">
+                    Esta es tu oportunidad.
+                </p>
+                <p style="font-size: 1.2em;">
+                    Agenda una reunión para ver el sistema en acción, revisar números detallados,
+                    y discutir cómo podemos hacer de esto una realidad.
+                </p>
+            </div>
+
+            <h3 style="margin-top: 60px; text-align: center; font-size: 2em;">Próximos Pasos</h3>
+
+            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 50px; border-radius: 20px; margin: 40px 0;">
+                <ol style="list-style: decimal; padding-left: 40px; font-size: 1.2em; line-height: 2;">
+                    <li style="margin: 25px 0; background: white; padding: 25px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                        <strong>Reunión Inicial (1 hora):</strong> Demo del sistema + Revisión de propuesta
+                    </li>
+                    <li style="margin: 25px 0; background: white; padding: 25px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                        <strong>Due Diligence (1 semana):</strong> Acceso completo al sistema, código, métricas
+                    </li>
+                    <li style="margin: 25px 0; background: white; padding: 25px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                        <strong>Negociación Final (3-5 días):</strong> Afinar términos de sociedad
+                    </li>
+                    <li style="margin: 25px 0; background: white; padding: 25px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                        <strong>Formalización (1 semana):</strong> Firma de acuerdos legales
+                    </li>
+                    <li style="margin: 25px 0; background: white; padding: 25px; border-radius: 10px; border-left: 5px solid #10b981;">
+                        <strong>¡A Vender! (Desde día 1):</strong> Primeros clientes en las primeras 2 semanas
+                    </li>
+                </ol>
+            </div>
+
+            <div class="highlight" style="text-align: center; margin-top: 60px;">
+                <h4 style="font-size: 2em; margin-bottom: 20px;">⏰ El Mejor Momento para Empezar...</h4>
+                <p style="font-size: 1.8em; font-weight: bold; color: #92400e;">
+                    ...fue hace 6 meses.<br>
+                    El segundo mejor momento es HOY.
+                </p>
+            </div>
+
+            <div style="text-align: center; margin-top: 80px; padding: 60px 40px; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 20px; color: white;">
+                <h3 style="font-size: 2.5em; color: white; margin-bottom: 30px;">
+                    Construyamos el Futuro Juntos
+                </h3>
+                <p style="font-size: 1.4em; line-height: 1.8; max-width: 800px; margin: 0 auto;">
+                    No estamos buscando solo un inversionista. Estamos buscando un
+                    <strong>co-fundador</strong>, un <strong>socio estratégico</strong>, alguien que
+                    comparta la visión de transformar la práctica legal con tecnología.
+                </p>
+                <p style="font-size: 1.3em; margin-top: 40px; opacity: 0.95;">
+                    Si eres esa persona, hablemos.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p style="font-size: 1.4em; margin-bottom: 20px;"><strong>Sistema Legal RAG</strong></p>
+            <p>Propuesta de Inversión Confidencial</p>
+            <p>Enero 2025</p>
+            <p style="margin-top: 30px; opacity: 0.9; font-size: 1.1em;">
+                Para más información o agendar una reunión, contactar por email o WhatsApp
+            </p>
+            <p style="margin-top: 40px; font-size: 0.9em; opacity: 0.7;">
+                Este documento contiene información confidencial y propietaria. Queda prohibida su distribución sin autorización.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

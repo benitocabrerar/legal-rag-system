@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal RAG System - User Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .version {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+        }
+
+        .nav h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .nav li a {
+            display: block;
+            padding: 15px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav li a:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .section {
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.6em;
+            margin: 30px 0 15px;
+        }
+
+        .section h4 {
+            color: #555;
+            font-size: 1.3em;
+            margin: 20px 0 10px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .feature-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .step-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #764ba2;
+        }
+
+        .step-box strong {
+            color: #764ba2;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-box::before {
+            content: "⚠️ ";
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-box::before {
+            content: "ℹ️ ";
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .success-box::before {
+            content: "✅ ";
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        .screenshot-placeholder {
+            background: #e9ecef;
+            border: 2px dashed #adb5bd;
+            border-radius: 10px;
+            padding: 60px;
+            text-align: center;
+            margin: 20px 0;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .code {
+            background: #f4f4f4;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #e83e8c;
+        }
+
+        .button-example {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.2s;
+        }
+
+        .button-example:hover {
+            transform: scale(1.05);
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .icon-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .icon-item .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .icon-item h5 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .header {
+                background: #667eea;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Legal RAG System</h1>
+            <p>Complete User Manual</p>
+            <div class="version">Version 1.0 | 2025</div>
+        </div>
+
+        <div class="content">
+            <!-- Table of Contents -->
+            <div class="nav">
+                <h2>📋 Table of Contents</h2>
+                <ul>
+                    <li><a href="#introduction">Introduction</a></li>
+                    <li><a href="#getting-started">Getting Started</a></li>
+                    <li><a href="#dashboard">Dashboard Overview</a></li>
+                    <li><a href="#cases">Managing Cases</a></li>
+                    <li><a href="#documents">Document Management</a></li>
+                    <li><a href="#ai-query">AI Query System</a></li>
+                    <li><a href="#admin">Admin Panel</a></li>
+                    <li><a href="#subscription">Subscription Plans</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a></li>
+                    <li><a href="#faq">Frequently Asked Questions</a></li>
+                </ul>
+            </div>
+
+            <!-- Introduction -->
+            <div class="section" id="introduction">
+                <h2>🎯 Introduction</h2>
+                <p>Welcome to the <strong>Legal RAG System</strong>, an advanced legal assistance platform powered by artificial intelligence. This system combines cutting-edge AI technology with a comprehensive legal knowledge base to provide intelligent document analysis, case management, and legal research capabilities.</p>
+
+                <h3>What is RAG?</h3>
+                <p><strong>RAG (Retrieval-Augmented Generation)</strong> is an AI architecture that combines the power of large language models with a searchable knowledge base. When you ask a question, the system:</p>
+                <ol>
+                    <li>Searches through thousands of legal documents to find relevant information</li>
+                    <li>Retrieves the most pertinent passages</li>
+                    <li>Uses GPT-4 to generate accurate, contextualized answers based on actual legal texts</li>
+                </ol>
+
+                <div class="success-box">
+                    <strong>Key Benefits:</strong>
+                    <ul>
+                        <li>Accurate answers grounded in real legal documents</li>
+                        <li>Faster legal research than traditional methods</li>
+                        <li>Access to comprehensive legal knowledge base</li>
+                        <li>Natural language interaction - no legal jargon required</li>
+                    </ul>
+                </div>
+
+                <h3>System Features</h3>
+                <div class="icon-grid">
+                    <div class="icon-item">
+                        <div class="icon">📄</div>
+                        <h5>Case Management</h5>
+                        <p>Organize and track legal cases efficiently</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="icon">🤖</div>
+                        <h5>AI Assistant</h5>
+                        <p>GPT-4 powered legal analysis</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="icon">🔍</div>
+                        <h5>Smart Search</h5>
+                        <p>Semantic search across all documents</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="icon">📚</div>
+                        <h5>Legal Library</h5>
+                        <p>Comprehensive legal knowledge base</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Getting Started -->
+            <div class="section" id="getting-started">
+                <h2>🚀 Getting Started</h2>
+
+                <h3>1. Creating Your Account</h3>
+                <div class="step-box">
+                    <strong>Step 1:</strong> Navigate to the registration page
+                    <p>Visit the Legal RAG System homepage and click on <span class="code">Create Account</span></p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 2:</strong> Fill in your information
+                    <ul>
+                        <li><strong>Name:</strong> Your full name</li>
+                        <li><strong>Email:</strong> A valid email address</li>
+                        <li><strong>Password:</strong> Minimum 8 characters, including letters and numbers</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 3:</strong> Verify your email
+                    <p>Check your inbox for a verification email and click the confirmation link</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 4:</strong> Choose your subscription plan
+                    <p>Select from Free, Basic, Professional, or Team plans based on your needs</p>
+                </div>
+
+                <h3>2. Logging In</h3>
+                <p>To access your account:</p>
+                <ol>
+                    <li>Go to the login page</li>
+                    <li>Enter your email and password</li>
+                    <li>Click <span class="code">Sign In</span></li>
+                </ol>
+
+                <div class="info-box">
+                    <strong>First-Time Login:</strong> After your first login, you'll be guided through a quick onboarding tutorial that explains the main features.
+                </div>
+
+                <h3>3. Navigating the Interface</h3>
+                <p>The main navigation menu provides access to all major features:</p>
+                <ul>
+                    <li><strong>Dashboard:</strong> Overview of your cases and recent activity</li>
+                    <li><strong>Cases:</strong> Manage your legal cases</li>
+                    <li><strong>Documents:</strong> Upload and organize documents</li>
+                    <li><strong>AI Query:</strong> Ask questions and get AI-powered answers</li>
+                    <li><strong>Profile:</strong> Manage your account settings</li>
+                </ul>
+            </div>
+
+            <!-- Dashboard Overview -->
+            <div class="section" id="dashboard">
+                <h2>📊 Dashboard Overview</h2>
+                <p>Your dashboard is the central hub where you can monitor all your legal activities at a glance.</p>
+
+                <h3>Dashboard Components</h3>
+
+                <div class="feature-card">
+                    <h4>📈 Key Metrics</h4>
+                    <p>Quick statistics showing:</p>
+                    <ul>
+                        <li>Total number of active cases</li>
+                        <li>Documents uploaded this month</li>
+                        <li>AI queries used vs. remaining in your plan</li>
+                        <li>Recent activity timeline</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>⚡ Quick Actions</h4>
+                    <p>Fast access to common tasks:</p>
+                    <ul>
+                        <li>Create new case</li>
+                        <li>Upload document</li>
+                        <li>Ask AI question</li>
+                        <li>Search legal database</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>📋 Recent Cases</h4>
+                    <p>View your most recently accessed cases with:</p>
+                    <ul>
+                        <li>Case name and status</li>
+                        <li>Last modification date</li>
+                        <li>Quick access links</li>
+                    </ul>
+                </div>
+
+                <h3>Customizing Your Dashboard</h3>
+                <p>You can personalize your dashboard by:</p>
+                <ol>
+                    <li>Clicking the <span class="code">⚙️ Settings</span> icon in the top right</li>
+                    <li>Selecting which widgets to display</li>
+                    <li>Arranging widgets by drag-and-drop</li>
+                    <li>Setting your preferred default view</li>
+                </ol>
+            </div>
+
+            <!-- Managing Cases -->
+            <div class="section" id="cases">
+                <h2>📁 Managing Cases</h2>
+                <p>The case management system helps you organize, track, and manage all your legal cases in one place.</p>
+
+                <h3>Creating a New Case</h3>
+                <div class="step-box">
+                    <strong>Step 1:</strong> Click <span class="code">New Case</span> button
+                    <p>Located on the Cases page or dashboard quick actions</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 2:</strong> Enter case details
+                    <ul>
+                        <li><strong>Case Name:</strong> Descriptive title (e.g., "Smith vs. Jones Contract Dispute")</li>
+                        <li><strong>Case Number:</strong> Optional reference number</li>
+                        <li><strong>Client Name:</strong> Person or entity you're representing</li>
+                        <li><strong>Case Type:</strong> Select from dropdown (Civil, Criminal, Family, etc.)</li>
+                        <li><strong>Status:</strong> Current stage (Open, In Progress, Closed)</li>
+                        <li><strong>Priority:</strong> Low, Medium, or High</li>
+                        <li><strong>Description:</strong> Detailed case summary</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 3:</strong> Add related documents (optional)
+                    <p>Upload relevant documents immediately or add them later</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 4:</strong> Save the case
+                    <p>Click <span class="code">Create Case</span> to save</p>
+                </div>
+
+                <h3>Case Organization</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Description</th>
+                            <th>When to Use</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Open</strong></td>
+                            <td>Case just created</td>
+                            <td>Initial case intake</td>
+                        </tr>
+                        <tr>
+                            <td><strong>In Progress</strong></td>
+                            <td>Active work ongoing</td>
+                            <td>During active case management</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Under Review</strong></td>
+                            <td>Awaiting decision or analysis</td>
+                            <td>When waiting for information or approval</td>
+                        </tr>
+                        <tr>
+                            <td><strong>On Hold</strong></td>
+                            <td>Temporarily paused</td>
+                            <td>When case is waiting for external factors</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Closed</strong></td>
+                            <td>Case completed</td>
+                            <td>After final resolution</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Working with Cases</h3>
+
+                <h4>Viewing Case Details</h4>
+                <p>Click on any case to view:</p>
+                <ul>
+                    <li>Complete case information</li>
+                    <li>Associated documents</li>
+                    <li>AI query history for this case</li>
+                    <li>Timeline of activities</li>
+                    <li>Notes and annotations</li>
+                </ul>
+
+                <h4>Editing Cases</h4>
+                <ol>
+                    <li>Open the case you want to edit</li>
+                    <li>Click the <span class="code">Edit</span> button</li>
+                    <li>Modify any fields as needed</li>
+                    <li>Click <span class="code">Save Changes</span></li>
+                </ol>
+
+                <h4>Deleting Cases</h4>
+                <div class="warning-box">
+                    <strong>Warning:</strong> Deleting a case is permanent and will remove all associated documents and query history. Make sure you have backups before deleting.
+                </div>
+
+                <p>To delete a case:</p>
+                <ol>
+                    <li>Open the case</li>
+                    <li>Click the <span class="code">Delete</span> button</li>
+                    <li>Confirm the deletion in the dialog box</li>
+                </ol>
+
+                <h3>Filtering and Searching Cases</h3>
+                <p>Use the powerful search and filter tools to find cases quickly:</p>
+                <ul>
+                    <li><strong>Search Bar:</strong> Search by case name, client, or case number</li>
+                    <li><strong>Status Filter:</strong> Filter by case status</li>
+                    <li><strong>Date Range:</strong> Find cases created or modified within specific dates</li>
+                    <li><strong>Case Type:</strong> Filter by legal category</li>
+                    <li><strong>Priority:</strong> Sort by priority level</li>
+                </ul>
+            </div>
+
+            <!-- Document Management -->
+            <div class="section" id="documents">
+                <h2>📄 Document Management</h2>
+                <p>The document management system allows you to upload, organize, and analyze legal documents with AI assistance.</p>
+
+                <h3>Uploading Documents</h3>
+
+                <h4>Single Document Upload</h4>
+                <div class="step-box">
+                    <strong>Step 1:</strong> Navigate to the Documents page
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 2:</strong> Click <span class="code">Upload Document</span>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 3:</strong> Select your file
+                    <p>Supported formats: PDF, DOCX, TXT</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 4:</strong> Enter document metadata
+                    <ul>
+                        <li><strong>Document Name:</strong> Descriptive title</li>
+                        <li><strong>Associated Case:</strong> Link to existing case (optional)</li>
+                        <li><strong>Document Type:</strong> Contract, Brief, Evidence, etc.</li>
+                        <li><strong>Tags:</strong> Add keywords for easier searching</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 5:</strong> Upload and process
+                    <p>The system will automatically extract text and create embeddings for AI search</p>
+                </div>
+
+                <h4>Processing Time</h4>
+                <div class="info-box">
+                    <strong>Document Processing:</strong> After upload, documents are processed to enable AI search. This typically takes:
+                    <ul>
+                        <li>Small documents (1-10 pages): 30 seconds - 1 minute</li>
+                        <li>Medium documents (10-50 pages): 1-3 minutes</li>
+                        <li>Large documents (50+ pages): 3-10 minutes</li>
+                    </ul>
+                    You'll receive a notification when processing is complete.
+                </div>
+
+                <h3>Document Organization</h3>
+
+                <h4>Folders and Categories</h4>
+                <p>Organize documents using:</p>
+                <ul>
+                    <li><strong>Cases:</strong> Automatically grouped by associated case</li>
+                    <li><strong>Document Types:</strong> Categorized by type (Contracts, Briefs, etc.)</li>
+                    <li><strong>Tags:</strong> Custom keywords for flexible organization</li>
+                    <li><strong>Date:</strong> Sort by upload or modification date</li>
+                </ul>
+
+                <h4>Supported Document Types</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Format</th>
+                            <th>Extensions</th>
+                            <th>Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>PDF</strong></td>
+                            <td>.pdf</td>
+                            <td>Full text extraction, OCR support, images</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Word</strong></td>
+                            <td>.docx, .doc</td>
+                            <td>Text, formatting, tables</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Plain Text</strong></td>
+                            <td>.txt</td>
+                            <td>Simple text documents</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Document Actions</h3>
+
+                <h4>Viewing Documents</h4>
+                <p>Click on any document to:</p>
+                <ul>
+                    <li>View in-browser preview</li>
+                    <li>Download original file</li>
+                    <li>See document metadata</li>
+                    <li>View AI analysis results</li>
+                    <li>Access related cases</li>
+                </ul>
+
+                <h4>Analyzing Documents with AI</h4>
+                <ol>
+                    <li>Open the document</li>
+                    <li>Click <span class="code">Analyze with AI</span></li>
+                    <li>Choose analysis type:
+                        <ul>
+                            <li>Summary</li>
+                            <li>Key points extraction</li>
+                            <li>Legal issues identification</li>
+                            <li>Risk assessment</li>
+                        </ul>
+                    </li>
+                    <li>Review AI-generated analysis</li>
+                </ol>
+
+                <h4>Sharing Documents</h4>
+                <p>Share documents securely with team members:</p>
+                <ol>
+                    <li>Open the document</li>
+                    <li>Click <span class="code">Share</span></li>
+                    <li>Enter recipient email addresses</li>
+                    <li>Set permissions (View only or Edit)</li>
+                    <li>Add optional message</li>
+                    <li>Send invitation</li>
+                </ol>
+
+                <div class="warning-box">
+                    <strong>Security Note:</strong> Shared documents maintain encryption and access logs. You can revoke access at any time from the document sharing settings.
+                </div>
+            </div>
+
+            <!-- AI Query System -->
+            <div class="section" id="ai-query">
+                <h2>🤖 AI Query System</h2>
+                <p>The AI Query System leverages GPT-4 and RAG technology to provide intelligent answers based on your documents and the legal knowledge base.</p>
+
+                <h3>How It Works</h3>
+                <div class="feature-card">
+                    <h4>The RAG Process</h4>
+                    <ol>
+                        <li><strong>You Ask:</strong> Type your legal question in natural language</li>
+                        <li><strong>System Searches:</strong> AI searches through thousands of legal documents</li>
+                        <li><strong>Relevant Content Retrieved:</strong> Most pertinent passages are identified</li>
+                        <li><strong>AI Generates Answer:</strong> GPT-4 creates a comprehensive answer with citations</li>
+                    </ol>
+                </div>
+
+                <h3>Making Queries</h3>
+
+                <h4>Basic Query</h4>
+                <div class="step-box">
+                    <strong>Step 1:</strong> Navigate to AI Query page
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 2:</strong> Type your question
+                    <p>Example: "What are the requirements for a valid contract in commercial law?"</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 3:</strong> Select search scope (optional)
+                    <ul>
+                        <li>All documents</li>
+                        <li>Specific case only</li>
+                        <li>Legal knowledge base only</li>
+                        <li>Your uploaded documents only</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 4:</strong> Click <span class="code">Ask AI</span>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 5:</strong> Review the answer
+                    <p>The AI will provide a detailed response with source citations</p>
+                </div>
+
+                <h3>Query Best Practices</h3>
+
+                <div class="success-box">
+                    <strong>Tips for Better Results:</strong>
+                    <ul>
+                        <li>Be specific in your questions</li>
+                        <li>Include relevant context (jurisdiction, case type, etc.)</li>
+                        <li>Ask one question at a time</li>
+                        <li>Use legal terminology when appropriate</li>
+                        <li>Reference specific documents if needed</li>
+                    </ul>
+                </div>
+
+                <h4>Good Query Examples</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Poor Query</th>
+                            <th>Better Query</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"What about contracts?"</td>
+                            <td>"What are the essential elements required for a valid commercial contract?"</td>
+                        </tr>
+                        <tr>
+                            <td>"Tell me about this case"</td>
+                            <td>"What are the key legal issues in Smith vs. Jones contract dispute case?"</td>
+                        </tr>
+                        <tr>
+                            <td>"Laws about property"</td>
+                            <td>"What are the legal requirements for property transfer in residential real estate?"</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Understanding AI Responses</h3>
+
+                <h4>Response Components</h4>
+                <ul>
+                    <li><strong>Answer:</strong> Direct response to your question</li>
+                    <li><strong>Sources:</strong> Legal documents and passages used</li>
+                    <li><strong>Confidence Score:</strong> AI's confidence in the answer (0-100%)</li>
+                    <li><strong>Related Topics:</strong> Suggested follow-up questions</li>
+                    <li><strong>Citations:</strong> Specific references with page numbers</li>
+                </ul>
+
+                <h4>Confidence Levels</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Score</th>
+                            <th>Meaning</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>90-100%</td>
+                            <td>High confidence</td>
+                            <td>Answer well-supported by documents</td>
+                        </tr>
+                        <tr>
+                            <td>70-89%</td>
+                            <td>Good confidence</td>
+                            <td>Answer supported, consider verifying</td>
+                        </tr>
+                        <tr>
+                            <td>50-69%</td>
+                            <td>Moderate confidence</td>
+                            <td>Review sources carefully, may need more context</td>
+                        </tr>
+                        <tr>
+                            <td>Below 50%</td>
+                            <td>Low confidence</td>
+                            <td>Limited information available, verify independently</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Advanced Query Features</h3>
+
+                <h4>Follow-up Questions</h4>
+                <p>Continue a conversation with the AI by asking follow-up questions that build on previous answers.</p>
+
+                <h4>Context-Aware Queries</h4>
+                <p>When asking questions within a specific case, the AI automatically considers all related documents.</p>
+
+                <h4>Comparative Analysis</h4>
+                <p>Ask the AI to compare multiple documents or legal concepts:
+                <br><em>Example: "Compare the contract terms in Document A and Document B"</em></p>
+
+                <h4>Precedent Search</h4>
+                <p>Find similar cases and legal precedents:
+                <br><em>Example: "Find similar contract dispute cases with damages exceeding $100,000"</em></p>
+
+                <h3>Query History</h3>
+                <p>Access your previous queries:</p>
+                <ul>
+                    <li>View all past questions and answers</li>
+                    <li>Filter by date, case, or topic</li>
+                    <li>Bookmark important queries</li>
+                    <li>Export query results to PDF</li>
+                    <li>Share queries with team members</li>
+                </ul>
+            </div>
+
+            <!-- Admin Panel -->
+            <div class="section" id="admin">
+                <h2>⚙️ Admin Panel</h2>
+                <p>The Admin Panel is available to administrators and provides powerful tools for managing the legal knowledge base and system configuration.</p>
+
+                <div class="warning-box">
+                    <strong>Access Required:</strong> Admin Panel features are only available to users with administrator role.
+                </div>
+
+                <h3>Legal Library Management</h3>
+                <p>Manage the comprehensive legal knowledge base that powers AI queries.</p>
+
+                <h4>Document Categories</h4>
+                <ul>
+                    <li>⚖️ <strong>Constitution:</strong> Constitutional documents and amendments</li>
+                    <li>📕 <strong>Codes:</strong> Civil, Penal, Commercial codes</li>
+                    <li>📜 <strong>Laws:</strong> Statutory laws and regulations</li>
+                    <li>📋 <strong>Decrees:</strong> Executive and administrative decrees</li>
+                    <li>📄 <strong>Resolutions:</strong> Court and administrative resolutions</li>
+                    <li>⚖️ <strong>Jurisprudence:</strong> Case law and legal precedents</li>
+                </ul>
+
+                <h4>Adding Legal Documents</h4>
+                <div class="step-box">
+                    <strong>Step 1:</strong> Access Legal Library
+                    <p>Navigate to Admin Panel → Legal Library</p>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 2:</strong> Click <span class="code">Upload Document</span>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 3:</strong> Complete document information
+                    <ul>
+                        <li><strong>Title:</strong> Official document name</li>
+                        <li><strong>Category:</strong> Select from dropdown</li>
+                        <li><strong>Jurisdiction:</strong> National, Provincial, or Municipal</li>
+                        <li><strong>Registry Number:</strong> Official reference number</li>
+                        <li><strong>Publication Date:</strong> When document was published</li>
+                        <li><strong>Effective Date:</strong> When it became legally effective</li>
+                        <li><strong>Subject:</strong> Legal topic or area</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <strong>Step 4:</strong> Upload PDF file
+                    <p>System will process and index the document</p>
+                </div>
+
+                <h3>Bulk Document Upload</h3>
+                <p>Upload multiple legal documents simultaneously for efficient processing.</p>
+
+                <h4>Using Bulk Upload</h4>
+                <ol>
+                    <li>Go to Admin Panel → Bulk Upload</li>
+                    <li>Set default category and jurisdiction</li>
+                    <li>Drag and drop multiple PDF files</li>
+                    <li>Edit individual titles and metadata as needed</li>
+                    <li>Click <span class="code">Process Queue</span></li>
+                    <li>Monitor processing progress</li>
+                </ol>
+
+                <div class="info-box">
+                    <strong>Batch Processing:</strong> Documents are processed sequentially. You can see real-time progress for each file including status, chunks created, and vectors generated.
+                </div>
+
+                <h3>Embeddings Control</h3>
+                <p>Monitor and manage the vector database that powers semantic search.</p>
+
+                <h4>Monitoring Embeddings</h4>
+                <p>View key metrics:</p>
+                <ul>
+                    <li><strong>Total Vectors:</strong> Number of embeddings in database</li>
+                    <li><strong>Documents Processed:</strong> Legal documents indexed</li>
+                    <li><strong>Processing Queue:</strong> Documents awaiting processing</li>
+                    <li><strong>Average Time:</strong> Processing time per document</li>
+                    <li><strong>Success Rate:</strong> Percentage of successful processing</li>
+                    <li><strong>Storage Used:</strong> Database storage consumption</li>
+                </ul>
+
+                <h4>Reindexing</h4>
+                <p>Refresh embeddings when needed:</p>
+                <ul>
+                    <li><strong>Single Document:</strong> Reindex specific document after updates</li>
+                    <li><strong>Bulk Reindex:</strong> Refresh all documents (use with caution)</li>
+                </ul>
+
+                <div class="warning-box">
+                    <strong>Performance Note:</strong> Bulk reindexing can take several hours depending on the number of documents. It's recommended to perform this during low-usage periods.
+                </div>
+
+                <h4>Testing Search</h4>
+                <p>Test semantic search functionality:</p>
+                <ol>
+                    <li>Click <span class="code">Test Search</span></li>
+                    <li>Enter a test query</li>
+                    <li>Review results with similarity scores</li>
+                    <li>Verify relevant documents are retrieved</li>
+                </ol>
+
+                <h3>User Management</h3>
+                <p>Administer user accounts, roles, and subscriptions.</p>
+
+                <h4>User Roles</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Permissions</th>
+                            <th>Access Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Administrator</strong></td>
+                            <td>Full system access, user management, legal library</td>
+                            <td>Complete</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lawyer</strong></td>
+                            <td>Case management, document upload, AI queries</td>
+                            <td>Professional</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Client</strong></td>
+                            <td>View assigned cases, limited document access</td>
+                            <td>Restricted</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Managing Users</h4>
+                <p>Admin capabilities:</p>
+                <ul>
+                    <li>Create new user accounts</li>
+                    <li>Edit user information and roles</li>
+                    <li>Activate/deactivate accounts</li>
+                    <li>Manage subscription plans</li>
+                    <li>View user activity statistics</li>
+                    <li>Reset passwords</li>
+                </ul>
+
+                <h3>Analytics Dashboard</h3>
+                <p>Comprehensive system metrics and business intelligence.</p>
+
+                <h4>Available Metrics</h4>
+                <ul>
+                    <li><strong>Usage Statistics:</strong> Total queries, active users, queries per day</li>
+                    <li><strong>Document Metrics:</strong> Total documents, uploads this month, most viewed</li>
+                    <li><strong>Cost Tracking:</strong> OpenAI costs, cost per query, monthly trends</li>
+                    <li><strong>Performance:</strong> Response times, success rates, common queries</li>
+                    <li><strong>User Activity:</strong> Most active users and usage patterns</li>
+                </ul>
+
+                <h4>Reporting Periods</h4>
+                <p>View analytics for different timeframes:</p>
+                <ul>
+                    <li>Last 7 days</li>
+                    <li>Current month</li>
+                    <li>Last 30 days</li>
+                    <li>Current year</li>
+                    <li>Custom date range</li>
+                </ul>
+            </div>
+
+            <!-- Subscription Plans -->
+            <div class="section" id="subscription">
+                <h2>💳 Subscription Plans</h2>
+                <p>Choose the plan that best fits your legal practice needs.</p>
+
+                <h3>Available Plans</h3>
+
+                <div class="feature-card">
+                    <h4>🆓 Free Plan - $0/month</h4>
+                    <p><strong>Perfect for:</strong> Individual lawyers or students exploring the platform</p>
+                    <ul>
+                        <li>1 active case</li>
+                        <li>5 documents maximum</li>
+                        <li>50 AI queries per month</li>
+                        <li>Access to basic legal knowledge base</li>
+                        <li>Standard support</li>
+                    </ul>
+                    <p><strong>Limitations:</strong> No advanced analysis, limited document storage</p>
+                </div>
+
+                <div class="feature-card">
+                    <h4>⚡ Basic Plan - $29/month</h4>
+                    <p><strong>Perfect for:</strong> Solo practitioners with moderate caseload</p>
+                    <ul>
+                        <li>10 active cases</li>
+                        <li>100 documents</li>
+                        <li>500 AI queries per month</li>
+                        <li>Complete legal knowledge base</li>
+                        <li>Document analysis tools</li>
+                        <li>Email support</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>🌟 Professional Plan - $99/month (Most Popular)</h4>
+                    <p><strong>Perfect for:</strong> Established lawyers and small firms</p>
+                    <ul>
+                        <li><strong>Unlimited</strong> cases</li>
+                        <li><strong>Unlimited</strong> documents</li>
+                        <li><strong>Unlimited</strong> AI queries</li>
+                        <li>Full legal knowledge base + Jurisprudence</li>
+                        <li>Advanced document analysis</li>
+                        <li>Automatic precedent matching</li>
+                        <li>Priority support</li>
+                        <li>Export features</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>👥 Team Plan - $299/month</h4>
+                    <p><strong>Perfect for:</strong> Law firms and legal departments</p>
+                    <ul>
+                        <li><strong>Everything in Professional</strong></li>
+                        <li>Up to 10 user accounts</li>
+                        <li>Real-time collaboration</li>
+                        <li>Admin panel access</li>
+                        <li>API access for integrations</li>
+                        <li>White-label option</li>
+                        <li>Dedicated support 24/7</li>
+                        <li>Custom training sessions</li>
+                    </ul>
+                </div>
+
+                <h3>Upgrading Your Plan</h3>
+                <ol>
+                    <li>Go to Profile → Subscription</li>
+                    <li>Click <span class="code">Change Plan</span></li>
+                    <li>Select your desired plan</li>
+                    <li>Review pricing and features</li>
+                    <li>Enter payment information (if not on file)</li>
+                    <li>Confirm upgrade</li>
+                </ol>
+
+                <div class="info-box">
+                    <strong>Instant Access:</strong> Upgrades are applied immediately. You'll have access to all new features right away. Billing is prorated for the current period.
+                </div>
+
+                <h3>Payment Methods</h3>
+                <p>We accept:</p>
+                <ul>
+                    <li>Credit Cards (Visa, MasterCard, American Express)</li>
+                    <li>Debit Cards</li>
+                    <li>PayPal</li>
+                    <li>Wire Transfer (Team plan only)</li>
+                </ul>
+
+                <h3>Billing and Invoices</h3>
+                <ul>
+                    <li>Automatic monthly billing</li>
+                    <li>Invoices sent via email</li>
+                    <li>Access invoice history in your profile</li>
+                    <li>Download PDF invoices for accounting</li>
+                </ul>
+
+                <h3>Cancellation Policy</h3>
+                <p>You can cancel your subscription at any time:</p>
+                <ol>
+                    <li>Go to Profile → Subscription</li>
+                    <li>Click <span class="code">Cancel Subscription</span></li>
+                    <li>Confirm cancellation</li>
+                </ol>
+
+                <div class="info-box">
+                    <strong>Access After Cancellation:</strong> You'll continue to have access to paid features until the end of your current billing period. After that, your account will revert to the Free plan.
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section" id="troubleshooting">
+                <h2>🔧 Troubleshooting</h2>
+                <p>Common issues and their solutions.</p>
+
+                <h3>Login Issues</h3>
+
+                <h4>Forgot Password</h4>
+                <ol>
+                    <li>Click <span class="code">Forgot Password</span> on login page</li>
+                    <li>Enter your email address</li>
+                    <li>Check your email for reset link</li>
+                    <li>Create new password</li>
+                </ol>
+
+                <h4>Account Locked</h4>
+                <div class="warning-box">
+                    <strong>Security Feature:</strong> After 5 failed login attempts, your account is temporarily locked for 30 minutes. Contact support if you need immediate access.
+                </div>
+
+                <h3>Document Upload Problems</h3>
+
+                <h4>Upload Fails</h4>
+                <p>If document upload fails, check:</p>
+                <ul>
+                    <li>File size (maximum 50MB per file)</li>
+                    <li>File format (PDF, DOCX, TXT only)</li>
+                    <li>Internet connection stability</li>
+                    <li>Available storage in your plan</li>
+                </ul>
+
+                <h4>Slow Processing</h4>
+                <p>Document processing time depends on:</p>
+                <ul>
+                    <li>Document size and complexity</li>
+                    <li>Current system load</li>
+                    <li>Number of documents in queue</li>
+                </ul>
+                <p>Processing usually completes within 10 minutes. If it takes longer, contact support.</p>
+
+                <h3>AI Query Issues</h3>
+
+                <h4>No Results Found</h4>
+                <p>If AI returns no results:</p>
+                <ul>
+                    <li>Try rephrasing your question</li>
+                    <li>Check if relevant documents are uploaded and processed</li>
+                    <li>Broaden your search scope</li>
+                    <li>Verify documents contain relevant content</li>
+                </ul>
+
+                <h4>Low Confidence Answers</h4>
+                <p>To improve answer quality:</p>
+                <ul>
+                    <li>Provide more context in your question</li>
+                    <li>Upload more relevant documents</li>
+                    <li>Be more specific about jurisdiction and legal area</li>
+                    <li>Use legal terminology when appropriate</li>
+                </ul>
+
+                <h3>Performance Issues</h3>
+
+                <h4>Slow Loading Times</h4>
+                <p>If the system is slow:</p>
+                <ol>
+                    <li>Clear your browser cache</li>
+                    <li>Check your internet connection</li>
+                    <li>Try a different browser</li>
+                    <li>Disable browser extensions temporarily</li>
+                </ol>
+
+                <h4>Browser Compatibility</h4>
+                <p>Recommended browsers:</p>
+                <ul>
+                    <li>Chrome (version 90+)</li>
+                    <li>Firefox (version 88+)</li>
+                    <li>Safari (version 14+)</li>
+                    <li>Edge (version 90+)</li>
+                </ul>
+
+                <h3>Getting Help</h3>
+
+                <h4>Support Channels</h4>
+                <ul>
+                    <li><strong>Email:</strong> support@legalrag.com</li>
+                    <li><strong>Live Chat:</strong> Available during business hours</li>
+                    <li><strong>Help Center:</strong> Searchable knowledge base</li>
+                    <li><strong>Video Tutorials:</strong> Step-by-step guides</li>
+                </ul>
+
+                <h4>Response Times</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Response Time</th>
+                            <th>Channels</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Free</td>
+                            <td>48-72 hours</td>
+                            <td>Email only</td>
+                        </tr>
+                        <tr>
+                            <td>Basic</td>
+                            <td>24-48 hours</td>
+                            <td>Email, Help Center</td>
+                        </tr>
+                        <tr>
+                            <td>Professional</td>
+                            <td>4-12 hours</td>
+                            <td>Email, Chat, Phone</td>
+                        </tr>
+                        <tr>
+                            <td>Team</td>
+                            <td>1-4 hours (24/7)</td>
+                            <td>All channels + dedicated support</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- FAQ -->
+            <div class="section" id="faq">
+                <h2>❓ Frequently Asked Questions</h2>
+
+                <h3>General Questions</h3>
+
+                <h4>Q: Is my data secure?</h4>
+                <p><strong>A:</strong> Yes. We use enterprise-grade encryption for data at rest and in transit. All documents are stored securely, and access is logged for security auditing. We comply with GDPR and other data protection regulations.</p>
+
+                <h4>Q: Can I use the system offline?</h4>
+                <p><strong>A:</strong> No, Legal RAG System requires an internet connection to access AI features and cloud-stored documents. However, you can download documents for offline viewing.</p>
+
+                <h4>Q: What languages are supported?</h4>
+                <p><strong>A:</strong> Currently, the system supports Spanish and English for documents and queries. We plan to add more languages in future updates.</p>
+
+                <h3>Subscription Questions</h3>
+
+                <h4>Q: Can I change plans anytime?</h4>
+                <p><strong>A:</strong> Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, and billing is prorated.</p>
+
+                <h4>Q: What happens if I exceed my plan limits?</h4>
+                <p><strong>A:</strong> You'll receive notifications when approaching limits. If exceeded, you can upgrade your plan or wait until the next billing period. We'll never charge you without notification.</p>
+
+                <h4>Q: Do you offer refunds?</h4>
+                <p><strong>A:</strong> We offer a 30-day money-back guarantee for first-time subscribers. If you're not satisfied, contact support within 30 days of your first payment.</p>
+
+                <h3>Technical Questions</h3>
+
+                <h4>Q: How accurate is the AI?</h4>
+                <p><strong>A:</strong> Our AI uses GPT-4, which provides highly accurate responses based on the documents in the system. However, AI responses should be reviewed by legal professionals and not considered as legal advice.</p>
+
+                <h4>Q: Can I integrate with other legal software?</h4>
+                <p><strong>A:</strong> Team plan subscribers have access to our API for custom integrations. Contact sales for integration possibilities.</p>
+
+                <h4>Q: How often is the legal knowledge base updated?</h4>
+                <p><strong>A:</strong> Our legal knowledge base is updated continuously as new laws, regulations, and jurisprudence are published. Updates typically occur weekly.</p>
+
+                <h3>Privacy Questions</h3>
+
+                <h4>Q: Who can see my documents?</h4>
+                <p><strong>A:</strong> Only you and users you explicitly share with can access your documents. Our staff cannot view your documents except when required for technical support with your explicit permission.</p>
+
+                <h4>Q: Is my query history private?</h4>
+                <p><strong>A:</strong> Yes, all queries and their results are private to your account. We use anonymized, aggregated data for system improvements but never share individual query data.</p>
+
+                <h4>Q: Can I delete my data?</h4>
+                <p><strong>A:</strong> Yes, you can delete individual documents, cases, or your entire account. Deletion is permanent and typically completed within 30 days.</p>
+
+                <h3>Support Questions</h3>
+
+                <h4>Q: Do you offer training?</h4>
+                <p><strong>A:</strong> Professional and Team plan subscribers receive onboarding training. Team plan includes custom training sessions for your organization.</p>
+
+                <h4>Q: Is there a mobile app?</h4>
+                <p><strong>A:</strong> The web interface is mobile-responsive. Native mobile apps for iOS and Android are in development and will be released in 2025.</p>
+
+                <h4>Q: Can I import cases from other systems?</h4>
+                <p><strong>A:</strong> We offer data migration assistance for Team plan subscribers. Contact our support team to discuss your migration needs.</p>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <h3>Need More Help?</h3>
+            <p>Contact our support team at <a href="mailto:support@legalrag.com">support@legalrag.com</a></p>
+            <p style="margin-top: 20px; opacity: 0.8;">Legal RAG System © 2025 | Version 1.0</p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.7;">
+                This manual was generated on November 6, 2025
+            </p>
+        </div>
+    </div>
+</body>
+</html>

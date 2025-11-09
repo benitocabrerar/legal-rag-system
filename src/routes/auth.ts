@@ -76,6 +76,15 @@ export async function authRoutes(fastify: FastifyInstance) {
       // Find user
       const user = await prisma.user.findUnique({
         where: { email: body.email },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          planTier: true,
+          passwordHash: true,
+          twoFactorEnabled: true,
+        },
       });
 
       if (!user) {
@@ -87,6 +96,15 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       if (!validPassword) {
         return reply.code(401).send({ error: 'Invalid credentials' });
+      }
+
+      // Check if 2FA is enabled
+      if (user.twoFactorEnabled) {
+        // Return a special response indicating 2FA is required
+        return reply.send({
+          requires2FA: true,
+          email: user.email,
+        });
       }
 
       // Generate JWT token
