@@ -20,14 +20,14 @@ interface User {
 const ROLES = [
   { value: 'admin', label: 'Administrador', color: 'purple' },
   { value: 'lawyer', label: 'Abogado', color: 'blue' },
-  { value: 'client', label: 'Cliente', color: 'green' },
+  { value: 'user', label: 'Usuario', color: 'green' },
 ];
 
 const SUBSCRIPTION_PLANS = [
   { value: 'free', label: 'Gratis' },
   { value: 'basic', label: 'Básico' },
   { value: 'professional', label: 'Profesional' },
-  { value: 'team', label: 'Equipo' },
+  { value: 'enterprise', label: 'Empresarial' },
 ];
 
 export default function UsersPage() {
@@ -115,7 +115,7 @@ export default function UsersPage() {
     inactive: users.filter((u) => !u.isActive).length,
     admins: users.filter((u) => u.role === 'admin').length,
     lawyers: users.filter((u) => u.role === 'lawyer').length,
-    clients: users.filter((u) => u.role === 'client').length,
+    clients: users.filter((u) => u.role === 'user').length,
   };
 
   return (
@@ -148,7 +148,7 @@ export default function UsersPage() {
           <p className="text-2xl font-bold text-blue-600">{stats.lawyers}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-1">Clientes</p>
+          <p className="text-sm text-gray-600 mb-1">Usuarios</p>
           <p className="text-2xl font-bold text-green-600">{stats.clients}</p>
         </div>
       </div>
