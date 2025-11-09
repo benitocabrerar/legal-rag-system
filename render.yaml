@@ -1,69 +1,12 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: legal-rag-postgres
-    env: docker
-    plan: starter
-    region: oregon
-    databaseName: legal_rag
-    databaseUser: legal_user
-    ipAllowList: []
-
-  # Redis Cache
-  - type: redis
-    name: legal-rag-redis
-    plan: starter
-    region: oregon
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
-
-  # Backend API
   - type: web
     name: legal-rag-api
     env: node
     region: oregon
     plan: starter
-    buildCommand: npm install && npx prisma generate
-    startCommand: npx tsx src/server.ts
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 8000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: legal-rag-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: legal-rag-redis
-          type: redis
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: CORS_ORIGIN
-        value: https://legal-rag-frontend.onrender.com
-
-  # Frontend Next.js
-  - type: web
-    name: legal-rag-frontend
-    env: node
-    region: oregon
-    plan: starter
-    rootDir: frontend
-    buildCommand: npm install && npm run build
+    branch: main
+    buildCommand: npm install && npx prisma generate && node scripts/migrate-with-resolve.js
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: legal-rag-api
-          type: web
-          property: host
-      - key: NEXTAUTH_URL
-        value: https://legal-rag-frontend.onrender.com
-      - key: NEXTAUTH_SECRET
-        generateValue: true
