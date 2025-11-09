@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal AI Dashboard - Guía Completa del Usuario</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 3rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header .subtitle {
+            font-size: 1.5rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .header .version {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .content {
+            padding: 3rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section-header .icon {
+            font-size: 2.5rem;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .feature-card .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: #6b7280;
+            line-height: 1.7;
+        }
+
+        .legal-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin: 0.25rem;
+        }
+
+        .badge-penal { background: #fee2e2; color: #991b1b; }
+        .badge-civil { background: #dbeafe; color: #1e40af; }
+        .badge-constitucional { background: #ede9fe; color: #6b21a8; }
+        .badge-transito { background: #fef3c7; color: #92400e; }
+        .badge-administrativo { background: #f3f4f6; color: #374151; }
+        .badge-laboral { background: #d1fae5; color: #065f46; }
+
+        .pipeline-stage {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .pipeline-stage.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea10 0%, #764ba215 100%);
+        }
+
+        .pipeline-stage.completed {
+            opacity: 0.7;
+        }
+
+        .pipeline-stage .stage-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .pipeline-stage.active .stage-number {
+            background: #667eea;
+            color: white;
+        }
+
+        .pipeline-stage.completed .stage-number {
+            background: #10b981;
+            color: white;
+        }
+
+        .pipeline-stage .stage-icon {
+            font-size: 2rem;
+        }
+
+        .pipeline-stage .stage-content {
+            flex: 1;
+        }
+
+        .pipeline-stage .stage-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .pipeline-stage .stage-description {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .prompt-category {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .prompt-category-header {
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+
+        .prompt-category-header:hover {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+
+        .prompt-category-header .cat-icon {
+            font-size: 1.8rem;
+        }
+
+        .prompt-category-header .cat-name {
+            flex: 1;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .prompt-category-header .cat-count {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .prompt-list {
+            padding: 1.5rem;
+            background: #fafafa;
+        }
+
+        .prompt-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        .prompt-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .prompt-item .prompt-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-item .prompt-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+
+        .prompt-item .prompt-text {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+        }
+
+        .stat-card .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-value {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-trend {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .stat-card .trend-up {
+            color: #86efac;
+        }
+
+        .stat-card .trend-down {
+            color: #fca5a5;
+        }
+
+        .legal-reference {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .legal-reference .ref-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .legal-reference .ref-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #1f2937;
+        }
+
+        .legal-reference .ref-relevance {
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .relevance-high {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .relevance-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .relevance-low {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .legal-reference .ref-content {
+            color: #6b7280;
+            line-height: 1.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .legal-reference .ref-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .legal-reference .ref-link:hover {
+            text-decoration: underline;
+        }
+
+        .ai-insight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #fbbf24;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .ai-insight .insight-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-insight .insight-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #78350f;
+            margin-bottom: 0.75rem;
+        }
+
+        .ai-insight .insight-text {
+            color: #92400e;
+            line-height: 1.7;
+        }
+
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border: 2px dashed #9ca3af;
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            text-align: center;
+            color: #6b7280;
+            margin: 2rem 0;
+        }
+
+        .screenshot-placeholder .placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .screenshot-placeholder .placeholder-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .toc {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .toc h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #1f2937;
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .toc li:last-child {
+            border-bottom: none;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toc a:hover {
+            color: #764ba2;
+        }
+
+        .footer {
+            background: #1f2937;
+            color: white;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer .footer-links {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .footer .footer-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer .footer-links a:hover {
+            color: #764ba2;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚖️ Legal AI Dashboard</h1>
+            <p class="subtitle">Sistema Revolucionario de Gestión Legal con Inteligencia Artificial</p>
+            <span class="version">📦 Versión 2.0.0 | Enero 2025</span>
+        </div>
+
+        <div class="content">
+            <!-- Tabla de Contenidos -->
+            <div class="toc">
+                <h3>📋 Tabla de Contenidos</h3>
+                <ul>
+                    <li><a href="#introduccion">🎯 Introducción</a></li>
+                    <li><a href="#dashboard">📊 Dashboard Principal</a></li>
+                    <li><a href="#tipos-legales">⚖️ Clasificación Legal</a></li>
+                    <li><a href="#caso-detalle">📁 Página de Caso Detallado</a></li>
+                    <li><a href="#prompts">🤖 Prompts Especializados</a></li>
+                    <li><a href="#pipeline">🔄 Pipeline de Procesos</a></li>
+                    <li><a href="#referencias">📚 Referencias Legales</a></li>
+                    <li><a href="#ia-features">✨ Características de IA</a></li>
+                    <li><a href="#generacion">📝 Generación de Documentos</a></li>
+                </ul>
+            </div>
+
+            <!-- Introducción -->
+            <section id="introduccion" class="section">
+                <div class="section-header">
+                    <span class="icon">🎯</span>
+                    <h2>Introducción</h2>
+                </div>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">💡</div>
+                    <div class="insight-title">¿Qué es Legal AI Dashboard?</div>
+                    <div class="insight-text">
+                        Legal AI Dashboard es un sistema revolucionario de gestión de casos legales que integra
+                        inteligencia artificial avanzada para ayudar a abogados y profesionales del derecho a
+                        trabajar de manera más eficiente. El sistema utiliza tecnología RAG (Retrieval-Augmented Generation)
+                        para proporcionar análisis legal contextual, generación de documentos, y recomendaciones basadas
+                        en jurisprudencia ecuatoriana.
+                    </div>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🚀</div>
+                        <h3>IA Avanzada</h3>
+                        <p>Sistema RAG con búsqueda semántica en documentos legales, jurisprudencia y normativa ecuatoriana.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚖️</div>
+                        <h3>6 Tipos Legales</h3>
+                        <p>Penal, Civil, Constitucional, Tránsito, Administrativo y Laboral con prompts especializados.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>Análisis Visual</h3>
+                        <p>Pipeline de procesos, estadísticas en tiempo real y visualización del progreso de casos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>Generación Automática</h3>
+                        <p>Crea informes, escritos, análisis y peticiones con IA en segundos.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Principal -->
+            <section id="dashboard" class="section">
+                <div class="section-header">
+                    <span class="icon">📊</span>
+                    <h2>Dashboard Principal</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    El dashboard es el corazón del sistema. Aquí encontrarás una vista general de todos tus casos,
+                    estadísticas clave, insights de IA y acceso rápido a todas las funcionalidades.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">🎯 Tarjetas de Estadísticas Rápidas</h3>
+
+                <div class="feature-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📁</div>
+                        <div class="stat-label">Total de Casos</div>
+                        <div class="stat-value">24</div>
+                        <div class="stat-trend"><span class="trend-up">↑ 12%</span> vs mes anterior</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-label">Casos Activos</div>
+                        <div class="stat-value">18</div>
+                        <div class="stat-trend"><span class="trend-up">↑ 8%</span> vs mes anterior</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏰</div>
+                        <div class="stat-label">Acciones Pendientes</div>
+                        <div class="stat-value">7</div>
+                        <div class="stat-trend"><span class="trend-down">↓ 3</span> vs semana anterior</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-label">Este Mes</div>
+                        <div class="stat-value">5</div>
+                        <div class="stat-trend"><span class="trend-up">↑ 2</span> nuevos casos</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem;">💡 Panel de Insights de IA</h3>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">🔍</div>
+                    <div class="insight-title">Recomendación Inteligente</div>
+                    <div class="insight-text">
+                        El caso "Despido Intempestivo - García vs. Empresa X" requiere atención. El plazo para presentar
+                        la demanda vence en 5 días. Se recomienda iniciar el cálculo de liquidación y preparar la
+                        documentación de respaldo.
+                    </div>
+                </div>
+
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-icon">🖼️</div>
+                    <div class="placeholder-text">Vista del Dashboard con Filtros de Tipo Legal</div>
+                </div>
+            </section>
+
+            <!-- Clasificación Legal -->
+            <section id="tipos-legales" class="section">
+                <div class="section-header">
+                    <span class="icon">⚖️</span>
+                    <h2>Clasificación por Tipo Legal</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    El sistema clasifica automáticamente los casos en 6 tipos legales principales, cada uno con
+                    su propio conjunto de herramientas, prompts y referencias especializadas.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">🏷️ Tipos Disponibles</h3>
+
+                <div style="margin-bottom: 2rem;">
+                    <span class="legal-type-badge badge-penal">⚖️ Penal</span>
+                    <span class="legal-type-badge badge-civil">📋 Civil</span>
+                    <span class="legal-type-badge badge-constitucional">🏛️ Constitucional</span>
+                    <span class="legal-type-badge badge-transito">🚗 Tránsito</span>
+                    <span class="legal-type-badge badge-administrativo">🏢 Administrativo</span>
+                    <span class="legal-type-badge badge-laboral">👔 Laboral</span>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚖️</div>
+                        <h3>Penal</h3>
+                        <p><strong>Enfoque:</strong> Análisis de elementos del tipo penal, atenuantes, agravantes, y estrategia de defensa.</p>
+                        <p><strong>Referencias:</strong> COIP, jurisprudencia de salas penales.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📋</div>
+                        <h3>Civil</h3>
+                        <p><strong>Enfoque:</strong> Fundamentos jurídicos, análisis de contratos, obligaciones y responsabilidad civil.</p>
+                        <p><strong>Referencias:</strong> Código Civil, jurisprudencia civil.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏛️</div>
+                        <h3>Constitucional</h3>
+                        <p><strong>Enfoque:</strong> Acciones de protección, derechos fundamentales, garantías constitucionales.</p>
+                        <p><strong>Referencias:</strong> Constitución, precedentes de Corte Constitucional.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🚗</div>
+                        <h3>Tránsito</h3>
+                        <p><strong>Enfoque:</strong> Responsabilidad civil y penal, daños, lucro cesante, daño emergente.</p>
+                        <p><strong>Referencias:</strong> Ley Orgánica de Transporte Terrestre.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏢</div>
+                        <h3>Administrativo</h3>
+                        <p><strong>Enfoque:</strong> Procedimientos administrativos, recursos, vicios de nulidad.</p>
+                        <p><strong>Referencias:</strong> Estatuto del Régimen Jurídico Administrativo.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">👔</div>
+                        <h3>Laboral</h3>
+                        <p><strong>Enfoque:</strong> Indemnizaciones, despidos, cálculos laborales, derechos del trabajador.</p>
+                        <p><strong>Referencias:</strong> Código de Trabajo, Mandatos Constituyentes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Página de Caso Detallado -->
+            <section id="caso-detalle" class="section">
+                <div class="section-header">
+                    <span class="icon">📁</span>
+                    <h2>Página de Caso Detallado</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    La página de caso detallado es un espacio de trabajo completo con diseño de 3 columnas que
+                    proporciona acceso a todas las herramientas de IA, documentos, y análisis legal.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">📐 Diseño de 3 Columnas</h3>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📂</div>
+                        <h3>Columna Izquierda</h3>
+                        <p><strong>Gestor de Documentos:</strong> Sube, organiza y visualiza PDFs, Word, imágenes y más.</p>
+                        <p><strong>Pipeline de Proceso:</strong> Visualización del progreso del caso a través de 6 etapas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💬</div>
+                        <h3>Panel Central</h3>
+                        <p><strong>Asistente de IA:</strong> Chat interactivo con contexto del caso.</p>
+                        <p><strong>Prompts Especializados:</strong> Acceso rápido a plantillas de consulta por categoría.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Columna Derecha</h3>
+                        <p><strong>Acciones Rápidas:</strong> Generar, exportar, compartir, archivar.</p>
+                        <p><strong>Referencias Legales:</strong> Artículos, leyes y jurisprudencia relevante.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-icon">🖼️</div>
+                    <div class="placeholder-text">Vista de Caso Detallado con Diseño de 3 Columnas</div>
+                </div>
+            </section>
+
+            <!-- Prompts Especializados -->
+            <section id="prompts" class="section">
+                <div class="section-header">
+                    <span class="icon">🤖</span>
+                    <h2>Prompts Especializados por IA</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    Cada tipo legal cuenta con prompts especializados organizados por categorías que guían
+                    a la IA para proporcionar respuestas más precisas y útiles.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">📊 Ejemplo: Prompts Penales</h3>
+
+                <div class="prompt-category">
+                    <div class="prompt-category-header">
+                        <span class="cat-icon">📊</span>
+                        <span class="cat-name">Análisis Legal</span>
+                        <span class="cat-count">4</span>
+                    </div>
+                    <div class="prompt-list">
+                        <div class="prompt-item">
+                            <div class="prompt-icon">📊</div>
+                            <div class="prompt-title">Analizar elementos del tipo penal</div>
+                            <div class="prompt-text">
+                                Analiza los elementos del tipo penal en este caso. Identifica si se configuran
+                                todos los elementos objetivos y subjetivos del delito.
+                            </div>
+                        </div>
+                        <div class="prompt-item">
+                            <div class="prompt-icon">🔍</div>
+                            <div class="prompt-title">Buscar atenuantes</div>
+                            <div class="prompt-text">
+                                Encuentra circunstancias atenuantes aplicables según el COIP. Analiza todas
+                                las posibilidades para reducir la pena.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prompt-category">
+                    <div class="prompt-category-header">
+                        <span class="cat-icon">📝</span>
+                        <span class="cat-name">Documentos</span>
+                        <span class="cat-count">2</span>
+                    </div>
+                    <div class="prompt-list">
+                        <div class="prompt-item">
+                            <div class="prompt-icon">📝</div>
+                            <div class="prompt-title">Generar escrito de defensa</div>
+                            <div class="prompt-text">
+                                Genera un escrito de defensa penal profesional. Incluye teoría del caso,
+                                análisis de pruebas y argumentos jurídicos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prompt-category">
+                    <div class="prompt-category-header">
+                        <span class="cat-icon">📚</span>
+                        <span class="cat-name">Citas Legales</span>
+                        <span class="cat-count">1</span>
+                    </div>
+                    <div class="prompt-list">
+                        <div class="prompt-item">
+                            <div class="prompt-icon">📚</div>
+                            <div class="prompt-title">Artículos del COIP</div>
+                            <div class="prompt-text">
+                                ¿Qué dice el Código Orgánico Integral Penal (COIP) sobre [delito específico]?
+                                Proporciona análisis completo.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem;">📋 Categorías de Prompts</h3>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>Análisis Legal</h3>
+                        <p>Prompts para analizar fundamentos jurídicos, elementos del tipo, responsabilidad y viabilidad legal.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Búsqueda</h3>
+                        <p>Búsqueda de jurisprudencia, precedentes, atenuantes, agravantes y referencias legales.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>Documentos</h3>
+                        <p>Generación de escritos, demandas, contestaciones, recursos y otros documentos legales.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📚</div>
+                        <h3>Citas Legales</h3>
+                        <p>Referencias a artículos de códigos, leyes, constitución y normativa aplicable.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pipeline de Procesos -->
+            <section id="pipeline" class="section">
+                <div class="section-header">
+                    <span class="icon">🔄</span>
+                    <h2>Pipeline de Procesos Legales</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    Cada tipo legal tiene su propio pipeline de 6 etapas que visualiza el progreso del caso
+                    y proporciona recomendaciones para la siguiente acción.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">⚖️ Ejemplo: Pipeline Penal</h3>
+
+                <div class="pipeline-stage completed">
+                    <div class="stage-number">1</div>
+                    <div class="stage-icon">📢</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Denuncia</div>
+                        <div class="stage-description">Presentación de denuncia inicial</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage active">
+                    <div class="stage-number">2</div>
+                    <div class="stage-icon">🔍</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Instrucción Fiscal</div>
+                        <div class="stage-description">Investigación preliminar y recolección de pruebas</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage">
+                    <div class="stage-number">3</div>
+                    <div class="stage-icon">👨‍⚖️</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Audiencia de Formulación</div>
+                        <div class="stage-description">Audiencia de formulación de cargos</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage">
+                    <div class="stage-number">4</div>
+                    <div class="stage-icon">📋</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Etapa de Juicio</div>
+                        <div class="stage-description">Presentación de pruebas y alegatos</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage">
+                    <div class="stage-number">5</div>
+                    <div class="stage-icon">⚖️</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Sentencia</div>
+                        <div class="stage-description">Emisión de sentencia por el tribunal</div>
+                    </div>
+                </div>
+
+                <div class="pipeline-stage">
+                    <div class="stage-number">6</div>
+                    <div class="stage-icon">📝</div>
+                    <div class="stage-content">
+                        <div class="stage-title">Recursos</div>
+                        <div class="stage-description">Interposición de recursos si aplica</div>
+                    </div>
+                </div>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">💡</div>
+                    <div class="insight-title">Siguiente Acción Recomendada</div>
+                    <div class="insight-text">
+                        Preparar solicitud de medidas cautelares y asegurar presencia del imputado en la
+                        audiencia de formulación de cargos. Revisar el expediente fiscal para identificar
+                        posibles vicios de procedimiento.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Referencias Legales -->
+            <section id="referencias" class="section">
+                <div class="section-header">
+                    <span class="icon">📚</span>
+                    <h2>Referencias Legales Inteligentes</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    El sistema identifica automáticamente las referencias legales más relevantes para cada caso,
+                    incluyendo artículos de la Constitución, códigos, leyes y jurisprudencia.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">📜 Referencias Disponibles</h3>
+
+                <div class="legal-reference">
+                    <div class="ref-header">
+                        <div class="ref-title">Constitución del Ecuador - Art. 76</div>
+                        <span class="ref-relevance relevance-high">Relevancia Alta</span>
+                    </div>
+                    <div class="ref-content">
+                        En todo proceso en el que se determinen derechos y obligaciones de cualquier orden,
+                        se asegurará el derecho al debido proceso que incluirá las siguientes garantías básicas...
+                    </div>
+                    <a href="#" class="ref-link">Ver texto completo →</a>
+                </div>
+
+                <div class="legal-reference">
+                    <div class="ref-header">
+                        <div class="ref-title">COIP - Art. 140: Asesinato</div>
+                        <span class="ref-relevance relevance-high">Relevancia Alta</span>
+                    </div>
+                    <div class="ref-content">
+                        La persona que mate a otra será sancionada con pena privativa de libertad de veintidós
+                        a veintiséis años, si concurre alguna de las siguientes circunstancias...
+                    </div>
+                    <a href="#" class="ref-link">Ver texto completo →</a>
+                </div>
+
+                <div class="legal-reference">
+                    <div class="ref-header">
+                        <div class="ref-title">Sentencia 001-17-SEP-CC (Corte Constitucional)</div>
+                        <span class="ref-relevance relevance-medium">Relevancia Media</span>
+                    </div>
+                    <div class="ref-content">
+                        Precedente sobre el derecho a la defensa técnica en procesos penales. La falta de
+                        notificación oportuna viola garantías constitucionales fundamentales.
+                    </div>
+                    <a href="#" class="ref-link">Ver sentencia completa →</a>
+                </div>
+
+                <div class="legal-reference">
+                    <div class="ref-header">
+                        <div class="ref-title">Código de Procedimiento Penal - Art. 234</div>
+                        <span class="ref-relevance relevance-medium">Relevancia Media</span>
+                    </div>
+                    <div class="ref-content">
+                        Requisitos para la procedencia de medidas cautelares en materia penal.
+                        Se debe demostrar peligro de fuga y riesgo procesal.
+                    </div>
+                    <a href="#" class="ref-link">Ver texto completo →</a>
+                </div>
+            </section>
+
+            <!-- Características de IA -->
+            <section id="ia-features" class="section">
+                <div class="section-header">
+                    <span class="icon">✨</span>
+                    <h2>Características Avanzadas de IA</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    El sistema utiliza tecnología de IA de última generación para proporcionar análisis
+                    contextual, búsqueda semántica y generación de documentos legales.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>Búsqueda Semántica</h3>
+                        <p>Busca por concepto, no solo por palabras clave. La IA comprende el contexto y encuentra información relevante incluso cuando no coinciden las palabras exactas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧠</div>
+                        <h3>Análisis Vectorial</h3>
+                        <p>Todos los documentos se convierten en vectores semánticos, permitiendo búsquedas de similitud y análisis de relaciones entre casos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>RAG Contextual</h3>
+                        <p>Retrieval-Augmented Generation combina documentos del caso con conocimiento legal general para respuestas precisas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💬</div>
+                        <h3>Chat Inteligente</h3>
+                        <p>Asistente de IA con memoria de conversación que recuerda el contexto y proporciona respuestas cada vez más precisas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3>Prompts Especializados</h3>
+                        <p>Más de 40 plantillas de prompts diseñados específicamente para cada tipo legal y categoría de análisis.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📈</div>
+                        <h3>Análisis Predictivo</h3>
+                        <p>Recomendaciones sobre siguiente acción, plazos críticos y probabilidades de éxito basadas en casos similares.</p>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem;">🚀 Casos de Uso de IA</h3>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">🔍</div>
+                    <div class="insight-title">Ejemplo: Búsqueda Semántica Cruzada</div>
+                    <div class="insight-text">
+                        <strong>Consulta:</strong> "Encuentra precedentes sobre responsabilidad del empleador en accidentes de trabajo"
+                        <br><br>
+                        <strong>Resultado:</strong> La IA busca en todos los documentos, jurisprudencia y casos similares,
+                        identificando no solo la palabra "responsabilidad" sino conceptos relacionados como "culpa patronal",
+                        "deber de cuidado", "condiciones de seguridad" y "riesgos laborales".
+                    </div>
+                </div>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">📝</div>
+                    <div class="insight-title">Ejemplo: Generación de Documento</div>
+                    <div class="insight-text">
+                        <strong>Prompt:</strong> "Genera una demanda laboral por despido intempestivo"
+                        <br><br>
+                        <strong>Resultado:</strong> La IA analiza los documentos del caso, identifica datos clave del cliente,
+                        calcula indemnizaciones automáticamente, y genera un escrito profesional con fundamentos de hecho,
+                        derecho, pruebas y petitorio completo.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Generación de Documentos -->
+            <section id="generacion" class="section">
+                <div class="section-header">
+                    <span class="icon">📝</span>
+                    <h2>Generación Automática de Documentos</h2>
+                </div>
+
+                <p style="margin-bottom: 2rem; color: #6b7280; font-size: 1.1rem;">
+                    El sistema puede generar automáticamente diversos tipos de documentos legales con solo
+                    hacer clic, utilizando la información del caso y las plantillas especializadas.
+                </p>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem;">📄 Tipos de Documentos Generables</h3>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">📋</div>
+                        <h3>Informes de Caso</h3>
+                        <p>Resumen ejecutivo del caso con análisis legal, cronología de eventos, documentos clave y recomendaciones estratégicas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚖️</div>
+                        <h3>Escritos Judiciales</h3>
+                        <p>Demandas, contestaciones, recursos, alegatos y otros escritos procesales con fundamentos legales completos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>Análisis Legal</h3>
+                        <p>Análisis detallado de viabilidad legal, elementos del tipo, responsabilidad civil o penal, y probabilidades de éxito.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>Pedidos de Impulso</h3>
+                        <p>Solicitudes procesales, pedidos de información, oficios a autoridades y otros trámites administrativos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💰</div>
+                        <h3>Cálculos Financieros</h3>
+                        <p>Liquidaciones laborales, daños y perjuicios, intereses, honorarios y otros cálculos legales automatizados.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📑</div>
+                        <h3>Contratos y Convenios</h3>
+                        <p>Generación de contratos personalizados, acuerdos transaccionales y documentos negociales.</p>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem;">📤 Formatos de Exportación</h3>
+
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
+                    <div style="background: #667eea; color: white; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">📄</span> PDF
+                    </div>
+                    <div style="background: #764ba2; color: white; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">📝</span> DOCX
+                    </div>
+                    <div style="background: #667eea; color: white; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">📊</span> Excel
+                    </div>
+                    <div style="background: #764ba2; color: white; padding: 1rem 2rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">📋</span> Texto
+                    </div>
+                </div>
+
+                <div class="ai-insight">
+                    <div class="insight-icon">⚡</div>
+                    <div class="insight-title">Generación en Segundos</div>
+                    <div class="insight-text">
+                        Los documentos se generan en cuestión de segundos. La IA analiza todo el contexto del caso,
+                        identifica información relevante de los documentos subidos, aplica plantillas legales apropiadas
+                        y produce un documento profesional listo para revisar y firmar.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Conclusión -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="icon">🎯</span>
+                    <h2>Comenzar a Usar el Sistema</h2>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">1️⃣</div>
+                        <h3>Crear un Caso</h3>
+                        <p>Haz clic en "Nuevo Caso" y completa la información básica: nombre del cliente, número de caso y tipo legal.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">2️⃣</div>
+                        <h3>Subir Documentos</h3>
+                        <p>Sube todos los documentos relevantes del caso. El sistema los analizará automáticamente con IA.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">3️⃣</div>
+                        <h3>Usar Prompts</h3>
+                        <p>Selecciona prompts especializados o haz tus propias preguntas al asistente de IA.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">4️⃣</div>
+                        <h3>Generar Documentos</h3>
+                        <p>Usa las herramientas de generación automática para crear informes, escritos y análisis.</p>
+                    </div>
+                </div>
+
+                <div class="ai-insight" style="margin-top: 3rem;">
+                    <div class="insight-icon">🚀</div>
+                    <div class="insight-title">El Futuro del Trabajo Legal</div>
+                    <div class="insight-text">
+                        Legal AI Dashboard representa el futuro del trabajo legal en Ecuador. Con inteligencia artificial
+                        avanzada, búsqueda semántica, generación automática de documentos y análisis contextual,
+                        los profesionales del derecho pueden trabajar de manera más eficiente, precisa y profesional.
+                        <br><br>
+                        <strong>¡Bienvenido a la revolución legal impulsada por IA!</strong>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <p><strong>Legal AI Dashboard</strong></p>
+            <p>Sistema Revolucionario de Gestión Legal con Inteligencia Artificial</p>
+            <p style="margin-top: 1rem;">Versión 2.0.0 | Enero 2025</p>
+            <p>Desarrollado con ❤️ para profesionales del derecho ecuatorianos</p>
+
+            <div class="footer-links">
+                <a href="https://legal-rag-frontend.onrender.com">🌐 Acceder al Sistema</a>
+                <a href="https://github.com/benitocabrerar/legal-rag-system">📦 Repositorio GitHub</a>
+                <a href="#">📧 Soporte Técnico</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

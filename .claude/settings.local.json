@@ -51,7 +51,12 @@
       "Bash(if not exist \"prisma\\migrations\\20250108_add_admin_panel\" mkdir \"prisma\\migrations\\20250108_add_admin_panel\")",
       "Bash(npm run build:*)",
       "Bash(if not exist \"prisma\\migrations\\20250108_payment_system\" mkdir \"prisma\\migrations\\20250108_payment_system\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(timeout /t 20 /nobreak)",
+      "Bash(git rm:*)",
+      "Bash(if [ -f \"nul\" ])",
+      "Bash(then rm -f \"nul\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
