@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proceso de Vectorización - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .flowchart {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .flow-step {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: '↓';
+            display: block;
+            text-align: center;
+            font-size: 24px;
+            color: #3498db;
+            margin: 10px 0 -10px 0;
+        }
+
+        .flow-step:last-child::after {
+            content: '';
+        }
+
+        .flow-step-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .flow-step-desc {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .code-block .keyword { color: #c678dd; }
+        .code-block .function { color: #61afef; }
+        .code-block .string { color: #98c379; }
+        .code-block .number { color: #d19a66; }
+        .code-block .comment { color: #5c6370; font-style: italic; }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .architecture-diagram {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .arch-component {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .arch-component h4 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .arch-component p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .data-flow {
+            background: #fff;
+            border: 2px dashed #3498db;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .data-flow-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .data-flow-icon {
+            width: 40px;
+            height: 40px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .metric {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+
+        .toc h2 {
+            margin-top: 0;
+            border-left: none;
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            margin: 8px 0;
+        }
+
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Proceso de Vectorización y RAG - Legal RAG System</h1>
+
+        <div class="info-box">
+            <strong>📋 Documento Técnico</strong><br>
+            Este documento explica en detalle el proceso de carga de documentos, vectorización, almacenamiento y consulta mediante RAG (Retrieval Augmented Generation) en el sistema Legal RAG.
+        </div>
+
+        <div class="toc">
+            <h2>📑 Tabla de Contenidos</h2>
+            <ul>
+                <li><a href="#overview">1. Visión General del Sistema</a></li>
+                <li><a href="#architecture">2. Arquitectura de Componentes</a></li>
+                <li><a href="#upload">3. Proceso de Carga de Documentos</a></li>
+                <li><a href="#chunking">4. Fragmentación (Chunking)</a></li>
+                <li><a href="#vectorization">5. Vectorización con OpenAI</a></li>
+                <li><a href="#storage">6. Almacenamiento en PostgreSQL</a></li>
+                <li><a href="#query">7. Proceso de Consulta RAG</a></li>
+                <li><a href="#similarity">8. Búsqueda por Similitud</a></li>
+                <li><a href="#generation">9. Generación de Respuestas con GPT-4</a></li>
+                <li><a href="#code">10. Implementación en Código</a></li>
+            </ul>
+        </div>
+
+        <section id="overview" class="section">
+            <h2>1. 🎯 Visión General del Sistema</h2>
+
+            <p>El sistema Legal RAG implementa un pipeline completo de procesamiento de documentos legales utilizando técnicas de embeddings vectoriales y generación aumentada por recuperación (RAG). El objetivo es permitir consultas inteligentes sobre documentos legales con respuestas contextualizadas y citadas.</p>
+
+            <h3>Componentes Principales:</h3>
+            <div class="architecture-diagram">
+                <div class="arch-component">
+                    <h4>📤 Carga de Documentos</h4>
+                    <p>API endpoints para usuarios y administradores</p>
+                </div>
+                <div class="arch-component">
+                    <h4>🔄 Procesamiento</h4>
+                    <p>Chunking y vectorización con OpenAI</p>
+                </div>
+                <div class="arch-component">
+                    <h4>💾 Almacenamiento</h4>
+                    <p>PostgreSQL con embeddings JSON</p>
+                </div>
+            </div>
+
+            <div class="success-box">
+                <strong>✅ Dos Tipos de Documentos:</strong>
+                <ul>
+                    <li><strong>Documentos de Casos:</strong> Subidos por usuarios, vinculados a casos específicos</li>
+                    <li><strong>Documentos Legales Globales:</strong> Subidos por administradores, disponibles para todos (constituciones, leyes, códigos, jurisprudencia)</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="architecture" class="section">
+            <h2>2. 🏗️ Arquitectura de Componentes</h2>
+
+            <div class="flowchart">
+                <h3>Flujo Completo del Sistema</h3>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">1️⃣ Usuario/Admin Sube Documento</div>
+                    <div class="flow-step-desc">POST /api/v1/documents o POST /api/v1/legal-documents</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">2️⃣ Validación y Creación de Registro</div>
+                    <div class="flow-step-desc">Autenticación, permisos, creación en base de datos</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">3️⃣ Fragmentación del Contenido</div>
+                    <div class="flow-step-desc">División en chunks de 1000 caracteres</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">4️⃣ Generación de Embeddings</div>
+                    <div class="flow-step-desc">OpenAI text-embedding-ada-002 por cada chunk</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">5️⃣ Almacenamiento de Chunks</div>
+                    <div class="flow-step-desc">Guardar contenido + embedding en PostgreSQL</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">6️⃣ Consulta del Usuario</div>
+                    <div class="flow-step-desc">POST /api/v1/query con pregunta</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">7️⃣ Vectorización de Consulta</div>
+                    <div class="flow-step-desc">Generar embedding de la pregunta</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">8️⃣ Búsqueda por Similitud</div>
+                    <div class="flow-step-desc">Calcular similitud coseno contra todos los chunks</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">9️⃣ Construcción de Contexto</div>
+                    <div class="flow-step-desc">Tomar top N chunks más similares</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">🔟 Generación de Respuesta</div>
+                    <div class="flow-step-desc">GPT-4 genera respuesta basada en contexto</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="upload" class="section">
+            <h2>3. 📤 Proceso de Carga de Documentos</h2>
+
+            <h3>3.1 Endpoint para Documentos de Casos</h3>
+            <div class="info-box">
+                <strong>Ruta:</strong> <code>POST /api/v1/documents</code><br>
+                <strong>Autenticación:</strong> Requerida (JWT Token)<br>
+                <strong>Archivo:</strong> <code>src/routes/documents.ts</code>
+            </div>
+
+            <div class="code-block">
+<span class="comment">// Estructura del request body</span>
+{
+  <span class="string">"title"</span>: <span class="string">"Contrato de Arrendamiento"</span>,
+  <span class="string">"content"</span>: <span class="string">"Texto completo del documento..."</span>,
+  <span class="string">"caseId"</span>: <span class="string">"uuid-del-caso"</span>
+}
+            </div>
+
+            <h3>3.2 Endpoint para Documentos Legales Globales</h3>
+            <div class="warning-box">
+                <strong>⚠️ Solo Administradores:</strong> Este endpoint requiere rol de administrador
+            </div>
+
+            <div class="info-box">
+                <strong>Ruta:</strong> <code>POST /api/v1/legal-documents</code><br>
+                <strong>Autenticación:</strong> Requerida + Rol Admin<br>
+                <strong>Archivo:</strong> <code>src/routes/legal-documents.ts</code>
+            </div>
+
+            <div class="code-block">
+<span class="comment">// Estructura del request body</span>
+{
+  <span class="string">"title"</span>: <span class="string">"Constitución Política de México"</span>,
+  <span class="string">"content"</span>: <span class="string">"Texto completo del documento legal..."</span>,
+  <span class="string">"category"</span>: <span class="string">"constitution"</span>,  <span class="comment">// constitution, law, code, regulation, jurisprudence</span>
+  <span class="string">"metadata"</span>: {
+    <span class="string">"year"</span>: <span class="number">1917</span>,
+    <span class="string">"number"</span>: <span class="string">"N/A"</span>,
+    <span class="string">"jurisdiction"</span>: <span class="string">"Federal"</span>
+  }
+}
+            </div>
+
+            <h3>3.3 Validaciones Realizadas</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Validación</th>
+                            <th>Descripción</th>
+                            <th>Error si Falla</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Autenticación</strong></td>
+                            <td>Verificar token JWT válido</td>
+                            <td>401 Unauthorized</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Permisos de Caso</strong></td>
+                            <td>Usuario debe ser dueño del caso</td>
+                            <td>403 Forbidden</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Rol Admin</strong></td>
+                            <td>Solo para documentos legales globales</td>
+                            <td>403 Forbidden</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Campos Requeridos</strong></td>
+                            <td>title, content, caseId (o category)</td>
+                            <td>400 Bad Request</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="chunking" class="section">
+            <h2>4. ✂️ Fragmentación (Chunking)</h2>
+
+            <p>El contenido del documento se divide en fragmentos más pequeños para optimizar la búsqueda y el procesamiento. Esto permite:</p>
+
+            <ul>
+                <li>✅ <strong>Mejor Precisión:</strong> Encontrar secciones específicas relevantes</li>
+                <li>✅ <strong>Límites de Tokens:</strong> Respetar límites de la API de OpenAI</li>
+                <li>✅ <strong>Mejor Rendimiento:</strong> Búsquedas más rápidas en chunks pequeños</li>
+                <li>✅ <strong>Contexto Granular:</strong> Citas precisas de fuentes</li>
+            </ul>
+
+            <h3>4.1 Estrategia de Chunking Implementada</h3>
+
+            <div class="info-box">
+                <strong>Parámetros Actuales:</strong><br>
+                📏 Tamaño de Chunk: <span class="metric">1000 caracteres</span><br>
+                🔄 Solapamiento: <span class="metric">0 caracteres</span> (sin overlap)<br>
+                📝 Método: División por tamaño fijo
+            </div>
+
+            <div class="code-block">
+<span class="comment">// Implementación del chunking</span>
+<span class="keyword">const</span> chunkSize = <span class="number">1000</span>;
+<span class="keyword">const</span> chunks = [];
+
+<span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; body.content.length; i += chunkSize) {
+  chunks.<span class="function">push</span>(body.content.<span class="function">slice</span>(i, i + chunkSize));
+}
+
+<span class="comment">// Ejemplo de resultado:</span>
+<span class="comment">// Documento de 3500 caracteres → 4 chunks:</span>
+<span class="comment">// - Chunk 0: caracteres 0-999</span>
+<span class="comment">// - Chunk 1: caracteres 1000-1999</span>
+<span class="comment">// - Chunk 2: caracteres 2000-2999</span>
+<span class="comment">// - Chunk 3: caracteres 3000-3499</span>
+            </div>
+
+            <div class="data-flow">
+                <h3>Flujo de División del Documento</h3>
+                <div class="data-flow-item">
+                    <div class="data-flow-icon">📄</div>
+                    <div>
+                        <strong>Documento Original</strong><br>
+                        <span style="color: #666;">Ejemplo: 5,432 caracteres</span>
+                    </div>
+                </div>
+                <div class="data-flow-item">
+                    <div class="data-flow-icon">✂️</div>
+                    <div>
+                        <strong>División en Chunks</strong><br>
+                        <span style="color: #666;">Loop de 0 a length con paso de 1000</span>
+                    </div>
+                </div>
+                <div class="data-flow-item">
+                    <div class="data-flow-icon">📦</div>
+                    <div>
+                        <strong>6 Chunks Creados</strong><br>
+                        <span style="color: #666;">Chunks 0-5, último chunk de 432 caracteres</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Limitación Actual:</strong> No hay overlap entre chunks. Esto puede causar que información que cruza el límite de 1000 caracteres se fragmente. Una mejora futura sería implementar overlap de 100-200 caracteres.
+            </div>
+        </section>
+
+        <section id="vectorization" class="section">
+            <h2>5. 🧮 Vectorización con OpenAI</h2>
+
+            <p>Cada chunk se convierte en un vector numérico (embedding) que captura su significado semántico. Esto permite comparar documentos por <strong>significado</strong> en lugar de solo palabras clave.</p>
+
+            <h3>5.1 Modelo Utilizado</h3>
+            <div class="info-box">
+                <strong>Modelo:</strong> <code>text-embedding-ada-002</code><br>
+                <strong>Dimensiones:</strong> <span class="metric">1536</span> números por embedding<br>
+                <strong>Costo:</strong> $0.0001 por 1,000 tokens<br>
+                <strong>Velocidad:</strong> ~100-200ms por chunk
+            </div>
+
+            <h3>5.2 Proceso de Generación</h3>
+
+            <div class="code-block">
+<span class="comment">// Generar embedding para un chunk</span>
+<span class="keyword">const</span> embeddingResponse = <span class="keyword">await</span> openai.embeddings.<span class="function">create</span>({
+  model: <span class="string">'text-embedding-ada-002'</span>,
+  input: chunk,  <span class="comment">// El texto del chunk</span>
+});
+
+<span class="keyword">const</span> embedding = embeddingResponse.data[<span class="number">0</span>].embedding;
+
+<span class="comment">// embedding es un array de 1536 números</span>
+<span class="comment">// Ejemplo (primeros 5 valores):</span>
+<span class="comment">// [-0.006929283495992422, -0.005336422007530928, ...]</span>
+            </div>
+
+            <h3>5.3 ¿Qué Representa un Embedding?</h3>
+
+            <div class="success-box">
+                Un embedding es una representación matemática del significado semántico del texto. Textos con significados similares tendrán embeddings cercanos en el espacio vectorial de 1536 dimensiones.
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Texto Original</th>
+                            <th>Embedding (simplificado)</th>
+                            <th>Interpretación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"El contrato de arrendamiento..."</td>
+                            <td>[0.23, -0.45, 0.12, ...]</td>
+                            <td>Vector que captura concepto de "arrendamiento"</td>
+                        </tr>
+                        <tr>
+                            <td>"El acuerdo de renta..."</td>
+                            <td>[0.21, -0.43, 0.15, ...]</td>
+                            <td>Vector <strong>similar</strong> al anterior (mismo tema)</td>
+                        </tr>
+                        <tr>
+                            <td>"La constitución establece..."</td>
+                            <td>[-0.67, 0.89, -0.34, ...]</td>
+                            <td>Vector <strong>diferente</strong> (tema distinto)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>5.4 Loop de Vectorización</h3>
+
+            <div class="code-block">
+<span class="comment">// Procesar todos los chunks del documento</span>
+<span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; chunks.length; i++) {
+  <span class="keyword">const</span> chunk = chunks[i];
+
+  <span class="comment">// 1. Generar embedding usando OpenAI</span>
+  <span class="keyword">const</span> embeddingResponse = <span class="keyword">await</span> openai.embeddings.<span class="function">create</span>({
+    model: <span class="string">'text-embedding-ada-002'</span>,
+    input: chunk,
+  });
+
+  <span class="keyword">const</span> embedding = embeddingResponse.data[<span class="number">0</span>].embedding;
+
+  <span class="comment">// 2. Guardar en base de datos (ver siguiente sección)</span>
+  <span class="keyword">await</span> prisma.documentChunk.<span class="function">create</span>({
+    data: {
+      documentId: document.id,
+      content: chunk,
+      chunkIndex: i,
+      embedding: embedding,  <span class="comment">// Array de 1536 números</span>
+    },
+  });
+}
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Consideración de Performance:</strong> Con chunks grandes, este proceso puede tomar varios segundos. Para un documento de 50 chunks, esperamos ~5-10 segundos de procesamiento total.
+            </div>
+        </section>
+
+        <section id="storage" class="section">
+            <h2>6. 💾 Almacenamiento en PostgreSQL</h2>
+
+            <p>Los chunks con sus embeddings se almacenan en PostgreSQL utilizando el tipo de dato JSON para los vectores.</p>
+
+            <h3>6.1 Esquema de Base de Datos</h3>
+
+            <div class="code-block">
+<span class="comment">// Modelo Document - Registro del documento completo</span>
+<span class="keyword">model</span> Document {
+  id        String   <span class="keyword">@id @default</span>(<span class="function">uuid</span>())
+  caseId    String   <span class="keyword">@map</span>(<span class="string">"case_id"</span>)
+  userId    String   <span class="keyword">@map</span>(<span class="string">"user_id"</span>)
+  title     String
+  content   String   <span class="keyword">@db.Text</span>
+  createdAt DateTime <span class="keyword">@default</span>(<span class="function">now</span>())
+
+  <span class="comment">// Relaciones</span>
+  case   Case            <span class="keyword">@relation</span>(...)
+  user   User            <span class="keyword">@relation</span>(...)
+  chunks DocumentChunk[] <span class="comment">// ← Los chunks del documento</span>
+}
+
+<span class="comment">// Modelo DocumentChunk - Cada fragmento con su embedding</span>
+<span class="keyword">model</span> DocumentChunk {
+  id         String   <span class="keyword">@id @default</span>(<span class="function">uuid</span>())
+  documentId String   <span class="keyword">@map</span>(<span class="string">"document_id"</span>)
+  content    String   <span class="keyword">@db.Text</span>       <span class="comment">// Texto del chunk</span>
+  chunkIndex Int      <span class="keyword">@map</span>(<span class="string">"chunk_index"</span>)  <span class="comment">// Posición (0, 1, 2...)</span>
+  embedding  Json?                   <span class="comment">// ← Vector de 1536 números</span>
+  createdAt  DateTime <span class="keyword">@default</span>(<span class="function">now</span>())
+
+  document Document <span class="keyword">@relation</span>(...)
+}
+            </div>
+
+            <h3>6.2 Estructura de Datos Guardados</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tabla</th>
+                            <th>Registros</th>
+                            <th>Contenido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>documents</strong></td>
+                            <td>1 por documento</td>
+                            <td>Metadata del documento (título, contenido completo, usuario, caso)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>document_chunks</strong></td>
+                            <td>N por documento</td>
+                            <td>Fragmentos individuales con sus embeddings</td>
+                        </tr>
+                        <tr>
+                            <td><strong>legal_documents</strong></td>
+                            <td>1 por doc legal</td>
+                            <td>Documentos legales globales (constituciones, leyes, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>legal_document_chunks</strong></td>
+                            <td>N por doc legal</td>
+                            <td>Fragmentos de documentos legales con embeddings</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>6.3 Ejemplo de Registro en document_chunks</h3>
+
+            <div class="code-block">
+{
+  <span class="string">"id"</span>: <span class="string">"550e8400-e29b-41d4-a716-446655440000"</span>,
+  <span class="string">"documentId"</span>: <span class="string">"a1b2c3d4-e5f6-7890-1234-567890abcdef"</span>,
+  <span class="string">"content"</span>: <span class="string">"El presente contrato de arrendamiento se celebra entre..."</span>,
+  <span class="string">"chunkIndex"</span>: <span class="number">0</span>,
+  <span class="string">"embedding"</span>: [
+    -<span class="number">0.006929283495992422</span>,
+    -<span class="number">0.005336422007530928</span>,
+    -<span class="number">0.024047505110502243</span>,
+    <span class="comment">// ... 1533 números más</span>
+    <span class="number">0.015234567890123456</span>
+  ],
+  <span class="string">"createdAt"</span>: <span class="string">"2025-01-15T10:30:00.000Z"</span>
+}
+            </div>
+
+            <div class="info-box">
+                <strong>💡 Ventaja de JSON:</strong> PostgreSQL puede almacenar y recuperar arrays de números como JSON de manera eficiente. Aunque no es tan rápido como extensiones especializadas (pgvector), es suficiente para MVP y no requiere dependencias adicionales.
+            </div>
+        </section>
+
+        <section id="query" class="section">
+            <h2>7. 🔍 Proceso de Consulta RAG</h2>
+
+            <p>Cuando un usuario hace una pregunta, el sistema busca los fragmentos más relevantes y genera una respuesta contextualizada.</p>
+
+            <h3>7.1 Endpoint de Consulta</h3>
+
+            <div class="info-box">
+                <strong>Ruta:</strong> <code>POST /api/v1/query</code><br>
+                <strong>Autenticación:</strong> Requerida<br>
+                <strong>Archivo:</strong> <code>src/routes/query.ts</code>
+            </div>
+
+            <div class="code-block">
+<span class="comment">// Request body</span>
+{
+  <span class="string">"query"</span>: <span class="string">"¿Cuál es la duración del contrato de arrendamiento?"</span>,
+  <span class="string">"caseId"</span>: <span class="string">"uuid-del-caso"</span>,
+  <span class="string">"maxResults"</span>: <span class="number">5</span>  <span class="comment">// Opcional, default: 5 chunks más relevantes</span>
+}
+            </div>
+
+            <h3>7.2 Flujo de Procesamiento de Consulta</h3>
+
+            <div class="flowchart">
+                <div class="flow-step">
+                    <div class="flow-step-title">1️⃣ Validar Acceso</div>
+                    <div class="flow-step-desc">Verificar que el usuario tenga acceso al caso</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">2️⃣ Generar Embedding de la Pregunta</div>
+                    <div class="flow-step-desc">Convertir query a vector de 1536 dimensiones</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">3️⃣ Recuperar Todos los Chunks del Caso</div>
+                    <div class="flow-step-desc">SELECT * FROM document_chunks WHERE document.caseId = ?</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">4️⃣ Calcular Similitud Coseno</div>
+                    <div class="flow-step-desc">Comparar embedding de query vs cada chunk</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">5️⃣ Ordenar por Similitud</div>
+                    <div class="flow-step-desc">Tomar top N chunks (default: 5)</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">6️⃣ Construir Contexto</div>
+                    <div class="flow-step-desc">Concatenar chunks relevantes con metadata</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">7️⃣ Generar Respuesta con GPT-4</div>
+                    <div class="flow-step-desc">Enviar contexto + query a GPT-4</div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-step-title">8️⃣ Devolver Respuesta + Fuentes</div>
+                    <div class="flow-step-desc">JSON con answer, sources, y metadata</div>
+                </div>
+            </div>
+
+            <h3>7.3 Implementación del Query</h3>
+
+            <div class="code-block">
+<span class="comment">// 1. Generar embedding de la pregunta</span>
+<span class="keyword">const</span> queryEmbeddingResponse = <span class="keyword">await</span> openai.embeddings.<span class="function">create</span>({
+  model: <span class="string">'text-embedding-ada-002'</span>,
+  input: body.query,
+});
+
+<span class="keyword">const</span> queryEmbedding = queryEmbeddingResponse.data[<span class="number">0</span>].embedding;
+
+<span class="comment">// 2. Recuperar todos los chunks del caso</span>
+<span class="keyword">const</span> allChunks = <span class="keyword">await</span> prisma.documentChunk.<span class="function">findMany</span>({
+  where: {
+    document: {
+      caseId: body.caseId,
+    },
+  },
+  include: {
+    document: {
+      select: {
+        id: <span class="keyword">true</span>,
+        title: <span class="keyword">true</span>,
+      },
+    },
+  },
+});
+            </div>
+        </section>
+
+        <section id="similarity" class="section">
+            <h2>8. 📊 Búsqueda por Similitud</h2>
+
+            <p>La similitud coseno es una medida matemática que determina qué tan "cerca" están dos vectores en el espacio vectorial.</p>
+
+            <h3>8.1 Fórmula de Similitud Coseno</h3>
+
+            <div class="info-box">
+                <strong>Fórmula Matemática:</strong><br><br>
+                <code style="font-size: 16px; display: block; text-align: center;">
+                    similarity = (A · B) / (||A|| × ||B||)
+                </code>
+                <br>
+                Donde:<br>
+                • A · B = producto punto de los vectores<br>
+                • ||A|| = norma (magnitud) del vector A<br>
+                • ||B|| = norma del vector B<br>
+                <br>
+                <strong>Resultado:</strong> Valor entre -1 y 1 (típicamente 0 a 1 para textos)
+            </div>
+
+            <h3>8.2 Implementación de Cosine Similarity</h3>
+
+            <div class="code-block">
+<span class="keyword">function</span> <span class="function">cosineSimilarity</span>(vecA: <span class="keyword">number</span>[], vecB: <span class="keyword">number</span>[]): <span class="keyword">number</span> {
+  <span class="comment">// Validar que los vectores tengan la misma longitud</span>
+  <span class="keyword">if</span> (vecA.length !== vecB.length) {
+    <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Vectors must have the same length'</span>);
+  }
+
+  <span class="keyword">let</span> dotProduct = <span class="number">0</span>;  <span class="comment">// A · B</span>
+  <span class="keyword">let</span> normA = <span class="number">0</span>;       <span class="comment">// ||A||²</span>
+  <span class="keyword">let</span> normB = <span class="number">0</span>;       <span class="comment">// ||B||²</span>
+
+  <span class="comment">// Calcular en un solo loop para eficiencia</span>
+  <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];      <span class="comment">// Suma de productos</span>
+    normA += vecA[i] * vecA[i];           <span class="comment">// Suma de cuadrados A</span>
+    normB += vecB[i] * vecB[i];           <span class="comment">// Suma de cuadrados B</span>
+  }
+
+  <span class="comment">// Calcular normas (raíz cuadrada)</span>
+  normA = Math.<span class="function">sqrt</span>(normA);
+  normB = Math.<span class="function">sqrt</span>(normB);
+
+  <span class="comment">// Evitar división por cero</span>
+  <span class="keyword">if</span> (normA === <span class="number">0</span> || normB === <span class="number">0</span>) {
+    <span class="keyword">return</span> <span class="number">0</span>;
+  }
+
+  <span class="comment">// Retornar similitud (entre 0 y 1 típicamente)</span>
+  <span class="keyword">return</span> dotProduct / (normA * normB);
+}
+            </div>
+
+            <h3>8.3 Cálculo y Ordenamiento</h3>
+
+            <div class="code-block">
+<span class="comment">// Calcular similitud para cada chunk</span>
+<span class="keyword">const</span> chunksWithScores = allChunks.<span class="function">map</span>((chunk) => {
+  <span class="keyword">const</span> embedding = chunk.embedding <span class="keyword">as number</span>[];
+  <span class="keyword">const</span> similarity = <span class="function">cosineSimilarity</span>(queryEmbedding, embedding);
+
+  <span class="keyword">return</span> {
+    ...chunk,
+    similarity,  <span class="comment">// Agregar score de similitud</span>
+  };
+});
+
+<span class="comment">// Ordenar de mayor a menor similitud y tomar top N</span>
+<span class="keyword">const</span> topChunks = chunksWithScores
+  .<span class="function">sort</span>((a, b) => b.similarity - a.similarity)  <span class="comment">// DESC</span>
+  .<span class="function">slice</span>(<span class="number">0</span>, body.maxResults || <span class="number">5</span>);          <span class="comment">// Top 5 por defecto</span>
+            </div>
+
+            <h3>8.4 Interpretación de Scores</h3>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Score de Similitud</th>
+                            <th>Interpretación</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>0.9 - 1.0</strong></td>
+                            <td>Muy similar / Casi idéntico</td>
+                            <td>✅ Altamente relevante</td>
+                        </tr>
+                        <tr>
+                            <td><strong>0.7 - 0.9</strong></td>
+                            <td>Similar / Relacionado</td>
+                            <td>✅ Relevante</td>
+                        </tr>
+                        <tr>
+                            <td><strong>0.5 - 0.7</strong></td>
+                            <td>Algo relacionado</td>
+                            <td>⚠️ Potencialmente útil</td>
+                        </tr>
+                        <tr>
+                            <td><strong>0.0 - 0.5</strong></td>
+                            <td>Poco o nada relacionado</td>
+                            <td>❌ No relevante</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="success-box">
+                <strong>💡 Optimización Futura:</strong> Implementar un threshold mínimo (ej: 0.6) para filtrar chunks poco relevantes antes de enviarlos a GPT-4.
+            </div>
+        </section>
+
+        <section id="generation" class="section">
+            <h2>9. 🤖 Generación de Respuestas con GPT-4</h2>
+
+            <p>Los chunks más relevantes se combinan en un contexto que se envía a GPT-4 para generar una respuesta precisa y citada.</p>
+
+            <h3>9.1 Construcción del Contexto</h3>
+
+            <div class="code-block">
+<span class="comment">// Construir contexto a partir de top chunks</span>
+<span class="keyword">const</span> context = topChunks
+  .<span class="function">map</span>((chunk, index) => {
+    <span class="keyword">return</span> `[Document: ${chunk.document.title}, Chunk ${chunk.chunkIndex + <span class="number">1</span>}]
+${chunk.content}`;
+  })
+  .<span class="function">join</span>(<span class="string">'\n\n---\n\n'</span>);
+
+<span class="comment">// Ejemplo de contexto generado:</span>
+<span class="comment">/*
+[Document: Contrato de Arrendamiento, Chunk 1]
+El presente contrato se celebra por un plazo de 12 meses...
+
+---
+
+[Document: Contrato de Arrendamiento, Chunk 3]
+La renta mensual será de $10,000.00 pesos...
+
+---
+
+[Document: Anexo Legal, Chunk 2]
+En caso de incumplimiento del arrendatario...
+*/</span>
+            </div>
+
+            <h3>9.2 Prompts del Sistema</h3>
+
+            <div class="code-block">
+<span class="keyword">const</span> systemPrompt = `Eres un asistente legal experto.
+Analiza los siguientes fragmentos de documentos legales y responde
+la pregunta del usuario de manera precisa y profesional.
+
+IMPORTANTE:
+- Basa tu respuesta ÚNICAMENTE en la información proporcionada
+- Si no encuentras información relevante, indícalo claramente
+- Cita los documentos de donde obtienes la información
+- Usa lenguaje legal apropiado pero comprensible`;
+
+<span class="keyword">const</span> userPrompt = `Contexto de documentos legales:
+
+${context}
+
+---
+
+Pregunta del usuario: ${body.query}
+
+Por favor, responde basándote en los documentos proporcionados
+e indica las fuentes específicas.`;
+            </div>
+
+            <h3>9.3 Llamada a GPT-4</h3>
+
+            <div class="code-block">
+<span class="keyword">const</span> completion = <span class="keyword">await</span> openai.chat.completions.<span class="function">create</span>({
+  model: <span class="string">'gpt-4'</span>,
+  messages: [
+    { role: <span class="string">'system'</span>, content: systemPrompt },
+    { role: <span class="string">'user'</span>, content: userPrompt },
+  ],
+  temperature: <span class="number">0.3</span>,  <span class="comment">// Bajo para respuestas más deterministas</span>
+  max_tokens: <span class="number">1500</span>,
+});
+
+<span class="keyword">const</span> answer = completion.choices[<span class="number">0</span>].message.content;
+            </div>
+
+            <div class="info-box">
+                <strong>Parámetros de GPT-4:</strong><br>
+                • <strong>Temperature: 0.3</strong> - Respuestas más consistentes y precisas (menos creatividad)<br>
+                • <strong>Max Tokens: 1500</strong> - Límite de longitud de respuesta (~1125 palabras)<br>
+                • <strong>Model: gpt-4</strong> - Mayor precisión que GPT-3.5 para tareas legales
+            </div>
+
+            <h3>9.4 Respuesta Final</h3>
+
+            <div class="code-block">
+<span class="comment">// Estructura de respuesta al cliente</span>
+{
+  <span class="string">"answer"</span>: <span class="string">"Según el Contrato de Arrendamiento (Chunk 1), el plazo del contrato es de 12 meses, iniciando el 1 de enero de 2025..."</span>,
+  <span class="string">"sources"</span>: [
+    {
+      <span class="string">"documentId"</span>: <span class="string">"uuid-1"</span>,
+      <span class="string">"documentTitle"</span>: <span class="string">"Contrato de Arrendamiento"</span>,
+      <span class="string">"chunkIndex"</span>: <span class="number">0</span>,
+      <span class="string">"similarity"</span>: <span class="number">0.89</span>,
+      <span class="string">"content"</span>: <span class="string">"El presente contrato se celebra por un plazo..."</span>
+    },
+    {
+      <span class="string">"documentId"</span>: <span class="string">"uuid-1"</span>,
+      <span class="string">"documentTitle"</span>: <span class="string">"Contrato de Arrendamiento"</span>,
+      <span class="string">"chunkIndex"</span>: <span class="number">2</span>,
+      <span class="string">"similarity"</span>: <span class="number">0.76</span>,
+      <span class="string">"content"</span>: <span class="string">"La renta mensual será de $10,000.00..."</span>
+    }
+  ],
+  <span class="string">"metadata"</span>: {
+    <span class="string">"totalChunksSearched"</span>: <span class="number">42</span>,
+    <span class="string">"chunksUsed"</span>: <span class="number">5</span>,
+    <span class="string">"model"</span>: <span class="string">"gpt-4"</span>,
+    <span class="string">"tokensUsed"</span>: <span class="number">856</span>
+  }
+}
+            </div>
+        </section>
+
+        <section id="code" class="section">
+            <h2>10. 💻 Implementación Completa en Código</h2>
+
+            <h3>10.1 Archivo: src/routes/documents.ts</h3>
+            <div class="info-box">
+                <strong>Líneas clave:</strong> 40-100<br>
+                <strong>Responsabilidad:</strong> Upload y vectorización de documentos de casos
+            </div>
+
+            <div class="code-block">
+<span class="comment">// POST /api/v1/documents - Subir documento</span>
+app.<span class="function">post</span>(<span class="string">'/documents'</span>, {
+  onRequest: [app.authenticate]
+}, <span class="keyword">async</span> (request, reply) => {
+  <span class="keyword">const</span> userId = request.user!.id;
+  <span class="keyword">const</span> body = request.body <span class="keyword">as</span> UploadDocumentBody;
+
+  <span class="comment">// 1. Validar que el usuario tenga acceso al caso</span>
+  <span class="keyword">const</span> caseRecord = <span class="keyword">await</span> prisma.case.<span class="function">findFirst</span>({
+    where: {
+      id: body.caseId,
+      userId,
+    },
+  });
+
+  <span class="keyword">if</span> (!caseRecord) {
+    reply.<span class="function">code</span>(<span class="number">403</span>);
+    <span class="keyword">return</span> { error: <span class="string">'Access denied to this case'</span> };
+  }
+
+  <span class="comment">// 2. Crear registro del documento</span>
+  <span class="keyword">const</span> document = <span class="keyword">await</span> prisma.document.<span class="function">create</span>({
+    data: {
+      title: body.title,
+      content: body.content,
+      caseId: body.caseId,
+      userId,
+    },
+  });
+
+  <span class="comment">// 3. Fragmentar contenido (chunks de 1000 caracteres)</span>
+  <span class="keyword">const</span> chunkSize = <span class="number">1000</span>;
+  <span class="keyword">const</span> chunks = [];
+  <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; body.content.length; i += chunkSize) {
+    chunks.<span class="function">push</span>(body.content.<span class="function">slice</span>(i, i + chunkSize));
+  }
+
+  <span class="comment">// 4. Generar embeddings y guardar chunks</span>
+  <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; chunks.length; i++) {
+    <span class="keyword">const</span> chunk = chunks[i];
+
+    <span class="comment">// Generar embedding con OpenAI</span>
+    <span class="keyword">const</span> embeddingResponse = <span class="keyword">await</span> openai.embeddings.<span class="function">create</span>({
+      model: <span class="string">'text-embedding-ada-002'</span>,
+      input: chunk,
+    });
+
+    <span class="keyword">const</span> embedding = embeddingResponse.data[<span class="number">0</span>].embedding;
+
+    <span class="comment">// Guardar chunk con embedding</span>
+    <span class="keyword">await</span> prisma.documentChunk.<span class="function">create</span>({
+      data: {
+        documentId: document.id,
+        content: chunk,
+        chunkIndex: i,
+        embedding: embedding,
+      },
+    });
+  }
+
+  <span class="keyword">return</span> {
+    document,
+    chunksCreated: chunks.length,
+  };
+});
+            </div>
+
+            <h3>10.2 Archivo: src/routes/query.ts</h3>
+            <div class="info-box">
+                <strong>Líneas clave:</strong> 20-150<br>
+                <strong>Responsabilidad:</strong> Búsqueda RAG y generación de respuestas
+            </div>
+
+            <div class="code-block">
+<span class="comment">// POST /api/v1/query - Hacer consulta RAG</span>
+app.<span class="function">post</span>(<span class="string">'/query'</span>, {
+  onRequest: [app.authenticate]
+}, <span class="keyword">async</span> (request, reply) => {
+  <span class="keyword">const</span> body = request.body <span class="keyword">as</span> QueryBody;
+
+  <span class="comment">// 1. Generar embedding de la pregunta</span>
+  <span class="keyword">const</span> queryEmbeddingResponse = <span class="keyword">await</span> openai.embeddings.<span class="function">create</span>({
+    model: <span class="string">'text-embedding-ada-002'</span>,
+    input: body.query,
+  });
+  <span class="keyword">const</span> queryEmbedding = queryEmbeddingResponse.data[<span class="number">0</span>].embedding;
+
+  <span class="comment">// 2. Recuperar chunks del caso</span>
+  <span class="keyword">const</span> allChunks = <span class="keyword">await</span> prisma.documentChunk.<span class="function">findMany</span>({
+    where: { document: { caseId: body.caseId } },
+    include: { document: { select: { id: <span class="keyword">true</span>, title: <span class="keyword">true</span> } } },
+  });
+
+  <span class="comment">// 3. Calcular similitud para cada chunk</span>
+  <span class="keyword">const</span> chunksWithScores = allChunks.<span class="function">map</span>((chunk) => ({
+    ...chunk,
+    similarity: <span class="function">cosineSimilarity</span>(
+      queryEmbedding,
+      chunk.embedding <span class="keyword">as number</span>[]
+    ),
+  }));
+
+  <span class="comment">// 4. Ordenar y tomar top N</span>
+  <span class="keyword">const</span> topChunks = chunksWithScores
+    .<span class="function">sort</span>((a, b) => b.similarity - a.similarity)
+    .<span class="function">slice</span>(<span class="number">0</span>, body.maxResults || <span class="number">5</span>);
+
+  <span class="comment">// 5. Construir contexto</span>
+  <span class="keyword">const</span> context = topChunks
+    .<span class="function">map</span>((chunk) =>
+      `[Document: ${chunk.document.title}, Chunk ${chunk.chunkIndex + <span class="number">1</span>}]\n${chunk.content}`
+    )
+    .<span class="function">join</span>(<span class="string">'\n\n---\n\n'</span>);
+
+  <span class="comment">// 6. Generar respuesta con GPT-4</span>
+  <span class="keyword">const</span> completion = <span class="keyword">await</span> openai.chat.completions.<span class="function">create</span>({
+    model: <span class="string">'gpt-4'</span>,
+    messages: [
+      { role: <span class="string">'system'</span>, content: systemPrompt },
+      { role: <span class="string">'user'</span>, content: `${context}\n\nPregunta: ${body.query}` },
+    ],
+    temperature: <span class="number">0.3</span>,
+    max_tokens: <span class="number">1500</span>,
+  });
+
+  <span class="comment">// 7. Devolver respuesta con fuentes</span>
+  <span class="keyword">return</span> {
+    answer: completion.choices[<span class="number">0</span>].message.content,
+    sources: topChunks.<span class="function">map</span>((chunk) => ({
+      documentId: chunk.document.id,
+      documentTitle: chunk.document.title,
+      chunkIndex: chunk.chunkIndex,
+      similarity: chunk.similarity,
+      content: chunk.content,
+    })),
+    metadata: {
+      totalChunksSearched: allChunks.length,
+      chunksUsed: topChunks.length,
+      model: <span class="string">'gpt-4'</span>,
+    },
+  };
+});
+            </div>
+
+            <h3>10.3 Función de Similitud Coseno</h3>
+
+            <div class="code-block">
+<span class="keyword">function</span> <span class="function">cosineSimilarity</span>(vecA: <span class="keyword">number</span>[], vecB: <span class="keyword">number</span>[]): <span class="keyword">number</span> {
+  <span class="keyword">if</span> (vecA.length !== vecB.length) {
+    <span class="keyword">throw new</span> <span class="function">Error</span>(<span class="string">'Vectors must have the same length'</span>);
+  }
+
+  <span class="keyword">let</span> dotProduct = <span class="number">0</span>;
+  <span class="keyword">let</span> normA = <span class="number">0</span>;
+  <span class="keyword">let</span> normB = <span class="number">0</span>;
+
+  <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+
+  normA = Math.<span class="function">sqrt</span>(normA);
+  normB = Math.<span class="function">sqrt</span>(normB);
+
+  <span class="keyword">if</span> (normA === <span class="number">0</span> || normB === <span class="number">0</span>) {
+    <span class="keyword">return</span> <span class="number">0</span>;
+  }
+
+  <span class="keyword">return</span> dotProduct / (normA * normB);
+}
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📊 Resumen de Métricas del Sistema</h2>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrica</th>
+                            <th>Valor</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Tamaño de Chunk</strong></td>
+                            <td>1000 caracteres</td>
+                            <td>Sin overlap actualmente</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dimensiones del Embedding</strong></td>
+                            <td>1536</td>
+                            <td>text-embedding-ada-002</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Chunks Recuperados</strong></td>
+                            <td>5 (configurable)</td>
+                            <td>Top N más similares</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Modelo de Generación</strong></td>
+                            <td>GPT-4</td>
+                            <td>Temperature: 0.3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Max Tokens Respuesta</strong></td>
+                            <td>1500</td>
+                            <td>~1125 palabras</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tiempo Procesamiento (est.)</strong></td>
+                            <td>100-200ms/chunk</td>
+                            <td>Para embeddings</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>🚀 Mejoras Futuras Recomendadas</h2>
+
+            <div class="warning-box">
+                <h3>Optimizaciones Técnicas:</h3>
+                <ol>
+                    <li><strong>Overlap en Chunks:</strong> Implementar 100-200 caracteres de overlap para no perder contexto en fronteras</li>
+                    <li><strong>Threshold de Similitud:</strong> Filtrar chunks con similarity < 0.6 para mejorar calidad</li>
+                    <li><strong>Cache de Embeddings:</strong> Cachear embeddings de queries comunes</li>
+                    <li><strong>Procesamiento Asíncrono:</strong> Queue system para procesamiento de documentos grandes</li>
+                    <li><strong>Vector Database:</strong> Migrar a pgvector o Pinecone para búsquedas más rápidas</li>
+                    <li><strong>Chunking Inteligente:</strong> Dividir por párrafos o secciones en lugar de caracteres fijos</li>
+                </ol>
+            </div>
+
+            <div class="success-box">
+                <h3>Features Adicionales:</h3>
+                <ul>
+                    <li>✨ Búsqueda híbrida (keyword + semántica)</li>
+                    <li>✨ Re-ranking de resultados</li>
+                    <li>✨ Feedback loop (usuarios marcan respuestas útiles)</li>
+                    <li>✨ Multi-query expansion (generar queries relacionadas)</li>
+                    <li>✨ Summarización de documentos largos</li>
+                </ul>
+            </div>
+        </section>
+
+        <div class="info-box" style="margin-top: 40px;">
+            <strong>📝 Documento Generado:</strong> 2025-01-15<br>
+            <strong>📍 Sistema:</strong> Legal RAG System<br>
+            <strong>🔧 Versión API:</strong> 1.0.0
+        </div>
+    </div>
+</body>
+</html>
