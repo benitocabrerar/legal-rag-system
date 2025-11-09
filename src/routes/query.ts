@@ -84,13 +84,24 @@ export async function queryRoutes(fastify: FastifyInstance) {
         .join('\n\n---\n\n');
 
       // Generate answer using GPT-4
-      const systemPrompt = `You are a legal assistant helping with case analysis.
+      // If no documents are available, use general legal assistant mode
+      const hasDocuments = allChunks.length > 0;
+
+      const systemPrompt = hasDocuments
+        ? `You are a legal assistant helping with case analysis.
 You have access to relevant documents from the case files.
 Use the provided context to answer the user's question accurately.
 If the context doesn't contain enough information to answer the question, say so clearly.
-Always cite which documents you're referencing in your answer.`;
+Always cite which documents you're referencing in your answer.`
+        : `You are a legal assistant helping with general legal questions.
+Answer the user's legal questions to the best of your ability.
+Provide general legal information, principles, and guidance.
+Note: Remind the user they can upload case documents for more specific analysis.
+Always clarify that your answers are general legal information and not specific legal advice.`;
 
-      const userPrompt = `Context from case documents:\n\n${context}\n\n---\n\nQuestion: ${body.query}\n\nPlease provide a detailed answer based on the context above.`;
+      const userPrompt = hasDocuments
+        ? `Context from case documents:\n\n${context}\n\n---\n\nQuestion: ${body.query}\n\nPlease provide a detailed answer based on the context above.`
+        : `Question: ${body.query}\n\nPlease provide a helpful answer with general legal information and guidance.`;
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-4',

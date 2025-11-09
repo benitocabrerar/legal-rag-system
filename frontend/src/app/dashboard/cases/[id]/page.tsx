@@ -340,7 +340,7 @@ export default function CaseDetailPage() {
               <p className="text-sm text-gray-600 mt-1">
                 {documents.length > 0
                   ? `Analizando ${documents.length} documento${documents.length > 1 ? 's' : ''}`
-                  : 'Sube documentos para comenzar el análisis'}
+                  : 'Listo para responder tus consultas legales'}
               </p>
             </div>
 
@@ -351,8 +351,8 @@ export default function CaseDetailPage() {
                   <div className="text-6xl mb-4">🤖</div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">¡Hola! Soy tu Asistente Legal IA</h3>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Sube documentos legales y pregúntame lo que necesites. Puedo ayudarte con análisis,
-                    referencias legales, redacción y estrategia.
+                    Pregúntame lo que necesites. Puedo ayudarte con análisis de documentos,
+                    referencias legales, redacción y estrategia legal. Sube documentos para análisis específicos.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     <button className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors">
@@ -438,12 +438,8 @@ export default function CaseDetailPage() {
                   <textarea
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    disabled={querying || documents.length === 0}
-                    placeholder={
-                      documents.length === 0
-                        ? 'Sube documentos para empezar a consultar...'
-                        : 'Escribe tu consulta legal...'
-                    }
+                    disabled={querying}
+                    placeholder="Escribe tu consulta legal..."
                     rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 resize-none"
                     onKeyDown={(e) => {
@@ -459,7 +455,7 @@ export default function CaseDetailPage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={querying || !query.trim() || documents.length === 0}
+                  disabled={querying || !query.trim()}
                   className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Send className="w-5 h-5" />
