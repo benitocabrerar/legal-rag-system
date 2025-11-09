@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { casesAPI } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { LegalType } from '@/lib/design-tokens';
+import { QuickStatsCards } from '@/components/dashboard/QuickStatsCards';
+import { AIInsightsPanel } from '@/components/dashboard/AIInsightsPanel';
+import { LegalTypeFilterTabs } from '@/components/dashboard/LegalTypeFilterTabs';
+import { EnhancedCaseCard } from '@/components/dashboard/EnhancedCaseCard';
+import { Plus } from 'lucide-react';
 
 interface Case {
   id: string;
@@ -13,17 +17,22 @@ interface Case {
   status: string;
   description?: string;
   createdAt: string;
+  legalType?: LegalType;
+  priority?: 'high' | 'medium' | 'low';
 }
 
 export default function DashboardPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLegalType, setSelectedLegalType] = useState<LegalType | 'todos'>('todos');
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [newCase, setNewCase] = useState({
     title: '',
     clientName: '',
     caseNumber: '',
     description: '',
+    legalType: 'civil' as LegalType,
+    priority: 'medium' as 'high' | 'medium' | 'low',
   });
 
   useEffect(() => {
@@ -33,7 +42,15 @@ export default function DashboardPage() {
   const loadCases = async () => {
     try {
       const data = await casesAPI.list();
-      setCases(data);
+      // Add mock legal types and priorities for demonstration
+      const enhancedCases = data.map((c: Case, index: number) => ({
+        ...c,
+        legalType: (['civil', 'penal', 'laboral', 'constitucional', 'transito', 'administrativo'] as LegalType[])[
+          index % 6
+        ],
+        priority: (['high', 'medium', 'low'] as const)[index % 3],
+      }));
+      setCases(enhancedCases);
     } catch (error) {
       console.error('Error loading cases:', error);
     } finally {
@@ -46,12 +63,34 @@ export default function DashboardPage() {
     try {
       await casesAPI.create(newCase);
       setShowNewCaseModal(false);
-      setNewCase({ title: '', clientName: '', caseNumber: '', description: '' });
+      setNewCase({
+        title: '',
+        clientName: '',
+        caseNumber: '',
+        description: '',
+        legalType: 'civil',
+        priority: 'medium',
+      });
       loadCases();
     } catch (error) {
       console.error('Error creating case:', error);
     }
   };
+
+  // Filter cases by legal type
+  const filteredCases =
+    selectedLegalType === 'todos' ? cases : cases.filter((c) => c.legalType === selectedLegalType);
+
+  // Calculate case counts by legal type
+  const caseCounts: Partial<Record<LegalType | 'todos', number>> = {
+    todos: cases.length,
+  };
+  (['penal', 'civil', 'constitucional', 'transito', 'administrativo', 'laboral'] as LegalType[]).forEach((type) => {
+    caseCounts[type] = cases.filter((c) => c.legalType === type).length;
+  });
+
+  // Calculate stats
+  const activeCases = cases.filter((c) => c.status === 'Activo' || !c.status).length;
 
   if (loading) {
     return (
@@ -62,20 +101,38 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Mis Casos</h1>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Panel de Control</h1>
+          <p className="text-gray-600">Gestiona tus casos con inteligencia artificial</p>
+        </div>
         <button
           onClick={() => setShowNewCaseModal(true)}
-          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
         >
-          + Nuevo Caso
+          <Plus className="w-5 h-5" />
+          Nuevo Caso
         </button>
       </div>
 
-      {cases.length === 0 ? (
+      {/* Quick Stats Cards */}
+      <QuickStatsCards totalCases={cases.length} activeCases={activeCases} pendingActions={7} upcomingDeadlines={3} />
+
+      {/* AI Insights Panel */}
+      <AIInsightsPanel />
+
+      {/* Legal Type Filter Tabs */}
+      <LegalTypeFilterTabs selected={selectedLegalType} onChange={setSelectedLegalType} caseCounts={caseCounts} />
+
+      {/* Case Cards Grid */}
+      {filteredCases.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-gray-300">
-          <p className="text-gray-500 text-lg mb-4">No tienes casos aún</p>
+          <div className="text-6xl mb-4">📁</div>
+          <p className="text-gray-500 text-lg mb-4">
+            {selectedLegalType === 'todos' ? 'No tienes casos aún' : `No tienes casos de tipo ${selectedLegalType}`}
+          </p>
           <button
             onClick={() => setShowNewCaseModal(true)}
             className="text-indigo-600 hover:text-indigo-700 font-semibold"
@@ -85,32 +142,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {cases.map((case_) => (
-            <Link
-              key={case_.id}
-              href={`/dashboard/cases/${case_.id}`}
-              className="block bg-white rounded-xl shadow-sm hover:shadow-lg transition-all p-6 border border-gray-200 hover:border-indigo-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">{case_.title}</h3>
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-700">
-                  {case_.status || 'Activo'}
-                </span>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>
-                  <span className="font-medium">Cliente:</span> {case_.clientName}
-                </p>
-                {case_.caseNumber && (
-                  <p>
-                    <span className="font-medium">Nº Caso:</span> {case_.caseNumber}
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-4">
-                  Creado: {formatDate(case_.createdAt)}
-                </p>
-              </div>
-            </Link>
+          {filteredCases.map((caseData) => (
+            <EnhancedCaseCard key={caseData.id} caseData={caseData} />
           ))}
         </div>
       )}
@@ -118,26 +151,97 @@ export default function DashboardPage() {
       {/* New Case Modal */}
       {showNewCaseModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-6">Nuevo Caso</h2>
-            <form onSubmit={handleCreateCase} className="space-y-4">
+            <form onSubmit={handleCreateCase} className="space-y-6">
+              {/* Legal Type Selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Título del Caso *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Caso *</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {(['penal', 'civil', 'constitucional', 'transito', 'administrativo', 'laboral'] as LegalType[]).map(
+                    (type) => {
+                      const icons = {
+                        penal: '⚖️',
+                        civil: '🏛️',
+                        constitucional: '📜',
+                        transito: '🚗',
+                        administrativo: '🏢',
+                        laboral: '💼',
+                      };
+                      const labels = {
+                        penal: 'Penal',
+                        civil: 'Civil',
+                        constitucional: 'Constitucional',
+                        transito: 'Tránsito',
+                        administrativo: 'Administrativo',
+                        laboral: 'Laboral',
+                      };
+
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setNewCase({ ...newCase, legalType: type })}
+                          className={`p-4 border-2 rounded-lg transition-all ${
+                            newCase.legalType === type
+                              ? 'border-indigo-600 bg-indigo-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="text-3xl mb-2">{icons[type]}</div>
+                          <div className="text-sm font-medium">{labels[type]}</div>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+
+              {/* Priority Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Prioridad *</label>
+                <div className="flex gap-3">
+                  {(['high', 'medium', 'low'] as const).map((priority) => {
+                    const labels = {
+                      high: '🔴 Alta',
+                      medium: '🟡 Media',
+                      low: '🔵 Baja',
+                    };
+
+                    return (
+                      <button
+                        key={priority}
+                        type="button"
+                        onClick={() => setNewCase({ ...newCase, priority })}
+                        className={`flex-1 p-3 border-2 rounded-lg transition-all ${
+                          newCase.priority === priority
+                            ? 'border-indigo-600 bg-indigo-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="text-sm font-medium">{labels[priority]}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Título del Caso *</label>
                 <input
                   type="text"
                   required
                   value={newCase.title}
                   onChange={(e) => setNewCase({ ...newCase, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Ej: Demanda laboral"
+                  placeholder="Ej: Demanda laboral por despido intempestivo"
                 />
               </div>
+
+              {/* Client */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cliente *</label>
                 <input
                   type="text"
                   required
@@ -147,10 +251,10 @@ export default function DashboardPage() {
                   placeholder="Nombre del cliente"
                 />
               </div>
+
+              {/* Case Number */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Caso
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Caso</label>
                 <input
                   type="text"
                   value={newCase.caseNumber}
@@ -159,10 +263,10 @@ export default function DashboardPage() {
                   placeholder="2025-001"
                 />
               </div>
+
+              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
                 <textarea
                   value={newCase.description}
                   onChange={(e) => setNewCase({ ...newCase, description: e.target.value })}
@@ -171,6 +275,8 @@ export default function DashboardPage() {
                   placeholder="Descripción breve del caso"
                 />
               </div>
+
+              {/* Actions */}
               <div className="flex space-x-4 pt-4">
                 <button
                   type="button"
