@@ -50,6 +50,10 @@ export default function CaseDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
+  const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadCaseData();
@@ -170,6 +174,164 @@ export default function CaseDetailPage() {
 
   const handlePromptSelect = (prompt: string) => {
     setQuery(prompt);
+  };
+
+  const handleGenerateDocument = async (docType: string) => {
+    if (!caseData) return;
+    setGeneratingDoc(true);
+    try {
+      // Build context from case data and messages
+      const context = `
+Caso: ${caseData.title}
+Descripción: ${caseData.description || 'Sin descripción'}
+Estado: ${caseData.status}
+Documentos: ${documents.length}
+
+Conversación reciente:
+${messages.slice(-5).map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`).join('\n')}
+      `.trim();
+
+      const response = await queryAPI.query({
+        caseId,
+        query: `Genera un ${docType} profesional basado en este caso. Incluye todos los detalles relevantes, formato legal apropiado y secciones necesarias. Contexto: ${context}`
+      });
+
+      // Create a new message with the generated document
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: response.answer,
+        timestamp: new Date().toISOString(),
+        citations: response.citations || [],
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setShowGenerateDocModal(false);
+
+      // Auto-scroll to see the generated document
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error('Error generating document:', error);
+      alert('Error al generar el documento. Por favor, intenta nuevamente.');
+    } finally {
+      setGeneratingDoc(false);
+    }
+  };
+
+  const handleExportCase = async (format: 'pdf' | 'json') => {
+    if (!caseData) return;
+    setExporting(true);
+    try {
+      const exportData = {
+        case: caseData,
+        documents: documents.map(d => ({
+          filename: d.filename,
+          size: d.size,
+          createdAt: d.createdAt,
+          mimeType: d.mimeType
+        })),
+        messages: messages,
+        exportedAt: new Date().toISOString()
+      };
+
+      if (format === 'json') {
+        // Download as JSON
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `caso-${caseData.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // For PDF, we'll generate HTML content and use browser print
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>${caseData.title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 40px; }
+              h1 { color: #4F46E5; border-bottom: 2px solid #4F46E5; padding-bottom: 10px; }
+              .section { margin: 20px 0; }
+              .label { font-weight: bold; color: #374151; }
+              .message { margin: 10px 0; padding: 10px; border-left: 3px solid #E5E7EB; }
+              .user { border-left-color: #4F46E5; }
+              .assistant { border-left-color: #10B981; }
+            </style>
+          </head>
+          <body>
+            <h1>${caseData.title}</h1>
+            <div class="section">
+              <p><span class="label">Estado:</span> ${caseData.status}</p>
+              <p><span class="label">Creado:</span> ${formatDate(caseData.createdAt)}</p>
+              <p><span class="label">Descripción:</span> ${caseData.description || 'Sin descripción'}</p>
+            </div>
+            <div class="section">
+              <h2>Documentos (${documents.length})</h2>
+              <ul>
+                ${documents.map(d => `<li>${d.filename} (${(d.size / 1024).toFixed(2)} KB)</li>`).join('')}
+              </ul>
+            </div>
+            <div class="section">
+              <h2>Conversación</h2>
+              ${messages.map(m => `
+                <div class="message ${m.role}">
+                  <strong>${m.role === 'user' ? 'Usuario' : 'Asistente'}:</strong>
+                  <p>${m.content.replace(/\n/g, '<br>')}</p>
+                </div>
+              `).join('')}
+            </div>
+          </body>
+          </html>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        }
+      }
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Error exporting case:', error);
+      alert('Error al exportar el caso. Por favor, intenta nuevamente.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleRequestAnalysis = async () => {
+    if (!caseData) return;
+
+    const analysisPrompt = `Por favor, proporciona un análisis completo y detallado de este caso legal:
+
+**Información del Caso:**
+- Título: ${caseData.title}
+- Estado: ${caseData.status}
+- Descripción: ${caseData.description || 'Sin descripción'}
+- Documentos disponibles: ${documents.length}
+
+**Análisis solicitado:**
+1. Resumen ejecutivo del caso
+2. Puntos fuertes y débiles
+3. Riesgos legales identificados
+4. Recomendaciones estratégicas
+5. Próximos pasos sugeridos
+
+Por favor, basa tu análisis en la información disponible y en los documentos del caso.`;
+
+    setQuery(analysisPrompt);
+    // Trigger the query automatically
+    setTimeout(() => {
+      const form = document.querySelector('form') as HTMLFormElement;
+      if (form) form.requestSubmit();
+    }, 100);
   };
 
   const filteredDocuments = documents.filter((doc) => {
@@ -475,15 +637,24 @@ export default function CaseDetailPage() {
               Acciones Rápidas
             </h3>
             <div className="space-y-2">
-              <button className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+              <button
+                onClick={() => setShowGenerateDocModal(true)}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              >
                 <FileText className="w-4 h-4" />
                 Generar Documento
               </button>
-              <button className="w-full px-4 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="w-full px-4 py-2.5 border-2 border-indigo-600 text-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition-colors flex items-center gap-2"
+              >
                 <Download className="w-4 h-4" />
                 Exportar Caso
               </button>
-              <button className="w-full px-4 py-2.5 border-2 border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2">
+              <button
+                onClick={handleRequestAnalysis}
+                className="w-full px-4 py-2.5 border-2 border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+              >
                 <Sparkles className="w-4 h-4" />
                 Solicitar Análisis IA
               </button>
@@ -494,6 +665,117 @@ export default function CaseDetailPage() {
           <LegalReferences legalType={legalType} />
         </div>
       </div>
+
+      {/* Generate Document Modal */}
+      {showGenerateDocModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Generar Documento</h3>
+            <p className="text-gray-600 mb-6">
+              Selecciona el tipo de documento que deseas generar con IA:
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleGenerateDocument('contrato legal')}
+                disabled={generatingDoc}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              >
+                📄 Contrato Legal
+              </button>
+              <button
+                onClick={() => handleGenerateDocument('demanda o petición')}
+                disabled={generatingDoc}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              >
+                ⚖️ Demanda o Petición
+              </button>
+              <button
+                onClick={() => handleGenerateDocument('informe legal')}
+                disabled={generatingDoc}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              >
+                📊 Informe Legal
+              </button>
+              <button
+                onClick={() => handleGenerateDocument('carta legal')}
+                disabled={generatingDoc}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              >
+                ✉️ Carta Legal
+              </button>
+              <button
+                onClick={() => handleGenerateDocument('resumen ejecutivo del caso')}
+                disabled={generatingDoc}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              >
+                📋 Resumen Ejecutivo
+              </button>
+            </div>
+            {generatingDoc && (
+              <div className="mt-4 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Generando documento...</p>
+              </div>
+            )}
+            <button
+              onClick={() => setShowGenerateDocModal(false)}
+              disabled={generatingDoc}
+              className="w-full mt-4 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Export Case Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Exportar Caso</h3>
+            <p className="text-gray-600 mb-6">
+              Selecciona el formato de exportación:
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleExportCase('pdf')}
+                disabled={exporting}
+                className="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+              >
+                <FileText className="w-5 h-5" />
+                <div className="text-left flex-1">
+                  <div className="font-bold">Exportar como PDF</div>
+                  <div className="text-sm text-red-100">Documento imprimible con formato profesional</div>
+                </div>
+              </button>
+              <button
+                onClick={() => handleExportCase('json')}
+                disabled={exporting}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+              >
+                <Download className="w-5 h-5" />
+                <div className="text-left flex-1">
+                  <div className="font-bold">Exportar como JSON</div>
+                  <div className="text-sm text-blue-100">Datos estructurados para backup o migración</div>
+                </div>
+              </button>
+            </div>
+            {exporting && (
+              <div className="mt-4 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Exportando caso...</p>
+              </div>
+            )}
+            <button
+              onClick={() => setShowExportModal(false)}
+              disabled={exporting}
+              className="w-full mt-4 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
