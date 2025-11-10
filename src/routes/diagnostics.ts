@@ -51,26 +51,24 @@ export async function diagnosticsRoutes(fastify: FastifyInstance) {
 
       // Count total chunks and embeddings
       const totalChunks = await prisma.legalDocumentChunk.count();
-      const chunksWithEmbeddings = await prisma.legalDocumentChunk.count({
-        where: {
-          NOT: {
-            embedding: null,
-          },
+
+      // Fetch all chunks to check embeddings (Json fields can't use NOT null in Prisma where)
+      const allChunks = await prisma.legalDocumentChunk.findMany({
+        select: {
+          id: true,
+          legalDocumentId: true,
+          embedding: true,
         },
       });
+
+      const chunksWithEmbeddings = allChunks.filter(chunk => chunk.embedding !== null).length;
 
       // Get chunk details for each document
       const documentsWithEmbeddings = await Promise.all(
         documents.map(async (doc) => {
-          const chunks = await prisma.legalDocumentChunk.count({
-            where: { legalDocumentId: doc.id },
-          });
-          const embeddingsCount = await prisma.legalDocumentChunk.count({
-            where: {
-              legalDocumentId: doc.id,
-              NOT: { embedding: null },
-            },
-          });
+          const docChunks = allChunks.filter(chunk => chunk.legalDocumentId === doc.id);
+          const chunks = docChunks.length;
+          const embeddingsCount = docChunks.filter(chunk => chunk.embedding !== null).length;
 
           return {
             ...doc,
