@@ -99,7 +99,7 @@ export default function LegalLibraryPage() {
 
   const loadDocuments = async () => {
     try {
-      const response = await api.get('/api/v1/legal-documents-v2');
+      const response = await api.get('/legal-documents-v2');
       setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -148,7 +148,7 @@ export default function LegalLibraryPage() {
         formData.append('last_reform_date', uploadForm.last_reform_date);
       }
 
-      await api.post('/api/v1/legal-documents-v2', formData, {
+      await api.post('/legal-documents-v2', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const progress = progressEvent.total
