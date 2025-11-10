@@ -3,32 +3,72 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
+// Types matching backend schema
 interface LegalDocument {
   id: string;
-  title: string;
-  category: string;
+  norm_type: string;
+  norm_title: string;
+  legal_hierarchy: string;
+  publication_type: string;
+  publication_number: string;
+  publication_date?: string;
+  last_reform_date?: string;
+  document_state: string;
   jurisdiction: string;
-  registryNumber?: string;
-  publishDate?: string;
-  effectiveDate?: string;
   status: 'active' | 'processing' | 'error';
   fileSize: number;
   createdAt: string;
 }
 
-const CATEGORIES = [
-  { value: 'constitucion', label: 'Constitución', icon: '⚖️' },
-  { value: 'codigo', label: 'Códigos', icon: '📕' },
-  { value: 'ley', label: 'Leyes', icon: '📜' },
-  { value: 'decreto', label: 'Decretos', icon: '📋' },
-  { value: 'resolucion', label: 'Resoluciones', icon: '📄' },
-  { value: 'jurisprudencia', label: 'Jurisprudencia', icon: '⚖️' },
+// Enums from backend
+const NORM_TYPES = [
+  { value: 'CONSTITUTIONAL_NORM', label: 'Norma Constitucional', icon: '⚖️' },
+  { value: 'ORGANIC_LAW', label: 'Ley Orgánica', icon: '📜' },
+  { value: 'ORDINARY_LAW', label: 'Ley Ordinaria', icon: '📋' },
+  { value: 'ORGANIC_CODE', label: 'Código Orgánico', icon: '📕' },
+  { value: 'ORDINARY_CODE', label: 'Código Ordinario', icon: '📘' },
+  { value: 'REGULATION_GENERAL', label: 'Reglamento General', icon: '📄' },
+  { value: 'REGULATION_EXECUTIVE', label: 'Reglamento Ejecutivo', icon: '📑' },
+  { value: 'ORDINANCE_MUNICIPAL', label: 'Ordenanza Municipal', icon: '🏛️' },
+  { value: 'ORDINANCE_METROPOLITAN', label: 'Ordenanza Metropolitana', icon: '🌆' },
+  { value: 'RESOLUTION_ADMINISTRATIVE', label: 'Resolución Administrativa', icon: '📃' },
+  { value: 'RESOLUTION_JUDICIAL', label: 'Resolución Judicial', icon: '⚖️' },
+  { value: 'ADMINISTRATIVE_AGREEMENT', label: 'Acuerdo Administrativo', icon: '🤝' },
+  { value: 'INTERNATIONAL_TREATY', label: 'Tratado Internacional', icon: '🌍' },
+  { value: 'JUDICIAL_PRECEDENT', label: 'Precedente Judicial', icon: '⚖️' },
+];
+
+const LEGAL_HIERARCHY = [
+  { value: 'CONSTITUCION', label: 'Constitución', level: 1 },
+  { value: 'TRATADOS_INTERNACIONALES_DDHH', label: 'Tratados Internacionales DDHH', level: 2 },
+  { value: 'LEYES_ORGANICAS', label: 'Leyes Orgánicas', level: 3 },
+  { value: 'LEYES_ORDINARIAS', label: 'Leyes Ordinarias', level: 4 },
+  { value: 'CODIGOS_ORGANICOS', label: 'Códigos Orgánicos', level: 5 },
+  { value: 'CODIGOS_ORDINARIOS', label: 'Códigos Ordinarios', level: 6 },
+  { value: 'REGLAMENTOS', label: 'Reglamentos', level: 7 },
+  { value: 'ORDENANZAS', label: 'Ordenanzas', level: 8 },
+  { value: 'RESOLUCIONES', label: 'Resoluciones', level: 9 },
+  { value: 'ACUERDOS_ADMINISTRATIVOS', label: 'Acuerdos Administrativos', level: 10 },
+];
+
+const PUBLICATION_TYPES = [
+  { value: 'ORDINARIO', label: 'Registro Oficial Ordinario' },
+  { value: 'SUPLEMENTO', label: 'Suplemento' },
+  { value: 'SEGUNDO_SUPLEMENTO', label: 'Segundo Suplemento' },
+  { value: 'SUPLEMENTO_ESPECIAL', label: 'Suplemento Especial' },
+  { value: 'EDICION_CONSTITUCIONAL', label: 'Edición Constitucional' },
+];
+
+const DOCUMENT_STATES = [
+  { value: 'ORIGINAL', label: 'Original' },
+  { value: 'REFORMADO', label: 'Reformado' },
 ];
 
 const JURISDICTIONS = [
-  { value: 'nacional', label: 'Nacional' },
-  { value: 'provincial', label: 'Provincial' },
-  { value: 'municipal', label: 'Municipal' },
+  { value: 'NACIONAL', label: 'Nacional' },
+  { value: 'PROVINCIAL', label: 'Provincial' },
+  { value: 'MUNICIPAL', label: 'Municipal' },
+  { value: 'INTERNACIONAL', label: 'Internacional' },
 ];
 
 export default function LegalLibraryPage() {
@@ -36,16 +76,20 @@ export default function LegalLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [filterHierarchy, setFilterHierarchy] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [uploadForm, setUploadForm] = useState({
-    title: '',
-    category: 'ley',
-    jurisdiction: 'nacional',
-    registryNumber: '',
-    publishDate: '',
-    effectiveDate: '',
+    norm_type: 'ORDINARY_LAW',
+    norm_title: '',
+    legal_hierarchy: 'LEYES_ORDINARIAS',
+    publication_type: 'ORDINARIO',
+    publication_number: '',
+    publication_date: '',
+    last_reform_date: '',
+    document_state: 'ORIGINAL',
+    jurisdiction: 'NACIONAL',
     file: null as File | null,
   });
 
@@ -55,9 +99,8 @@ export default function LegalLibraryPage() {
 
   const loadDocuments = async () => {
     try {
-      // This endpoint would need to be created in the backend
-      // For now, using placeholder data
-      setDocuments([]);
+      const response = await api.get('/api/v1/legal-documents-v2');
+      setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Error loading documents:', error);
     } finally {
@@ -68,6 +111,14 @@ export default function LegalLibraryPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Por favor selecciona un archivo PDF');
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        alert('El archivo no debe superar 50MB');
+        return;
+      }
       setUploadForm({ ...uploadForm, file });
     }
   };
@@ -77,88 +128,111 @@ export default function LegalLibraryPage() {
     if (!uploadForm.file) return;
 
     setUploading(true);
+    setUploadProgress(0);
+
     try {
       const formData = new FormData();
       formData.append('file', uploadForm.file);
-      formData.append('title', uploadForm.title);
-      formData.append('category', uploadForm.category);
+      formData.append('norm_type', uploadForm.norm_type);
+      formData.append('norm_title', uploadForm.norm_title);
+      formData.append('legal_hierarchy', uploadForm.legal_hierarchy);
+      formData.append('publication_type', uploadForm.publication_type);
+      formData.append('publication_number', uploadForm.publication_number);
+      formData.append('document_state', uploadForm.document_state);
       formData.append('jurisdiction', uploadForm.jurisdiction);
-      if (uploadForm.registryNumber) formData.append('registryNumber', uploadForm.registryNumber);
-      if (uploadForm.publishDate) formData.append('publishDate', uploadForm.publishDate);
-      if (uploadForm.effectiveDate) formData.append('effectiveDate', uploadForm.effectiveDate);
 
-      // This endpoint would need to be created in the backend
-      // await api.post('/admin/legal-documents', formData, {
-      //   headers: { 'Content-Type': 'multipart/form-data' },
-      // });
+      if (uploadForm.publication_date) {
+        formData.append('publication_date', uploadForm.publication_date);
+      }
+      if (uploadForm.last_reform_date) {
+        formData.append('last_reform_date', uploadForm.last_reform_date);
+      }
 
-      alert('Documento legal subido exitosamente');
+      await api.post('/api/v1/legal-documents-v2', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        },
+      });
+
+      alert('✅ Documento legal subido y procesado exitosamente');
       setShowUploadModal(false);
       setUploadForm({
-        title: '',
-        category: 'ley',
-        jurisdiction: 'nacional',
-        registryNumber: '',
-        publishDate: '',
-        effectiveDate: '',
+        norm_type: 'ORDINARY_LAW',
+        norm_title: '',
+        legal_hierarchy: 'LEYES_ORDINARIAS',
+        publication_type: 'ORDINARIO',
+        publication_number: '',
+        publication_date: '',
+        last_reform_date: '',
+        document_state: 'ORIGINAL',
+        jurisdiction: 'NACIONAL',
         file: null,
       });
+      setUploadProgress(0);
       loadDocuments();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading document:', error);
-      alert('Error al subir documento legal');
+      const errorMessage = error?.response?.data?.message || 'Error al subir documento legal';
+      alert(`❌ ${errorMessage}`);
     } finally {
       setUploading(false);
     }
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesCategory = filterCategory === 'all' || doc.category === filterCategory;
-    const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doc.registryNumber?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesHierarchy = filterHierarchy === 'all' || doc.legal_hierarchy === filterHierarchy;
+    const matchesSearch =
+      doc.norm_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.publication_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesHierarchy && matchesSearch;
   });
 
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Biblioteca Legal</h1>
-          <p className="text-gray-600">Gestiona la base de conocimiento jurídico del sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">📚 Biblioteca Legal Global</h1>
+          <p className="text-gray-600">
+            Gestiona los documentos legales oficiales del Registro Oficial del Ecuador
+          </p>
         </div>
         <button
           onClick={() => setShowUploadModal(true)}
-          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all"
+          className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
         >
           + Subir Documento Legal
         </button>
       </div>
 
-      {/* Category Filter */}
+      {/* Hierarchy Filter */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center space-x-4 mb-4">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Filtrar por Jerarquía Legal</h3>
+        <div className="flex flex-wrap gap-2 mb-4">
           <button
-            onClick={() => setFilterCategory('all')}
+            onClick={() => setFilterHierarchy('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterCategory === 'all'
+              filterHierarchy === 'all'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Todos
           </button>
-          {CATEGORIES.map((cat) => (
+          {LEGAL_HIERARCHY.map((hier) => (
             <button
-              key={cat.value}
-              onClick={() => setFilterCategory(cat.value)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                filterCategory === cat.value
+              key={hier.value}
+              onClick={() => setFilterHierarchy(hier.value)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                filterHierarchy === hier.value
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span>{cat.icon}</span>
-              <span>{cat.label}</span>
+              {hier.label}
             </button>
           ))}
         </div>
@@ -168,9 +242,35 @@ export default function LegalLibraryPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar por título o número de registro..."
+          placeholder="🔍 Buscar por título o número de publicación del Registro Oficial..."
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+          <div className="text-3xl font-bold">{documents.length}</div>
+          <div className="text-blue-100">Documentos Totales</div>
+        </div>
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white">
+          <div className="text-3xl font-bold">
+            {documents.filter((d) => d.status === 'active').length}
+          </div>
+          <div className="text-green-100">Activos</div>
+        </div>
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+          <div className="text-3xl font-bold">
+            {new Set(documents.map((d) => d.legal_hierarchy)).size}
+          </div>
+          <div className="text-purple-100">Jerarquías</div>
+        </div>
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+          <div className="text-3xl font-bold">
+            {documents.filter((d) => d.document_state === 'REFORMADO').length}
+          </div>
+          <div className="text-orange-100">Reformados</div>
+        </div>
       </div>
 
       {/* Documents Grid */}
@@ -181,7 +281,7 @@ export default function LegalLibraryPage() {
       ) : filteredDocuments.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-gray-300">
           <p className="text-gray-500 text-lg mb-4">
-            {searchQuery || filterCategory !== 'all'
+            {searchQuery || filterHierarchy !== 'all'
               ? 'No se encontraron documentos con ese filtro'
               : 'No hay documentos legales en la biblioteca'}
           </p>
@@ -197,32 +297,60 @@ export default function LegalLibraryPage() {
           {filteredDocuments.map((doc) => (
             <div
               key={doc.id}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-indigo-300 transition-all"
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-indigo-300 transition-all hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex items-center space-x-3 mb-3">
                     <span className="text-2xl">
-                      {CATEGORIES.find((c) => c.value === doc.category)?.icon}
+                      {NORM_TYPES.find((t) => t.value === doc.norm_type)?.icon || '📄'}
                     </span>
-                    <h3 className="text-xl font-bold text-gray-900">{doc.title}</h3>
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
                     <div>
-                      <span className="font-medium">Categoría:</span>{' '}
-                      {CATEGORIES.find((c) => c.value === doc.category)?.label}
+                      <h3 className="text-xl font-bold text-gray-900">{doc.norm_title}</h3>
+                      <p className="text-sm text-gray-500">
+                        {NORM_TYPES.find((t) => t.value === doc.norm_type)?.label}
+                      </p>
                     </div>
-                    <div>
-                      <span className="font-medium">Jurisdicción:</span> {doc.jurisdiction}
-                    </div>
-                    {doc.registryNumber && (
-                      <div>
-                        <span className="font-medium">Nº Registro:</span> {doc.registryNumber}
-                      </div>
-                    )}
                   </div>
+
+                  <div className="grid md:grid-cols-4 gap-3 text-sm">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <span className="font-semibold text-blue-900">Jerarquía:</span>
+                      <p className="text-blue-700">
+                        {LEGAL_HIERARCHY.find((h) => h.value === doc.legal_hierarchy)?.label}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded-lg">
+                      <span className="font-semibold text-purple-900">Publicación:</span>
+                      <p className="text-purple-700">
+                        {PUBLICATION_TYPES.find((p) => p.value === doc.publication_type)?.label}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <span className="font-semibold text-green-900">Nº RO:</span>
+                      <p className="text-green-700">{doc.publication_number}</p>
+                    </div>
+                    <div className="bg-orange-50 p-3 rounded-lg">
+                      <span className="font-semibold text-orange-900">Estado:</span>
+                      <p className="text-orange-700">
+                        {DOCUMENT_STATES.find((s) => s.value === doc.document_state)?.label}
+                      </p>
+                    </div>
+                  </div>
+
+                  {doc.publication_date && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      📅 Publicado:{' '}
+                      {new Date(doc.publication_date).toLocaleDateString('es-EC', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center space-x-2">
+
+                <div className="flex flex-col items-end space-y-2">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       doc.status === 'active'
@@ -233,10 +361,13 @@ export default function LegalLibraryPage() {
                     }`}
                   >
                     {doc.status === 'active'
-                      ? 'Activo'
+                      ? '✓ Activo'
                       : doc.status === 'processing'
-                      ? 'Procesando'
-                      : 'Error'}
+                      ? '⏳ Procesando'
+                      : '✗ Error'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
                   </span>
                 </div>
               </div>
@@ -248,51 +379,169 @@ export default function LegalLibraryPage() {
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6">Subir Documento Legal</h2>
+          <div className="bg-white rounded-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6">📤 Subir Documento Legal del Registro Oficial</h2>
+
             <form onSubmit={handleUpload} className="space-y-4">
+              {/* Norm Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Título del Documento *
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Título de la Norma *
                 </label>
                 <input
                   type="text"
                   required
-                  value={uploadForm.title}
-                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Ej: Código Civil y Comercial"
+                  value={uploadForm.norm_title}
+                  onChange={(e) => setUploadForm({ ...uploadForm, norm_title: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Ej: Código Orgánico Integral Penal"
                 />
               </div>
 
+              {/* Norm Type & Legal Hierarchy */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tipo de Norma *
                   </label>
                   <select
                     required
-                    value={uploadForm.category}
-                    onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    value={uploadForm.norm_type}
+                    onChange={(e) => setUploadForm({ ...uploadForm, norm_type: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.icon} {cat.label}
+                    {NORM_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.icon} {type.label}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jerarquía Legal *
+                  </label>
+                  <select
+                    required
+                    value={uploadForm.legal_hierarchy}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, legal_hierarchy: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    {LEGAL_HIERARCHY.map((hier) => (
+                      <option key={hier.value} value={hier.value}>
+                        Nivel {hier.level}: {hier.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Publication Type & Number */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tipo de Publicación RO *
+                  </label>
+                  <select
+                    required
+                    value={uploadForm.publication_type}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, publication_type: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    {PUBLICATION_TYPES.map((pub) => (
+                      <option key={pub.value} value={pub.value}>
+                        {pub.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Número de Registro Oficial *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={uploadForm.publication_number}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, publication_number: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Ej: RO-180"
+                  />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Fecha de Publicación
+                  </label>
+                  <input
+                    type="date"
+                    value={uploadForm.publication_date}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, publication_date: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Fecha de Última Reforma
+                  </label>
+                  <input
+                    type="date"
+                    value={uploadForm.last_reform_date}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, last_reform_date: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Document State & Jurisdiction */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Estado del Documento *
+                  </label>
+                  <select
+                    required
+                    value={uploadForm.document_state}
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, document_state: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    {DOCUMENT_STATES.map((state) => (
+                      <option key={state.value} value={state.value}>
+                        {state.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Jurisdicción *
                   </label>
                   <select
                     required
                     value={uploadForm.jurisdiction}
-                    onChange={(e) => setUploadForm({ ...uploadForm, jurisdiction: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    onChange={(e) =>
+                      setUploadForm({ ...uploadForm, jurisdiction: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     {JURISDICTIONS.map((jur) => (
                       <option key={jur.value} value={jur.value}>
@@ -303,76 +552,64 @@ export default function LegalLibraryPage() {
                 </div>
               </div>
 
+              {/* File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Registro
-                </label>
-                <input
-                  type="text"
-                  value={uploadForm.registryNumber}
-                  onChange={(e) => setUploadForm({ ...uploadForm, registryNumber: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Ej: LEY-26994"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha de Publicación
-                  </label>
-                  <input
-                    type="date"
-                    value={uploadForm.publishDate}
-                    onChange={(e) => setUploadForm({ ...uploadForm, publishDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha de Vigencia
-                  </label>
-                  <input
-                    type="date"
-                    value={uploadForm.effectiveDate}
-                    onChange={(e) => setUploadForm({ ...uploadForm, effectiveDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Archivo PDF *
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Archivo PDF del Registro Oficial *
                 </label>
                 <input
                   type="file"
                   required
-                  accept=".pdf"
+                  accept=".pdf,application/pdf"
                   onChange={handleFileChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
                 {uploadForm.file && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Archivo seleccionado: {uploadForm.file.name} (
-                    {(uploadForm.file.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      ✓ Archivo seleccionado: <strong>{uploadForm.file.name}</strong> (
+                      {(uploadForm.file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> El documento será procesado automáticamente para generar
-                  embeddings y estará disponible para consultas en el sistema RAG.
-                </p>
+              {/* Upload Progress */}
+              {uploading && uploadProgress > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-blue-800">Subiendo...</span>
+                    <span className="text-sm font-semibold text-blue-800">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Info Box */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Información Importante:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• El documento se procesará automáticamente con PDF.js</li>
+                  <li>• Se generarán embeddings vectoriales para búsqueda semántica</li>
+                  <li>• Los documentos se almacenan en AWS S3</li>
+                  <li>• Tamaño máximo: 50MB por archivo</li>
+                </ul>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex space-x-4 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowUploadModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadProgress(0);
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                   disabled={uploading}
                 >
                   Cancelar
@@ -380,9 +617,9 @@ export default function LegalLibraryPage() {
                 <button
                   type="submit"
                   disabled={uploading || !uploadForm.file}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >
-                  {uploading ? 'Subiendo...' : 'Subir Documento'}
+                  {uploading ? `Subiendo... ${uploadProgress}%` : '📤 Subir Documento'}
                 </button>
               </div>
             </form>
