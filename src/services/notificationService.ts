@@ -9,7 +9,7 @@ import { PrismaClient } from '@prisma/client';
 import { Logger } from 'pino';
 import { DocumentEventBus, DocumentEventType, NotificationEvent } from '../events/documentEventBus';
 import { Redis } from 'ioredis';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import axios from 'axios';
 
 export interface NotificationChannel {
