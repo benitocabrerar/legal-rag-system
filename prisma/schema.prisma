@@ -66,6 +66,16 @@ model User {
   settings              UserSettings?
   usageHistory          UsageHistory[]
 
+  // New relations for Calendar, Tasks, and Notifications modules
+  createdEvents         Event[]         @relation("CreatedEvents")
+  eventParticipations   EventParticipant[]
+  eventReminders        EventReminder[]
+  assignedTasks         Task[]          @relation("AssignedTasks")
+  createdTasks          Task[]          @relation("CreatedTasks")
+  completedChecklistItems TaskChecklistItem[]
+  taskHistory           TaskHistory[]
+  notificationLogs      NotificationLog[]
+
   @@map("users")
 }
 
@@ -82,6 +92,15 @@ model Case {
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents Document[]
+
+  // New relations for Calendar, Tasks, and Finance modules
+  events          Event[]
+  tasks           Task[]
+  agreements      Agreement[]
+  serviceItems    ServiceItem[]
+  invoices        InvoiceFinance[]
+  payments        PaymentFinance[]
+  finance         CaseFinance?
 
   @@map("cases")
 }
@@ -615,4 +634,536 @@ model PaymentMethod {
 
   @@index([userId])
   @@map("payment_methods")
+}
+
+// ============================================================================
+// CALENDAR & EVENTS MODULE
+// ============================================================================
+
+enum EventType {
+  HEARING
+  MEETING
+  DEADLINE
+  CONSULTATION
+  COURT_DATE
+  FILING_DEADLINE
+  CLIENT_MEETING
+  INTERNAL_MEETING
+  PHONE_CALL
+  VIDEO_CONFERENCE
+  OTHER
+}
+
+enum EventStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+  NO_SHOW
+}
+
+enum ReminderType {
+  EMAIL
+  SMS
+  IN_APP
+  PUSH
+}
+
+model Event {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?       @db.Text
+  type            EventType
+  status          EventStatus   @default(SCHEDULED)
+  location        String?
+  meetingLink     String?       @map("meeting_link")
+  startTime       DateTime      @map("start_time")
+  endTime         DateTime      @map("end_time")
+  allDay          Boolean       @default(false) @map("all_day")
+  timezone        String        @default("America/Guayaquil")
+
+  // Recurring events
+  isRecurring     Boolean       @default(false) @map("is_recurring")
+  recurrenceRule  String?       @map("recurrence_rule") // iCalendar RRULE format
+  recurrenceEnd   DateTime?     @map("recurrence_end")
+  parentEventId   String?       @map("parent_event_id")
+
+  // Associations
+  caseId          String?       @map("case_id")
+  createdBy       String        @map("created_by")
+
+  // Metadata
+  color           String?       // For calendar display
+  isPrivate       Boolean       @default(false) @map("is_private")
+  notes           String?       @db.Text
+  attachments     Json?         // File references
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  case            Case?         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  creator         User          @relation("CreatedEvents", fields: [createdBy], references: [id], onDelete: Cascade)
+  parentEvent     Event?        @relation("RecurringEvents", fields: [parentEventId], references: [id])
+  recurringEvents Event[]       @relation("RecurringEvents")
+  participants    EventParticipant[]
+  reminders       EventReminder[]
+
+  @@index([caseId])
+  @@index([createdBy])
+  @@index([startTime])
+  @@index([status])
+  @@index([type])
+  @@map("events")
+}
+
+model EventParticipant {
+  id              String   @id @default(uuid())
+  eventId         String   @map("event_id")
+  userId          String?  @map("user_id")
+  email           String?  // For external participants
+  name            String?  // For external participants
+  role            String   @default("attendee") // organizer, attendee, optional
+  status          String   @default("pending") // pending, accepted, declined, tentative
+  responseTime    DateTime? @map("response_time")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@index([userId])
+  @@map("event_participants")
+}
+
+model EventReminder {
+  id              String       @id @default(uuid())
+  eventId         String       @map("event_id")
+  type            ReminderType
+  minutesBefore   Int          @map("minutes_before")
+  sentAt          DateTime?    @map("sent_at")
+  status          String       @default("pending") // pending, sent, failed
+  recipientUserId String?      @map("recipient_user_id")
+  recipientEmail  String?      @map("recipient_email")
+  errorMessage    String?      @map("error_message")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  event           Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipient       User?        @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([sentAt])
+  @@index([status])
+  @@map("event_reminders")
+}
+
+// ============================================================================
+// TASKS MODULE
+// ============================================================================
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?       @db.Text
+  status          TaskStatus    @default(TODO)
+  priority        TaskPriority  @default(MEDIUM)
+
+  // Associations
+  caseId          String?       @map("case_id")
+  assignedTo      String?       @map("assigned_to")
+  createdBy       String        @map("created_by")
+
+  // Dates
+  dueDate         DateTime?     @map("due_date")
+  startDate       DateTime?     @map("start_date")
+  completedAt     DateTime?     @map("completed_at")
+
+  // Progress tracking
+  estimatedHours  Float?        @map("estimated_hours")
+  actualHours     Float?        @map("actual_hours")
+  progress        Int           @default(0) // 0-100 percentage
+
+  // Metadata
+  tags            String[]
+  isRecurring     Boolean       @default(false) @map("is_recurring")
+  recurrenceRule  String?       @map("recurrence_rule")
+  parentTaskId    String?       @map("parent_task_id")
+  dependsOn       String[]      @map("depends_on") // Array of task IDs
+  attachments     Json?
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  case            Case?         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  assignee        User?         @relation("AssignedTasks", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator         User          @relation("CreatedTasks", fields: [createdBy], references: [id], onDelete: Cascade)
+  parentTask      Task?         @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subTasks        Task[]        @relation("SubTasks")
+  checklistItems  TaskChecklistItem[]
+  history         TaskHistory[]
+
+  @@index([caseId])
+  @@index([assignedTo])
+  @@index([createdBy])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model TaskChecklistItem {
+  id              String   @id @default(uuid())
+  taskId          String   @map("task_id")
+  title           String
+  isCompleted     Boolean  @default(false) @map("is_completed")
+  completedAt     DateTime? @map("completed_at")
+  completedBy     String?  @map("completed_by")
+  displayOrder    Int      @default(0) @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  completedByUser User?    @relation(fields: [completedBy], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@map("task_checklist_items")
+}
+
+model TaskHistory {
+  id              String   @id @default(uuid())
+  taskId          String   @map("task_id")
+  userId          String   @map("user_id")
+  action          String   // created, updated, status_changed, assigned, completed, etc.
+  changes         Json?    // Before/after values
+  comment         String?  @db.Text
+  timestamp       DateTime @default(now())
+
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("task_history")
+}
+
+// ============================================================================
+// NOTIFICATIONS MODULE (Enhanced)
+// ============================================================================
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+model NotificationTemplate {
+  id              String   @id @default(uuid())
+  name            String
+  code            String   @unique
+  channel         NotificationChannel
+  subject         String?
+  bodyTemplate    String   @db.Text @map("body_template")
+  variables       Json?    // Available template variables
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  logs            NotificationLog[]
+
+  @@map("notification_templates")
+}
+
+model NotificationLog {
+  id              String               @id @default(uuid())
+  templateId      String?              @map("template_id")
+  userId          String?              @map("user_id")
+  channel         NotificationChannel
+  recipient       String               // Email, phone number, or user ID
+  subject         String?
+  body            String               @db.Text
+  status          String               @default("pending") // pending, sent, failed, bounced
+  sentAt          DateTime?            @map("sent_at")
+  deliveredAt     DateTime?            @map("delivered_at")
+  readAt          DateTime?            @map("read_at")
+  errorMessage    String?              @map("error_message")
+  metadata        Json?
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  template        NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user            User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([channel])
+  @@index([createdAt])
+  @@map("notification_logs")
+}
+
+// ============================================================================
+// FINANCE MODULE
+// ============================================================================
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethodType {
+  CASH
+  BANK_TRANSFER
+  CREDIT_CARD
+  DEBIT_CARD
+  CHECK
+  PAYPAL
+  STRIPE
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum ServiceItemType {
+  CONSULTATION
+  COURT_REPRESENTATION
+  DOCUMENT_PREPARATION
+  RESEARCH
+  FILING
+  NEGOTIATION
+  HOURLY_WORK
+  FIXED_FEE
+  EXPENSE
+  OTHER
+}
+
+model Agreement {
+  id              String   @id @default(uuid())
+  caseId          String   @map("case_id")
+  title           String
+  description     String?  @db.Text
+
+  // Financial terms
+  totalAmount     Float    @map("total_amount")
+  currency        String   @default("USD")
+  paymentTerms    String?  @db.Text @map("payment_terms")
+
+  // Dates
+  startDate       DateTime @map("start_date")
+  endDate         DateTime? @map("end_date")
+  signedDate      DateTime? @map("signed_date")
+
+  // Status
+  status          String   @default("draft") // draft, active, completed, terminated
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Documents
+  documentUrl     String?  @map("document_url")
+  signatureUrl    String?  @map("signature_url")
+
+  // Metadata
+  notes           String?  @db.Text
+  metadata        Json?
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  serviceItems    ServiceItem[]
+
+  @@index([caseId])
+  @@index([status])
+  @@map("agreements")
+}
+
+model ServiceItem {
+  id              String          @id @default(uuid())
+  agreementId     String?         @map("agreement_id")
+  caseId          String          @map("case_id")
+  type            ServiceItemType
+
+  // Service details
+  description     String
+  quantity        Float           @default(1)
+  rate            Float           // Hourly rate or fixed amount
+  amount          Float           // quantity * rate
+  currency        String          @default("USD")
+
+  // Billing
+  isBillable      Boolean         @default(true) @map("is_billable")
+  isBilled        Boolean         @default(false) @map("is_billed")
+  billedDate      DateTime?       @map("billed_date")
+
+  // Dates
+  serviceDate     DateTime        @map("service_date")
+
+  // Metadata
+  notes           String?         @db.Text
+  metadata        Json?
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  agreement       Agreement?      @relation(fields: [agreementId], references: [id], onDelete: SetNull)
+  case            Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([agreementId])
+  @@index([caseId])
+  @@index([type])
+  @@index([serviceDate])
+  @@map("service_items")
+}
+
+model InvoiceFinance {
+  id              String         @id @default(uuid())
+  caseId          String         @map("case_id")
+  invoiceNumber   String         @unique @map("invoice_number")
+
+  // Financial details
+  subtotal        Float
+  taxRate         Float          @default(0) @map("tax_rate")
+  taxAmount       Float          @default(0) @map("tax_amount")
+  discountAmount  Float          @default(0) @map("discount_amount")
+  totalAmount     Float          @map("total_amount")
+  paidAmount      Float          @default(0) @map("paid_amount")
+  balanceDue      Float          @map("balance_due")
+  currency        String         @default("USD")
+
+  // Status
+  status          InvoiceStatus  @default(DRAFT)
+
+  // Dates
+  issueDate       DateTime       @map("issue_date")
+  dueDate         DateTime       @map("due_date")
+  paidDate        DateTime?      @map("paid_date")
+  sentDate        DateTime?      @map("sent_date")
+  viewedDate      DateTime?      @map("viewed_date")
+
+  // Line items
+  items           Json           // Array of invoice line items
+
+  // Client details
+  clientName      String         @map("client_name")
+  clientEmail     String?        @map("client_email")
+  clientAddress   String?        @map("client_address") @db.Text
+
+  // Documents
+  pdfUrl          String?        @map("pdf_url")
+
+  // Metadata
+  notes           String?        @db.Text
+  internalNotes   String?        @db.Text @map("internal_notes")
+  metadata        Json?
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  case            Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  payments        PaymentFinance[]
+
+  @@index([caseId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@map("finance_invoices")
+}
+
+model PaymentFinance {
+  id              String            @id @default(uuid())
+  invoiceId       String            @map("invoice_id")
+  caseId          String            @map("case_id")
+
+  // Payment details
+  amount          Float
+  currency        String            @default("USD")
+  method          PaymentMethodType
+  status          PaymentStatus     @default(PENDING)
+
+  // Transaction details
+  transactionId   String?           @map("transaction_id")
+  referenceNumber String?           @map("reference_number")
+
+  // Dates
+  paymentDate     DateTime          @map("payment_date")
+  receivedDate    DateTime?         @map("received_date")
+
+  // Receipt
+  receiptUrl      String?           @map("receipt_url")
+  receiptNumber   String?           @map("receipt_number")
+
+  // Metadata
+  notes           String?           @db.Text
+  metadata        Json?
+
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  invoice         InvoiceFinance    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  case            Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([caseId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("finance_payments")
+}
+
+model CaseFinance {
+  id              String   @id @default(uuid())
+  caseId          String   @unique @map("case_id")
+
+  // Financial summary
+  totalBilled     Float    @default(0) @map("total_billed")
+  totalPaid       Float    @default(0) @map("total_paid")
+  totalOutstanding Float   @default(0) @map("total_outstanding")
+  totalExpenses   Float    @default(0) @map("total_expenses")
+
+  // Counts
+  invoiceCount    Int      @default(0) @map("invoice_count")
+  paymentCount    Int      @default(0) @map("payment_count")
+
+  // Dates
+  lastInvoiceDate DateTime? @map("last_invoice_date")
+  lastPaymentDate DateTime? @map("last_payment_date")
+
+  // Metadata
+  currency        String   @default("USD")
+  notes           String?  @db.Text
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("case_finances")
 }

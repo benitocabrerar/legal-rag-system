@@ -23,6 +23,10 @@ import { subscriptionRoutes } from './routes/subscription.js';
 import { usageRoutes } from './routes/usage.js';
 import { billingRoutes } from './routes/billing.js';
 import { settingsRoutes } from './routes/settings.js';
+import { calendarRoutes } from './routes/calendar.js';
+import { taskRoutes } from './routes/tasks.js';
+import { notificationsEnhancedRoutes } from './routes/notifications-enhanced.js';
+import { financeRoutes } from './routes/finance.js';
 
 dotenv.config();
 
@@ -74,7 +78,11 @@ app.get('/', async () => {
       'Legal Document Library',
       'User Management & Subscriptions',
       'Billing & Payments',
-      'Admin Panel'
+      'Admin Panel',
+      'Calendar & Events',
+      'Task Management',
+      'Notifications',
+      'Financial Management'
     ]
   };
 });
@@ -107,6 +115,12 @@ await app.register(adminSpecialtyRoutes, { prefix: '/api/v1' });
 await app.register(adminAuditRoutes, { prefix: '/api/v1' });
 await app.register(adminQuotaRoutes, { prefix: '/api/v1' });
 await app.register(adminPlanRoutes, { prefix: '/api/v1' });
+
+// Register calendar, tasks, notifications, and finance routes
+await app.register(calendarRoutes, { prefix: '/api/v1' });
+await app.register(taskRoutes, { prefix: '/api/v1' });
+await app.register(notificationsEnhancedRoutes, { prefix: '/api/v1' });
+await app.register(financeRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {
