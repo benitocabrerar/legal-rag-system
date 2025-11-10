@@ -177,7 +177,32 @@ export default function LegalLibraryPage() {
 
       // Success - processing complete
       setProcessingAfterUpload(false);
-      alert('✅ Documento legal subido y procesado exitosamente');
+
+      // Extract vectorization info from response
+      const { message, warnings, vectorization } = response.data;
+
+      // Build detailed alert message
+      let alertMessage = message || '✅ Documento legal subido y procesado exitosamente';
+
+      if (vectorization) {
+        alertMessage += `\n\n📊 Detalles de Vectorización:`;
+        alertMessage += `\n• Total de fragmentos: ${vectorization.totalChunks}`;
+        alertMessage += `\n• Embeddings generados: ${vectorization.embeddingsGenerated}`;
+        alertMessage += `\n• Tasa de éxito: ${vectorization.successRate}`;
+
+        if (vectorization.embeddingsFailed > 0) {
+          alertMessage += `\n• ⚠️ Fallos: ${vectorization.embeddingsFailed}`;
+        }
+      }
+
+      if (warnings && warnings.length > 0) {
+        alertMessage += `\n\n⚠️ ADVERTENCIAS:\n`;
+        warnings.forEach((warning: string, index: number) => {
+          alertMessage += `\n${index + 1}. ${warning}`;
+        });
+      }
+
+      alert(alertMessage);
       setShowUploadModal(false);
       setUploadForm({
         norm_type: 'ORDINARY_LAW',

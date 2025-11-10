@@ -81,13 +81,19 @@ export class LegalDocumentService {
     }).then(async (document) => {
       // Generate chunks and embeddings asynchronously AFTER transaction completes
       // This prevents transaction timeout issues with slow OpenAI API calls
-      const chunks = await this.createDocumentChunksAsync(document.id, data.content);
+      const vectorizationResult = await this.createDocumentChunksAsync(document.id, data.content);
 
       return {
         ...document,
-        chunksCount: chunks.length,
+        chunksCount: vectorizationResult.chunks.length,
         revisionsCount: 0,
-      } as LegalDocumentResponse;
+        vectorization: {
+          totalChunks: vectorizationResult.totalChunks,
+          embeddingsGenerated: vectorizationResult.embeddingsGenerated,
+          embeddingsFailed: vectorizationResult.embeddingsFailed,
+          success: vectorizationResult.success,
+        },
+      } as any; // Extended LegalDocumentResponse with vectorization info
     });
   }
 
@@ -176,12 +182,18 @@ export class LegalDocumentService {
 
       // Regenerate chunks and embeddings asynchronously AFTER transaction
       if (contentChanged && newContent) {
-        const chunks = await this.createDocumentChunksAsync(updated.id, newContent);
+        const vectorizationResult = await this.createDocumentChunksAsync(updated.id, newContent);
         return {
           ...updated,
-          chunksCount: chunks.length,
+          chunksCount: vectorizationResult.chunks.length,
           revisionsCount: 0,
-        } as LegalDocumentResponse;
+          vectorization: {
+            totalChunks: vectorizationResult.totalChunks,
+            embeddingsGenerated: vectorizationResult.embeddingsGenerated,
+            embeddingsFailed: vectorizationResult.embeddingsFailed,
+            success: vectorizationResult.success,
+          },
+        } as any;
       }
 
       return {
@@ -417,7 +429,13 @@ export class LegalDocumentService {
   private async createDocumentChunksAsync(
     documentId: string,
     content: string
-  ): Promise<any[]> {
+  ): Promise<{
+    chunks: any[];
+    totalChunks: number;
+    embeddingsGenerated: number;
+    embeddingsFailed: number;
+    success: boolean;
+  }> {
     const chunkSize = 1000;
     const chunks = [];
 
@@ -488,7 +506,13 @@ export class LegalDocumentService {
       console.warn(`   These chunks will only be searchable via text search`);
     }
 
-    return createdChunks;
+    return {
+      chunks: createdChunks,
+      totalChunks: chunks.length,
+      embeddingsGenerated: successCount,
+      embeddingsFailed: failCount,
+      success: failCount === 0, // Only successful if ALL embeddings were generated
+    };
   }
 
   /**

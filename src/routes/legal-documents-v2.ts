@@ -124,9 +124,38 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
       const validatedData = CreateLegalDocumentSchema.parse(documentData);
       const document = await documentService.createDocument(validatedData, user.id);
 
+      // Build detailed message about vectorization status
+      const vectorization = (document as any).vectorization;
+      let message: string;
+      let warnings: string[] = [];
+
+      if (vectorization && vectorization.success) {
+        // All embeddings generated successfully
+        message = `✅ Documento cargado y vectorizado correctamente. Se generaron ${vectorization.embeddingsGenerated} embeddings de ${vectorization.totalChunks} fragmentos. El documento está listo para búsquedas semánticas con IA.`;
+      } else if (vectorization && vectorization.embeddingsFailed > 0) {
+        // Some embeddings failed
+        message = `⚠️ Documento cargado pero la vectorización fue parcial. Se generaron ${vectorization.embeddingsGenerated} de ${vectorization.totalChunks} embeddings. ${vectorization.embeddingsFailed} fragmentos NO tienen embeddings.`;
+        warnings.push(
+          `${vectorization.embeddingsFailed} fragmentos no pudieron ser vectorizados y solo estarán disponibles mediante búsqueda de texto.`,
+          `Para búsquedas óptimas con IA, se recomienda eliminar este documento y volver a subirlo.`,
+          `Si el problema persiste, verifique su configuración de API de OpenAI o contacte al administrador del sistema.`
+        );
+      } else {
+        // No vectorization info (shouldn't happen but handle it)
+        message = `✅ Documento cargado correctamente.`;
+      }
+
       return reply.code(201).send({
-        success: true,
+        success: vectorization ? vectorization.success : true,
+        message,
+        warnings: warnings.length > 0 ? warnings : undefined,
         document,
+        vectorization: vectorization ? {
+          totalChunks: vectorization.totalChunks,
+          embeddingsGenerated: vectorization.embeddingsGenerated,
+          embeddingsFailed: vectorization.embeddingsFailed,
+          successRate: `${Math.round((vectorization.embeddingsGenerated / vectorization.totalChunks) * 100)}%`,
+        } : undefined,
       });
     } catch (error: any) {
       fastify.log.error(error);
