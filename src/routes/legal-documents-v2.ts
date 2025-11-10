@@ -9,6 +9,7 @@ import {
   LegacyLegalDocumentSchema,
   CreateDocumentRevisionSchema,
 } from '../schemas/legal-document-schemas';
+import pdfParse from 'pdf-parse';
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({
@@ -35,16 +36,75 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         });
       }
 
-      // Check if this is a multipart request (file upload)
+      let documentData: any;
+
+      // Handle multipart file upload
       if (request.isMultipart()) {
-        return reply.code(501).send({
-          error: 'Not Implemented',
-          message: 'File upload support requires PDF/DOCX text extraction libraries. Please install pdf-parse or mammoth packages, or send document content as JSON with the "content" field already extracted.',
-        });
+        const parts = request.parts();
+        const formData: any = {};
+        let fileBuffer: Buffer | null = null;
+        let filename: string | null = null;
+
+        // Process all parts
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            // Get file buffer
+            fileBuffer = await part.toBuffer();
+            filename = part.filename;
+          } else {
+            // Regular form field
+            formData[part.fieldname] = (part as any).value;
+          }
+        }
+
+        if (!fileBuffer) {
+          return reply.code(400).send({
+            error: 'Bad Request',
+            message: 'No file provided',
+          });
+        }
+
+        // Extract text from PDF
+        let extractedText: string;
+        try {
+          const pdfData = await pdfParse(fileBuffer);
+          extractedText = pdfData.text;
+
+          if (!extractedText || extractedText.trim().length === 0) {
+            return reply.code(400).send({
+              error: 'Bad Request',
+              message: 'Could not extract text from PDF. The file may be empty or image-based.',
+            });
+          }
+        } catch (pdfError: any) {
+          fastify.log.error('PDF parsing error:', pdfError);
+          return reply.code(400).send({
+            error: 'Bad Request',
+            message: `Failed to parse PDF: ${pdfError.message}`,
+          });
+        }
+
+        // Build document data from form fields
+        documentData = {
+          normType: formData.norm_type,
+          normTitle: formData.norm_title,
+          legalHierarchy: formData.legal_hierarchy,
+          content: extractedText,
+          publicationType: formData.publication_type,
+          publicationNumber: formData.publication_number,
+          publicationDate: formData.publication_date || undefined,
+          documentState: formData.document_state,
+          jurisdiction: formData.jurisdiction,
+          lastReformDate: formData.last_reform_date || undefined,
+        };
+      } else {
+        // Handle JSON request
+        documentData = request.body;
       }
 
-      const body = CreateLegalDocumentSchema.parse(request.body);
-      const document = await documentService.createDocument(body, user.id);
+      // Validate with Zod schema
+      const validatedData = CreateLegalDocumentSchema.parse(documentData);
+      const document = await documentService.createDocument(validatedData, user.id);
 
       return reply.code(201).send({
         success: true,
