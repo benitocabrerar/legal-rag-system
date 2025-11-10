@@ -22,12 +22,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // CREATE LEGAL DOCUMENT
   // ============================================================================
   fastify.post('/legal-documents-v2', {
-    schema: {
-      body: CreateLegalDocumentSchema,
-      tags: ['Legal Documents'],
-      description: 'Create a new legal document with enhanced metadata',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -67,19 +61,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // UPDATE LEGAL DOCUMENT
   // ============================================================================
   fastify.put('/legal-documents-v2/:id', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-        },
-        required: ['id'],
-      },
-      body: UpdateLegalDocumentSchema,
-      tags: ['Legal Documents'],
-      description: 'Update an existing legal document',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -126,12 +107,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // QUERY LEGAL DOCUMENTS
   // ============================================================================
   fastify.get('/legal-documents-v2', {
-    schema: {
-      querystring: QueryLegalDocumentsSchema,
-      tags: ['Legal Documents'],
-      description: 'Query legal documents with advanced filters',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -161,18 +136,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // GET SINGLE LEGAL DOCUMENT
   // ============================================================================
   fastify.get('/legal-documents-v2/:id', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-        },
-        required: ['id'],
-      },
-      tags: ['Legal Documents'],
-      description: 'Get a legal document by ID',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -203,18 +166,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // DELETE LEGAL DOCUMENT
   // ============================================================================
   fastify.delete('/legal-documents-v2/:id', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-        },
-        required: ['id'],
-      },
-      tags: ['Legal Documents'],
-      description: 'Delete a legal document',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -263,19 +214,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // CREATE DOCUMENT REVISION
   // ============================================================================
   fastify.post('/legal-documents-v2/:id/revisions', {
-    schema: {
-      params: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', format: 'uuid' },
-        },
-        required: ['id'],
-      },
-      body: CreateDocumentRevisionSchema,
-      tags: ['Legal Documents'],
-      description: 'Create a new revision for a legal document',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -346,19 +284,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // SEMANTIC SEARCH
   // ============================================================================
   fastify.post('/legal-documents-v2/search', {
-    schema: {
-      body: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', minLength: 1 },
-          limit: { type: 'integer', minimum: 1, maximum: 50, default: 10 },
-        },
-        required: ['query'],
-      },
-      tags: ['Legal Documents'],
-      description: 'Perform semantic search on legal documents',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -383,12 +308,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // LEGACY MIGRATION ENDPOINT
   // ============================================================================
   fastify.post('/legal-documents-v2/migrate', {
-    schema: {
-      body: LegacyLegalDocumentSchema,
-      tags: ['Legal Documents'],
-      description: 'Migrate a legacy document to new structure',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -429,11 +348,6 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // GET ENUM VALUES (For Frontend Dropdowns)
   // ============================================================================
   fastify.get('/legal-documents-v2/enums', {
-    schema: {
-      tags: ['Legal Documents'],
-      description: 'Get all enum values for legal documents',
-      security: [{ bearerAuth: [] }],
-    },
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     return reply.send({
