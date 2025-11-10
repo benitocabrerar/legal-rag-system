@@ -402,6 +402,11 @@ export class LegalDocumentService {
 
     // Generate embeddings and store chunks
     const createdChunks = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    console.log(`📝 Generating embeddings for ${chunks.length} chunks...`);
+
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
 
@@ -414,8 +419,14 @@ export class LegalDocumentService {
           input: chunk,
         });
         embedding = embeddingResponse.data[0].embedding;
+        successCount++;
+
+        if (i % 10 === 0) {
+          console.log(`  ✅ Generated ${successCount} embeddings (chunk ${i + 1}/${chunks.length})`);
+        }
       } catch (error: any) {
-        console.error(`Failed to generate embedding for chunk ${i}:`, error.message);
+        failCount++;
+        console.error(`  ❌ Failed to generate embedding for chunk ${i}:`, error.message);
         // Continue without embedding - document will still be searchable via text search
       }
 
@@ -430,6 +441,15 @@ export class LegalDocumentService {
       });
 
       createdChunks.push(createdChunk);
+    }
+
+    console.log(`\n📊 Embedding generation complete:`);
+    console.log(`  ✅ Success: ${successCount}/${chunks.length}`);
+    console.log(`  ❌ Failed: ${failCount}/${chunks.length}`);
+
+    if (failCount > 0) {
+      console.warn(`⚠️  WARNING: ${failCount} chunks saved without embeddings`);
+      console.warn(`   These chunks will only be searchable via text search`);
     }
 
     return createdChunks;

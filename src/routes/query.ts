@@ -112,15 +112,41 @@ export async function queryRoutes(fastify: FastifyInstance) {
         })),
       ];
 
-      // Calculate cosine similarity for each chunk
-      const chunksWithScores = allChunks.map((chunk) => {
-        const embedding = chunk.embedding as number[];
-        const similarity = cosineSimilarity(queryEmbedding, embedding);
-        return {
-          ...chunk,
-          similarity,
-        };
-      });
+      // Filter out chunks without embeddings
+      const chunksWithEmbeddings = allChunks.filter((chunk) => chunk.embedding !== null);
+
+      // If no chunks have embeddings, fall back to text search
+      if (chunksWithEmbeddings.length === 0) {
+        // Fallback: Search by text content
+        const textResults = allChunks
+          .filter((chunk) => {
+            const queryLower = body.query.toLowerCase();
+            const contentLower = chunk.content.toLowerCase();
+            return contentLower.includes(queryLower);
+          })
+          .slice(0, body.maxResults)
+          .map((chunk) => ({
+            ...chunk,
+            similarity: 1.0, // Placeholder similarity for text matches
+          }));
+
+        if (textResults.length > 0) {
+          fastify.log.warn('No embeddings found, using text search fallback');
+        }
+
+        // Use text results as chunksWithScores
+        var chunksWithScores = textResults;
+      } else {
+        // Calculate cosine similarity for each chunk with embeddings
+        var chunksWithScores = chunksWithEmbeddings.map((chunk) => {
+          const embedding = chunk.embedding as number[];
+          const similarity = cosineSimilarity(queryEmbedding, embedding);
+          return {
+            ...chunk,
+            similarity,
+          };
+        });
+      }
 
       // Sort by similarity and take top results
       const topChunks = chunksWithScores
