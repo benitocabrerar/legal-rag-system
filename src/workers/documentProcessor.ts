@@ -5,7 +5,7 @@
  * Implements queue-based processing with Bull for reliability
  */
 
-import Bull, { Job, Queue, QueueScheduler, Worker } from 'bullmq';
+import Bull, { Job, Queue, Worker } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { Logger } from 'pino';
 import { OpenAI } from 'openai';
@@ -45,7 +45,6 @@ export interface JobResult {
 export class DocumentProcessor {
   private queue: Queue<DocumentJob>;
   private worker?: Worker<DocumentJob, JobResult>;
-  private scheduler?: QueueScheduler;
   private prisma: PrismaClient;
   private logger: Logger;
   private eventBus: DocumentEventBus;
@@ -94,13 +93,7 @@ export class DocumentProcessor {
     }
 
     try {
-      // Start scheduler for delayed/repeated jobs
-      this.scheduler = new QueueScheduler('document-processing', {
-        connection: this.redis.duplicate()
-      });
-      await this.scheduler.waitUntilReady();
-
-      // Create worker
+      // Create worker (note: BullMQ v5+ handles delayed/repeated jobs automatically)
       this.worker = new Worker<DocumentJob, JobResult>(
         'document-processing',
         async (job: Job<DocumentJob>) => {
@@ -141,10 +134,6 @@ export class DocumentProcessor {
     try {
       if (this.worker) {
         await this.worker.close();
-      }
-
-      if (this.scheduler) {
-        await this.scheduler.close();
       }
 
       await this.queue.close();
