@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+import { Client } from 'pg';
 
 const MIGRATION_SQL = `-- =====================================================
 -- Document Analysis and Notification System Tables
@@ -403,10 +404,26 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
 
       app.log.info('🔄 Iniciando aplicación de migración (embedded SQL)...');
 
-      // Ejecutar la migración
-      app.log.info('⚙️  Ejecutando migración SQL...');
-      await prisma.$executeRawUnsafe(MIGRATION_SQL);
-      app.log.info('✅ Migración SQL ejecutada exitosamente!');
+      // Ejecutar la migración usando pg Client directamente
+      app.log.info('⚙️  Ejecutando migración SQL con pg Client...');
+
+      const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+      });
+
+      try {
+        await client.connect();
+        app.log.info('   Conectado a la base de datos');
+
+        // Execute the entire SQL script at once
+        await client.query(MIGRATION_SQL);
+        app.log.info('✅ Migración SQL ejecutada exitosamente!');
+
+        await client.end();
+      } catch (error) {
+        await client.end().catch(() => {});
+        throw error;
+      }
 
       // Verificar que las tablas se crearon
       app.log.info('🔍 Verificando tablas creadas...');
