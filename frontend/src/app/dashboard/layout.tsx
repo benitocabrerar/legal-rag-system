@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { User, Settings, CreditCard, LogOut, ChevronDown } from 'lucide-react';
+import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -60,6 +60,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                 >
                   Casos
+                </Link>
+                <Link
+                  href="/dashboard/calendar"
+                  className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Calendario
+                </Link>
+                <Link
+                  href="/dashboard/tasks"
+                  className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Tareas
+                </Link>
+                <Link
+                  href="/dashboard/finance"
+                  className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Finanzas
                 </Link>
                 <Link
                   href="/pricing"
