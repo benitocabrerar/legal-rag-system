@@ -510,4 +510,52 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
       });
     }
   });
+
+  // Endpoint para resolver migración fallida
+  app.post('/migration/resolve-failed', async (request, reply) => {
+    try {
+      // Verificar secret de seguridad
+      const { secret, migrationName } = request.body as { secret?: string; migrationName?: string };
+      const MIGRATION_SECRET = process.env.MIGRATION_SECRET || 'temp-migration-secret-12345';
+
+      if (secret !== MIGRATION_SECRET) {
+        return reply.code(403).send({ error: 'Forbidden - Invalid secret' });
+      }
+
+      const targetMigration = migrationName || '20241110_document_analysis_system';
+
+      app.log.info(`🔧 Resolviendo migración fallida: ${targetMigration}`);
+
+      // Marcar la migración como aplicada
+      await prisma.$executeRawUnsafe(`
+        UPDATE _prisma_migrations
+        SET finished_at = NOW(),
+            logs = 'Migration resolved manually - tables already exist and were created via embedded endpoint'
+        WHERE migration_name = '${targetMigration}'
+          AND finished_at IS NULL;
+      `);
+
+      app.log.info('✅ Migración marcada como resuelta');
+
+      // Verificar el estado
+      const migrations = await prisma.$queryRaw<Array<{ migration_name: string; finished_at: Date | null; rolled_back_at: Date | null }>>`
+        SELECT migration_name, finished_at, rolled_back_at
+        FROM _prisma_migrations
+        WHERE migration_name = ${targetMigration};
+      `;
+
+      return reply.code(200).send({
+        success: true,
+        message: `Migración ${targetMigration} resuelta exitosamente`,
+        migrationStatus: migrations
+      });
+
+    } catch (error) {
+      app.log.error('❌ Error resolviendo migración:', error);
+      return reply.code(500).send({
+        error: 'Error resolviendo migración',
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }

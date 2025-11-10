@@ -13,7 +13,9 @@
       "Bash(node -e:*)",
       "Bash(APPLY_THIS_MIGRATION.sql)",
       "mcp__render__list_key_value",
-      "Bash(if exist \"prisma\\migrations\\20241110_document_analysis_system\" rmdir /s /q \"prisma\\migrations\\20241110_document_analysis_system\")"
+      "Bash(if exist \"prisma\\migrations\\20241110_document_analysis_system\" rmdir /s /q \"prisma\\migrations\\20241110_document_analysis_system\")",
+      "Bash(timeout:*)",
+      "Bash(node scripts/resolve-failed-migration.cjs:*)"
     ],
     "deny": [],
     "ask": []
