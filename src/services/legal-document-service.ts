@@ -61,13 +61,6 @@ export class LegalDocumentService {
         },
       });
 
-      // Generate and store embeddings in chunks
-      const chunks = await this.createDocumentChunks(
-        document.id,
-        data.content,
-        tx
-      );
-
       // Create audit log entry
       await tx.auditLog.create({
         data: {
@@ -83,6 +76,12 @@ export class LegalDocumentService {
           success: true,
         },
       });
+
+      return document;
+    }).then(async (document) => {
+      // Generate chunks and embeddings asynchronously AFTER transaction completes
+      // This prevents transaction timeout issues with slow OpenAI API calls
+      const chunks = await this.createDocumentChunksAsync(document.id, data.content);
 
       return {
         ...document,
@@ -152,15 +151,11 @@ export class LegalDocumentService {
         },
       });
 
-      // If content changed, regenerate chunks
+      // If content changed, delete old chunks (regeneration happens after transaction)
       if (contentChanged && data.content) {
-        // Delete old chunks
         await tx.legalDocumentChunk.deleteMany({
           where: { legalDocumentId: documentId },
         });
-
-        // Create new chunks
-        await this.createDocumentChunks(documentId, data.content, tx);
       }
 
       // Create audit log
@@ -174,6 +169,20 @@ export class LegalDocumentService {
           success: true,
         },
       });
+
+      return { updated, contentChanged, newContent: data.content };
+    }).then(async (result) => {
+      const { updated, contentChanged, newContent } = result;
+
+      // Regenerate chunks and embeddings asynchronously AFTER transaction
+      if (contentChanged && newContent) {
+        const chunks = await this.createDocumentChunksAsync(updated.id, newContent);
+        return {
+          ...updated,
+          chunksCount: chunks.length,
+          revisionsCount: 0,
+        } as LegalDocumentResponse;
+      }
 
       return {
         ...updated,
@@ -376,12 +385,11 @@ export class LegalDocumentService {
   }
 
   /**
-   * Private helper to create document chunks with embeddings
+   * Private helper to create document chunks with embeddings (async, no transaction)
    */
-  private async createDocumentChunks(
+  private async createDocumentChunksAsync(
     documentId: string,
-    content: string,
-    tx: Prisma.TransactionClient
+    content: string
   ): Promise<any[]> {
     const chunkSize = 1000;
     const chunks = [];
@@ -411,12 +419,49 @@ export class LegalDocumentService {
       }
 
       // Store chunk with or without embedding
-      const createdChunk = await tx.legalDocumentChunk.create({
+      const createdChunk = await this.prisma.legalDocumentChunk.create({
         data: {
           legalDocumentId: documentId,
           content: chunk,
           chunkIndex: i,
           embedding: embedding,
+        },
+      });
+
+      createdChunks.push(createdChunk);
+    }
+
+    return createdChunks;
+  }
+
+  /**
+   * Private helper to create document chunks with embeddings (within transaction)
+   */
+  private async createDocumentChunks(
+    documentId: string,
+    content: string,
+    tx: Prisma.TransactionClient
+  ): Promise<any[]> {
+    const chunkSize = 1000;
+    const chunks = [];
+
+    // Split content into chunks
+    for (let i = 0; i < content.length; i += chunkSize) {
+      chunks.push(content.slice(i, i + chunkSize));
+    }
+
+    // Store chunks WITHOUT embeddings to avoid transaction timeout
+    const createdChunks = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+
+      // Store chunk without embedding
+      const createdChunk = await tx.legalDocumentChunk.create({
+        data: {
+          legalDocumentId: documentId,
+          content: chunk,
+          chunkIndex: i,
+          embedding: null,
         },
       });
 
