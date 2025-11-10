@@ -43,9 +43,12 @@ export async function queryRoutes(fastify: FastifyInstance) {
 
       const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
 
-      // Search for similar chunks using cosine similarity
-      // Note: This is a simplified implementation. For production, use Pinecone or pgvector
-      const allChunks = await prisma.documentChunk.findMany({
+      // Search for similar chunks from BOTH sources:
+      // 1. Global legal documents (LegalDocument)
+      // 2. Case-specific documents (Document)
+
+      // Get case-specific document chunks
+      const caseChunks = await prisma.documentChunk.findMany({
         where: {
           document: {
             caseId: body.caseId,
@@ -60,6 +63,54 @@ export async function queryRoutes(fastify: FastifyInstance) {
           },
         },
       });
+
+      // Get global legal document chunks (from legal library)
+      const legalChunks = await prisma.legalDocumentChunk.findMany({
+        where: {
+          legalDocument: {
+            isActive: true,
+          },
+        },
+        take: 1000, // Limit to avoid loading too many chunks
+        include: {
+          legalDocument: {
+            select: {
+              id: true,
+              normTitle: true,
+              normType: true,
+              legalHierarchy: true,
+            },
+          },
+        },
+      });
+
+      // Combine both sources
+      const allChunks = [
+        ...caseChunks.map(chunk => ({
+          id: chunk.id,
+          content: chunk.content,
+          chunkIndex: chunk.chunkIndex,
+          embedding: chunk.embedding,
+          document: {
+            id: chunk.document.id,
+            title: chunk.document.title,
+          },
+          source: 'case' as const,
+        })),
+        ...legalChunks.map(chunk => ({
+          id: chunk.id,
+          content: chunk.content,
+          chunkIndex: chunk.chunkIndex,
+          embedding: chunk.embedding,
+          document: {
+            id: chunk.legalDocument.id,
+            title: chunk.legalDocument.normTitle,
+          },
+          source: 'legal' as const,
+          normType: chunk.legalDocument.normType,
+          legalHierarchy: chunk.legalDocument.legalHierarchy,
+        })),
+      ];
 
       // Calculate cosine similarity for each chunk
       const chunksWithScores = allChunks.map((chunk) => {
@@ -76,10 +127,13 @@ export async function queryRoutes(fastify: FastifyInstance) {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, body.maxResults);
 
-      // Build context from top chunks
+      // Build context from top chunks, indicating source
       const context = topChunks
         .map((chunk, index) => {
-          return `[Document: ${chunk.document.title}, Chunk ${chunk.chunkIndex + 1}]\n${chunk.content}`;
+          const sourceLabel = chunk.source === 'legal'
+            ? `📚 Legal Library: ${chunk.document.title}`
+            : `📄 Case Document: ${chunk.document.title}`;
+          return `[${sourceLabel}, Section ${chunk.chunkIndex + 1}]\n${chunk.content}`;
         })
         .join('\n\n---\n\n');
 
@@ -88,15 +142,20 @@ export async function queryRoutes(fastify: FastifyInstance) {
       const hasDocuments = allChunks.length > 0;
 
       const systemPrompt = hasDocuments
-        ? `You are a legal assistant helping with case analysis.
-You have access to relevant documents from the case files.
+        ? `You are a legal assistant for Ecuador helping with case analysis.
+You have access to TWO sources of information:
+1. 📚 Legal Library: Official legal documents from Ecuador (Constitution, laws, codes, regulations)
+2. 📄 Case Documents: Specific documents uploaded by the user for this case
+
 Use the provided context to answer the user's question accurately.
+When citing information, always specify which source you're using (Legal Library vs Case Document).
 If the context doesn't contain enough information to answer the question, say so clearly.
-Always cite which documents you're referencing in your answer.`
-        : `You are a legal assistant helping with general legal questions.
-Answer the user's legal questions to the best of your ability.
-Provide general legal information, principles, and guidance.
-Note: Remind the user they can upload case documents for more specific analysis.
+Always respond in Spanish unless the user asks in English.
+Provide specific article numbers and legal references when citing from the Legal Library.`
+        : `You are a legal assistant for Ecuador helping with general legal questions.
+Answer the user's legal questions to the best of your ability in Spanish.
+Provide general legal information, principles, and guidance based on Ecuadorian law.
+Note: The user can ask about specific laws and the system will search the legal database.
 Always clarify that your answers are general legal information and not specific legal advice.`;
 
       const userPrompt = hasDocuments
@@ -122,6 +181,11 @@ Always clarify that your answers are general legal information and not specific 
         chunkIndex: chunk.chunkIndex,
         similarity: chunk.similarity,
         content: chunk.content.substring(0, 200) + '...',
+        source: chunk.source,
+        ...(chunk.source === 'legal' && {
+          normType: (chunk as any).normType,
+          legalHierarchy: (chunk as any).legalHierarchy,
+        }),
       }));
 
       return reply.send({
