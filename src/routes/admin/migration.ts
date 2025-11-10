@@ -24,7 +24,7 @@ export async function migrationRoutes(app: FastifyInstance) {
       app.log.info('🔄 Iniciando aplicación de migración...');
 
       // Leer el archivo SQL de migración
-      const migrationPath = path.join(__dirname, '..', '..', 'prisma', 'migrations', '20241110_document_analysis_system', 'migration.sql');
+      const migrationPath = path.join(__dirname, '..', '..', '..', 'prisma', 'migrations', '20241110_document_analysis_system', 'migration.sql');
 
       app.log.info(`📄 Leyendo archivo de migración: ${migrationPath}`);
 
