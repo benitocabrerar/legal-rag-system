@@ -26,19 +26,19 @@ ADD COLUMN     "jurisdiction" "Jurisdiction" DEFAULT 'NACIONAL',
 ALTER COLUMN "title" DROP NOT NULL,
 ALTER COLUMN "category" DROP NOT NULL;
 
--- Migrate existing data
+-- Migrate existing data (update ALL records, not just NULL ones)
 UPDATE "legal_documents"
 SET
-  "norm_title" = "title",
-  "legal_hierarchy" = CASE
+  "norm_title" = COALESCE("norm_title", "title"),
+  "legal_hierarchy" = COALESCE("legal_hierarchy", CASE
     WHEN "category" = 'constitution' THEN 'CONSTITUCION'::"LegalHierarchy"
     WHEN "category" = 'law' THEN 'LEYES_ORDINARIAS'::"LegalHierarchy"
     WHEN "category" = 'code' THEN 'CODIGOS_ORDINARIOS'::"LegalHierarchy"
     WHEN "category" = 'regulation' THEN 'REGLAMENTOS'::"LegalHierarchy"
     WHEN "category" = 'jurisprudence' THEN 'RESOLUCIONES'::"LegalHierarchy"
     ELSE 'LEYES_ORDINARIAS'::"LegalHierarchy"
-  END,
-  "norm_type" = CASE
+  END),
+  "norm_type" = COALESCE("norm_type", CASE
     WHEN "category" = 'constitution' THEN 'CONSTITUTIONAL_NORM'::"NormType"
     WHEN "category" = 'law' AND "title" ILIKE '%orgánica%' THEN 'ORGANIC_LAW'::"NormType"
     WHEN "category" = 'law' THEN 'ORDINARY_LAW'::"NormType"
@@ -48,11 +48,11 @@ SET
     WHEN "category" = 'regulation' THEN 'REGULATION_GENERAL'::"NormType"
     WHEN "category" = 'jurisprudence' THEN 'JUDICIAL_PRECEDENT'::"NormType"
     ELSE 'ORDINARY_LAW'::"NormType"
-  END,
-  "publication_number" = COALESCE(("metadata"->>'number')::TEXT, ''),
-  "document_state" = 'ORIGINAL'::"DocumentState",
-  "jurisdiction" = 'NACIONAL'::"Jurisdiction"
-WHERE "norm_type" IS NULL;
+  END),
+  "publication_type" = COALESCE("publication_type", 'ORDINARIO'::"PublicationType"),
+  "publication_number" = COALESCE("publication_number", COALESCE(("metadata"->>'number')::TEXT, '')),
+  "document_state" = COALESCE("document_state", 'ORIGINAL'::"DocumentState"),
+  "jurisdiction" = COALESCE("jurisdiction", 'NACIONAL'::"Jurisdiction");
 
 -- Set NOT NULL constraints for required fields
 ALTER TABLE "legal_documents" ALTER COLUMN "norm_type" SET NOT NULL;
