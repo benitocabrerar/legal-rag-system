@@ -101,7 +101,15 @@ export default function LegalLibraryPage() {
   const loadDocuments = async () => {
     try {
       const response = await api.get('/legal-documents-v2');
-      setDocuments(response.data.documents || []);
+      const docs = response.data.documents || [];
+
+      // Map documents and add status field based on backend data
+      const mappedDocs = docs.map((doc: any) => ({
+        ...doc,
+        status: doc.isActive ? 'active' : 'inactive',
+      }));
+
+      setDocuments(mappedDocs);
     } catch (error) {
       console.error('Error loading documents:', error);
     } finally {
