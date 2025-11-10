@@ -9,7 +9,7 @@ import {
   LegacyLegalDocumentSchema,
   CreateDocumentRevisionSchema,
 } from '../schemas/legal-document-schemas';
-import pdfParse from 'pdf-parse';
+import { PDFExtract } from 'pdf.js-extract';
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({
@@ -67,8 +67,13 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         // Extract text from PDF
         let extractedText: string;
         try {
-          const pdfData = await pdfParse(fileBuffer);
-          extractedText = pdfData.text;
+          const pdfExtract = new PDFExtract();
+          const pdfData = await pdfExtract.extractBuffer(fileBuffer);
+
+          // Extract text from all pages
+          extractedText = pdfData.pages
+            .map(page => page.content.map(item => item.str).join(' '))
+            .join('\n');
 
           if (!extractedText || extractedText.trim().length === 0) {
             return reply.code(400).send({
