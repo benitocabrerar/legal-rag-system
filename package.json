@@ -17,6 +17,7 @@
     "prisma:studio": "prisma studio",
     "seed:laws": "bun run scripts/seed-laws.ts",
     "add:admin": "node scripts/add-admin.cjs",
+    "cleanup:duplicates": "tsx scripts/cleanup-duplicate-documents.ts",
     "test": "bun test",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
