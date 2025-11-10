@@ -30,6 +30,7 @@ try {
 
   const migrationsToResolve = [
     // 20241110_document_analysis_system - Already resolved manually, tables exist
+    // 20250111_add_rag_enhancements - Already resolved manually, tables exist from previous migration
     '20250111000000_user_management_system',
     '20250111000001_user_management_system'
   ];
