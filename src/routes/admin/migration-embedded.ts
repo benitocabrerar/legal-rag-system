@@ -119,7 +119,7 @@ CREATE INDEX idx_references_type ON document_references(reference_type);
 -- Table for legal document articles (structured storage)
 CREATE TABLE IF NOT EXISTS legal_document_articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  legal_document_id UUID NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
+  legal_document_id TEXT NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
 
   -- Article identification
   article_number INTEGER NOT NULL,
@@ -156,7 +156,7 @@ CREATE INDEX idx_articles_parent ON legal_document_articles(parent_section_id);
 -- Table for legal document sections (titles, chapters, sections)
 CREATE TABLE IF NOT EXISTS legal_document_sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  legal_document_id UUID NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
+  legal_document_id TEXT NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
 
   -- Section identification
   section_type VARCHAR(50) NOT NULL, -- title, chapter, section
@@ -188,7 +188,7 @@ CREATE INDEX idx_sections_hierarchy ON legal_document_sections(hierarchy_path);
 -- Table for document summaries at different levels
 CREATE TABLE IF NOT EXISTS legal_document_summaries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  legal_document_id UUID NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
+  legal_document_id TEXT NOT NULL REFERENCES legal_documents(id) ON DELETE CASCADE,
 
   -- Summary details
   summary_type VARCHAR(50) NOT NULL, -- executive, chapter, section, technical
