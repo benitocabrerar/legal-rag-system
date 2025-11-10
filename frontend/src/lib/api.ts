@@ -400,3 +400,99 @@ export const tasksAPI = {
     return response.data.task;
   },
 };
+
+// Finance API
+export const financeAPI = {
+  // Invoices
+  listInvoices: async (params?: {
+    caseId?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const response = await api.get('/finance/invoices', { params });
+    return response.data;
+  },
+  getInvoice: async (id: string) => {
+    const response = await api.get(`/finance/invoices/${id}`);
+    return response.data.invoice;
+  },
+  createInvoice: async (data: {
+    caseId: string;
+    amount: number;
+    currency?: string;
+    issueDate: string;
+    dueDate: string;
+    description?: string;
+    taxAmount?: number;
+    notes?: string;
+  }) => {
+    const response = await api.post('/finance/invoices', data);
+    return response.data.invoice;
+  },
+  updateInvoice: async (id: string, data: any) => {
+    const response = await api.patch(`/finance/invoices/${id}`, data);
+    return response.data.invoice;
+  },
+  updateInvoiceStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/finance/invoices/${id}/status`, { status });
+    return response.data.invoice;
+  },
+
+  // Payments
+  listPayments: async (params?: {
+    caseId?: string;
+    invoiceId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const response = await api.get('/finance/payments', { params });
+    return response.data;
+  },
+  getPayment: async (id: string) => {
+    const response = await api.get(`/finance/payments/${id}`);
+    return response.data.payment;
+  },
+  createPayment: async (data: {
+    caseId: string;
+    invoiceId?: string;
+    amount: number;
+    currency?: string;
+    method: string;
+    paymentDate: string;
+    transactionId?: string;
+    notes?: string;
+    receiptUrl?: string;
+  }) => {
+    const response = await api.post('/finance/payments', data);
+    return response.data.payment;
+  },
+
+  // Payment Agreements
+  listPaymentAgreements: async (params?: { caseId?: string }) => {
+    const response = await api.get('/finance/payment-agreements', { params });
+    return response.data;
+  },
+  getPaymentAgreement: async (id: string) => {
+    const response = await api.get(`/finance/payment-agreements/${id}`);
+    return response.data.paymentAgreement;
+  },
+  createPaymentAgreement: async (data: {
+    caseId: string;
+    totalAmount: number;
+    currency?: string;
+    installments: number;
+    frequency: string;
+    startDate: string;
+    description?: string;
+  }) => {
+    const response = await api.post('/finance/payment-agreements', data);
+    return response.data.paymentAgreement;
+  },
+
+  // Case Finances
+  getCaseFinance: async (caseId: string) => {
+    const response = await api.get(`/finance/case-finances/${caseId}`);
+    return response.data.caseFinance;
+  },
+};
