@@ -425,15 +425,21 @@ export class LegalDocumentService {
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
 
-      // Generate embedding
-      const embeddingResponse = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: chunk,
-      });
+      let embedding = null;
 
-      const embedding = embeddingResponse.data[0].embedding;
+      // Try to generate embedding, but continue if it fails
+      try {
+        const embeddingResponse = await this.openai.embeddings.create({
+          model: 'text-embedding-ada-002',
+          input: chunk,
+        });
+        embedding = embeddingResponse.data[0].embedding;
+      } catch (error: any) {
+        console.error(`Failed to generate embedding for chunk ${i}:`, error.message);
+        // Continue without embedding - document will still be searchable via text search
+      }
 
-      // Store chunk with embedding
+      // Store chunk with or without embedding
       const createdChunk = await tx.legalDocumentChunk.create({
         data: {
           legalDocumentId: documentId,
