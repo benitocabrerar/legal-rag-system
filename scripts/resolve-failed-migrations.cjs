@@ -33,9 +33,35 @@ try {
     '20250111000001_user_management_system'
   ];
 
+  // Migration that failed and needs to be rolled back before re-applying
+  const failedMigrationToRollback = '20250111_calendar_tasks_notifications_finance';
+
   let resolvedCount = 0;
   let alreadyAppliedCount = 0;
 
+  // First, try to rollback the failed migration
+  try {
+    console.log(`🔧 Rolling back failed migration: ${failedMigrationToRollback}`);
+    execSync(`npx prisma migrate resolve --rolled-back ${failedMigrationToRollback}`, {
+      stdio: 'pipe'
+    });
+    console.log(`✅ Marked ${failedMigrationToRollback} as rolled-back`);
+    resolvedCount++;
+  } catch (rollbackError) {
+    const errorOutput = rollbackError.stderr?.toString() || rollbackError.stdout?.toString() || '';
+
+    // P3008 or P3009 variations are OK - migration may not exist or already resolved
+    if (errorOutput.includes('P3008') ||
+        errorOutput.includes('P3009') ||
+        errorOutput.includes('not found') ||
+        errorOutput.includes('already applied')) {
+      console.log(`ℹ️  ${failedMigrationToRollback} already resolved or not found`);
+    } else {
+      console.log(`⚠️  Could not rollback ${failedMigrationToRollback}: ${errorOutput.substring(0, 200)}`);
+    }
+  }
+
+  // Then resolve previously failed migrations by marking as applied
   for (const migration of migrationsToResolve) {
     try {
       console.log(`🔧 Resolving migration: ${migration}`);
