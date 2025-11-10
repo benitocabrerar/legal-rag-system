@@ -43,14 +43,9 @@ export class LegalDocumentService {
 
           documentState: data.documentState || 'ORIGINAL',
           lastReformDate: data.lastReformDate ? new Date(data.lastReformDate) : null,
-          reformHistory: data.reformHistory || null,
 
           jurisdiction: data.jurisdiction || 'NACIONAL',
-          effectiveFromDate: data.effectiveFromDate ? new Date(data.effectiveFromDate) : null,
 
-          keywords: data.keywords || [],
-          relatedNorms: data.relatedNorms || [],
-          attachments: data.attachments || null,
           metadata: data.metadata || {},
 
           uploadedBy: userId,
@@ -133,14 +128,9 @@ export class LegalDocumentService {
 
           documentState: data.documentState,
           lastReformDate: data.lastReformDate ? new Date(data.lastReformDate) : undefined,
-          reformHistory: data.reformHistory,
 
           jurisdiction: data.jurisdiction,
-          effectiveFromDate: data.effectiveFromDate ? new Date(data.effectiveFromDate) : undefined,
 
-          keywords: data.keywords,
-          relatedNorms: data.relatedNorms,
-          attachments: data.attachments,
           metadata: data.metadata,
 
           isActive: data.isActive,
@@ -173,26 +163,6 @@ export class LegalDocumentService {
         await this.createDocumentChunks(documentId, data.content, tx);
       }
 
-      // Create revision entry if document state changed to REFORMADO
-      if (data.documentState === 'REFORMADO' && existingDoc.documentState !== 'REFORMADO') {
-        const revisionCount = await tx.legalDocumentRevision.count({
-          where: { legalDocumentId: documentId },
-        });
-
-        await tx.legalDocumentRevision.create({
-          data: {
-            legalDocumentId: documentId,
-            revisionNumber: revisionCount + 1,
-            revisionType: 'reform',
-            description: 'Document marked as reformed',
-            previousContent: existingDoc.content,
-            newContent: data.content || existingDoc.content,
-            changedBy: userId,
-            effectiveDate: data.lastReformDate ? new Date(data.lastReformDate) : new Date(),
-          },
-        });
-      }
-
       // Create audit log
       await tx.auditLog.create({
         data: {
@@ -208,7 +178,7 @@ export class LegalDocumentService {
       return {
         ...updated,
         chunksCount: updated._count.chunks,
-        revisionsCount: updated._count.revisions,
+        revisionsCount: 0,
       } as LegalDocumentResponse;
     });
   }
@@ -329,7 +299,7 @@ export class LegalDocumentService {
         _count: {
           select: {
             chunks: true,
-            revisions: true,
+            specialties: true,
           },
         },
       },
@@ -352,7 +322,7 @@ export class LegalDocumentService {
     return {
       ...document,
       chunksCount: document._count.chunks,
-      revisionsCount: document._count.revisions,
+      revisionsCount: 0,
     } as LegalDocumentResponse;
   }
 
