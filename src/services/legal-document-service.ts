@@ -36,15 +36,16 @@ export class LegalDocumentService {
           legalHierarchy: data.legalHierarchy,
           content: data.content,
 
-          publicationType: data.publicationType,
-          publicationNumber: data.publicationNumber,
+          // Prisma requires these fields - provide defaults if not specified
+          publicationType: data.publicationType || 'ORDINARIO',
+          publicationNumber: data.publicationNumber || 'S/N',
           publicationDate: data.publicationDate ? new Date(data.publicationDate) : null,
 
           documentState: data.documentState || 'ORIGINAL',
           lastReformDate: data.lastReformDate ? new Date(data.lastReformDate) : null,
           reformHistory: data.reformHistory || null,
 
-          jurisdiction: data.jurisdiction,
+          jurisdiction: data.jurisdiction || 'NACIONAL',
           effectiveFromDate: data.effectiveFromDate ? new Date(data.effectiveFromDate) : null,
 
           keywords: data.keywords || [],
