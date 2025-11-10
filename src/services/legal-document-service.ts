@@ -155,7 +155,7 @@ export class LegalDocumentService {
           _count: {
             select: {
               chunks: true,
-              revisions: true,
+              specialties: true,
             },
           },
         },
@@ -278,7 +278,7 @@ export class LegalDocumentService {
           _count: {
             select: {
               chunks: true,
-              revisions: true,
+              specialties: true,
             },
           },
         },
@@ -295,7 +295,7 @@ export class LegalDocumentService {
     const transformedDocs = documents.map((doc) => ({
       ...doc,
       chunksCount: doc._count.chunks,
-      revisionsCount: doc._count.revisions,
+      specialtiesCount: doc._count.specialties,
     }));
 
     return {
