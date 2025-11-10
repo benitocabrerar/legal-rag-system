@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal RAG System - UI Mockups Interactivos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Tailwind Configuration */
+        @layer utilities {
+            .shadow-custom-sm {
+                box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            }
+            .shadow-custom-md {
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            }
+            .shadow-custom-lg {
+                box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Event Dots Colors */
+        .event-hearing { background-color: #8b5cf6; }
+        .event-deadline { background-color: #ef4444; }
+        .event-meeting { background-color: #3b82f6; }
+        .event-task { background-color: #10b981; }
+
+        /* Priority Colors */
+        .priority-urgent { color: #dc2626; }
+        .priority-high { color: #ea580c; }
+        .priority-medium { color: #f59e0b; }
+        .priority-low { color: #6b7280; }
+
+        /* Status Colors */
+        .status-paid { background-color: #10b981; color: white; }
+        .status-pending { background-color: #f59e0b; color: white; }
+        .status-overdue { background-color: #ef4444; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Tabs -->
+    <div class="bg-white border-b sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex gap-4 overflow-x-auto">
+                <button onclick="showView('calendar')" id="tab-calendar"
+                    class="tab-btn px-4 py-2 rounded-lg font-medium transition-colors hover:bg-blue-50">
+                    📅 Calendario
+                </button>
+                <button onclick="showView('tasks')" id="tab-tasks"
+                    class="tab-btn px-4 py-2 rounded-lg font-medium transition-colors hover:bg-blue-50">
+                    ✓ Tareas
+                </button>
+                <button onclick="showView('notifications')" id="tab-notifications"
+                    class="tab-btn px-4 py-2 rounded-lg font-medium transition-colors hover:bg-blue-50">
+                    🔔 Notificaciones
+                </button>
+                <button onclick="showView('financial')" id="tab-financial"
+                    class="tab-btn px-4 py-2 rounded-lg font-medium transition-colors hover:bg-blue-50">
+                    💰 Dashboard Financiero
+                </button>
+                <button onclick="showView('reports')" id="tab-reports"
+                    class="tab-btn px-4 py-2 rounded-lg font-medium transition-colors hover:bg-blue-50">
+                    📊 Reportes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- CALENDAR VIEW -->
+        <div id="view-calendar" class="view-container hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold mb-2">📅 Vista de Calendario</h1>
+                <p class="text-gray-600">Gestiona eventos, audiencias y recordatorios</p>
+            </div>
+
+            <!-- Calendar Header -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+                            Todo
+                        </button>
+                        <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+                            Mi Calendario
+                        </button>
+                        <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+                            Por Caso
+                        </button>
+                    </div>
+                    <button onclick="openModal('event-modal')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        + Nuevo Evento
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex gap-3 mb-6">
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Tipo de Evento</option>
+                        <option>Audiencia</option>
+                        <option>Reunión</option>
+                        <option>Plazo Legal</option>
+                    </select>
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Todos los Casos</option>
+                        <option>Caso #1234</option>
+                        <option>Caso #5678</option>
+                    </select>
+                    <button class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        Limpiar
+                    </button>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="border rounded-lg overflow-hidden">
+                    <!-- Month Navigation -->
+                    <div class="flex items-center justify-between p-4 bg-gray-50 border-b">
+                        <button class="p-2 hover:bg-gray-200 rounded-lg">←</button>
+                        <h2 class="text-xl font-semibold">Noviembre 2025</h2>
+                        <div class="flex gap-2">
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Hoy</button>
+                            <button class="p-2 hover:bg-gray-200 rounded-lg">→</button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar -->
+                    <div class="p-4">
+                        <!-- Day Headers -->
+                        <div class="grid grid-cols-7 gap-2 mb-2">
+                            <div class="text-center text-sm font-medium text-gray-600">Dom</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Lun</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Mar</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Mié</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Jue</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Vie</div>
+                            <div class="text-center text-sm font-medium text-gray-600">Sáb</div>
+                        </div>
+
+                        <!-- Calendar Days -->
+                        <div class="grid grid-cols-7 gap-2">
+                            <!-- Previous Month Days -->
+                            <div class="aspect-square p-2 rounded-lg border border-transparent text-gray-400 hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">29</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border border-transparent text-gray-400 hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">30</div>
+                            </div>
+
+                            <!-- Current Month Days -->
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">1</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">2</div>
+                                <div class="flex gap-1 justify-center">
+                                    <div class="w-2 h-2 rounded-full event-meeting"></div>
+                                    <div class="w-2 h-2 rounded-full event-hearing"></div>
+                                </div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">3</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">4</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">5</div>
+                            </div>
+
+                            <!-- Week 2 -->
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">6</div>
+                                <div class="flex gap-1 justify-center">
+                                    <div class="w-2 h-2 rounded-full event-deadline"></div>
+                                </div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">7</div>
+                                <div class="flex gap-1 justify-center">
+                                    <div class="w-2 h-2 rounded-full event-task"></div>
+                                </div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border border-blue-600 border-2 bg-blue-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1 text-blue-600">8</div>
+                                <div class="text-xs text-center text-blue-600 font-medium">Hoy</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">9</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">10</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">11</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">12</div>
+                            </div>
+
+                            <!-- More days... -->
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">13</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">14</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">15</div>
+                                <div class="flex gap-1 justify-center">
+                                    <div class="w-2 h-2 rounded-full event-meeting"></div>
+                                </div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium mb-1">16</div>
+                                <div class="flex gap-1 justify-center">
+                                    <div class="w-2 h-2 rounded-full event-meeting"></div>
+                                    <div class="w-2 h-2 rounded-full event-hearing"></div>
+                                </div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">17</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">18</div>
+                            </div>
+                            <div class="aspect-square p-2 rounded-lg border hover:bg-gray-50 cursor-pointer">
+                                <div class="text-sm font-medium">19</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold">Próximos Eventos (5)</h3>
+                    <a href="#" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Ver todos</a>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Event Card 1 -->
+                    <div class="border-l-4 border-l-red-500 bg-gray-50 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-sm font-semibold text-red-600">Hoy, 10:00 AM</span>
+                                </div>
+                                <h4 class="font-semibold mb-1">Audiencia Preliminar</h4>
+                                <p class="text-sm text-gray-600">Caso #1234 - Juzgado Civil, Sala 3</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                    Ver
+                                </button>
+                                <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                    Editar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Card 2 -->
+                    <div class="border-l-4 border-l-blue-500 bg-gray-50 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-sm font-semibold text-blue-600">Mañana, 3:00 PM</span>
+                                </div>
+                                <h4 class="font-semibold mb-1">Reunión con Cliente</h4>
+                                <p class="text-sm text-gray-600">Caso #5678 - Videoconferencia</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                    Ver
+                                </button>
+                                <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                    Editar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Event Card 3 -->
+                    <div class="border-l-4 border-l-purple-500 bg-gray-50 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-sm font-semibold text-purple-600">15 Nov, 9:00 AM</span>
+                                </div>
+                                <h4 class="font-semibold mb-1">Audiencia de Conciliación</h4>
+                                <p class="text-sm text-gray-600">Caso #9012 - Centro de Conciliación</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                    Ver
+                                </button>
+                                <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                    Editar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TASKS VIEW -->
+        <div id="view-tasks" class="view-container hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold mb-2">✓ Gestión de Tareas</h1>
+                <p class="text-gray-600">Organiza y prioriza tu trabajo</p>
+            </div>
+
+            <!-- Tasks Header -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 bg-gray-100 rounded-lg font-medium">
+                            Lista
+                        </button>
+                        <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                            Kanban
+                        </button>
+                        <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                            Calendario
+                        </button>
+                    </div>
+                    <button onclick="openModal('task-modal')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                        + Nueva Tarea
+                    </button>
+                </div>
+
+                <!-- Quick Filters -->
+                <div class="flex gap-2 mb-6 overflow-x-auto">
+                    <button class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Todas (24)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Hoy (5)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Esta Semana (12)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Urgentes (3)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Vencidas (2)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg text-sm font-medium whitespace-nowrap">
+                        Mis Tareas (15)
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex gap-3">
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Todas las Prioridades</option>
+                        <option>Urgente</option>
+                        <option>Alta</option>
+                        <option>Media</option>
+                        <option>Baja</option>
+                    </select>
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Asignado a</option>
+                    </select>
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Todos los Casos</option>
+                    </select>
+                    <select class="px-4 py-2 border rounded-lg">
+                        <option>Todos los Estados</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tasks List -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6">
+                <h3 class="text-lg font-semibold mb-4">Tareas Pendientes</h3>
+
+                <div class="space-y-3">
+                    <!-- Task Row 1 -->
+                    <div class="group flex items-center gap-4 p-4 rounded-lg border-l-4 border-l-red-500 hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 rounded border-gray-300">
+                        <div class="priority-urgent">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                        </div>
+
+                        <div class="flex-1">
+                            <h4 class="font-medium mb-1">Preparar alegatos para audiencia</h4>
+                            <div class="flex items-center gap-3 text-sm text-gray-600">
+                                <span>📁 Caso #1234</span>
+                                <span class="text-red-600 font-medium">⏰ Vence: Mañana</span>
+                                <span>👤 Asignado: Tú</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                Editar
+                            </button>
+                            <button class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                Completar
+                            </button>
+                            <button class="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded">
+                                ...
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Task Row 2 -->
+                    <div class="group flex items-center gap-4 p-4 rounded-lg border-l-4 border-l-amber-500 hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 rounded border-gray-300">
+                        <div class="priority-medium">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                            </svg>
+                        </div>
+
+                        <div class="flex-1">
+                            <h4 class="font-medium mb-1">Revisar documentos del cliente</h4>
+                            <div class="flex items-center gap-3 text-sm text-gray-600">
+                                <span>📁 Caso #5678</span>
+                                <span>⏰ Vence: 3 días</span>
+                                <span>👤 Asignado: María</span>
+                                <span>📎 3</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                Editar
+                            </button>
+                            <button class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                Completar
+                            </button>
+                            <button class="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded">
+                                ...
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Task Row 3 - Completed -->
+                    <div class="group flex items-center gap-4 p-4 rounded-lg border-l-4 border-l-green-500 hover:bg-gray-50 transition-colors opacity-60">
+                        <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300">
+                        <div class="priority-low">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                            </svg>
+                        </div>
+
+                        <div class="flex-1">
+                            <h4 class="font-medium mb-1 line-through">Redactar contrato</h4>
+                            <div class="flex items-center gap-3 text-sm text-gray-600">
+                                <span>📁 Caso #9012</span>
+                                <span>✓ Completado hace 2 días</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTIFICATIONS VIEW -->
+        <div id="view-notifications" class="view-container hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold mb-2">🔔 Centro de Notificaciones</h1>
+                <p class="text-gray-600">Mantente al día con todas tus alertas</p>
+            </div>
+
+            <!-- Notification Tabs -->
+            <div class="bg-white rounded-lg shadow-custom-md mb-6">
+                <div class="flex items-center gap-4 p-4 border-b">
+                    <button class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium">
+                        Todas (24)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                        No leídas (3)
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                        Archivadas
+                    </button>
+                    <div class="flex-1"></div>
+                    <button class="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                        ✓ Marcar todas leídas
+                    </button>
+                </div>
+
+                <div class="divide-y">
+                    <!-- Notification 1 - Unread -->
+                    <div class="p-4 bg-blue-50/30 hover:bg-blue-50 transition-colors cursor-pointer">
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <span class="text-red-600">📅</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-2 mb-1">
+                                    <h4 class="font-semibold">Recordatorio: Audiencia en 30 minutos</h4>
+                                    <span class="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-2"></span>
+                                </div>
+                                <p class="text-sm text-gray-700 mb-2">
+                                    Caso #1234 - Audiencia Preliminar - Juzgado Civil, Sala 3
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500">Hace 5 minutos</span>
+                                    <button class="text-xs text-blue-600 hover:underline">Ver Caso</button>
+                                    <button class="text-xs text-gray-600 hover:underline">Marcar leída</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification 2 - Unread -->
+                    <div class="p-4 bg-blue-50/30 hover:bg-blue-50 transition-colors cursor-pointer">
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                <span class="text-green-600">💰</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between gap-2 mb-1">
+                                    <h4 class="font-semibold">Nuevo pago recibido</h4>
+                                    <span class="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-2"></span>
+                                </div>
+                                <p class="text-sm text-gray-700 mb-2">
+                                    $500.00 - Caso #5678 - Pago #2/3
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500">Hace 2 horas</span>
+                                    <button class="text-xs text-blue-600 hover:underline">Ver Detalles</button>
+                                    <button class="text-xs text-gray-600 hover:underline">Marcar leída</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification 3 - Read -->
+                    <div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                                <span class="text-amber-600">📄</span>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium">Documento pendiente de revisión</h4>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    Cliente subió "Contrato-v2.pdf" al Caso #9012
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500">Hace 1 día</span>
+                                    <button class="text-xs text-blue-600 hover:underline">Ver Documento</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification 4 - Read -->
+                    <div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <span class="text-blue-600">✓</span>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium">Tarea completada</h4>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    María completó "Revisar documentos iniciales" - Caso #3456
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500">Hace 2 días</span>
+                                    <button class="text-xs text-blue-600 hover:underline">Ver Tarea</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t text-center">
+                    <button class="text-sm text-blue-600 hover:underline font-medium">
+                        Ver más notificaciones antiguas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FINANCIAL DASHBOARD VIEW -->
+        <div id="view-financial" class="view-container hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold mb-2">💰 Dashboard Financiero</h1>
+                <p class="text-gray-600">Gestiona pagos, acuerdos y reportes financieros</p>
+            </div>
+
+            <!-- View Tabs -->
+            <div class="bg-white rounded-lg shadow-custom-md mb-6">
+                <div class="flex gap-4 p-4 border-b">
+                    <button class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium">
+                        Por Caso
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                        Por Cliente
+                    </button>
+                    <button class="px-4 py-2 hover:bg-gray-100 rounded-lg font-medium">
+                        General
+                    </button>
+                </div>
+
+                <!-- Case Selector -->
+                <div class="p-4 border-b">
+                    <div class="flex items-center gap-3">
+                        <label class="font-medium">Caso:</label>
+                        <select class="flex-1 px-4 py-2 border rounded-lg">
+                            <option>Caso #1234 - Juan Pérez</option>
+                            <option>Caso #5678 - María García</option>
+                            <option>Caso #9012 - Carlos López</option>
+                        </select>
+                        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Registrar Pago
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Financial Summary Cards -->
+                <div class="p-6">
+                    <div class="grid grid-cols-3 gap-4 mb-8">
+                        <!-- Total Card -->
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600">Total del Caso</span>
+                                <span class="text-gray-400">📄</span>
+                            </div>
+                            <div class="text-3xl font-bold mb-2 text-blue-900">$5,000.00</div>
+                            <div class="h-2 bg-blue-200 rounded-full">
+                                <div class="h-full bg-blue-600 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Paid Card -->
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600">Monto Pagado</span>
+                                <span class="text-green-600">✓</span>
+                            </div>
+                            <div class="text-3xl font-bold mb-2 text-green-900">$3,000.00</div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">60%</span>
+                                <div class="h-2 w-20 bg-green-200 rounded-full">
+                                    <div class="h-full bg-green-600 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Card -->
+                        <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600">Saldo Pendiente</span>
+                                <span class="text-amber-600">⏰</span>
+                            </div>
+                            <div class="text-3xl font-bold mb-2 text-amber-900">$2,000.00</div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">40%</span>
+                                <div class="h-2 w-20 bg-amber-200 rounded-full">
+                                    <div class="h-full bg-amber-600 rounded-full" style="width: 40%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Agreement Details -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold mb-4">Acuerdo Inicial</h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <span class="text-sm text-gray-600">Monto Total:</span>
+                                    <span class="ml-2 font-semibold">$5,000.00</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Fecha:</span>
+                                    <span class="ml-2 font-semibold">15/10/2025</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Términos:</span>
+                                    <span class="ml-2 font-semibold">3 pagos de $1,666.67</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm text-gray-600">Estado:</span>
+                                    <span class="ml-2 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded font-medium">
+                                        Pago Parcial
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Timeline -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Historial de Pagos</h3>
+                        <div class="space-y-4">
+                            <!-- Payment 1 - Completed -->
+                            <div class="flex gap-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+                                        ✓
+                                    </div>
+                                    <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
+                                </div>
+                                <div class="flex-1 pb-4">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h4 class="font-semibold">Pago #1</h4>
+                                                <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-medium">
+                                                    Pagado
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-600">15 de Noviembre, 2025</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-xl font-bold">$2,000.00</div>
+                                            <div class="text-sm text-gray-600">💳 Tarjeta</div>
+                                        </div>
+                                    </div>
+                                    <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                        ⬇ Descargar Recibo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Payment 2 - Completed -->
+                            <div class="flex gap-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+                                        ✓
+                                    </div>
+                                    <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
+                                </div>
+                                <div class="flex-1 pb-4">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h4 class="font-semibold">Pago #2</h4>
+                                                <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-medium">
+                                                    Pagado
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-600">20 de Noviembre, 2025</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-xl font-bold">$1,000.00</div>
+                                            <div class="text-sm text-gray-600">💵 Efectivo</div>
+                                        </div>
+                                    </div>
+                                    <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                        ⬇ Descargar Recibo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Payment 3 - Pending -->
+                            <div class="flex gap-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                                        ⏰
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h4 class="font-semibold">Pago #3</h4>
+                                                <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded font-medium">
+                                                    Pendiente
+                                                </span>
+                                            </div>
+                                            <p class="text-sm text-gray-600">Vence: 25 de Noviembre, 2025</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-xl font-bold text-amber-600">$2,000.00</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700">
+                                            ✓ Registrar Pago
+                                        </button>
+                                        <button class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                            Editar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORTS VIEW -->
+        <div id="view-reports" class="view-container hidden">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold mb-2">📊 Reportes Financieros</h1>
+                <p class="text-gray-600">Analiza ingresos, gastos y tendencias</p>
+            </div>
+
+            <!-- Report Configuration -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">Configuración del Reporte</h3>
+
+                <!-- Period Selection -->
+                <div class="mb-6">
+                    <label class="block font-medium mb-2">Período</label>
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Hoy</button>
+                        <button class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Esta Semana</button>
+                        <button class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">Este Mes</button>
+                        <button class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Este Año</button>
+                        <button class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Personalizado</button>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Desde</label>
+                        <input type="date" value="2025-11-01" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Hasta</label>
+                        <input type="date" value="2025-11-30" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Caso</label>
+                        <select class="w-full px-4 py-2 border rounded-lg">
+                            <option>Todos los casos</option>
+                            <option>Caso #1234</option>
+                            <option>Caso #5678</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Cliente</label>
+                        <select class="w-full px-4 py-2 border rounded-lg">
+                            <option>Todos los clientes</option>
+                            <option>Juan Pérez</option>
+                            <option>María García</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Servicio</label>
+                        <select class="w-full px-4 py-2 border rounded-lg">
+                            <option>Todos los servicios</option>
+                            <option>Consultas</option>
+                            <option>Juicios</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3">
+                    <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        📄 Generar Reporte
+                    </button>
+                    <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
+                        ⬇ Exportar PDF
+                    </button>
+                    <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
+                        📊 Exportar Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Generated Report -->
+            <div class="bg-white rounded-lg shadow-custom-md p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold">Reporte: Noviembre 2025</h3>
+                    <button class="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded">✕</button>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-3 gap-4 mb-8">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Ingresos</p>
+                                <h3 class="text-3xl font-bold text-green-900">$18,200.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center">
+                                <span class="text-2xl">📈</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-green-600 font-medium">+8.3% ↑</span>
+                            <span class="text-gray-600">vs mes anterior</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Gastos</p>
+                                <h3 class="text-3xl font-bold text-red-900">$5,300.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-red-200 flex items-center justify-center">
+                                <span class="text-2xl">📉</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-green-600 font-medium">-2.1% ↓</span>
+                            <span class="text-gray-600">vs mes anterior</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-1">Balance Neto</p>
+                                <h3 class="text-3xl font-bold text-blue-900">$12,900.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center">
+                                <span class="text-2xl">💰</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-green-600 font-medium">+15.2% ↑</span>
+                            <span class="text-gray-600">vs mes anterior</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Placeholder -->
+                <div class="mb-8">
+                    <h4 class="font-semibold mb-4">Comparativa con Período Anterior</h4>
+                    <div class="bg-gray-50 rounded-lg p-8 text-center">
+                        <div class="text-gray-400 mb-2">📊</div>
+                        <p class="text-gray-600">Gráfico de comparación (Recharts)</p>
+                        <p class="text-sm text-gray-500">Barras comparativas de ingresos y gastos</p>
+                    </div>
+                </div>
+
+                <!-- Service Breakdown -->
+                <div class="mb-8">
+                    <h4 class="font-semibold mb-4">Desglose por Tipo de Servicio</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">Servicio</th>
+                                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-600">Cantidad</th>
+                                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-600">Ingresos</th>
+                                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-600">%</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">Consultas Legales</td>
+                                    <td class="px-4 py-3 text-right">15</td>
+                                    <td class="px-4 py-3 text-right font-medium">$7,500.00</td>
+                                    <td class="px-4 py-3 text-right text-gray-600">41.2%</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">Honorarios de Juicio</td>
+                                    <td class="px-4 py-3 text-right">8</td>
+                                    <td class="px-4 py-3 text-right font-medium">$6,400.00</td>
+                                    <td class="px-4 py-3 text-right text-gray-600">35.2%</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">Redacción de Documentos</td>
+                                    <td class="px-4 py-3 text-right">12</td>
+                                    <td class="px-4 py-3 text-right font-medium">$4,300.00</td>
+                                    <td class="px-4 py-3 text-right text-gray-600">23.6%</td>
+                                </tr>
+                                <tr class="bg-gray-50 font-semibold">
+                                    <td class="px-4 py-3">Total</td>
+                                    <td class="px-4 py-3 text-right">35</td>
+                                    <td class="px-4 py-3 text-right">$18,200.00</td>
+                                    <td class="px-4 py-3 text-right">100%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top Clients -->
+                <div>
+                    <h4 class="font-semibold mb-4">Top 10 Clientes (por ingresos)</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <span class="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</span>
+                                <span class="font-medium">Juan Pérez</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold">$2,500.00</span>
+                                <span class="text-sm text-gray-600 ml-2">(2 casos)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <span class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">2</span>
+                                <span class="font-medium">María García</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold">$2,100.00</span>
+                                <span class="text-sm text-gray-600 ml-2">(1 caso)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <span class="w-6 h-6 bg-blue-400 text-white rounded-full flex items-center justify-center text-sm font-semibold">3</span>
+                                <span class="font-medium">Carlos López</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold">$1,800.00</span>
+                                <span class="text-sm text-gray-600 ml-2">(3 casos)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Event Modal -->
+    <div id="event-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeModal('event-modal')">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">📅 Crear Nuevo Evento</h2>
+                <button onclick="closeModal('event-modal')" class="text-gray-600 hover:text-gray-900">✕</button>
+            </div>
+
+            <form class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Título del Evento *</label>
+                    <input type="text" placeholder="ej. Audiencia Preliminar" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Tipo de Evento *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" class="px-4 py-3 border rounded-lg hover:bg-purple-50 hover:border-purple-500 text-left">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-purple-500"></div>
+                                <span>⚖️ Audiencia</span>
+                            </div>
+                        </button>
+                        <button type="button" class="px-4 py-3 border rounded-lg hover:bg-red-50 hover:border-red-500 text-left">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <span>⚠️ Plazo Legal</span>
+                            </div>
+                        </button>
+                        <button type="button" class="px-4 py-3 border rounded-lg hover:bg-blue-50 hover:border-blue-500 text-left">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span>👥 Reunión</span>
+                            </div>
+                        </button>
+                        <button type="button" class="px-4 py-3 border rounded-lg hover:bg-green-50 hover:border-green-500 text-left">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span>✓ Tarea</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Fecha Inicio *</label>
+                        <input type="date" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Hora Inicio</label>
+                        <input type="time" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Ubicación</label>
+                    <input type="text" placeholder="ej. Juzgado Civil - Sala 3" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Caso Asociado</label>
+                    <select class="w-full px-4 py-2 border rounded-lg">
+                        <option>Seleccionar caso...</option>
+                        <option>Caso #1234 - Juan Pérez</option>
+                        <option>Caso #5678 - María García</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal('event-modal')" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        💾 Guardar Evento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeModal('task-modal')">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">✓ Nueva Tarea</h2>
+                <button onclick="closeModal('task-modal')" class="text-gray-600 hover:text-gray-900">✕</button>
+            </div>
+
+            <form class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Título de la Tarea *</label>
+                    <input type="text" placeholder="¿Qué necesitas hacer?" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Descripción</label>
+                    <textarea rows="3" placeholder="Detalles adicionales..." class="w-full px-4 py-2 border rounded-lg"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Prioridad *</label>
+                        <select class="w-full px-4 py-2 border rounded-lg">
+                            <option>Urgente</option>
+                            <option>Alta</option>
+                            <option selected>Media</option>
+                            <option>Baja</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Estado Inicial</label>
+                        <select class="w-full px-4 py-2 border rounded-lg">
+                            <option>Pendiente</option>
+                            <option>En Progreso</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Fecha de Vencimiento</label>
+                    <input type="date" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Caso Asociado</label>
+                    <select class="w-full px-4 py-2 border rounded-lg">
+                        <option>Seleccionar caso...</option>
+                        <option>Caso #1234 - Juan Pérez</option>
+                        <option>Caso #5678 - María García</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal('task-modal')" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        💾 Crear Tarea
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // View Management
+        function showView(viewName) {
+            // Hide all views
+            document.querySelectorAll('.view-container').forEach(view => {
+                view.classList.add('hidden');
+                view.classList.remove('animate-fadeIn');
+            });
+
+            // Remove active state from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+            });
+
+            // Show selected view with animation
+            const selectedView = document.getElementById('view-' + viewName);
+            if (selectedView) {
+                selectedView.classList.remove('hidden');
+                selectedView.classList.add('animate-fadeIn');
+            }
+
+            // Highlight active tab
+            const activeTab = document.getElementById('tab-' + viewName);
+            if (activeTab) {
+                activeTab.classList.add('bg-blue-600', 'text-white');
+            }
+        }
+
+        // Modal Management
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        // Initialize - Show first view
+        showView('calendar');
+
+        // Close modals on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('[id$="-modal"]').forEach(modal => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

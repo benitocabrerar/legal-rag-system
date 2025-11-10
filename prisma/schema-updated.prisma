@@ -1,0 +1,144 @@
+// ============================================================================
+// ENUMS FOR LEGAL DOCUMENTS - NEW ENUMS
+// ============================================================================
+
+enum NormType {
+  CONSTITUTIONAL_NORM
+  ORGANIC_LAW
+  ORDINARY_LAW
+  ORGANIC_CODE
+  ORDINARY_CODE
+  REGULATION_GENERAL
+  REGULATION_EXECUTIVE
+  ORDINANCE_MUNICIPAL
+  ORDINANCE_METROPOLITAN
+  RESOLUTION_ADMINISTRATIVE
+  RESOLUTION_JUDICIAL
+  ADMINISTRATIVE_AGREEMENT
+  INTERNATIONAL_TREATY
+  JUDICIAL_PRECEDENT
+}
+
+enum LegalHierarchy {
+  CONSTITUCION
+  TRATADOS_INTERNACIONALES_DDHH
+  LEYES_ORGANICAS
+  LEYES_ORDINARIAS
+  CODIGOS_ORGANICOS
+  CODIGOS_ORDINARIOS
+  REGLAMENTOS
+  ORDENANZAS
+  RESOLUCIONES
+  ACUERDOS_ADMINISTRATIVOS
+}
+
+enum PublicationType {
+  ORDINARIO
+  SUPLEMENTO
+  SEGUNDO_SUPLEMENTO
+  SUPLEMENTO_ESPECIAL
+  EDICION_CONSTITUCIONAL
+}
+
+enum DocumentState {
+  ORIGINAL
+  REFORMADO
+}
+
+// ============================================================================
+// UPDATED LEGAL DOCUMENT MODEL
+// ============================================================================
+
+model LegalDocument {
+  id                      String                @id @default(uuid())
+
+  // Changed fields based on requirements
+  normType                NormType              @map("norm_type") // Was: title (string)
+  normTitle               String                @map("norm_title") // NEW: Actual title of the norm
+  legalHierarchy          LegalHierarchy        @map("legal_hierarchy") // Was: category (string)
+
+  // Official Publication Information
+  publicationType         PublicationType?      @map("publication_type") // NEW
+  publicationNumber       String?               @map("publication_number") // Was: metadata.number
+  publicationDate         DateTime?             @map("publication_date") // NEW
+
+  // Document State and Reform Information
+  documentState           DocumentState         @default(ORIGINAL) @map("document_state") // NEW
+  lastReformDate          DateTime?             @map("last_reform_date") // Was: metadata.effectiveDate
+  reformHistory           Json?                 @map("reform_history") // NEW: Array of reform dates and descriptions
+
+  // Original fields to keep
+  content                 String                @db.Text
+  uploadedBy              String                @map("uploaded_by")
+  isActive                Boolean               @default(true) @map("is_active")
+  viewCount               Int                   @default(0) @map("view_count")
+  downloadCount           Int                   @default(0) @map("download_count")
+
+  // Enhanced metadata
+  metadata                Json?                 // Keep for backward compatibility and additional data
+  jurisdiction            String?               // From old metadata
+  effectiveFromDate       DateTime?             @map("effective_from_date") // NEW
+
+  // Additional fields for better organization
+  keywords                String[]              // NEW: For search optimization
+  relatedNorms            String[]              @map("related_norms") // NEW: IDs of related documents
+  attachments             Json?                 // NEW: For additional files/annexes
+
+  // Timestamps
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  uploader                User                  @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks                  LegalDocumentChunk[]
+  specialties             DocumentSpecialty[]
+  revisions               LegalDocumentRevision[] // NEW relation
+
+  @@index([normType])
+  @@index([legalHierarchy])
+  @@index([publicationType])
+  @@index([documentState])
+  @@index([publicationDate])
+  @@index([lastReformDate])
+  @@map("legal_documents")
+}
+
+// ============================================================================
+// NEW: LEGAL DOCUMENT REVISIONS - For tracking document changes
+// ============================================================================
+
+model LegalDocumentRevision {
+  id                String         @id @default(uuid())
+  legalDocumentId   String         @map("legal_document_id")
+  revisionNumber    Int            @map("revision_number")
+  revisionType      String         @map("revision_type") // reform, correction, annotation
+  description       String?        @db.Text
+  previousContent   String?        @db.Text @map("previous_content")
+  newContent        String?        @db.Text @map("new_content")
+  changedBy         String         @map("changed_by")
+  approvedBy        String?        @map("approved_by")
+  effectiveDate     DateTime       @map("effective_date")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  legalDocument     LegalDocument  @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([legalDocumentId, revisionNumber])
+  @@index([legalDocumentId])
+  @@index([effectiveDate])
+  @@map("legal_document_revisions")
+}
+
+// Keep existing LegalDocumentChunk model unchanged for compatibility
+model LegalDocumentChunk {
+  id              String   @id @default(uuid())
+  legalDocumentId String   @map("legal_document_id")
+  content         String   @db.Text
+  chunkIndex      Int      @map("chunk_index")
+  embedding       Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  legalDocument LegalDocument @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([legalDocumentId])
+  @@map("legal_document_chunks")
+}

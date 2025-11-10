@@ -127,6 +127,11 @@ model User {
   taskHistory           TaskHistory[]
   notificationLogs      NotificationLog[]
 
+  // Document Analysis System relations
+  createdAnalysisJobs   AnalysisQueue[]
+  notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriptions")
+  notificationQueueRecipient NotificationQueue[]      @relation("NotificationQueueRecipient")
+
   @@map("users")
 }
 
@@ -219,6 +224,11 @@ model LegalDocument {
   uploader             User              @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
   chunks               LegalDocumentChunk[]
   specialties          DocumentSpecialty[]
+
+  // Document Analysis System relations
+  articles             LegalDocumentArticle[]
+  sections             LegalDocumentSection[]
+  summaries            LegalDocumentSummary[]
 
   @@index([normType])
   @@index([legalHierarchy])
@@ -964,6 +974,7 @@ model NotificationTemplate {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   logs            NotificationLog[]
+  queues          NotificationQueue[] @relation("NotificationQueueTemplate")
 
   @@map("notification_templates")
 }
@@ -1241,4 +1252,367 @@ model CaseFinance {
   case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@map("case_finances")
+}
+
+// ============================================================================
+// DOCUMENT ANALYSIS & NOTIFICATION SYSTEM
+// ============================================================================
+
+model AnalysisQueue {
+  id            String    @id @default(uuid())
+  documentId    String    @map("document_id")
+  documentType  String    @map("document_type") // 'LegalDocument' or 'Document'
+  jobType       String    @map("job_type")
+  status        String    @default("pending")
+  priority      Int       @default(0)
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3) @map("max_attempts")
+
+  // Job data
+  jobData       Json?     @map("job_data")
+  result        Json?
+  errorMessage  String?   @map("error_message") @db.Text
+
+  // Timing
+  scheduledAt   DateTime? @map("scheduled_at")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  failedAt      DateTime? @map("failed_at")
+  processingTimeMs Int?   @map("processing_time_ms")
+
+  // Metadata
+  createdBy     String?   @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  creator       User?     @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledAt])
+  @@map("analysis_queue")
+}
+
+model DocumentRegistry {
+  id                  String    @id @default(uuid())
+  documentId          String    @map("document_id")
+  documentType        String    @map("document_type") // 'LegalDocument' or 'Document'
+
+  // Hierarchy information
+  parentId            String?   @map("parent_id")
+  hierarchyLevel      Int       @default(0) @map("hierarchy_level")
+  hierarchyPath       String    @map("hierarchy_path")
+  displayOrder        Int       @default(0) @map("display_order")
+
+  // Document metadata
+  title               String
+  category            String?
+  tags                String[]
+
+  // Version control
+  version             String?
+  isCurrentVersion    Boolean   @default(true) @map("is_current_version")
+  supersededBy        String?   @map("superseded_by")
+  versionDate         DateTime? @map("version_date")
+
+  // Access control
+  isPublic            Boolean   @default(false) @map("is_public")
+  accessLevel         String    @default("authenticated") @map("access_level")
+  restrictedToRoles   String[]  @map("restricted_to_roles")
+
+  // Search optimization
+  searchVector        String?   @map("search_vector") @db.Text
+  keywords            String[]
+
+  // Statistics
+  viewCount           Int       @default(0) @map("view_count")
+  referenceCount      Int       @default(0) @map("reference_count")
+  lastAccessed        DateTime? @map("last_accessed")
+
+  // Timestamps
+  registeredAt        DateTime  @default(now()) @map("registered_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  parent              DocumentRegistry?  @relation("DocumentHierarchy", fields: [parentId], references: [id])
+  children            DocumentRegistry[] @relation("DocumentHierarchy")
+  supersededByDoc     DocumentRegistry?  @relation("VersionControl", fields: [supersededBy], references: [id])
+  supersedes          DocumentRegistry[] @relation("VersionControl")
+
+  @@unique([documentId, documentType, version])
+  @@index([documentId, documentType])
+  @@index([parentId])
+  @@index([hierarchyPath])
+  @@index([isCurrentVersion])
+  @@map("document_registry")
+}
+
+model DocumentReference {
+  id                  String    @id @default(uuid())
+  sourceDocumentId    String    @map("source_document_id")
+  sourceDocumentType  String    @map("source_document_type")
+  targetDocumentId    String?   @map("target_document_id")
+  targetDocumentType  String?   @map("target_document_type")
+
+  // Reference details
+  referenceType       String    @map("reference_type") // cites, amends, repeals, implements, etc.
+  referenceText       String?   @map("reference_text") @db.Text
+  referenceLocation   String?   @map("reference_location") // article number, section, etc.
+
+  // Validation
+  isValid             Boolean   @default(true) @map("is_valid")
+  validationDate      DateTime? @map("validation_date")
+  validationError     String?   @map("validation_error") @db.Text
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@index([sourceDocumentId, sourceDocumentType])
+  @@index([targetDocumentId, targetDocumentType])
+  @@index([referenceType])
+  @@map("document_references")
+}
+
+model LegalDocumentArticle {
+  id                  String    @id @default(uuid())
+  legalDocumentId     String    @map("legal_document_id")
+
+  // Article identification
+  articleNumber       Int       @map("article_number")
+  articleNumberText   String?   @map("article_number_text") // For articles like "23-A"
+  articleTitle        String?   @map("article_title") @db.Text
+
+  // Content
+  articleContent      String    @map("article_content") @db.Text
+  wordCount           Int?      @map("word_count")
+
+  // Structure
+  parentSectionId     String?   @map("parent_section_id")
+  displayOrder        Int?      @map("display_order")
+  hierarchyLevel      Int       @default(4) @map("hierarchy_level")
+
+  // Analysis results
+  summary             String?   @db.Text
+  keywords            Json?
+  entities            Json?
+  referencedArticles  Json?     @map("referenced_articles")
+
+  // Embeddings for different strategies
+  embedding           Json?
+  summaryEmbedding    Json?     @map("summary_embedding")
+  queryEmbedding      Json?     @map("query_embedding")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  legalDocument       LegalDocument           @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+  parentSection       LegalDocumentSection?   @relation("ArticleSections", fields: [parentSectionId], references: [id])
+  summaries           LegalDocumentSummary[]
+
+  @@index([legalDocumentId])
+  @@index([articleNumber])
+  @@index([parentSectionId])
+  @@map("legal_document_articles")
+}
+
+model LegalDocumentSection {
+  id                  String    @id @default(uuid())
+  legalDocumentId     String    @map("legal_document_id")
+
+  // Section identification
+  sectionType         String    @map("section_type") // title, chapter, section
+  sectionNumber       String    @map("section_number")
+  sectionTitle        String?   @map("section_title") @db.Text
+
+  // Hierarchy
+  parentSectionId     String?   @map("parent_section_id")
+  level               Int
+  hierarchyPath       String?   @map("hierarchy_path")
+  displayOrder        Int?      @map("display_order")
+
+  // Content
+  content             String?   @db.Text
+  wordCount           Int?      @map("word_count")
+
+  // Analysis
+  summary             String?   @db.Text
+  embedding           Json?
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  legalDocument       LegalDocument           @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+  parentSection       LegalDocumentSection?   @relation("SectionHierarchy", fields: [parentSectionId], references: [id])
+  childSections       LegalDocumentSection[]  @relation("SectionHierarchy")
+  articles            LegalDocumentArticle[]  @relation("ArticleSections")
+  summaries           LegalDocumentSummary[]
+
+  @@index([legalDocumentId])
+  @@index([sectionType])
+  @@index([parentSectionId])
+  @@index([hierarchyPath])
+  @@map("legal_document_sections")
+}
+
+model LegalDocumentSummary {
+  id                  String    @id @default(uuid())
+  legalDocumentId     String    @map("legal_document_id")
+
+  // Summary details
+  summaryType         String    @map("summary_type") // executive, chapter, section, technical
+  summaryLevel        String    @map("summary_level") // document, chapter, section, article
+  summaryText         String    @map("summary_text") @db.Text
+
+  // Associated structure element
+  sectionId           String?   @map("section_id")
+  articleId           String?   @map("article_id")
+
+  // Metadata
+  keyPoints           Json?     @map("key_points")
+  confidenceScore     Float?    @map("confidence_score")
+
+  // Embeddings
+  embedding           Json?
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  legalDocument       LegalDocument         @relation(fields: [legalDocumentId], references: [id], onDelete: Cascade)
+  section             LegalDocumentSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  article             LegalDocumentArticle? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([legalDocumentId])
+  @@index([summaryType])
+  @@index([summaryLevel])
+  @@map("legal_document_summaries")
+}
+
+model QueryTemplate {
+  id                  String    @id @default(uuid())
+  pattern             String    @db.Text
+  queryType           String    @map("query_type")
+  responseTemplate    String?   @map("response_template") @db.Text
+
+  // Associated documents
+  documentIds         String[]  @map("document_ids")
+  documentTypes       String[]  @map("document_types")
+
+  // Metadata
+  requiredFields      Json?     @map("required_fields")
+  optionalFields      Json?     @map("optional_fields")
+  priority            Int       @default(50)
+
+  // Usage statistics
+  useCount            Int       @default(0) @map("use_count")
+  successRate         Float?    @map("success_rate")
+  avgResponseTimeMs   Int?      @map("avg_response_time_ms")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([queryType])
+  @@index([priority])
+  @@map("query_templates")
+}
+
+model DocumentProcessingHistory {
+  id                  String    @id @default(uuid())
+  documentId          String    @map("document_id")
+  documentType        String    @map("document_type")
+
+  // Processing details
+  processType         String    @map("process_type")
+  processVersion      String?   @map("process_version")
+
+  // Results
+  status              String
+  results             Json?
+  errorDetails        Json?     @map("error_details")
+
+  // Metrics
+  processingTimeMs    Int?      @map("processing_time_ms")
+  tokensUsed          Int?      @map("tokens_used")
+  embeddingsGenerated Int?      @map("embeddings_generated")
+  chunksCreated       Int?      @map("chunks_created")
+
+  // Timestamps
+  startedAt           DateTime  @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@index([documentId, documentType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("document_processing_history")
+}
+
+model NotificationSubscription {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+
+  // Subscription preferences
+  subscriptionType    String    @map("subscription_type") // document_upload, analysis_complete, etc.
+  channel             String                             // email, in_app, sms, webhook
+
+  // Filters
+  documentTypes       String[]  @map("document_types")
+  categories          String[]
+  keywords            String[]
+
+  // Configuration
+  isActive            Boolean   @default(true) @map("is_active")
+  frequency           String    @default("immediate") // immediate, daily, weekly
+  quietHoursStart     DateTime? @map("quiet_hours_start") @db.Time
+  quietHoursEnd       DateTime? @map("quiet_hours_end") @db.Time
+
+  // Webhook configuration (if channel = webhook)
+  webhookUrl          String?   @map("webhook_url")
+  webhookSecret       String?   @map("webhook_secret")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user                User      @relation("NotificationSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subscriptionType])
+  @@index([isActive])
+  @@map("notification_subscriptions")
+}
+
+model NotificationQueue {
+  id                  String    @id @default(uuid())
+
+  // Notification details
+  templateId          String?   @map("template_id")
+  channel             String
+  recipientId         String?   @map("recipient_id")
+  recipientEmail      String?   @map("recipient_email")
+  recipientPhone      String?   @map("recipient_phone")
+
+  // Content
+  subject             String?   @db.Text
+  body                String    @db.Text
+  data                Json?
+
+  // Scheduling
+  priority            String    @default("normal")
+  scheduledAt         DateTime? @map("scheduled_at")
+
+  // Status
+  status              String    @default("pending")
+  attempts            Int       @default(0)
+  maxAttempts         Int       @default(3) @map("max_attempts")
+
+  // Results
+  sentAt              DateTime? @map("sent_at")
+  deliveredAt         DateTime? @map("delivered_at")
+  failedAt            DateTime? @map("failed_at")
+  errorMessage        String?   @map("error_message") @db.Text
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  template            NotificationTemplate? @relation("NotificationQueueTemplate", fields: [templateId], references: [id])
+  recipient           User?                 @relation("NotificationQueueRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([priority])
+  @@map("notification_queue")
 }

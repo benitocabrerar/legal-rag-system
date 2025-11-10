@@ -1,0 +1,30 @@
+DONDE DICE  “Título del Documento” debe decir “Tipo de Norma”
+SE DEBE INCLUIR UN CAMPO QUE DIGA “Título de la Norma”
+EN “Categoría” esta sería la tabla
+1.	Constitución  
+2.	Tratados internacionales de DD.HH.
+3.	Leyes orgánicas
+4.	Leyes ordinarias
+5.	Códigos
+a.	Orgánicos
+b.	Ordinarios
+6.	Reglamentos
+7.	Ordenanzas
+8.	Resoluciones
+9.	Acuerdos administrativos
+
+
+SE DEBE INCLUIR UN CAMPO QUE DIGA “Tipo de Publicación Registro Oficial”
+Esta sería la tabla
+1.	Ordinario
+2.	Suplemento
+3.	Segundo Suplemento
+4.	Suplemento Especial
+5.	Edición Constitucional
+SE DEBE CAMBIAR “Número de Registro” por “Número de Publicación Registro Oficial”
+
+Se debe cambiar por “Fecha de Vigencia” por “Fecha de última reforma”
+Se debe incluir un campo que diga “Estado”
+Con esta table: Original, Reformado
+
+No me deja subir los documentos legales he intentado varias veces.

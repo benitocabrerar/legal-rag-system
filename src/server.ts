@@ -13,6 +13,8 @@ import { documentRoutes } from './routes/documents.js';
 import { queryRoutes } from './routes/query.js';
 import { legalDocumentRoutes } from './routes/legal-documents.js';
 import { legalDocumentRoutesV2 } from './routes/legal-documents-v2.js';
+import { legalDocumentRoutesEnhanced } from './routes/legal-documents-enhanced.js';
+import { documentRoutesEnhanced } from './routes/documents-enhanced.js';
 import { adminUserRoutes } from './routes/admin/users.js';
 import { adminSpecialtyRoutes } from './routes/admin/specialties.js';
 import { adminAuditRoutes } from './routes/admin/audit.js';
@@ -101,9 +103,11 @@ await app.register(twoFactorRoutes, { prefix: '/api/v1' });
 await app.register(oauthRoutes, { prefix: '/api/v1' });
 await app.register(caseRoutes, { prefix: '/api/v1' });
 await app.register(documentRoutes, { prefix: '/api/v1' });
+await app.register(documentRoutesEnhanced, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutesV2, { prefix: '/api/v1' });
+await app.register(legalDocumentRoutesEnhanced, { prefix: '/api/v1' });
 await app.register(paymentRoutes, { prefix: '/api/v1' });
 
 // Register user management routes

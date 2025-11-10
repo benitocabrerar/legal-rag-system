@@ -1,0 +1,498 @@
+// Version: 3.0.0 - Complete rebuild with defensive error handling
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
+  : 'https://legal-rag-api-qnew.onrender.com/api/v1';
+
+// Helper function to safely handle API errors
+export const parseApiError = (error: any): string => {
+  try {
+    const errorData = error?.response?.data;
+
+    if (!errorData) {
+      return 'Error de conexión con el servidor';
+    }
+
+    if (errorData.error) {
+      if (Array.isArray(errorData.error)) {
+        return errorData.error.map((e: any) => e.message || String(e)).join(', ');
+      }
+      return String(errorData.error);
+    }
+
+    if (errorData.message) {
+      return String(errorData.message);
+    }
+
+    return 'Error al procesar la solicitud';
+  } catch {
+    return 'Error al procesar la solicitud';
+  }
+};
+
+export const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authAPI = {
+  register: async (data: { email: string; password: string; name: string }) => {
+    const response = await api.post('/auth/register', data);
+    return response.data;
+  },
+  login: async (data: { email: string; password: string }) => {
+    const response = await api.post('/auth/login', data);
+    return response.data;
+  },
+  getMe: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
+};
+
+// Cases API
+export const casesAPI = {
+  list: async () => {
+    const response = await api.get('/cases');
+    return response.data.cases || [];
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/cases/${id}`);
+    return response.data.case;
+  },
+  create: async (data: {
+    title: string;
+    clientName: string;
+    caseNumber?: string;
+    description?: string;
+  }) => {
+    const response = await api.post('/cases', data);
+    return response.data;
+  },
+  update: async (id: string, data: Partial<{
+    title: string;
+    clientName: string;
+    caseNumber: string;
+    description: string;
+    status: string;
+  }>) => {
+    const response = await api.patch(`/cases/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/cases/${id}`);
+    return response.data;
+  },
+};
+
+// Documents API
+export const documentsAPI = {
+  upload: async (caseId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caseId', caseId);
+
+    const response = await api.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  listByCase: async (caseId: string) => {
+    const response = await api.get(`/documents/case/${caseId}`);
+    return response.data.documents || [];
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/documents/${id}`);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/documents/${id}`);
+    return response.data;
+  },
+};
+
+// Query API (RAG)
+export const queryAPI = {
+  query: async (data: { caseId: string; query: string }) => {
+    const response = await api.post('/query', data);
+    return response.data;
+  },
+  getHistory: async (caseId: string) => {
+    const response = await api.get(`/query/history/${caseId}`);
+    return response.data.queries || [];
+  },
+};
+
+// Legal Documents API (Admin)
+export const legalDocumentsAPI = {
+  upload: async (data: {
+    title: string;
+    category: 'constitution' | 'law' | 'code' | 'regulation' | 'jurisprudence';
+    content: string;
+    metadata?: {
+      year?: number;
+      number?: string;
+      jurisdiction?: string;
+    };
+  }) => {
+    const response = await api.post('/legal-documents/upload', data);
+    return response.data;
+  },
+  list: async (category?: string) => {
+    const params = category ? { category } : {};
+    const response = await api.get('/legal-documents', { params });
+    return response.data.documents || [];
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/legal-documents/${id}`);
+    return response.data.document;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/legal-documents/${id}`);
+    return response.data;
+  },
+};
+
+// User API
+export const userAPI = {
+  getProfile: async () => {
+    const response = await api.get('/user/profile');
+    return response.data.user;
+  },
+  updateProfile: async (data: any) => {
+    const response = await api.patch('/user/profile', data);
+    return response.data.user;
+  },
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await api.post('/user/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data.user;
+  },
+  deleteAvatar: async () => {
+    const response = await api.delete('/user/avatar');
+    return response.data;
+  },
+};
+
+// Subscription API
+export const subscriptionAPI = {
+  getCurrent: async () => {
+    const response = await api.get('/user/subscription');
+    return response.data;
+  },
+  getPlans: async () => {
+    const response = await api.get('/user/subscription/plans');
+    return response.data.plans;
+  },
+  upgrade: async (planCode: string, billingCycle: 'monthly' | 'yearly' = 'monthly') => {
+    const response = await api.post('/user/subscription/upgrade', {
+      planCode,
+      billingCycle
+    });
+    return response.data;
+  },
+  cancel: async (immediately: boolean = false) => {
+    const response = await api.post('/user/subscription/cancel', {
+      immediately
+    });
+    return response.data;
+  },
+};
+
+// Usage API
+export const usageAPI = {
+  getCurrent: async () => {
+    const response = await api.get('/user/usage');
+    return response.data;
+  },
+  getHistory: async (months: number = 6) => {
+    const response = await api.get(`/user/usage/history?months=${months}`);
+    return response.data;
+  },
+  track: async (type: 'query' | 'document' | 'case' | 'storage' | 'api', metadata: any = {}) => {
+    const response = await api.post('/user/usage/track', { type, metadata });
+    return response.data;
+  },
+};
+
+// Billing API
+export const billingAPI = {
+  getInvoices: async (limit: number = 10, offset: number = 0) => {
+    const response = await api.get(`/billing/invoices?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+  getInvoice: async (id: string) => {
+    const response = await api.get(`/billing/invoices/${id}`);
+    return response.data.invoice;
+  },
+  getPaymentMethods: async () => {
+    const response = await api.get('/billing/payment-methods');
+    return response.data.paymentMethods;
+  },
+  addPaymentMethod: async (data: any) => {
+    const response = await api.post('/billing/payment-methods', data);
+    return response.data;
+  },
+  deletePaymentMethod: async (id: string) => {
+    const response = await api.delete(`/billing/payment-methods/${id}`);
+    return response.data;
+  },
+  setDefaultPaymentMethod: async (id: string) => {
+    const response = await api.patch(`/billing/payment-methods/${id}/default`);
+    return response.data;
+  },
+};
+
+// Settings API
+export const settingsAPI = {
+  get: async () => {
+    const response = await api.get('/user/settings');
+    return response.data.settings;
+  },
+  update: async (data: any) => {
+    const response = await api.patch('/user/settings', data);
+    return response.data.settings;
+  },
+  exportData: async () => {
+    const response = await api.post('/user/settings/export-data');
+    return response.data;
+  },
+  deleteAccount: async (confirmEmail: string) => {
+    const response = await api.delete('/user/settings/account', {
+      data: { confirmEmail }
+    });
+    return response.data;
+  },
+};
+
+// Events/Calendar API
+export const eventsAPI = {
+  list: async (params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    type?: string;
+    status?: string;
+    caseId?: string;
+  }) => {
+    const response = await api.get('/events', { params });
+    return response.data;
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/events/${id}`);
+    return response.data.event;
+  },
+  create: async (data: {
+    title: string;
+    description?: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+    location?: string;
+    meetingLink?: string;
+    allDay?: boolean;
+    timezone?: string;
+    caseId?: string;
+    participants?: Array<{
+      userId?: string;
+      email?: string;
+      name?: string;
+      role?: string;
+    }>;
+    reminders?: Array<{
+      type: string;
+      minutesBefore: number;
+    }>;
+  }) => {
+    const response = await api.post('/events', data);
+    return response.data.event;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.patch(`/events/${id}`, data);
+    return response.data.event;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/events/${id}`);
+    return response.data;
+  },
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/events/${id}/status`, { status });
+    return response.data.event;
+  },
+};
+
+// Tasks API
+export const tasksAPI = {
+  list: async (params?: {
+    status?: string;
+    priority?: string;
+    caseId?: string;
+    assignedToId?: string;
+    dueDateFrom?: string;
+    dueDateTo?: string;
+    isArchived?: boolean;
+  }) => {
+    const response = await api.get('/tasks', { params });
+    return response.data;
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/tasks/${id}`);
+    return response.data.task;
+  },
+  create: async (data: {
+    title: string;
+    description?: string;
+    status?: string;
+    priority: string;
+    dueDate?: string;
+    caseId?: string;
+    assignedToId?: string;
+    tags?: string[];
+    reminderDate?: string;
+    checklistItems?: Array<{
+      title: string;
+      position: number;
+    }>;
+  }) => {
+    const response = await api.post('/tasks', data);
+    return response.data.task;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.patch(`/tasks/${id}`, data);
+    return response.data.task;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/tasks/${id}`);
+    return response.data;
+  },
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/tasks/${id}/status`, { status });
+    return response.data.task;
+  },
+};
+
+// Finance API
+export const financeAPI = {
+  // Invoices
+  listInvoices: async (params?: {
+    caseId?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const response = await api.get('/finance/invoices', { params });
+    return response.data;
+  },
+  getInvoice: async (id: string) => {
+    const response = await api.get(`/finance/invoices/${id}`);
+    return response.data.invoice;
+  },
+  createInvoice: async (data: {
+    caseId: string;
+    amount: number;
+    currency?: string;
+    issueDate: string;
+    dueDate: string;
+    description?: string;
+    taxAmount?: number;
+    notes?: string;
+  }) => {
+    const response = await api.post('/finance/invoices', data);
+    return response.data.invoice;
+  },
+  updateInvoice: async (id: string, data: any) => {
+    const response = await api.patch(`/finance/invoices/${id}`, data);
+    return response.data.invoice;
+  },
+  updateInvoiceStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/finance/invoices/${id}/status`, { status });
+    return response.data.invoice;
+  },
+
+  // Payments
+  listPayments: async (params?: {
+    caseId?: string;
+    invoiceId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const response = await api.get('/finance/payments', { params });
+    return response.data;
+  },
+  getPayment: async (id: string) => {
+    const response = await api.get(`/finance/payments/${id}`);
+    return response.data.payment;
+  },
+  createPayment: async (data: {
+    caseId: string;
+    invoiceId?: string;
+    amount: number;
+    currency?: string;
+    method: string;
+    paymentDate: string;
+    transactionId?: string;
+    notes?: string;
+    receiptUrl?: string;
+  }) => {
+    const response = await api.post('/finance/payments', data);
+    return response.data.payment;
+  },
+
+  // Payment Agreements
+  listPaymentAgreements: async (params?: { caseId?: string }) => {
+    const response = await api.get('/finance/payment-agreements', { params });
+    return response.data;
+  },
+  getPaymentAgreement: async (id: string) => {
+    const response = await api.get(`/finance/payment-agreements/${id}`);
+    return response.data.paymentAgreement;
+  },
+  createPaymentAgreement: async (data: {
+    caseId: string;
+    totalAmount: number;
+    currency?: string;
+    installments: number;
+    frequency: string;
+    startDate: string;
+    description?: string;
+  }) => {
+    const response = await api.post('/finance/payment-agreements', data);
+    return response.data.paymentAgreement;
+  },
+
+  // Case Finances
+  getCaseFinance: async (caseId: string) => {
+    const response = await api.get(`/finance/case-finances/${caseId}`);
+    return response.data.caseFinance;
+  },
+};
