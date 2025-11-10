@@ -29,6 +29,7 @@ try {
   console.log('⚠️  Found migration issues, attempting to resolve...');
 
   const migrationsToResolve = [
+    '20241110_document_analysis_system',  // Tables already created via embedded endpoint
     '20250111000000_user_management_system',
     '20250111000001_user_management_system'
   ];
