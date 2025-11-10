@@ -386,6 +386,32 @@ export class LegalDocumentService {
   }
 
   /**
+   * Private helper to retry OpenAI API calls with exponential backoff
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T | null> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        if (isLastAttempt) {
+          throw error;
+        }
+
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.warn(`  ⚠️  Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return null;
+  }
+
+  /**
    * Private helper to create document chunks with embeddings (async, no transaction)
    */
   private async createDocumentChunksAsync(
@@ -412,17 +438,27 @@ export class LegalDocumentService {
 
       let embedding = null;
 
-      // Try to generate embedding, but continue if it fails
+      // Try to generate embedding with retries
       try {
-        const embeddingResponse = await this.openai.embeddings.create({
-          model: 'text-embedding-ada-002',
-          input: chunk,
-        });
-        embedding = embeddingResponse.data[0].embedding;
-        successCount++;
+        const embeddingResponse = await this.retryWithBackoff(
+          () => this.openai.embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: chunk,
+          }),
+          3, // max 3 retries
+          1000 // 1 second base delay
+        );
 
-        if (i % 10 === 0) {
-          console.log(`  ✅ Generated ${successCount} embeddings (chunk ${i + 1}/${chunks.length})`);
+        if (embeddingResponse) {
+          embedding = embeddingResponse.data[0].embedding;
+          successCount++;
+
+          if (i % 10 === 0) {
+            console.log(`  ✅ Generated ${successCount} embeddings (chunk ${i + 1}/${chunks.length})`);
+          }
+        } else {
+          failCount++;
+          console.error(`  ❌ Failed to generate embedding for chunk ${i} after retries`);
         }
       } catch (error: any) {
         failCount++;
