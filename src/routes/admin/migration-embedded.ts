@@ -310,7 +310,7 @@ CREATE TABLE IF NOT EXISTS notification_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Notification details
-  template_id UUID REFERENCES notification_templates(id),
+  template_id TEXT REFERENCES notification_templates(id),
   channel VARCHAR(50) NOT NULL,
   recipient_id UUID,
   recipient_email TEXT,
