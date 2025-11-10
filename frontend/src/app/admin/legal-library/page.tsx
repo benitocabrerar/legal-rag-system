@@ -3,17 +3,17 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
-// Types matching backend schema
+// Types matching backend schema (camelCase from Prisma)
 interface LegalDocument {
   id: string;
-  norm_type: string;
-  norm_title: string;
-  legal_hierarchy: string;
-  publication_type: string;
-  publication_number: string;
-  publication_date?: string;
-  last_reform_date?: string;
-  document_state: string;
+  normType: string;
+  normTitle: string;
+  legalHierarchy: string;
+  publicationType: string;
+  publicationNumber: string;
+  publicationDate?: string;
+  lastReformDate?: string;
+  documentState: string;
   jurisdiction: string;
   status: 'active' | 'processing' | 'error';
   fileSize: number;
@@ -184,10 +184,10 @@ export default function LegalLibraryPage() {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesHierarchy = filterHierarchy === 'all' || doc.legal_hierarchy === filterHierarchy;
+    const matchesHierarchy = filterHierarchy === 'all' || doc.legalHierarchy === filterHierarchy;
     const matchesSearch =
-      doc.norm_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.publication_number?.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.normTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.publicationNumber?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesHierarchy && matchesSearch;
   });
 
@@ -261,13 +261,13 @@ export default function LegalLibraryPage() {
         </div>
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white">
           <div className="text-3xl font-bold">
-            {new Set(documents.map((d) => d.legal_hierarchy)).size}
+            {new Set(documents.map((d) => d.legalHierarchy)).size}
           </div>
           <div className="text-purple-100">Jerarquías</div>
         </div>
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white">
           <div className="text-3xl font-bold">
-            {documents.filter((d) => d.document_state === 'REFORMADO').length}
+            {documents.filter((d) => d.documentState === 'REFORMADO').length}
           </div>
           <div className="text-orange-100">Reformados</div>
         </div>
@@ -303,12 +303,12 @@ export default function LegalLibraryPage() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-3">
                     <span className="text-2xl">
-                      {NORM_TYPES.find((t) => t.value === doc.norm_type)?.icon || '📄'}
+                      {NORM_TYPES.find((t) => t.value === doc.normType)?.icon || '📄'}
                     </span>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">{doc.norm_title}</h3>
+                      <h3 className="text-xl font-bold text-gray-900">{doc.normTitle}</h3>
                       <p className="text-sm text-gray-500">
-                        {NORM_TYPES.find((t) => t.value === doc.norm_type)?.label}
+                        {NORM_TYPES.find((t) => t.value === doc.normType)?.label}
                       </p>
                     </div>
                   </div>
@@ -317,31 +317,31 @@ export default function LegalLibraryPage() {
                     <div className="bg-blue-50 p-3 rounded-lg">
                       <span className="font-semibold text-blue-900">Jerarquía:</span>
                       <p className="text-blue-700">
-                        {LEGAL_HIERARCHY.find((h) => h.value === doc.legal_hierarchy)?.label}
+                        {LEGAL_HIERARCHY.find((h) => h.value === doc.legalHierarchy)?.label}
                       </p>
                     </div>
                     <div className="bg-purple-50 p-3 rounded-lg">
                       <span className="font-semibold text-purple-900">Publicación:</span>
                       <p className="text-purple-700">
-                        {PUBLICATION_TYPES.find((p) => p.value === doc.publication_type)?.label}
+                        {PUBLICATION_TYPES.find((p) => p.value === doc.publicationType)?.label}
                       </p>
                     </div>
                     <div className="bg-green-50 p-3 rounded-lg">
                       <span className="font-semibold text-green-900">Nº RO:</span>
-                      <p className="text-green-700">{doc.publication_number}</p>
+                      <p className="text-green-700">{doc.publicationNumber}</p>
                     </div>
                     <div className="bg-orange-50 p-3 rounded-lg">
                       <span className="font-semibold text-orange-900">Estado:</span>
                       <p className="text-orange-700">
-                        {DOCUMENT_STATES.find((s) => s.value === doc.document_state)?.label}
+                        {DOCUMENT_STATES.find((s) => s.value === doc.documentState)?.label}
                       </p>
                     </div>
                   </div>
 
-                  {doc.publication_date && (
+                  {doc.publicationDate && (
                     <div className="mt-3 text-sm text-gray-600">
                       📅 Publicado:{' '}
-                      {new Date(doc.publication_date).toLocaleDateString('es-EC', {
+                      {new Date(doc.publicationDate).toLocaleDateString('es-EC', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
