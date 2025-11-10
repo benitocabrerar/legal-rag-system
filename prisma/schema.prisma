@@ -7,6 +7,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums for Legal Documents
+enum NormType {
+  CONSTITUTIONAL_NORM
+  ORGANIC_LAW
+  ORDINARY_LAW
+  ORGANIC_CODE
+  ORDINARY_CODE
+  REGULATION_GENERAL
+  REGULATION_EXECUTIVE
+  ORDINANCE_MUNICIPAL
+  ORDINANCE_METROPOLITAN
+  RESOLUTION_ADMINISTRATIVE
+  RESOLUTION_JUDICIAL
+  ADMINISTRATIVE_AGREEMENT
+  INTERNATIONAL_TREATY
+  JUDICIAL_PRECEDENT
+}
+
+enum LegalHierarchy {
+  CONSTITUCION
+  TRATADOS_INTERNACIONALES_DDHH
+  LEYES_ORGANICAS
+  LEYES_ORDINARIAS
+  CODIGOS_ORGANICOS
+  CODIGOS_ORDINARIOS
+  REGLAMENTOS
+  ORDENANZAS
+  RESOLUCIONES
+  ACUERDOS_ADMINISTRATIVOS
+}
+
+enum PublicationType {
+  ORDINARIO
+  SUPLEMENTO
+  SEGUNDO_SUPLEMENTO
+  SUPLEMENTO_ESPECIAL
+  EDICION_CONSTITUCIONAL
+}
+
+enum DocumentState {
+  ORIGINAL
+  REFORMADO
+}
+
+enum Jurisdiction {
+  NACIONAL
+  PROVINCIAL
+  MUNICIPAL
+  INTERNACIONAL
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -136,21 +187,45 @@ model DocumentChunk {
 
 model LegalDocument {
   id            String   @id @default(uuid())
-  title         String
-  category      String
-  content       String   @db.Text
-  metadata      Json?
-  uploadedBy    String   @map("uploaded_by")
-  isActive      Boolean  @default(true) @map("is_active")
-  viewCount     Int      @default(0) @map("view_count")
-  downloadCount Int      @default(0) @map("download_count")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  uploader    User                 @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
-  chunks      LegalDocumentChunk[]
-  specialties DocumentSpecialty[]
+  // New required fields according to specifications
+  normType             NormType          @map("norm_type")                    // Tipo de Norma (replaces old title field)
+  normTitle            String            @map("norm_title")                   // Título de la Norma (actual document title)
+  legalHierarchy       LegalHierarchy    @map("legal_hierarchy")              // Jerarquía Legal (replaces old category)
+  publicationType      PublicationType   @map("publication_type")             // Tipo de Publicación Registro Oficial
+  publicationNumber    String            @map("publication_number")           // Número de Publicación Registro Oficial
+  publicationDate      DateTime?         @map("publication_date")             // Fecha de Publicación
+  lastReformDate       DateTime?         @map("last_reform_date")             // Fecha de última reforma
+  documentState        DocumentState     @default(ORIGINAL) @map("document_state") // Estado: Original/Reformado
+  jurisdiction         Jurisdiction      @default(NACIONAL)                   // Jurisdicción
 
+  // Content and processing
+  content              String            @db.Text                             // Full document text content
+  metadata             Json?                                                   // Additional metadata
+
+  // Legacy fields (kept for backward compatibility)
+  title                String?                                                 // Old title field (deprecated, use normTitle)
+  category             String?                                                 // Old category (deprecated, use legalHierarchy)
+
+  // Admin and tracking
+  uploadedBy           String            @map("uploaded_by")
+  isActive             Boolean           @default(true) @map("is_active")
+  viewCount            Int               @default(0) @map("view_count")
+  downloadCount        Int               @default(0) @map("download_count")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  uploader             User              @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  chunks               LegalDocumentChunk[]
+  specialties          DocumentSpecialty[]
+
+  @@index([normType])
+  @@index([legalHierarchy])
+  @@index([jurisdiction])
+  @@index([publicationType])
+  @@index([documentState])
+  @@index([publicationDate])
   @@map("legal_documents")
 }
 
