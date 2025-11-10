@@ -34,7 +34,7 @@ try {
   ];
 
   // Migration that failed and needs to be rolled back before re-applying
-  const failedMigrationToRollback = '20250111_calendar_tasks_notifications_finance';
+  const failedMigrationToRollback = '20251110_legal_document_enhancements';
 
   let resolvedCount = 0;
   let alreadyAppliedCount = 0;
