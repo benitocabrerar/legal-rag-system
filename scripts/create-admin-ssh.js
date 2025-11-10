@@ -29,7 +29,6 @@ async function createAdmin() {
         role: 'admin',
         planTier: 'team',
         isActive: true,
-        isVerified: true,
         passwordHash: passwordHash,
         updatedAt: new Date(),
       },
@@ -39,7 +38,6 @@ async function createAdmin() {
         role: 'admin',
         planTier: 'team',
         isActive: true,
-        isVerified: true,
         passwordHash: passwordHash,
       },
     });
