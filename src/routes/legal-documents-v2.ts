@@ -89,6 +89,19 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
           });
         }
 
+        // Helper function to convert date strings to ISO 8601 datetime format
+        const toISODateTime = (dateStr: string | undefined): string | undefined => {
+          if (!dateStr) return undefined;
+          try {
+            // If already ISO datetime, return as-is
+            if (dateStr.includes('T')) return dateStr;
+            // Convert simple date to ISO datetime
+            return new Date(dateStr).toISOString();
+          } catch {
+            return undefined;
+          }
+        };
+
         // Build document data from form fields
         documentData = {
           normType: formData.norm_type,
@@ -97,10 +110,10 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
           content: extractedText,
           publicationType: formData.publication_type,
           publicationNumber: formData.publication_number,
-          publicationDate: formData.publication_date || undefined,
+          publicationDate: toISODateTime(formData.publication_date),
           documentState: formData.document_state,
           jurisdiction: formData.jurisdiction,
-          lastReformDate: formData.last_reform_date || undefined,
+          lastReformDate: toISODateTime(formData.last_reform_date),
         };
       } else {
         // Handle JSON request
