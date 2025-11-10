@@ -21,7 +21,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // CREATE LEGAL DOCUMENT
   // ============================================================================
-  fastify.post('/api/v2/legal-documents', {
+  fastify.post('/legal-documents-v2', {
     schema: {
       body: CreateLegalDocumentSchema,
       tags: ['Legal Documents'],
@@ -66,7 +66,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // UPDATE LEGAL DOCUMENT
   // ============================================================================
-  fastify.put('/api/v2/legal-documents/:id', {
+  fastify.put('/legal-documents-v2/:id', {
     schema: {
       params: {
         type: 'object',
@@ -125,7 +125,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // QUERY LEGAL DOCUMENTS
   // ============================================================================
-  fastify.get('/api/v2/legal-documents', {
+  fastify.get('/legal-documents-v2', {
     schema: {
       querystring: QueryLegalDocumentsSchema,
       tags: ['Legal Documents'],
@@ -160,7 +160,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // GET SINGLE LEGAL DOCUMENT
   // ============================================================================
-  fastify.get('/api/v2/legal-documents/:id', {
+  fastify.get('/legal-documents-v2/:id', {
     schema: {
       params: {
         type: 'object',
@@ -202,7 +202,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // DELETE LEGAL DOCUMENT
   // ============================================================================
-  fastify.delete('/api/v2/legal-documents/:id', {
+  fastify.delete('/legal-documents-v2/:id', {
     schema: {
       params: {
         type: 'object',
@@ -262,7 +262,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // CREATE DOCUMENT REVISION
   // ============================================================================
-  fastify.post('/api/v2/legal-documents/:id/revisions', {
+  fastify.post('/legal-documents-v2/:id/revisions', {
     schema: {
       params: {
         type: 'object',
@@ -345,7 +345,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // SEMANTIC SEARCH
   // ============================================================================
-  fastify.post('/api/v2/legal-documents/search', {
+  fastify.post('/legal-documents-v2/search', {
     schema: {
       body: {
         type: 'object',
@@ -382,7 +382,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // LEGACY MIGRATION ENDPOINT
   // ============================================================================
-  fastify.post('/api/v2/legal-documents/migrate', {
+  fastify.post('/legal-documents-v2/migrate', {
     schema: {
       body: LegacyLegalDocumentSchema,
       tags: ['Legal Documents'],
@@ -428,7 +428,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   // ============================================================================
   // GET ENUM VALUES (For Frontend Dropdowns)
   // ============================================================================
-  fastify.get('/api/v2/legal-documents/enums', {
+  fastify.get('/legal-documents-v2/enums', {
     schema: {
       tags: ['Legal Documents'],
       description: 'Get all enum values for legal documents',
