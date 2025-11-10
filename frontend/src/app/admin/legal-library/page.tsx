@@ -77,6 +77,7 @@ export default function LegalLibraryPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingAfterUpload, setProcessingAfterUpload] = useState(false);
   const [filterHierarchy, setFilterHierarchy] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -125,10 +126,11 @@ export default function LegalLibraryPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadForm.file) return;
+    if (!uploadForm.file || uploading || processingAfterUpload) return;
 
     setUploading(true);
     setUploadProgress(0);
+    setProcessingAfterUpload(false);
 
     try {
       const formData = new FormData();
@@ -148,16 +150,25 @@ export default function LegalLibraryPage() {
         formData.append('last_reform_date', uploadForm.last_reform_date);
       }
 
-      await api.post('/legal-documents-v2', formData, {
+      // Show processing state when upload reaches 100%
+      const response = await api.post('/legal-documents-v2', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
           setUploadProgress(progress);
+
+          // When upload reaches 100%, show processing message
+          if (progress === 100) {
+            setUploading(false);
+            setProcessingAfterUpload(true);
+          }
         },
       });
 
+      // Success - processing complete
+      setProcessingAfterUpload(false);
       alert('✅ Documento legal subido y procesado exitosamente');
       setShowUploadModal(false);
       setUploadForm({
@@ -178,8 +189,26 @@ export default function LegalLibraryPage() {
       console.error('Error uploading document:', error);
       const errorMessage = error?.response?.data?.message || 'Error al subir documento legal';
       alert(`❌ ${errorMessage}`);
+      setProcessingAfterUpload(false);
     } finally {
       setUploading(false);
+      setProcessingAfterUpload(false);
+    }
+  };
+
+  const handleDelete = async (documentId: string, documentTitle: string) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar "${documentTitle}"?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/legal-documents-v2/${documentId}`);
+      alert('✅ Documento eliminado exitosamente');
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      const errorMessage = error?.response?.data?.message || 'Error al eliminar documento';
+      alert(`❌ ${errorMessage}`);
     }
   };
 
@@ -366,9 +395,17 @@ export default function LegalLibraryPage() {
                       ? '⏳ Procesando'
                       : '✗ Error'}
                   </span>
-                  <span className="text-xs text-gray-500">
-                    {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
-                  </span>
+                  {doc.fileSize && (
+                    <span className="text-xs text-gray-500">
+                      {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(doc.id, doc.normTitle)}
+                    className="text-xs text-red-600 hover:text-red-800 font-semibold hover:underline"
+                  >
+                    🗑️ Eliminar
+                  </button>
                 </div>
               </div>
             </div>
@@ -578,7 +615,7 @@ export default function LegalLibraryPage() {
               {uploading && uploadProgress > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-blue-800">Subiendo...</span>
+                    <span className="text-sm font-semibold text-blue-800">Subiendo archivo...</span>
                     <span className="text-sm font-semibold text-blue-800">{uploadProgress}%</span>
                   </div>
                   <div className="w-full bg-blue-200 rounded-full h-2">
@@ -586,6 +623,23 @@ export default function LegalLibraryPage() {
                       className="bg-blue-600 h-2 rounded-full transition-all"
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Processing After Upload */}
+              {processingAfterUpload && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-purple-800">
+                        Procesando documento...
+                      </span>
+                      <p className="text-xs text-purple-600 mt-1">
+                        Extrayendo texto del PDF y generando embeddings vectoriales. Esto puede tomar unos segundos.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -608,18 +662,23 @@ export default function LegalLibraryPage() {
                   onClick={() => {
                     setShowUploadModal(false);
                     setUploadProgress(0);
+                    setProcessingAfterUpload(false);
                   }}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                  disabled={uploading}
+                  disabled={uploading || processingAfterUpload}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading || !uploadForm.file}
+                  disabled={uploading || processingAfterUpload || !uploadForm.file}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >
-                  {uploading ? `Subiendo... ${uploadProgress}%` : '📤 Subir Documento'}
+                  {uploading
+                    ? `Subiendo... ${uploadProgress}%`
+                    : processingAfterUpload
+                    ? '⏳ Procesando...'
+                    : '📤 Subir Documento'}
                 </button>
               </div>
             </form>
