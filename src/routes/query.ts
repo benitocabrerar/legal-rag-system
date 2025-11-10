@@ -11,8 +11,43 @@ const openai = new OpenAI({
 const querySchema = z.object({
   caseId: z.string().uuid(),
   query: z.string().min(1),
-  maxResults: z.number().min(1).max(20).default(5),
+  maxResults: z.number().min(1).max(20).default(10),
 });
+
+// Helper function to preprocess query and extract article references
+function preprocessQuery(query: string): {
+  normalizedQuery: string;
+  articleNumbers: string[];
+  searchTerms: string[]
+} {
+  const articleNumbers: string[] = [];
+  const searchTerms: string[] = [query]; // Always include original query
+
+  // Patterns to detect article mentions in different formats
+  const patterns = [
+    /art(?:í|i)culo\s*(\d+)/gi,  // "artículo 100" or "articulo 100"
+    /art\.\s*(\d+)/gi,            // "art. 100"
+    /art\s+(\d+)/gi,              // "art 100"
+    /art\.(\d+)/gi,               // "art.100"
+  ];
+
+  let normalizedQuery = query;
+
+  patterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(query)) !== null) {
+      const articleNum = match[1];
+      if (!articleNumbers.includes(articleNum)) {
+        articleNumbers.push(articleNum);
+        // Add standardized format to search terms
+        searchTerms.push(`Art. ${articleNum}`);
+        searchTerms.push(`Artículo ${articleNum}`);
+      }
+    }
+  });
+
+  return { normalizedQuery, articleNumbers, searchTerms };
+}
 
 export async function queryRoutes(fastify: FastifyInstance) {
   // RAG Query endpoint - Search documents and generate answer
@@ -35,13 +70,26 @@ export async function queryRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'Case not found' });
       }
 
-      // Generate embedding for the query
-      const queryEmbeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: body.query,
-      });
+      // Preprocess query to detect article references
+      const { normalizedQuery, articleNumbers, searchTerms } = preprocessQuery(body.query);
 
-      const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
+      // Log detected articles for debugging
+      if (articleNumbers.length > 0) {
+        fastify.log.info(`Detected article references: ${articleNumbers.join(', ')}`);
+        fastify.log.info(`Expanded search terms: ${searchTerms.join(', ')}`);
+      }
+
+      // Generate embeddings for all search terms
+      const embeddingResponses = await Promise.all(
+        searchTerms.map(term =>
+          openai.embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: term,
+          })
+        )
+      );
+
+      const queryEmbeddings = embeddingResponses.map(resp => resp.data[0].embedding);
 
       // Search for similar chunks from BOTH sources:
       // 1. Global legal documents (LegalDocument)
@@ -140,7 +188,11 @@ export async function queryRoutes(fastify: FastifyInstance) {
         // Calculate cosine similarity for each chunk with embeddings
         var chunksWithScores = chunksWithEmbeddings.map((chunk) => {
           const embedding = chunk.embedding as number[];
-          const similarity = cosineSimilarity(queryEmbedding, embedding);
+          // Calculate similarity for each query embedding and take MAX
+          const similarities = queryEmbeddings.map(queryEmb =>
+            cosineSimilarity(queryEmb, embedding)
+          );
+          const similarity = Math.max(...similarities);
           return {
             ...chunk,
             similarity,
