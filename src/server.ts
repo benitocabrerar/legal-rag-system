@@ -13,7 +13,8 @@ import { documentRoutes } from './routes/documents.js';
 import { queryRoutes } from './routes/query.js';
 import { legalDocumentRoutes } from './routes/legal-documents.js';
 import { legalDocumentRoutesV2 } from './routes/legal-documents-v2.js';
-import { legalDocumentRoutesEnhanced } from './routes/legal-documents-enhanced.js';
+// TEMPORARILY DISABLED: nodemailer import issue causing deployment failure
+// import { legalDocumentRoutesEnhanced } from './routes/legal-documents-enhanced.js';
 // TEMPORARILY DISABLED: Missing fastify-multer dependency
 // import { documentRoutesEnhanced } from './routes/documents-enhanced.js';
 import { adminUserRoutes } from './routes/admin/users.js';
@@ -109,7 +110,8 @@ await app.register(documentRoutes, { prefix: '/api/v1' });
 await app.register(queryRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutes, { prefix: '/api/v1' });
 await app.register(legalDocumentRoutesV2, { prefix: '/api/v1' });
-await app.register(legalDocumentRoutesEnhanced, { prefix: '/api/v1' });
+// TEMPORARILY DISABLED: nodemailer import issue causing deployment failure
+// await app.register(legalDocumentRoutesEnhanced, { prefix: '/api/v1' });
 await app.register(paymentRoutes, { prefix: '/api/v1' });
 
 // Register user management routes
