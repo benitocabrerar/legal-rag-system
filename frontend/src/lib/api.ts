@@ -295,3 +295,58 @@ export const settingsAPI = {
     return response.data;
   },
 };
+
+// Events/Calendar API
+export const eventsAPI = {
+  list: async (params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    type?: string;
+    status?: string;
+    caseId?: string;
+  }) => {
+    const response = await api.get('/events', { params });
+    return response.data;
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/events/${id}`);
+    return response.data.event;
+  },
+  create: async (data: {
+    title: string;
+    description?: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+    location?: string;
+    meetingLink?: string;
+    allDay?: boolean;
+    timezone?: string;
+    caseId?: string;
+    participants?: Array<{
+      userId?: string;
+      email?: string;
+      name?: string;
+      role?: string;
+    }>;
+    reminders?: Array<{
+      type: string;
+      minutesBefore: number;
+    }>;
+  }) => {
+    const response = await api.post('/events', data);
+    return response.data.event;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.patch(`/events/${id}`, data);
+    return response.data.event;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/events/${id}`);
+    return response.data;
+  },
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/events/${id}/status`, { status });
+    return response.data.event;
+  },
+};
