@@ -12,7 +12,8 @@
       "Bash(node wake-db-and-migrate.cjs:*)",
       "Bash(node -e:*)",
       "Bash(APPLY_THIS_MIGRATION.sql)",
-      "mcp__render__list_key_value"
+      "mcp__render__list_key_value",
+      "Bash(if exist \"prisma\\migrations\\20241110_document_analysis_system\" rmdir /s /q \"prisma\\migrations\\20241110_document_analysis_system\")"
     ],
     "deny": [],
     "ask": []
