@@ -35,6 +35,14 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         });
       }
 
+      // Check if this is a multipart request (file upload)
+      if (request.isMultipart()) {
+        return reply.code(501).send({
+          error: 'Not Implemented',
+          message: 'File upload support requires PDF/DOCX text extraction libraries. Please install pdf-parse or mammoth packages, or send document content as JSON with the "content" field already extracted.',
+        });
+      }
+
       const body = CreateLegalDocumentSchema.parse(request.body);
       const document = await documentService.createDocument(body, user.id);
 
