@@ -79,6 +79,14 @@ export async function queryRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Expanded search terms: ${searchTerms.join(', ')}`);
       }
 
+      // Automatically increase maxResults when articles are detected
+      // to ensure we find the specific article chunk even if it has lower similarity
+      let effectiveMaxResults = body.maxResults;
+      if (articleNumbers.length > 0 && body.maxResults < 20) {
+        effectiveMaxResults = 20;
+        fastify.log.info(`Increased maxResults from ${body.maxResults} to ${effectiveMaxResults} for article search`);
+      }
+
       // Generate embeddings for all search terms
       const embeddingResponses = await Promise.all(
         searchTerms.map(term =>
@@ -172,7 +180,7 @@ export async function queryRoutes(fastify: FastifyInstance) {
             const contentLower = chunk.content.toLowerCase();
             return contentLower.includes(queryLower);
           })
-          .slice(0, body.maxResults)
+          .slice(0, effectiveMaxResults)
           .map((chunk) => ({
             ...chunk,
             similarity: 1.0, // Placeholder similarity for text matches
@@ -203,7 +211,7 @@ export async function queryRoutes(fastify: FastifyInstance) {
       // Sort by similarity and take top results
       const topChunks = chunksWithScores
         .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, body.maxResults);
+        .slice(0, effectiveMaxResults);
 
       // Build context from top chunks, indicating source
       const context = topChunks
