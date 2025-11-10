@@ -384,9 +384,7 @@ CREATE TRIGGER maintain_hierarchy
   BEFORE INSERT OR UPDATE ON document_registry
   FOR EACH ROW EXECUTE FUNCTION maintain_document_hierarchy();
 
--- Grant permissions
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;`;
+-- Grant permissions removed (not applicable to Render PostgreSQL)`;
 
 export async function migrationRoutesEmbedded(app: FastifyInstance) {
   const prisma = new PrismaClient();
