@@ -350,3 +350,53 @@ export const eventsAPI = {
     return response.data.event;
   },
 };
+
+// Tasks API
+export const tasksAPI = {
+  list: async (params?: {
+    status?: string;
+    priority?: string;
+    caseId?: string;
+    assignedToId?: string;
+    dueDateFrom?: string;
+    dueDateTo?: string;
+    isArchived?: boolean;
+  }) => {
+    const response = await api.get('/tasks', { params });
+    return response.data;
+  },
+  get: async (id: string) => {
+    const response = await api.get(`/tasks/${id}`);
+    return response.data.task;
+  },
+  create: async (data: {
+    title: string;
+    description?: string;
+    status?: string;
+    priority: string;
+    dueDate?: string;
+    caseId?: string;
+    assignedToId?: string;
+    tags?: string[];
+    reminderDate?: string;
+    checklistItems?: Array<{
+      title: string;
+      position: number;
+    }>;
+  }) => {
+    const response = await api.post('/tasks', data);
+    return response.data.task;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.patch(`/tasks/${id}`, data);
+    return response.data.task;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/tasks/${id}`);
+    return response.data;
+  },
+  updateStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/tasks/${id}/status`, { status });
+    return response.data.task;
+  },
+};
