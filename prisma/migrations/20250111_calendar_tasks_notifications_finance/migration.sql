@@ -32,7 +32,7 @@ CREATE TYPE "PaymentMethodType" AS ENUM ('CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'B
 CREATE TYPE "ServiceItemType" AS ENUM ('HOURLY', 'FIXED', 'EXPENSE', 'RETAINER', 'CONTINGENCY');
 
 -- CreateTable
-CREATE TABLE "Event" (
+CREATE TABLE "events" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -55,11 +55,11 @@ CREATE TABLE "Event" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "EventParticipant" (
+CREATE TABLE "event_participants" (
     "id" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
     "userId" TEXT,
@@ -70,11 +70,11 @@ CREATE TABLE "EventParticipant" (
     "responseTime" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "EventParticipant_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "event_participants_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "EventReminder" (
+CREATE TABLE "event_reminders" (
     "id" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
     "type" "ReminderType" NOT NULL,
@@ -86,11 +86,11 @@ CREATE TABLE "EventReminder" (
     "errorMessage" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "EventReminder_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "event_reminders_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Task" (
+CREATE TABLE "tasks" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -113,11 +113,11 @@ CREATE TABLE "Task" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Task_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "tasks_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TaskChecklistItem" (
+CREATE TABLE "task_checklist_items" (
     "id" TEXT NOT NULL,
     "taskId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -127,11 +127,11 @@ CREATE TABLE "TaskChecklistItem" (
     "completedBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TaskChecklistItem_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "task_checklist_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "TaskHistory" (
+CREATE TABLE "task_history" (
     "id" TEXT NOT NULL,
     "taskId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -140,11 +140,11 @@ CREATE TABLE "TaskHistory" (
     "comment" TEXT,
     "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TaskHistory_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "task_history_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "NotificationTemplate" (
+CREATE TABLE "notification_templates" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -156,11 +156,11 @@ CREATE TABLE "NotificationTemplate" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "NotificationTemplate_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "notification_templates_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "NotificationLog" (
+CREATE TABLE "notification_logs" (
     "id" TEXT NOT NULL,
     "templateId" TEXT,
     "userId" TEXT NOT NULL,
@@ -175,11 +175,11 @@ CREATE TABLE "NotificationLog" (
     "metadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "NotificationLog_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "notification_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Agreement" (
+CREATE TABLE "agreements" (
     "id" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
     "agreementType" TEXT NOT NULL,
@@ -196,11 +196,11 @@ CREATE TABLE "Agreement" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Agreement_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "agreements_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "ServiceItem" (
+CREATE TABLE "service_items" (
     "id" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
@@ -214,11 +214,11 @@ CREATE TABLE "ServiceItem" (
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ServiceItem_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "service_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "InvoiceFinance" (
+CREATE TABLE "finance_invoices" (
     "id" TEXT NOT NULL,
     "invoiceNumber" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
@@ -237,11 +237,11 @@ CREATE TABLE "InvoiceFinance" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "InvoiceFinance_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "finance_invoices_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "PaymentFinance" (
+CREATE TABLE "finance_payments" (
     "id" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
@@ -255,11 +255,11 @@ CREATE TABLE "PaymentFinance" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "PaymentFinance_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "finance_payments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "CaseFinance" (
+CREATE TABLE "case_finances" (
     "id" TEXT NOT NULL,
     "caseId" TEXT NOT NULL,
     "totalBilled" DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -271,152 +271,152 @@ CREATE TABLE "CaseFinance" (
     "lastPaymentDate" TIMESTAMP(3),
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "CaseFinance_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "case_finances_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE INDEX "Event_createdBy_idx" ON "Event"("createdBy");
+CREATE INDEX "events_createdBy_idx" ON "events"("createdBy");
 
 -- CreateIndex
-CREATE INDEX "Event_caseId_idx" ON "Event"("caseId");
+CREATE INDEX "events_caseId_idx" ON "events"("caseId");
 
 -- CreateIndex
-CREATE INDEX "Event_startTime_idx" ON "Event"("startTime");
+CREATE INDEX "events_startTime_idx" ON "events"("startTime");
 
 -- CreateIndex
-CREATE INDEX "EventParticipant_eventId_idx" ON "EventParticipant"("eventId");
+CREATE INDEX "event_participants_eventId_idx" ON "event_participants"("eventId");
 
 -- CreateIndex
-CREATE INDEX "EventParticipant_userId_idx" ON "EventParticipant"("userId");
+CREATE INDEX "event_participants_userId_idx" ON "event_participants"("userId");
 
 -- CreateIndex
-CREATE INDEX "EventReminder_eventId_idx" ON "EventReminder"("eventId");
+CREATE INDEX "event_reminders_eventId_idx" ON "event_reminders"("eventId");
 
 -- CreateIndex
-CREATE INDEX "Task_assignedTo_idx" ON "Task"("assignedTo");
+CREATE INDEX "tasks_assignedTo_idx" ON "tasks"("assignedTo");
 
 -- CreateIndex
-CREATE INDEX "Task_createdBy_idx" ON "Task"("createdBy");
+CREATE INDEX "tasks_createdBy_idx" ON "tasks"("createdBy");
 
 -- CreateIndex
-CREATE INDEX "Task_caseId_idx" ON "Task"("caseId");
+CREATE INDEX "tasks_caseId_idx" ON "tasks"("caseId");
 
 -- CreateIndex
-CREATE INDEX "Task_status_idx" ON "Task"("status");
+CREATE INDEX "tasks_status_idx" ON "tasks"("status");
 
 -- CreateIndex
-CREATE INDEX "Task_dueDate_idx" ON "Task"("dueDate");
+CREATE INDEX "tasks_dueDate_idx" ON "tasks"("dueDate");
 
 -- CreateIndex
-CREATE INDEX "TaskChecklistItem_taskId_idx" ON "TaskChecklistItem"("taskId");
+CREATE INDEX "task_checklist_items_taskId_idx" ON "task_checklist_items"("taskId");
 
 -- CreateIndex
-CREATE INDEX "TaskHistory_taskId_idx" ON "TaskHistory"("taskId");
+CREATE INDEX "task_history_taskId_idx" ON "task_history"("taskId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "NotificationTemplate_code_key" ON "NotificationTemplate"("code");
+CREATE UNIQUE INDEX "notification_templates_code_key" ON "notification_templates"("code");
 
 -- CreateIndex
-CREATE INDEX "NotificationLog_userId_idx" ON "NotificationLog"("userId");
+CREATE INDEX "notification_logs_userId_idx" ON "notification_logs"("userId");
 
 -- CreateIndex
-CREATE INDEX "NotificationLog_templateId_idx" ON "NotificationLog"("templateId");
+CREATE INDEX "notification_logs_templateId_idx" ON "notification_logs"("templateId");
 
 -- CreateIndex
-CREATE INDEX "NotificationLog_status_idx" ON "NotificationLog"("status");
+CREATE INDEX "notification_logs_status_idx" ON "notification_logs"("status");
 
 -- CreateIndex
-CREATE INDEX "Agreement_caseId_idx" ON "Agreement"("caseId");
+CREATE INDEX "agreements_caseId_idx" ON "agreements"("caseId");
 
 -- CreateIndex
-CREATE INDEX "ServiceItem_invoiceId_idx" ON "ServiceItem"("invoiceId");
+CREATE INDEX "service_items_invoiceId_idx" ON "service_items"("invoiceId");
 
 -- CreateIndex
-CREATE INDEX "ServiceItem_caseId_idx" ON "ServiceItem"("caseId");
+CREATE INDEX "service_items_caseId_idx" ON "service_items"("caseId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "InvoiceFinance_invoiceNumber_key" ON "InvoiceFinance"("invoiceNumber");
+CREATE UNIQUE INDEX "finance_invoices_invoiceNumber_key" ON "finance_invoices"("invoiceNumber");
 
 -- CreateIndex
-CREATE INDEX "InvoiceFinance_caseId_idx" ON "InvoiceFinance"("caseId");
+CREATE INDEX "finance_invoices_caseId_idx" ON "finance_invoices"("caseId");
 
 -- CreateIndex
-CREATE INDEX "InvoiceFinance_status_idx" ON "InvoiceFinance"("status");
+CREATE INDEX "finance_invoices_status_idx" ON "finance_invoices"("status");
 
 -- CreateIndex
-CREATE INDEX "PaymentFinance_invoiceId_idx" ON "PaymentFinance"("invoiceId");
+CREATE INDEX "finance_payments_invoiceId_idx" ON "finance_payments"("invoiceId");
 
 -- CreateIndex
-CREATE INDEX "PaymentFinance_caseId_idx" ON "PaymentFinance"("caseId");
+CREATE INDEX "finance_payments_caseId_idx" ON "finance_payments"("caseId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CaseFinance_caseId_key" ON "CaseFinance"("caseId");
+CREATE UNIQUE INDEX "case_finances_caseId_key" ON "case_finances"("caseId");
 
 -- AddForeignKey
-ALTER TABLE "Event" ADD CONSTRAINT "Event_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Event" ADD CONSTRAINT "Event_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventParticipant" ADD CONSTRAINT "EventParticipant_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "event_participants" ADD CONSTRAINT "event_participants_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventParticipant" ADD CONSTRAINT "EventParticipant_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "event_participants" ADD CONSTRAINT "event_participants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventReminder" ADD CONSTRAINT "EventReminder_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "event_reminders" ADD CONSTRAINT "event_reminders_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventReminder" ADD CONSTRAINT "EventReminder_recipientUserId_fkey" FOREIGN KEY ("recipientUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "event_reminders" ADD CONSTRAINT "event_reminders_recipientUserId_fkey" FOREIGN KEY ("recipientUserId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Task" ADD CONSTRAINT "Task_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Task" ADD CONSTRAINT "Task_assignedTo_fkey" FOREIGN KEY ("assignedTo") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_assignedTo_fkey" FOREIGN KEY ("assignedTo") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Task" ADD CONSTRAINT "Task_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskChecklistItem" ADD CONSTRAINT "TaskChecklistItem_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "task_checklist_items" ADD CONSTRAINT "task_checklist_items_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskChecklistItem" ADD CONSTRAINT "TaskChecklistItem_completedBy_fkey" FOREIGN KEY ("completedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "task_checklist_items" ADD CONSTRAINT "task_checklist_items_completedBy_fkey" FOREIGN KEY ("completedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskHistory" ADD CONSTRAINT "TaskHistory_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "task_history" ADD CONSTRAINT "task_history_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskHistory" ADD CONSTRAINT "TaskHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "task_history" ADD CONSTRAINT "task_history_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "NotificationLog" ADD CONSTRAINT "NotificationLog_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "NotificationTemplate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "notification_logs" ADD CONSTRAINT "notification_logs_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "notification_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "NotificationLog" ADD CONSTRAINT "NotificationLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "notification_logs" ADD CONSTRAINT "notification_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Agreement" ADD CONSTRAINT "Agreement_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "agreements" ADD CONSTRAINT "agreements_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ServiceItem" ADD CONSTRAINT "ServiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "InvoiceFinance"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_items" ADD CONSTRAINT "service_items_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "finance_invoices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ServiceItem" ADD CONSTRAINT "ServiceItem_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_items" ADD CONSTRAINT "service_items_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "InvoiceFinance" ADD CONSTRAINT "InvoiceFinance_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "finance_invoices" ADD CONSTRAINT "finance_invoices_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "InvoiceFinance" ADD CONSTRAINT "InvoiceFinance_agreementId_fkey" FOREIGN KEY ("agreementId") REFERENCES "Agreement"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "finance_invoices" ADD CONSTRAINT "finance_invoices_agreementId_fkey" FOREIGN KEY ("agreementId") REFERENCES "agreements"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PaymentFinance" ADD CONSTRAINT "PaymentFinance_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "InvoiceFinance"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "finance_payments" ADD CONSTRAINT "finance_payments_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "finance_invoices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PaymentFinance" ADD CONSTRAINT "PaymentFinance_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "finance_payments" ADD CONSTRAINT "finance_payments_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CaseFinance" ADD CONSTRAINT "CaseFinance_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "Case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "case_finances" ADD CONSTRAINT "case_finances_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
