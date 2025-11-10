@@ -205,7 +205,8 @@ export class LegalDocumentService {
       ...(query.publicationType && { publicationType: query.publicationType }),
       ...(query.documentState && { documentState: query.documentState }),
       ...(query.jurisdiction && { jurisdiction: query.jurisdiction }),
-      ...(query.isActive !== undefined && { isActive: query.isActive }),
+      // Filter active documents by default unless explicitly specified
+      isActive: query.isActive !== undefined ? query.isActive : true,
       ...(query.search && {
         OR: [
           { normTitle: { contains: query.search, mode: 'insensitive' } },
