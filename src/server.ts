@@ -28,6 +28,7 @@ import { calendarRoutes } from './routes/calendar.js';
 import { taskRoutes } from './routes/tasks.js';
 import { notificationsEnhancedRoutes } from './routes/notifications-enhanced.js';
 import { financeRoutes } from './routes/finance.js';
+import { diagnosticsRoutes } from './routes/diagnostics.js';
 
 dotenv.config();
 
@@ -123,6 +124,9 @@ await app.register(calendarRoutes, { prefix: '/api/v1' });
 await app.register(taskRoutes, { prefix: '/api/v1' });
 await app.register(notificationsEnhancedRoutes, { prefix: '/api/v1' });
 await app.register(financeRoutes, { prefix: '/api/v1' });
+
+// Register diagnostics routes
+await app.register(diagnosticsRoutes, { prefix: '/api/v1' });
 
 // Start server
 const start = async () => {
