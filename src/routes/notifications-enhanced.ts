@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient, NotificationChannel } from '@prisma/client';
 import { z } from 'zod';
+import { emailService } from '../services/emailService.js';
+import EmailTemplates from '../templates/emailTemplates.js';
 
 const prisma = new PrismaClient();
 
@@ -379,21 +381,31 @@ async function sendNotificationViaChannel(
   channel: NotificationChannel,
   data: { recipient: string; subject?: string; body: string }
 ): Promise<void> {
-  // This is a placeholder - integrate with actual services
   switch (channel) {
     case NotificationChannel.EMAIL:
-      // Integrate with SendGrid/Nodemailer
-      console.log('Sending email to:', data.recipient);
-      console.log('Subject:', data.subject);
-      console.log('Body:', data.body);
-      // TODO: Implement actual email sending
+      // Send email using SendGrid
+      if (!emailService.isValidEmail(data.recipient)) {
+        throw new Error('Invalid email address');
+      }
+
+      try {
+        await emailService.sendEmail({
+          to: data.recipient,
+          subject: data.subject || 'Notificación de Poweria Legal',
+          html: data.body,
+          text: data.body.replace(/<[^>]*>/g, ''), // Strip HTML for plain text
+        });
+      } catch (error) {
+        console.error('Failed to send email:', error);
+        throw new Error('Failed to send email notification');
+      }
       break;
 
     case NotificationChannel.SMS:
-      // Integrate with Twilio
+      // TODO: Integrate with Twilio
       console.log('Sending SMS to:', data.recipient);
       console.log('Message:', data.body);
-      // TODO: Implement actual SMS sending
+      // For now, just log - SMS integration can be added later
       break;
 
     case NotificationChannel.IN_APP:
@@ -403,16 +415,13 @@ async function sendNotificationViaChannel(
       break;
 
     case NotificationChannel.PUSH:
-      // Integrate with Firebase/OneSignal
+      // TODO: Integrate with Firebase/OneSignal
       console.log('Sending push notification to:', data.recipient);
       console.log('Message:', data.body);
-      // TODO: Implement actual push notification
+      // For now, just log - Push notification integration can be added later
       break;
 
     default:
       throw new Error(`Unsupported notification channel: ${channel}`);
   }
-
-  // Simulate async sending delay
-  await new Promise(resolve => setTimeout(resolve, 100));
 }
