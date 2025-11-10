@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS analysis_queue (
   processing_time_ms INTEGER,
 
   -- Metadata
-  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_by UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -276,7 +276,7 @@ CREATE INDEX idx_processing_history_date ON document_processing_history(created_
 -- Enhanced notification tables
 CREATE TABLE IF NOT EXISTS notification_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL,
 
   -- Subscription preferences
   subscription_type VARCHAR(50) NOT NULL, -- document_upload, analysis_complete, etc.
@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS notification_queue (
   -- Notification details
   template_id UUID REFERENCES notification_templates(id),
   channel VARCHAR(50) NOT NULL,
-  recipient_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  recipient_id UUID,
   recipient_email TEXT,
   recipient_phone TEXT,
 
