@@ -29,6 +29,7 @@ import { taskRoutes } from './routes/tasks.js';
 import { notificationsEnhancedRoutes } from './routes/notifications-enhanced.js';
 import { financeRoutes } from './routes/finance.js';
 import { diagnosticsRoutes } from './routes/diagnostics.js';
+import { migrationRoutes } from './routes/admin/migration.js';
 
 dotenv.config();
 
@@ -127,6 +128,9 @@ await app.register(financeRoutes, { prefix: '/api/v1' });
 
 // Register diagnostics routes
 await app.register(diagnosticsRoutes, { prefix: '/api/v1' });
+
+// Register migration routes (TEMPORARY - remove after use)
+await app.register(migrationRoutes, { prefix: '/api/v1/admin' });
 
 // Start server
 const start = async () => {
