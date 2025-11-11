@@ -573,10 +573,11 @@ export class LegalDocumentService {
       SELECT
         ld.*,
         ldc.content as matched_content,
-        1 - (ldc.embedding <=> ${queryEmbedding}::vector) as similarity
+        1 - (ldc.embedding_vector <=> ${queryEmbedding}::vector) as similarity
       FROM legal_document_chunks ldc
       JOIN legal_documents ld ON ld.id = ldc.legal_document_id
       WHERE ld.is_active = true
+        AND ldc.embedding_vector IS NOT NULL
       ORDER BY similarity DESC
       LIMIT ${limit}
     `;

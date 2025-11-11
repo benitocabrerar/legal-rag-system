@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalación de pgvector - Legal RAG System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .alert {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .code-block code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+        .step {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #007bff;
+            border-radius: 5px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        ul {
+            padding-left: 25px;
+        }
+        li {
+            margin: 10px 0;
+        }
+        .warning {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Instalación de pgvector en PostgreSQL</h1>
+
+        <div class="info">
+            <strong>ℹ️ Contexto:</strong> La búsqueda semántica con IA requiere la extensión <code>pgvector</code> para realizar búsquedas vectoriales eficientes en PostgreSQL.
+        </div>
+
+        <h2>📋 Pre-requisitos</h2>
+        <ul>
+            <li>Acceso SSH al backend de Render</li>
+            <li>Base de datos PostgreSQL activa</li>
+            <li>Documentos ya cargados y vectorizados</li>
+        </ul>
+
+        <h2>🔧 Pasos de Instalación</h2>
+
+        <div class="step">
+            <h3>Paso 1: Acceder al terminal SSH del Backend</h3>
+            <p>1. Ir a <a href="https://dashboard.render.com/" target="_blank">Render Dashboard</a></p>
+            <p>2. Navegar a: Services → <strong>legal-rag-api-qnew</strong></p>
+            <p>3. Hacer clic en el botón <strong>Shell</strong> en la parte superior derecha</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 2: Verificar la conexión a la base de datos</h3>
+            <p>Ejecuta el siguiente comando para verificar que puedes conectarte:</p>
+            <div class="code-block"><code>psql $DATABASE_URL -c "SELECT version();"</code></div>
+            <p>✅ Deberías ver la versión de PostgreSQL (17.x)</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 3: Ejecutar el script de instalación</h3>
+            <p>Ejecuta el script SQL que instala pgvector y convierte los embeddings:</p>
+            <div class="code-block"><code>psql $DATABASE_URL -f scripts/install-pgvector.sql</code></div>
+
+            <p><strong>El script hará lo siguiente:</strong></p>
+            <ul>
+                <li>📦 Instalar la extensión <code>pgvector</code></li>
+                <li>🔄 Agregar columnas de tipo <code>vector(1536)</code></li>
+                <li>📊 Convertir embeddings existentes de JSONB a vector</li>
+                <li>🚀 Crear índices HNSW para búsqueda eficiente</li>
+                <li>✅ Verificar que todo está correcto</li>
+            </ul>
+        </div>
+
+        <div class="alert">
+            <strong>⚠️ Nota:</strong> El proceso puede tardar 1-2 minutos dependiendo del tamaño de la base de datos. Tienes 435 chunks vectorizados que serán convertidos.
+        </div>
+
+        <div class="step">
+            <h3>Paso 4: Verificar la instalación</h3>
+            <p>Para confirmar que pgvector está instalado correctamente:</p>
+            <div class="code-block"><code>psql $DATABASE_URL -c "SELECT * FROM pg_extension WHERE extname = 'vector';"</code></div>
+
+            <p>Para verificar los embeddings convertidos:</p>
+            <div class="code-block"><code>psql $DATABASE_URL -c "SELECT COUNT(*) FROM legal_document_chunks WHERE embedding_vector IS NOT NULL;"</code></div>
+
+            <p>✅ Deberías ver <strong>435</strong> chunks con embeddings vectorizados</p>
+        </div>
+
+        <div class="step">
+            <h3>Paso 5: Actualizar el servicio de búsqueda</h3>
+            <p>Una vez instalado pgvector, el código del backend ya está listo para usar la búsqueda vectorial.</p>
+            <p>El endpoint de búsqueda semántica es:</p>
+            <div class="code-block"><code>POST https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/search</code></div>
+        </div>
+
+        <h2>🧪 Probar la Búsqueda Semántica</h2>
+
+        <p>Una vez instalado pgvector, puedes probar la búsqueda semántica con:</p>
+
+        <div class="code-block"><code>curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TU_JWT_TOKEN" \
+  -d '{
+    "query": "¿Cuáles son los derechos fundamentales de los ciudadanos?",
+    "limit": 3
+  }'</code></div>
+
+        <div class="success">
+            <strong>✅ ¿Qué obtendrás?</strong>
+            <ul>
+                <li>Búsqueda semántica con IA usando OpenAI embeddings</li>
+                <li>Resultados ordenados por similitud coseno</li>
+                <li>Respuestas relevantes incluso si no coincide exactamente el texto</li>
+                <li>Búsquedas ultra rápidas gracias a índices HNSW</li>
+            </ul>
+        </div>
+
+        <h2>❌ Solución de Problemas</h2>
+
+        <div class="warning">
+            <strong>Error: "permission denied to create extension"</strong>
+            <p>Si ves este error, significa que el usuario de la base de datos no tiene permisos de superusuario.</p>
+            <p><strong>Solución:</strong> Contacta al soporte de Render o ejecuta desde pgAdmin con un usuario con permisos.</p>
+        </div>
+
+        <div class="warning">
+            <strong>Error: "could not open extension control file"</strong>
+            <p>Esto significa que pgvector no está disponible en tu versión de PostgreSQL en Render.</p>
+            <p><strong>Solución:</strong> Verifica que estés usando PostgreSQL 17 que soporta pgvector nativamente.</p>
+        </div>
+
+        <h2>📚 Información Técnica</h2>
+
+        <div class="info">
+            <strong>Sobre los embeddings:</strong>
+            <ul>
+                <li><strong>Modelo:</strong> text-embedding-ada-002 (OpenAI)</li>
+                <li><strong>Dimensiones:</strong> 1536 (vector de números flotantes)</li>
+                <li><strong>Índice:</strong> HNSW (Hierarchical Navigable Small World)</li>
+                <li><strong>Métrica:</strong> Similitud coseno</li>
+                <li><strong>Chunks totales:</strong> 435 fragmentos de la Constitución</li>
+            </ul>
+        </div>
+
+        <h2>✅ Checklist Final</h2>
+
+        <ul>
+            <li>☐ Extensión pgvector instalada</li>
+            <li>☐ Columna embedding_vector creada</li>
+            <li>☐ 435 embeddings convertidos</li>
+            <li>☐ Índice HNSW creado</li>
+            <li>☐ Búsqueda semántica probada</li>
+        </ul>
+
+        <div class="success">
+            <strong>🎉 ¡Todo listo!</strong> Una vez completados estos pasos, tu sistema Legal RAG tendrá búsqueda semántica completa con IA.
+        </div>
+
+        <hr style="margin-top: 30px;">
+        <p style="text-align: center; color: #6c757d;">
+            <small>
+                📧 Usuario: benitocabrerar@gmail.com |
+                🗄️ Base de datos: legal-rag-postgres |
+                🌐 Backend: legal-rag-api-qnew
+            </small>
+        </p>
+    </div>
+</body>
+</html>
