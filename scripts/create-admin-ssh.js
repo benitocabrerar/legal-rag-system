@@ -23,6 +23,7 @@ async function createAdmin() {
     const passwordHash = await bcrypt.hash(adminPassword, 10);
 
     // Crear o actualizar usuario admin
+    // Solo usar los campos esenciales que existen en la BD
     const admin = await prisma.user.upsert({
       where: { email: adminEmail },
       update: {
@@ -30,7 +31,6 @@ async function createAdmin() {
         planTier: 'team',
         isActive: true,
         passwordHash: passwordHash,
-        updatedAt: new Date(),
       },
       create: {
         email: adminEmail,
