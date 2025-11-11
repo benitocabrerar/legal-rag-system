@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Usuario Admin - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .step {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-right: 15px;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-content {
+            margin-left: 65px;
+            color: #4b5563;
+        }
+
+        .code-block {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            overflow-x: auto;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-block.sql {
+            color: #60a5fa;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #92400e;
+        }
+
+        .warning {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning-icon {
+            font-size: 1.5rem;
+            color: #f59e0b;
+            margin-right: 10px;
+        }
+
+        .success {
+            background: #d1fae5;
+            border-left: 5px solid #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .success-icon {
+            font-size: 1.5rem;
+            color: #10b981;
+            margin-right: 10px;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            margin: 10px 5px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Crear Usuario Admin</h1>
+            <p>Legal RAG System - Instrucciones Paso a Paso</p>
+        </div>
+
+        <div class="content">
+            <div class="warning">
+                <span class="warning-icon">⚠️</span>
+                <strong>Importante:</strong> Este proceso solo se realiza UNA VEZ para crear el primer usuario administrador del sistema.
+            </div>
+
+            <!-- PASO 1 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    Acceder al Dashboard de Render
+                </div>
+                <div class="step-content">
+                    <p>Abre tu navegador y accede a:</p>
+                    <div class="code-block">
+                        https://dashboard.render.com/
+                    </div>
+                    <p>Inicia sesión con tu cuenta de Render (benitocabrerar@gmail.com)</p>
+                </div>
+            </div>
+
+            <!-- PASO 2 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    Navegar a la Base de Datos
+                </div>
+                <div class="step-content">
+                    <p>Una vez dentro del dashboard:</p>
+                    <ul>
+                        <li>En el menú lateral, haz clic en <span class="highlight">Databases</span></li>
+                        <li>Selecciona <span class="highlight">legal-rag-postgres</span></li>
+                        <li>Haz clic en la pestaña <span class="highlight">Console</span></li>
+                    </ul>
+                    <p style="margin-top: 15px;">Esto abrirá una consola SQL interactiva donde podrás ejecutar comandos directamente.</p>
+                </div>
+            </div>
+
+            <!-- PASO 3 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    Ejecutar el Script SQL
+                </div>
+                <div class="step-content">
+                    <p>Copia y pega el siguiente script SQL en la consola:</p>
+                    <div class="code-block sql">-- Crear usuario admin
+INSERT INTO users (
+  id,
+  email,
+  name,
+  role,
+  plan_tier,
+  created_at,
+  updated_at,
+  is_active,
+  is_verified
+)
+VALUES (
+  gen_random_uuid()::text,
+  'benitocabrerar@gmail.com',
+  'Benito Cabrera',
+  'admin',
+  'team',
+  NOW(),
+  NOW(),
+  true,
+  true
+)
+ON CONFLICT (email) DO UPDATE
+SET
+  role = 'admin',
+  plan_tier = 'team',
+  is_active = true,
+  is_verified = true,
+  updated_at = NOW()
+RETURNING id, email, name, role, plan_tier, created_at;</div>
+                    <p>Haz clic en <span class="highlight">Run</span> o presiona <span class="highlight">Ctrl + Enter</span></p>
+                </div>
+            </div>
+
+            <!-- PASO 4 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    Verificar la Creación
+                </div>
+                <div class="step-content">
+                    <p>El script debería devolver algo como:</p>
+                    <div class="code-block">
+id                                   | email                      | name           | role  | plan_tier | created_at
+-------------------------------------|----------------------------|----------------|-------|-----------|---------------------------
+a1b2c3d4-e5f6-7890-abcd-1234567890ab | benitocabrerar@gmail.com  | Benito Cabrera | admin | team      | 2025-11-10 23:45:12.345
+                    </div>
+                    <p>Si ves esta tabla, ¡el usuario admin fue creado exitosamente! ✅</p>
+                </div>
+            </div>
+
+            <!-- PASO 5 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    Establecer Contraseña
+                </div>
+                <div class="step-content">
+                    <p>Como el usuario fue creado sin contraseña, necesitas establecer una:</p>
+                    <ol>
+                        <li>Ve al frontend: <a href="https://legal-rag-frontend.onrender.com" class="link" target="_blank">https://legal-rag-frontend.onrender.com</a></li>
+                        <li>Haz clic en <span class="highlight">"¿Olvidaste tu contraseña?"</span></li>
+                        <li>Ingresa: <span class="highlight">benitocabrerar@gmail.com</span></li>
+                        <li>Revisa tu email para el enlace de restablecimiento</li>
+                        <li>Crea una contraseña segura (mínimo 8 caracteres)</li>
+                    </ol>
+                    <div class="warning" style="margin-top: 20px;">
+                        <span class="warning-icon">🔒</span>
+                        <strong>Seguridad:</strong> Usa una contraseña fuerte con letras mayúsculas, minúsculas, números y símbolos.
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 6 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">6</span>
+                    Iniciar Sesión
+                </div>
+                <div class="step-content">
+                    <p>Una vez que hayas establecido tu contraseña:</p>
+                    <ol>
+                        <li>Ve a: <a href="https://legal-rag-frontend.onrender.com" class="link" target="_blank">https://legal-rag-frontend.onrender.com</a></li>
+                        <li>Haz clic en <span class="highlight">"Iniciar Sesión"</span></li>
+                        <li>Ingresa:
+                            <ul>
+                                <li>Email: <span class="highlight">benitocabrerar@gmail.com</span></li>
+                                <li>Contraseña: <span class="highlight">tu nueva contraseña</span></li>
+                            </ul>
+                        </li>
+                        <li>Haz clic en <span class="highlight">"Entrar"</span></li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- PASO 7 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">7</span>
+                    Acceder al Panel de Admin
+                </div>
+                <div class="step-content">
+                    <p>Una vez dentro, deberías ver:</p>
+                    <ul>
+                        <li>Tu nombre en la esquina superior derecha: <span class="highlight">Benito Cabrera</span></li>
+                        <li>Rol: <span class="highlight">Admin</span></li>
+                        <li>Plan: <span class="highlight">Team</span></li>
+                        <li>Opciones de administración en el menú</li>
+                    </ul>
+                    <div class="success" style="margin-top: 20px;">
+                        <span class="success-icon">✅</span>
+                        <strong>¡Felicidades!</strong> Ahora tienes acceso completo al sistema como administrador.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIGUIENTES PASOS -->
+            <div class="step" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 5px solid #10b981;">
+                <div class="step-title" style="color: #10b981;">
+                    <span class="step-number">📋</span>
+                    Siguientes Pasos
+                </div>
+                <div class="step-content">
+                    <p><strong>Ahora puedes:</strong></p>
+                    <ul>
+                        <li>Subir documentos legales al sistema</li>
+                        <li>Probar el análisis automático de documentos</li>
+                        <li>Realizar búsquedas semánticas con IA</li>
+                        <li>Crear casos y gestionar documentos</li>
+                        <li>Administrar usuarios y permisos</li>
+                        <li>Ver estadísticas y métricas del sistema</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><strong>Para probar la carga de documentos, consulta:</strong></p>
+                    <a href="file:///C:/Users/benito/poweria/legal/TESTING_GUIDE.md" class="button">📖 Guía de Pruebas</a>
+                    <a href="file:///C:/Users/benito/poweria/legal/DEPLOYMENT_COMPLETE.html" class="button">🚀 Estado del Deploy</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Legal RAG System v1.0</strong></p>
+            <p>Backend: <a href="https://legal-rag-api-qnew.onrender.com/health" class="link" target="_blank">https://legal-rag-api-qnew.onrender.com</a></p>
+            <p>Frontend: <a href="https://legal-rag-frontend.onrender.com" class="link" target="_blank">https://legal-rag-frontend.onrender.com</a></p>
+            <p style="margin-top: 20px; color: #6b7280;">
+                © 2025 Legal RAG System | Creado con Claude Code
+            </p>
+        </div>
+    </div>
+</body>
+</html>

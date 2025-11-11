@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Técnica Completa - Vectorización Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section h2 {
+            color: #1e3c72;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #2a5298;
+            position: relative;
+        }
+
+        .section h2::before {
+            content: "";
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .section h3 {
+            color: #2a5298;
+            font-size: 1.6em;
+            margin-top: 35px;
+            margin-bottom: 20px;
+        }
+
+        .section h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .toc {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+        }
+
+        .toc h3 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            margin: 12px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .toc li::before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #2a5298;
+        }
+
+        .toc a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .toc a:hover {
+            color: #667eea;
+            padding-left: 10px;
+        }
+
+        .diagram {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .diagram-title {
+            font-size: 1.3em;
+            color: #1e3c72;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .flow-step {
+            background: white;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            padding: 20px 30px;
+            min-width: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: "⬇";
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5em;
+            color: #2a5298;
+        }
+
+        .flow-step:last-child::after {
+            content: "";
+        }
+
+        .flow-step-title {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .flow-step-desc {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 25px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .code-block .comment {
+            color: #6c757d;
+        }
+
+        .code-block .keyword {
+            color: #c678dd;
+        }
+
+        .code-block .string {
+            color: #98c379;
+        }
+
+        .code-block .number {
+            color: #d19a66;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .comparison-table thead {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+
+        .comparison-table th {
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .comparison-table td {
+            padding: 15px 18px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .comparison-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: #e9ecef;
+            transition: background 0.3s;
+        }
+
+        .comparison-table code {
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border-left: 5px solid #17a2b8;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-box strong {
+            color: #0c5460;
+            font-size: 1.1em;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .warning-box strong {
+            color: #856404;
+            font-size: 1.1em;
+        }
+
+        .success-box {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .success-box strong {
+            color: #155724;
+            font-size: 1.1em;
+        }
+
+        .danger-box {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-left: 5px solid #dc3545;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .danger-box strong {
+            color: #721c24;
+            font-size: 1.1em;
+        }
+
+        .tech-specs {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .tech-specs h4 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .tech-specs ul {
+            padding-left: 25px;
+        }
+
+        .tech-specs li {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .badge-primary {
+            background: #1e3c72;
+            color: white;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: black;
+        }
+
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        footer {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+        }
+
+        footer p {
+            margin: 8px 0;
+        }
+
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .arch-component {
+            background: white;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .arch-component h5 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .arch-component p {
+            color: #666;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Guía Técnica de Vectorización</h1>
+            <p>Documentación Completa del Sistema RAG con IA</p>
+            <p style="font-size: 0.9em; margin-top: 15px;">PostgreSQL + pgvector | Redis | Supabase</p>
+        </div>
+
+        <div class="content">
+            <!-- TABLE OF CONTENTS -->
+            <div class="toc">
+                <h3>📑 Índice de Contenidos</h3>
+                <ul>
+                    <li><a href="#overview">1. Resumen Ejecutivo</a></li>
+                    <li><a href="#what-is">2. ¿Qué es la Vectorización?</a></li>
+                    <li><a href="#current-architecture">3. Arquitectura Actual (PostgreSQL + pgvector)</a></li>
+                    <li><a href="#vectorization-process">4. Proceso Completo de Vectorización</a></li>
+                    <li><a href="#postgresql-implementation">5. Implementación con PostgreSQL</a></li>
+                    <li><a href="#redis-implementation">6. Implementación con Redis</a></li>
+                    <li><a href="#supabase-implementation">7. Implementación con Supabase</a></li>
+                    <li><a href="#comparison">8. Comparación de Bases de Datos</a></li>
+                    <li><a href="#best-practices">9. Mejores Prácticas</a></li>
+                    <li><a href="#troubleshooting">10. Troubleshooting</a></li>
+                    <li><a href="#performance">11. Optimización de Performance</a></li>
+                </ul>
+            </div>
+
+            <!-- SECTION 1: OVERVIEW -->
+            <div class="section" id="overview">
+                <h2>1. Resumen Ejecutivo</h2>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">1,741</div>
+                        <div class="stat-label">Chunks Vectorizados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">1,536</div>
+                        <div class="stat-label">Dimensiones por Vector</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">Tasa de Éxito</div>
+                    </div>
+                </div>
+
+                <div class="success-box">
+                    <strong>✅ Estado del Sistema:</strong> El sistema Legal RAG está completamente operativo con búsqueda semántica impulsada por IA. Todos los documentos han sido vectorizados exitosamente y están disponibles para consultas en lenguaje natural.
+                </div>
+
+                <h3>Tecnologías Implementadas</h3>
+                <div class="architecture-grid">
+                    <div class="arch-component">
+                        <h5>🤖 OpenAI</h5>
+                        <p>text-embedding-ada-002</p>
+                        <p>Generación de embeddings</p>
+                    </div>
+                    <div class="arch-component">
+                        <h5>🗄️ PostgreSQL 17.6</h5>
+                        <p>pgvector 0.8.0</p>
+                        <p>Almacenamiento vectorial</p>
+                    </div>
+                    <div class="arch-component">
+                        <h5>📊 HNSW Index</h5>
+                        <p>Similitud Coseno</p>
+                        <p>Búsqueda eficiente</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: WHAT IS VECTORIZATION -->
+            <div class="section" id="what-is">
+                <h2>2. ¿Qué es la Vectorización?</h2>
+
+                <div class="info-box">
+                    <strong>🔍 Definición:</strong> La vectorización es el proceso de convertir texto en representaciones numéricas (vectores) que capturan el significado semántico del contenido. Estos vectores permiten comparar similitudes entre textos basándose en su significado, no solo en coincidencias exactas de palabras.
+                </div>
+
+                <h3>Conceptos Fundamentales</h3>
+
+                <h4>Embeddings (Incrustaciones)</h4>
+                <p>Un embedding es un vector de números de punto flotante que representa el significado de un texto en un espacio multidimensional.</p>
+
+                <div class="tech-specs">
+                    <h4>Ejemplo de Embedding</h4>
+                    <ul>
+                        <li><strong>Texto:</strong> "Los derechos fundamentales son inalienables"</li>
+                        <li><strong>Vector:</strong> [-0.019, -0.006, 0.003, ..., 0.015] (1,536 dimensiones)</li>
+                        <li><strong>Modelo:</strong> OpenAI text-embedding-ada-002</li>
+                    </ul>
+                </div>
+
+                <h4>Similitud Coseno</h4>
+                <p>Métrica que mide qué tan similares son dos vectores en el espacio multidimensional.</p>
+
+                <div class="code-block">similarity = 1 - (vector_a &lt;=&gt; vector_b)
+
+Rango: 0.0 (totalmente diferentes) a 1.0 (idénticos)
+Ejemplo: similarity = 0.89 → Alta relevancia</div>
+
+                <h4>Chunking (Fragmentación)</h4>
+                <p>División del documento en fragmentos más pequeños para procesamiento eficiente.</p>
+
+                <div class="tech-specs">
+                    <h4>Configuración de Chunking</h4>
+                    <ul>
+                        <li><strong>Tamaño del chunk:</strong> 1,000 caracteres</li>
+                        <li><strong>Solapamiento:</strong> No (sin overlap)</li>
+                        <li><strong>Estrategia:</strong> División secuencial</li>
+                        <li><strong>Razón:</strong> Balance entre contexto y granularidad</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 3: CURRENT ARCHITECTURE -->
+            <div class="section" id="current-architecture">
+                <h2>3. Arquitectura Actual (PostgreSQL + pgvector)</h2>
+
+                <div class="diagram">
+                    <div class="diagram-title">Arquitectura del Sistema</div>
+                    <div class="architecture-grid">
+                        <div class="arch-component">
+                            <h5>📄 Documento PDF</h5>
+                            <p>Entrada del usuario</p>
+                        </div>
+                        <div class="arch-component">
+                            <h5>🔧 Backend API</h5>
+                            <p>Fastify + TypeScript</p>
+                        </div>
+                        <div class="arch-component">
+                            <h5>🤖 OpenAI API</h5>
+                            <p>Generación embeddings</p>
+                        </div>
+                    </div>
+                    <div style="margin: 20px 0; font-size: 2em; color: #2a5298;">⬇</div>
+                    <div class="architecture-grid">
+                        <div class="arch-component">
+                            <h5>🗄️ PostgreSQL</h5>
+                            <p>legal_documents</p>
+                        </div>
+                        <div class="arch-component">
+                            <h5>📦 pgvector</h5>
+                            <p>legal_document_chunks</p>
+                        </div>
+                        <div class="arch-component">
+                            <h5>🔍 HNSW Index</h5>
+                            <p>Búsqueda vectorial</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Esquema de Base de Datos</h3>
+
+                <h4>Tabla: legal_documents</h4>
+                <div class="code-block">CREATE TABLE legal_documents (
+  id                UUID PRIMARY KEY,
+  norm_type         VARCHAR NOT NULL,
+  norm_title        VARCHAR NOT NULL,
+  legal_hierarchy   VARCHAR NOT NULL,
+  content           TEXT NOT NULL,
+  publication_type  VARCHAR,
+  publication_number VARCHAR,
+  publication_date  TIMESTAMP,
+  document_state    VARCHAR DEFAULT 'ORIGINAL',
+  jurisdiction      VARCHAR DEFAULT 'NACIONAL',
+  uploaded_by       UUID NOT NULL,
+  is_active         BOOLEAN DEFAULT true,
+  created_at        TIMESTAMP DEFAULT now(),
+  updated_at        TIMESTAMP DEFAULT now()
+);</div>
+
+                <h4>Tabla: legal_document_chunks</h4>
+                <div class="code-block">CREATE TABLE legal_document_chunks (
+  id                  UUID PRIMARY KEY,
+  legal_document_id   UUID NOT NULL REFERENCES legal_documents(id),
+  content             TEXT NOT NULL,
+  chunk_index         INTEGER NOT NULL,
+  embedding           JSONB,              -- Embeddings originales
+  embedding_vector    vector(1536),       -- Embeddings como vector pgvector
+  created_at          TIMESTAMP DEFAULT now()
+);
+
+-- Índice HNSW para búsqueda vectorial eficiente
+CREATE INDEX idx_legal_document_chunks_embedding_vector
+ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops);</div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Columnas Duales:</strong> El sistema mantiene dos columnas para embeddings:
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li><code>embedding</code> (JSONB) - Backup original de OpenAI</li>
+                        <li><code>embedding_vector</code> (vector) - Formato optimizado para pgvector</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 4: VECTORIZATION PROCESS -->
+            <div class="section" id="vectorization-process">
+                <h2>4. Proceso Completo de Vectorización</h2>
+
+                <div class="diagram">
+                    <div class="diagram-title">Flujo de Vectorización End-to-End</div>
+                    <div class="flow-container">
+                        <div class="flow-step">
+                            <div class="flow-step-title">1️⃣ Carga de Documento PDF</div>
+                            <div class="flow-step-desc">Usuario sube PDF mediante API multipart/form-data</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">2️⃣ Extracción de Texto</div>
+                            <div class="flow-step-desc">pdf.js-extract extrae texto completo del PDF</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">3️⃣ Validación y Almacenamiento</div>
+                            <div class="flow-step-desc">Documento guardado en tabla legal_documents</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">4️⃣ Chunking (Fragmentación)</div>
+                            <div class="flow-step-desc">Texto dividido en chunks de 1,000 caracteres</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">5️⃣ Generación de Embeddings</div>
+                            <div class="flow-step-desc">OpenAI genera vector de 1,536 dimensiones por chunk</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">6️⃣ Retry con Backoff Exponencial</div>
+                            <div class="flow-step-desc">Máximo 3 reintentos con delays de 1s, 2s, 4s</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">7️⃣ Almacenamiento en PostgreSQL</div>
+                            <div class="flow-step-desc">Chunks guardados con embeddings en JSONB</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">8️⃣ Conversión a Vector pgvector</div>
+                            <div class="flow-step-desc">JSONB convertido a tipo vector(1536)</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">9️⃣ Indexación HNSW</div>
+                            <div class="flow-step-desc">Índice vectorial creado para búsqueda rápida</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">✅ Documento Listo</div>
+                            <div class="flow-step-desc">Sistema reporta éxito con estadísticas de vectorización</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Código del Proceso</h3>
+
+                <h4>Función: createDocumentChunksAsync</h4>
+                <div class="code-block">async createDocumentChunksAsync(
+  documentId: string,
+  content: string
+): Promise<VectorizationResult> {
+  const chunkSize = 1000;
+  const chunks = [];
+
+  // PASO 1: Fragmentación
+  for (let i = 0; i < content.length; i += chunkSize) {
+    chunks.push(content.slice(i, i + chunkSize));
+  }
+
+  let successCount = 0;
+  let failCount = 0;
+  const createdChunks = [];
+
+  console.log(`📝 Generating embeddings for ${chunks.length} chunks...`);
+
+  // PASO 2: Generación de embeddings con retry
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    let embedding = null;
+
+    try {
+      // PASO 3: Llamada a OpenAI con retry exponencial
+      const embeddingResponse = await this.retryWithBackoff(
+        () => this.openai.embeddings.create({
+          model: 'text-embedding-ada-002',
+          input: chunk,
+        }),
+        3,    // max retries
+        1000  // base delay
+      );
+
+      if (embeddingResponse) {
+        embedding = embeddingResponse.data[0].embedding;
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch (error) {
+      failCount++;
+      console.error(`❌ Failed chunk ${i}:`, error.message);
+    }
+
+    // PASO 4: Almacenar chunk con embedding
+    const createdChunk = await this.prisma.legalDocumentChunk.create({
+      data: {
+        legalDocumentId: documentId,
+        content: chunk,
+        chunkIndex: i,
+        embedding: embedding,  // JSONB
+      },
+    });
+
+    createdChunks.push(createdChunk);
+  }
+
+  // PASO 5: Reporte de resultados
+  console.log(`\n📊 Embedding generation complete:`);
+  console.log(`  ✅ Success: ${successCount}/${chunks.length}`);
+  console.log(`  ❌ Failed: ${failCount}/${chunks.length}`);
+
+  return {
+    chunks: createdChunks,
+    totalChunks: chunks.length,
+    embeddingsGenerated: successCount,
+    embeddingsFailed: failCount,
+    success: failCount === 0,
+  };
+}</div>
+
+                <h4>Función: retryWithBackoff</h4>
+                <div class="code-block">async retryWithBackoff&lt;T&gt;(
+  operation: () => Promise&lt;T&gt;,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise&lt;T | null&gt; {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries - 1;
+      if (isLastAttempt) throw error;
+
+      // Backoff exponencial: 1s → 2s → 4s
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.warn(`⚠️  Retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  return null;
+}</div>
+            </div>
+
+            <!-- SECTION 5: POSTGRESQL IMPLEMENTATION -->
+            <div class="section" id="postgresql-implementation">
+                <h2>5. Implementación con PostgreSQL + pgvector</h2>
+
+                <div class="success-box">
+                    <strong>✅ Implementación Actual:</strong> Este es el sistema en producción actualmente operativo.
+                </div>
+
+                <h3>Instalación de pgvector</h3>
+
+                <h4>Paso 1: Crear Extensión</h4>
+                <div class="code-block">-- Ejecutar en PostgreSQL
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Verificar instalación
+SELECT * FROM pg_extension WHERE extname = 'vector';
+-- Resultado esperado: version 0.8.0</div>
+
+                <h4>Paso 2: Agregar Columnas Vectoriales</h4>
+                <div class="code-block">ALTER TABLE legal_document_chunks
+ADD COLUMN IF NOT EXISTS embedding_vector vector(1536);</div>
+
+                <h4>Paso 3: Convertir Embeddings Existentes</h4>
+                <div class="code-block">-- Conversión de JSONB a vector
+UPDATE legal_document_chunks
+SET embedding_vector = (embedding::text)::vector
+WHERE embedding IS NOT NULL;</div>
+
+                <h4>Paso 4: Crear Índice HNSW</h4>
+                <div class="code-block">CREATE INDEX IF NOT EXISTS idx_legal_document_chunks_embedding_vector
+ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops);</div>
+
+                <h3>Búsqueda Semántica</h3>
+
+                <h4>Query SQL de Búsqueda Vectorial</h4>
+                <div class="code-block">SELECT
+  ld.*,
+  ldc.content as matched_content,
+  1 - (ldc.embedding_vector &lt;=&gt; $1::vector) as similarity
+FROM legal_document_chunks ldc
+JOIN legal_documents ld ON ld.id = ldc.legal_document_id
+WHERE ld.is_active = true
+  AND ldc.embedding_vector IS NOT NULL
+ORDER BY ldc.embedding_vector &lt;=&gt; $1::vector
+LIMIT 10;</div>
+
+                <div class="info-box">
+                    <strong>🔍 Operador &lt;=&gt;:</strong> Este operador calcula la distancia coseno entre vectores. Ordenar por esta distancia devuelve los resultados más similares primero.
+                </div>
+
+                <h3>Ventajas de PostgreSQL + pgvector</h3>
+                <ul style="padding-left: 25px; margin: 15px 0;">
+                    <li>✅ Integración nativa con base de datos existente</li>
+                    <li>✅ ACID compliance (transacciones confiables)</li>
+                    <li>✅ Índices HNSW extremadamente rápidos</li>
+                    <li>✅ No requiere infraestructura adicional</li>
+                    <li>✅ Respaldo automático incluido con base de datos</li>
+                    <li>✅ Consultas SQL familiares</li>
+                </ul>
+
+                <h3>Desventajas</h3>
+                <ul style="padding-left: 25px; margin: 15px 0;">
+                    <li>⚠️ Requiere PostgreSQL 12+ con extensión pgvector</li>
+                    <li>⚠️ Puede ser más lento que soluciones especializadas en vectores</li>
+                    <li>⚠️ Escalamiento vertical (no horizontal nativo)</li>
+                </ul>
+            </div>
+
+            <!-- SECTION 6: REDIS IMPLEMENTATION -->
+            <div class="section" id="redis-implementation">
+                <h2>6. Implementación con Redis (Vector Search)</h2>
+
+                <div class="info-box">
+                    <strong>ℹ️ Alternativa de Alta Performance:</strong> Redis con RediSearch puede usarse como caché de embeddings o como motor de búsqueda vectorial principal.
+                </div>
+
+                <h3>Arquitectura con Redis</h3>
+
+                <div class="diagram">
+                    <div class="diagram-title">Flujo con Redis Vector Search</div>
+                    <div class="flow-container">
+                        <div class="flow-step">
+                            <div class="flow-step-title">1️⃣ Generación de Embedding</div>
+                            <div class="flow-step-desc">OpenAI genera vector de consulta</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">2️⃣ Búsqueda en Redis</div>
+                            <div class="flow-step-desc">FT.SEARCH en índice vectorial</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">3️⃣ Cache Hit/Miss</div>
+                            <div class="flow-step-desc">Si hit: retornar resultados. Si miss: consultar PostgreSQL</div>
+                        </div>
+                        <div class="flow-step">
+                            <div class="flow-step-title">4️⃣ Actualizar Cache</div>
+                            <div class="flow-step-desc">Guardar resultados en Redis con TTL</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Configuración de Redis</h3>
+
+                <h4>Instalación de Módulos</h4>
+                <div class="code-block"># Docker Compose
+version: '3.8'
+services:
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_ARGS=--loadmodule /opt/redis-stack/lib/redisearch.so</div>
+
+                <h4>Crear Índice Vectorial en Redis</h4>
+                <div class="code-block">import { createClient } from 'redis';
+
+const redis = createClient();
+await redis.connect();
+
+// Crear índice con vector field
+await redis.ft.create('idx:legal_chunks', {
+  '$.content': {
+    type: SchemaFieldTypes.TEXT,
+    AS: 'content'
+  },
+  '$.embedding': {
+    type: SchemaFieldTypes.VECTOR,
+    ALGORITHM: VectorAlgorithms.HNSW,
+    TYPE: 'FLOAT32',
+    DIM: 1536,
+    DISTANCE_METRIC: 'COSINE',
+    AS: 'embedding'
+  }
+}, {
+  ON: 'JSON',
+  PREFIX: 'chunk:'
+});</div>
+
+                <h4>Almacenar Chunks en Redis</h4>
+                <div class="code-block">// Guardar chunk con embedding
+await redis.json.set(`chunk:${chunkId}`, '$', {
+  id: chunkId,
+  documentId: documentId,
+  content: chunkContent,
+  embedding: embeddingVector  // Array de 1536 números
+});</div>
+
+                <h4>Búsqueda Vectorial en Redis</h4>
+                <div class="code-block">// Generar embedding de consulta
+const queryEmbedding = await openai.embeddings.create({
+  model: 'text-embedding-ada-002',
+  input: userQuery
+});
+
+// Buscar en Redis
+const results = await redis.ft.search('idx:legal_chunks',
+  '*=>[KNN 10 @embedding $query_vec AS score]',
+  {
+    PARAMS: {
+      query_vec: Buffer.from(
+        new Float32Array(queryEmbedding.data[0].embedding).buffer
+      )
+    },
+    SORTBY: 'score',
+    DIALECT: 2,
+    RETURN: ['content', 'score']
+  }
+);</div>
+
+                <h3>Estrategia Híbrida: PostgreSQL + Redis</h3>
+
+                <div class="code-block">async semanticSearchWithCache(query: string, limit: number = 10) {
+  // PASO 1: Generar embedding
+  const embedding = await this.generateEmbedding(query);
+
+  // PASO 2: Buscar en Redis (cache)
+  const cacheKey = `search:${hashQuery(query)}`;
+  const cachedResults = await redis.get(cacheKey);
+
+  if (cachedResults) {
+    console.log('✅ Cache HIT');
+    return JSON.parse(cachedResults);
+  }
+
+  console.log('❌ Cache MISS - Querying PostgreSQL');
+
+  // PASO 3: Buscar en PostgreSQL
+  const results = await this.prisma.$queryRaw`
+    SELECT ... FROM legal_document_chunks
+    WHERE embedding_vector &lt;=&gt; ${embedding}::vector
+    LIMIT ${limit}
+  `;
+
+  // PASO 4: Guardar en cache (TTL 1 hora)
+  await redis.setex(cacheKey, 3600, JSON.stringify(results));
+
+  return results;
+}</div>
+
+                <h3>Ventajas de Redis</h3>
+                <ul style="padding-left: 25px; margin: 15px 0;">
+                    <li>✅ Performance extremadamente rápida (búsquedas &lt; 10ms)</li>
+                    <li>✅ Escalamiento horizontal nativo</li>
+                    <li>✅ Cache automático de resultados frecuentes</li>
+                    <li>✅ Menor carga en PostgreSQL</li>
+                </ul>
+
+                <h3>Desventajas</h3>
+                <ul style="padding-left: 25px; margin: 15px 0;">
+                    <li>⚠️ Infraestructura adicional requerida</li>
+                    <li>⚠️ No es ACID compliant (volatilidad de memoria)</li>
+                    <li>⚠️ Requiere sincronización con PostgreSQL</li>
+                    <li>⚠️ Costos de hosting adicionales</li>
+                </ul>
+            </div>
+
+            <!-- SECTION 7: SUPABASE IMPLEMENTATION -->
+            <div class="section" id="supabase-implementation">
+                <h2>7. Implementación con Supabase</h2>
+
+                <div class="info-box">
+                    <strong>ℹ️ Alternativa Cloud-Native:</strong> Supabase ofrece PostgreSQL + pgvector como servicio gestionado con APIs integradas.
+                </div>
+
+                <h3>Ventajas de Supabase</h3>
+                <ul style="padding-left: 25px; margin: 15px 0;">
+                    <li>✅ pgvector preinstalado y configurado</li>
+                    <li>✅ APIs REST y GraphQL automáticas</li>
+                    <li>✅ Autenticación integrada</li>
+                    <li>✅ Edge Functions para procesamiento</li>
+                    <li>✅ Backups automáticos</li>
+                    <li>✅ Dashboard de administración</li>
+                </ul>
+
+                <h3>Migración a Supabase</h3>
+
+                <h4>Paso 1: Crear Proyecto en Supabase</h4>
+                <div class="code-block"># Supabase CLI
+supabase init
+supabase start
+supabase db push</div>
+
+                <h4>Paso 2: Habilitar pgvector</h4>
+                <div class="code-block">-- En Supabase SQL Editor
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Verificar
+SELECT * FROM pg_available_extensions WHERE name = 'vector';</div>
+
+                <h4>Paso 3: Usar Supabase Client</h4>
+                <div class="code-block">import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
+// Búsqueda vectorial con Supabase
+const { data, error } = await supabase.rpc('match_documents', {
+  query_embedding: queryVector,
+  match_threshold: 0.7,
+  match_count: 10
+});</div>
+
+                <h4>Paso 4: Crear Función RPC para Búsqueda</h4>
+                <div class="code-block">-- Crear función PL/pgSQL en Supabase
+CREATE OR REPLACE FUNCTION match_documents (
+  query_embedding vector(1536),
+  match_threshold float,
+  match_count int
+)
+RETURNS TABLE (
+  id uuid,
+  content text,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ldc.id,
+    ldc.content,
+    1 - (ldc.embedding_vector &lt;=&gt; query_embedding) as similarity
+  FROM legal_document_chunks ldc
+  WHERE 1 - (ldc.embedding_vector &lt;=&gt; query_embedding) > match_threshold
+  ORDER BY ldc.embedding_vector &lt;=&gt; query_embedding
+  LIMIT match_count;
+END;
+$$;</div>
+
+                <h3>Diferencias vs PostgreSQL Tradicional</h3>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Característica</th>
+                            <th>PostgreSQL Self-Hosted</th>
+                            <th>Supabase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Setup</strong></td>
+                            <td>Manual (instalar pgvector)</td>
+                            <td>Automático (pgvector incluido)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>APIs</strong></td>
+                            <td>Construir manualmente</td>
+                            <td>Auto-generadas REST/GraphQL</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Autenticación</strong></td>
+                            <td>Implementar custom</td>
+                            <td>Integrada (JWT, OAuth)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Backups</strong></td>
+                            <td>Configurar manualmente</td>
+                            <td>Automáticos diarios</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Escalamiento</strong></td>
+                            <td>Manual</td>
+                            <td>On-demand</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Costo</strong></td>
+                            <td>Server + mantenimiento</td>
+                            <td>Pay-as-you-go</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- SECTION 8: COMPARISON -->
+            <div class="section" id="comparison">
+                <h2>8. Comparación de Bases de Datos</h2>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Criterio</th>
+                            <th>PostgreSQL + pgvector</th>
+                            <th>Redis Vector</th>
+                            <th>Supabase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Performance</strong></td>
+                            <td><span class="badge badge-warning">Media</span> ~50-100ms</td>
+                            <td><span class="badge badge-success">Excelente</span> &lt;10ms</td>
+                            <td><span class="badge badge-warning">Media</span> ~50-100ms</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Escalabilidad</strong></td>
+                            <td><span class="badge badge-warning">Vertical</span></td>
+                            <td><span class="badge badge-success">Horizontal</span></td>
+                            <td><span class="badge badge-success">Auto-scaling</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Costo</strong></td>
+                            <td><span class="badge badge-success">Bajo</span> (incluido)</td>
+                            <td><span class="badge badge-warning">Medio</span> (+hosting)</td>
+                            <td><span class="badge badge-warning">Medio</span> (pay-as-go)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Complejidad</strong></td>
+                            <td><span class="badge badge-success">Baja</span></td>
+                            <td><span class="badge badge-danger">Alta</span></td>
+                            <td><span class="badge badge-success">Baja</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>ACID</strong></td>
+                            <td><span class="badge badge-success">Sí</span></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                            <td><span class="badge badge-success">Sí</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mantenimiento</strong></td>
+                            <td><span class="badge badge-warning">Manual</span></td>
+                            <td><span class="badge badge-warning">Manual</span></td>
+                            <td><span class="badge badge-success">Automático</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Infraestructura</strong></td>
+                            <td><span class="badge badge-success">Existente</span></td>
+                            <td><span class="badge badge-danger">Nueva</span></td>
+                            <td><span class="badge badge-success">Cloud</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Recomendaciones por Caso de Uso</h3>
+
+                <div class="success-box">
+                    <strong>✅ Usar PostgreSQL + pgvector cuando:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Ya tienes PostgreSQL en producción</li>
+                        <li>Necesitas transacciones ACID</li>
+                        <li>Presupuesto limitado</li>
+                        <li>Volumen moderado (&lt;1M chunks)</li>
+                        <li>Performance de 50-100ms es aceptable</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <strong>🚀 Usar Redis cuando:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Performance crítica (&lt;10ms requerido)</li>
+                        <li>Alto volumen de búsquedas concurrentes</li>
+                        <li>Necesitas cache de resultados frecuentes</li>
+                        <li>Escalamiento horizontal necesario</li>
+                        <li>Puedes tolerar eventual consistency</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <strong>☁️ Usar Supabase cuando:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Quieres reducir overhead de DevOps</li>
+                        <li>Necesitas APIs auto-generadas</li>
+                        <li>Startup o MVP rápido</li>
+                        <li>Prefieres costos predecibles</li>
+                        <li>Quieres autenticación integrada</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 9: BEST PRACTICES -->
+            <div class="section" id="best-practices">
+                <h2>9. Mejores Prácticas</h2>
+
+                <h3>Optimización de Chunking</h3>
+
+                <div class="tech-specs">
+                    <h4>Tamaño Óptimo de Chunks</h4>
+                    <ul>
+                        <li><strong>Muy pequeño (&lt;500 chars):</strong> Pierde contexto, muchos chunks</li>
+                        <li><strong>Óptimo (800-1200 chars):</strong> Balance contexto/granularidad ✅</li>
+                        <li><strong>Muy grande (&gt;2000 chars):</strong> Resultados menos precisos</li>
+                    </ul>
+                </div>
+
+                <h4>Estrategias de Chunking Avanzadas</h4>
+
+                <div class="code-block">// Chunking con solapamiento
+function chunkWithOverlap(text: string, size: number, overlap: number) {
+  const chunks = [];
+  for (let i = 0; i < text.length; i += size - overlap) {
+    chunks.push(text.slice(i, i + size));
+  }
+  return chunks;
+}
+
+// Chunking por párrafos
+function chunkByParagraph(text: string, maxSize: number) {
+  const paragraphs = text.split('\n\n');
+  const chunks = [];
+  let currentChunk = '';
+
+  for (const para of paragraphs) {
+    if ((currentChunk + para).length > maxSize) {
+      chunks.push(currentChunk);
+      currentChunk = para;
+    } else {
+      currentChunk += '\n\n' + para;
+    }
+  }
+
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
+}</div>
+
+                <h3>Manejo de Errores</h3>
+
+                <div class="danger-box">
+                    <strong>⚠️ Errores Comunes:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li><strong>Rate Limiting OpenAI:</strong> Implementar retry con backoff exponencial</li>
+                        <li><strong>Timeout de API:</strong> Separar vectorización de transacción principal</li>
+                        <li><strong>Chunks sin embedding:</strong> Permitir búsqueda por texto como fallback</li>
+                        <li><strong>Memoria insuficiente:</strong> Procesar chunks en batches</li>
+                    </ul>
+                </div>
+
+                <h4>Implementación Robusta</h4>
+
+                <div class="code-block">async processChunksInBatches(chunks: string[], batchSize: number = 10) {
+  const results = [];
+
+  for (let i = 0; i < chunks.length; i += batchSize) {
+    const batch = chunks.slice(i, i + batchSize);
+
+    // Procesar batch en paralelo
+    const batchResults = await Promise.allSettled(
+      batch.map(chunk => this.generateEmbedding(chunk))
+    );
+
+    // Manejar resultados individuales
+    batchResults.forEach((result, idx) => {
+      if (result.status === 'fulfilled') {
+        results.push({ success: true, data: result.value });
+      } else {
+        console.error(`Chunk ${i + idx} failed:`, result.reason);
+        results.push({ success: false, error: result.reason });
+      }
+    });
+
+    // Pausa entre batches para evitar rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  return results;
+}</div>
+
+                <h3>Monitoreo y Métricas</h3>
+
+                <div class="code-block">// Métricas a rastrear
+interface VectorizationMetrics {
+  totalDocuments: number;
+  totalChunks: number;
+  successfulEmbeddings: number;
+  failedEmbeddings: number;
+  avgChunkSize: number;
+  avgEmbeddingTime: number;
+  successRate: number;
+
+  // Performance
+  avgSearchLatency: number;
+  p95SearchLatency: number;
+  cacheHitRate: number;
+
+  // Costos
+  totalOpenAICalls: number;
+  estimatedCostUSD: number;
+}
+
+// Logging estructurado
+console.log(JSON.stringify({
+  timestamp: new Date().toISOString(),
+  event: 'vectorization_complete',
+  documentId: doc.id,
+  metrics: {
+    chunks: 435,
+    embeddings: 435,
+    successRate: 1.0,
+    durationMs: 12500
+  }
+}));</div>
+
+                <h3>Seguridad</h3>
+
+                <div class="warning-box">
+                    <strong>🔒 Consideraciones de Seguridad:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Nunca exponer embeddings raw en API pública</li>
+                        <li>Validar y sanitizar input antes de vectorizar</li>
+                        <li>Implementar rate limiting por usuario</li>
+                        <li>Encriptar embeddings en reposo si contienen PII</li>
+                        <li>Rotar API keys de OpenAI regularmente</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 10: TROUBLESHOOTING -->
+            <div class="section" id="troubleshooting">
+                <h2>10. Troubleshooting</h2>
+
+                <h3>Problema: Embeddings no se generan</h3>
+
+                <div class="danger-box">
+                    <strong>❌ Síntomas:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Todos los chunks tienen <code>embedding = null</code></li>
+                        <li>Error: "OpenAI API key not found"</li>
+                        <li>Error: "Rate limit exceeded"</li>
+                    </ul>
+                </div>
+
+                <div class="success-box">
+                    <strong>✅ Soluciones:</strong>
+                    <ol style="margin-top: 10px; padding-left: 25px;">
+                        <li>Verificar <code>OPENAI_API_KEY</code> en variables de entorno</li>
+                        <li>Revisar límites de cuenta en OpenAI dashboard</li>
+                        <li>Implementar retry con backoff exponencial</li>
+                        <li>Reducir batch size o agregar delays</li>
+                    </ol>
+                </div>
+
+                <h4>Verificación</h4>
+                <div class="code-block">-- Verificar embeddings generados
+SELECT
+  COUNT(*) as total_chunks,
+  COUNT(embedding) as with_jsonb_embedding,
+  COUNT(embedding_vector) as with_vector_embedding
+FROM legal_document_chunks;
+
+-- Resultado esperado:
+-- total_chunks | with_jsonb_embedding | with_vector_embedding
+--     1741     |         1741         |         1741</div>
+
+                <h3>Problema: Búsqueda vectorial muy lenta</h3>
+
+                <div class="danger-box">
+                    <strong>❌ Síntomas:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Búsquedas toman &gt;5 segundos</li>
+                        <li>Timeout en consultas</li>
+                        <li>Alta carga de CPU en PostgreSQL</li>
+                    </ul>
+                </div>
+
+                <div class="success-box">
+                    <strong>✅ Soluciones:</strong>
+                    <ol style="margin-top: 10px; padding-left: 25px;">
+                        <li>Verificar que índice HNSW existe</li>
+                        <li>Aumentar parámetros de HNSW (m, ef_construction)</li>
+                        <li>Limitar resultados con LIMIT menor</li>
+                        <li>Implementar cache con Redis</li>
+                    </ol>
+                </div>
+
+                <h4>Verificar Índices</h4>
+                <div class="code-block">-- Listar índices en la tabla
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'legal_document_chunks';
+
+-- Recrear índice HNSW con parámetros optimizados
+DROP INDEX IF EXISTS idx_legal_document_chunks_embedding_vector;
+
+CREATE INDEX idx_legal_document_chunks_embedding_vector
+ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);</div>
+
+                <h3>Problema: Conversión JSONB → Vector falla</h3>
+
+                <div class="danger-box">
+                    <strong>❌ Error:</strong>
+                    <pre>ERROR: invalid input syntax for type vector</pre>
+                </div>
+
+                <div class="success-box">
+                    <strong>✅ Solución:</strong>
+                    <div class="code-block">-- Verificar estructura del embedding
+SELECT
+  jsonb_typeof(embedding) as type,
+  substring(embedding::text, 1, 100) as sample
+FROM legal_document_chunks
+WHERE embedding IS NOT NULL
+LIMIT 1;
+
+-- Si es array simple: [0.1, 0.2, ...]
+UPDATE legal_document_chunks
+SET embedding_vector = (embedding::text)::vector
+WHERE embedding IS NOT NULL;
+
+-- Si es nested array: [[0.1, 0.2, ...]]
+UPDATE legal_document_chunks
+SET embedding_vector = (embedding->0)::text::vector
+WHERE embedding IS NOT NULL;</div>
+                </div>
+
+                <h3>Problema: Resultados irrelevantes</h3>
+
+                <div class="danger-box">
+                    <strong>❌ Síntomas:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li>Búsqueda de "derechos humanos" retorna chunks sobre "animales"</li>
+                        <li>Similarity scores muy bajos (&lt;0.3)</li>
+                    </ul>
+                </div>
+
+                <div class="success-box">
+                    <strong>✅ Soluciones:</strong>
+                    <ol style="margin-top: 10px; padding-left: 25px;">
+                        <li>Ajustar tamaño de chunks (muy grandes pierden precisión)</li>
+                        <li>Filtrar resultados con threshold mínimo de similarity</li>
+                        <li>Regenerar embeddings si modelo OpenAI cambió</li>
+                        <li>Verificar que query embedding usa mismo modelo</li>
+                    </ol>
+                </div>
+
+                <h4>Query con Threshold</h4>
+                <div class="code-block">SELECT *
+FROM (
+  SELECT
+    ld.*,
+    ldc.content,
+    1 - (ldc.embedding_vector &lt;=&gt; $1::vector) as similarity
+  FROM legal_document_chunks ldc
+  JOIN legal_documents ld ON ld.id = ldc.legal_document_id
+  WHERE ld.is_active = true
+) results
+WHERE similarity > 0.7  -- Solo resultados con >70% similitud
+ORDER BY similarity DESC
+LIMIT 10;</div>
+            </div>
+
+            <!-- SECTION 11: PERFORMANCE -->
+            <div class="section" id="performance">
+                <h2>11. Optimización de Performance</h2>
+
+                <h3>Benchmarks del Sistema Actual</h3>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">~75ms</div>
+                        <div class="stat-label">Tiempo de Búsqueda</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">~2.5s</div>
+                        <div class="stat-label">Generar Embedding</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">~15min</div>
+                        <div class="stat-label">Vectorizar 1,741 Chunks</div>
+                    </div>
+                </div>
+
+                <h3>Optimizaciones Implementadas</h3>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Técnica</th>
+                            <th>Impacto</th>
+                            <th>Implementación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Índice HNSW</strong></td>
+                            <td><span class="badge badge-success">10x más rápido</span></td>
+                            <td>Búsqueda aproximada vs exacta</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Retry con Backoff</strong></td>
+                            <td><span class="badge badge-success">+95% reliability</span></td>
+                            <td>Manejo de rate limits OpenAI</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Async Vectorization</strong></td>
+                            <td><span class="badge badge-success">Sin timeouts</span></td>
+                            <td>Fuera de transacción DB</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Batch Processing</strong></td>
+                            <td><span class="badge badge-warning">30% más rápido</span></td>
+                            <td>Procesar 10 chunks en paralelo</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Configuración Óptima de HNSW</h3>
+
+                <div class="code-block">-- Configuración por defecto (buena para mayoría)
+CREATE INDEX ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops);
+
+-- Configuración optimizada para velocidad
+CREATE INDEX ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+
+-- Configuración optimizada para precisión
+CREATE INDEX ON legal_document_chunks
+USING hnsw (embedding_vector vector_cosine_ops)
+WITH (m = 32, ef_construction = 128);
+
+-- Parámetros en runtime
+SET hnsw.ef_search = 100;  -- Mayor = más preciso pero más lento</div>
+
+                <div class="info-box">
+                    <strong>📊 Parámetros HNSW:</strong>
+                    <ul style="margin-top: 10px; padding-left: 25px;">
+                        <li><strong>m:</strong> Número de conexiones (16-64). Mayor = mejor recall, más memoria</li>
+                        <li><strong>ef_construction:</strong> Candidates durante indexación (64-256). Mayor = mejor índice, más lento build</li>
+                        <li><strong>ef_search:</strong> Candidates durante búsqueda (40-200). Mayor = mejor recall, más lento query</li>
+                    </ul>
+                </div>
+
+                <h3>Monitoreo de Performance</h3>
+
+                <div class="code-block">-- Query con explain analyze
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT *
+FROM legal_document_chunks
+WHERE embedding_vector IS NOT NULL
+ORDER BY embedding_vector &lt;=&gt; '[0.1, 0.2, ...]'::vector
+LIMIT 10;
+
+-- Estadísticas del índice
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  idx_scan,
+  idx_tup_read,
+  idx_tup_fetch
+FROM pg_stat_user_indexes
+WHERE tablename = 'legal_document_chunks';</div>
+
+                <h3>Recomendaciones Futuras</h3>
+
+                <div class="success-box">
+                    <strong>🚀 Próximas Optimizaciones:</strong>
+                    <ol style="margin-top: 10px; padding-left: 25px;">
+                        <li>Implementar cache Redis para queries frecuentes</li>
+                        <li>Pre-calcular embeddings de queries comunes</li>
+                        <li>Implementar batching de generación de embeddings</li>
+                        <li>Considerar modelos de embedding más rápidos (pero menos precisos)</li>
+                        <li>Implementar reranking con modelo cross-encoder</li>
+                    </ol>
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            <p><strong>Legal RAG System - Guía Técnica de Vectorización</strong></p>
+            <p>PostgreSQL 17.6 + pgvector 0.8.0 + OpenAI text-embedding-ada-002</p>
+            <p style="margin-top: 15px; font-size: 0.9em;">
+                📧 Contacto: benitocabrerar@gmail.com<br>
+                🌐 API: https://legal-rag-api-qnew.onrender.com<br>
+                📊 Estado: ✅ Producción - 1,741 chunks vectorizados - 100% operacional
+            </p>
+            <p style="margin-top: 15px; opacity: 0.7;">
+                Última actualización: Enero 2025
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

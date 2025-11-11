@@ -1,21 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)",
-      "Bash(start DOCUMENTO_TECNICO_RAG_MEJORAS.html)",
-      "Bash(start RAG_SOLUTION_ARCHITECTURE.md)",
-      "Bash(start IMPLEMENTATION_GUIDE_RAG.md)",
-      "Bash(start docs/INTEGRATION_GUIDE.md)",
-      "Bash(start docs/API_REFERENCE.md)",
-      "Bash(node run-migration.js:*)",
-      "Bash(node run-migration.cjs:*)",
-      "Bash(node wake-db-and-migrate.cjs:*)",
-      "Bash(node -e:*)",
-      "Bash(APPLY_THIS_MIGRATION.sql)",
-      "mcp__render__list_key_value",
-      "Bash(if exist \"prisma\\migrations\\20241110_document_analysis_system\" rmdir /s /q \"prisma\\migrations\\20241110_document_analysis_system\")",
-      "Bash(timeout:*)",
-      "Bash(node scripts/resolve-failed-migration.cjs:*)"
+      "Bash(start CREAR_ADMIN_INSTRUCCIONES.html)",
+      "Bash(start CREAR_ADMIN_SSH.html)",
+      "Bash(start INSTALL_PGVECTOR.html)",
+      "Bash(start API_DOCUMENTATION.html)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

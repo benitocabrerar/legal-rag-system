@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Admin via SSH - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .header .method {
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .alert {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-left: 5px solid #10b981;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .alert-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            float: left;
+        }
+
+        .alert-content {
+            overflow: hidden;
+        }
+
+        .alert-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #065f46;
+            margin-bottom: 10px;
+        }
+
+        .step {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-right: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .step-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-content {
+            margin-left: 80px;
+            color: #4b5563;
+            font-size: 1.05rem;
+        }
+
+        .code-block {
+            background: #1f2937;
+            color: #10b981;
+            padding: 25px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            overflow-x: auto;
+            margin: 20px 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .code-block.bash {
+            color: #60a5fa;
+        }
+
+        .code-block.output {
+            color: #34d399;
+            background: #0f172a;
+        }
+
+        .code-block.javascript {
+            color: #fbbf24;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .copy-button:hover {
+            background: #764ba2;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #92400e;
+            font-family: 'Courier New', monospace;
+        }
+
+        .warning {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning-icon {
+            font-size: 1.5rem;
+            color: #f59e0b;
+            margin-right: 10px;
+        }
+
+        .success {
+            background: #d1fae5;
+            border-left: 5px solid #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .success-icon {
+            font-size: 1.5rem;
+            color: #10b981;
+            margin-right: 10px;
+        }
+
+        .credentials-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 3px solid #f59e0b;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .credential-item {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            font-size: 1.1rem;
+        }
+
+        .credential-label {
+            font-weight: bold;
+            color: #92400e;
+            width: 150px;
+        }
+
+        .credential-value {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: #1f2937;
+            font-weight: bold;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 35px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            margin: 10px 5px;
+            font-size: 1.05rem;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .button.secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+            margin: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #667eea;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 15px 0;
+        }
+
+        .timeline-item::before {
+            content: '✓';
+            position: absolute;
+            left: -30px;
+            width: 30px;
+            height: 30px;
+            background: #10b981;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            font-weight: bold;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            margin: 12px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Crear Usuario Admin</h1>
+            <p class="subtitle">Método Rápido via SSH Terminal</p>
+            <p class="method">✨ Ejecutar Directamente en el Servidor</p>
+        </div>
+
+        <div class="content">
+            <div class="alert">
+                <div class="alert-icon">🚀</div>
+                <div class="alert-content">
+                    <div class="alert-title">¡Método Más Rápido y Confiable!</div>
+                    <p>Este método usa el terminal SSH de Render para crear el usuario admin directamente en el servidor donde la base de datos ya está conectada. <strong>No hay problemas de conexión local.</strong></p>
+                </div>
+            </div>
+
+            <!-- PASO 1 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    Acceder al Dashboard de Render
+                </div>
+                <div class="step-content">
+                    <p>Abre tu navegador y ve a:</p>
+                    <div class="code-block">
+https://dashboard.render.com/
+                    </div>
+                    <p>Inicia sesión con tu cuenta de Render.</p>
+                </div>
+            </div>
+
+            <!-- PASO 2 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    Navegar al Servicio Backend
+                </div>
+                <div class="step-content">
+                    <p>En el dashboard:</p>
+                    <div class="timeline">
+                        <div class="timeline-item">Busca el servicio: <span class="highlight">legal-rag-api</span></div>
+                        <div class="timeline-item">Haz clic en el nombre del servicio</div>
+                        <div class="timeline-item">Verás los detalles del deployment</div>
+                    </div>
+                    <div class="warning">
+                        <span class="warning-icon">⚠️</span>
+                        <strong>Importante:</strong> Asegúrate de que el último deployment esté en estado <strong>"Live"</strong> (verde) antes de continuar.
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 3 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    Abrir Terminal SSH
+                </div>
+                <div class="step-content">
+                    <p>En la página del servicio backend:</p>
+                    <ul>
+                        <li>En la esquina superior derecha, busca el botón <span class="highlight">Shell</span> (🖥️ icono de terminal)</li>
+                        <li>Haz clic en <span class="highlight">Shell</span></li>
+                        <li>Se abrirá una nueva pestaña con una terminal interactiva</li>
+                        <li>Espera a que cargue el prompt (puede tardar 10-20 segundos)</li>
+                    </ul>
+                    <p style="margin-top: 15px;">Verás algo como:</p>
+                    <div class="code-block bash">
+$ _
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 4 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    Ejecutar el Script de Creación
+                </div>
+                <div class="step-content">
+                    <p>En el terminal SSH, ejecuta este comando:</p>
+                    <div class="code-block bash">
+<button class="copy-button" onclick="copyToClipboard('cmd1')">📋 Copiar</button>
+<span id="cmd1">node scripts/create-admin-ssh.js</span>
+                    </div>
+                    <p>Presiona <span class="highlight">Enter</span> y espera unos segundos.</p>
+                </div>
+            </div>
+
+            <!-- PASO 5 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    Verificar la Creación Exitosa
+                </div>
+                <div class="step-content">
+                    <p>Deberías ver este resultado:</p>
+                    <div class="code-block output">
+🔐 Creando usuario admin...
+
+✅ Usuario admin creado exitosamente!
+
+📧 Email: benitocabrerar@gmail.com
+👤 Nombre: Benito Cabrera
+🔑 Rol: admin
+📦 Plan: team
+🔒 Contraseña temporal: Admin123!
+
+⚠️  IMPORTANTE: Cambia esta contraseña después del primer login!
+
+🌐 Frontend: https://legal-rag-frontend.onrender.com
+                    </div>
+                    <div class="success">
+                        <span class="success-icon">✅</span>
+                        <strong>¡Éxito!</strong> El usuario admin fue creado correctamente en la base de datos.
+                    </div>
+                </div>
+            </div>
+
+            <!-- CREDENCIALES -->
+            <div class="step" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 5px solid #f59e0b;">
+                <div class="step-title" style="color: #92400e;">
+                    <span class="step-number" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">🔑</span>
+                    Credenciales de Acceso
+                </div>
+                <div class="step-content">
+                    <div class="credentials-box">
+                        <div class="credential-item">
+                            <span class="credential-label">📧 Email:</span>
+                            <span class="credential-value">benitocabrerar@gmail.com</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">🔒 Contraseña:</span>
+                            <span class="credential-value">Admin123!</span>
+                        </div>
+                        <div class="credential-item">
+                            <span class="credential-label">🌐 Frontend:</span>
+                            <span class="credential-value">legal-rag-frontend.onrender.com</span>
+                        </div>
+                    </div>
+                    <div class="warning">
+                        <span class="warning-icon">🔐</span>
+                        <strong>Seguridad Crítica:</strong> Esta es una contraseña temporal. Debes cambiarla INMEDIATAMENTE después del primer login por una contraseña segura con:
+                        <ul style="margin-top: 10px;">
+                            <li>Mínimo 12 caracteres</li>
+                            <li>Letras mayúsculas y minúsculas</li>
+                            <li>Números y símbolos especiales</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASO 6 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">6</span>
+                    Iniciar Sesión en el Frontend
+                </div>
+                <div class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item">Ve a: <a href="https://legal-rag-frontend.onrender.com" class="link" target="_blank">https://legal-rag-frontend.onrender.com</a></div>
+                        <div class="timeline-item">Haz clic en <span class="highlight">Iniciar Sesión</span></div>
+                        <div class="timeline-item">Ingresa el email: <span class="highlight">benitocabrerar@gmail.com</span></div>
+                        <div class="timeline-item">Ingresa la contraseña: <span class="highlight">Admin123!</span></div>
+                        <div class="timeline-item">Haz clic en <span class="highlight">Entrar</span></div>
+                    </div>
+                    <p style="margin-top: 20px; text-align: center;">
+                        <a href="https://legal-rag-frontend.onrender.com" class="button" target="_blank">
+                            🚀 Abrir Frontend Ahora
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- PASO 7 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">7</span>
+                    Cambiar Contraseña
+                </div>
+                <div class="step-content">
+                    <p><strong>Después de iniciar sesión:</strong></p>
+                    <ul>
+                        <li>Ve a tu perfil (esquina superior derecha)</li>
+                        <li>Haz clic en <span class="highlight">Configuración</span> o <span class="highlight">Mi Cuenta</span></li>
+                        <li>Busca la opción <span class="highlight">Cambiar Contraseña</span></li>
+                        <li>Ingresa la contraseña temporal: <span class="highlight">Admin123!</span></li>
+                        <li>Ingresa tu nueva contraseña segura (dos veces)</li>
+                        <li>Haz clic en <span class="highlight">Guardar</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SIGUIENTES PASOS -->
+            <div class="step" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 5px solid #10b981;">
+                <div class="step-title" style="color: #10b981;">
+                    <span class="step-number" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">🎉</span>
+                    ¡Listo! Ahora Puedes...
+                </div>
+                <div class="step-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Acción</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>📄 Subir Documentos</strong></td>
+                                <td>Cargar PDFs legales al sistema (Constitución, Códigos, Leyes)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>🤖 Análisis Automático</strong></td>
+                                <td>El sistema vectoriza automáticamente cada documento</td>
+                            </tr>
+                            <tr>
+                                <td><strong>🔍 Búsqueda Semántica</strong></td>
+                                <td>Realizar búsquedas inteligentes con IA en toda la biblioteca legal</td>
+                            </tr>
+                            <tr>
+                                <td><strong>📁 Gestión de Casos</strong></td>
+                                <td>Crear casos y asociar documentos</td>
+                            </tr>
+                            <tr>
+                                <td><strong>👥 Administrar Usuarios</strong></td>
+                                <td>Crear y gestionar usuarios del sistema</td>
+                            </tr>
+                            <tr>
+                                <td><strong>📊 Ver Estadísticas</strong></td>
+                                <td>Dashboard con métricas y analytics</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PROBAR EL SISTEMA -->
+            <div class="step" style="background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%); border-left: 5px solid #8b5cf6;">
+                <div class="step-title" style="color: #6d28d9;">
+                    <span class="step-number" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">🧪</span>
+                    Probar el Sistema
+                </div>
+                <div class="step-content">
+                    <p><strong>Test 1: Subir un Documento Legal</strong></p>
+                    <div class="timeline">
+                        <div class="timeline-item">Ve a la sección <span class="highlight">Documentos Legales</span> o <span class="highlight">Biblioteca Legal</span></div>
+                        <div class="timeline-item">Haz clic en <span class="highlight">Nuevo Documento</span> o <span class="highlight">Subir PDF</span></div>
+                        <div class="timeline-item">Llena los campos:
+                            <ul>
+                                <li>Tipo de Norma: <span class="highlight">Constitución</span></li>
+                                <li>Título: <span class="highlight">Constitución del Ecuador</span></li>
+                                <li>Jerarquía: <span class="highlight">Norma Suprema</span></li>
+                            </ul>
+                        </div>
+                        <div class="timeline-item">Selecciona el archivo PDF</div>
+                        <div class="timeline-item">Haz clic en <span class="highlight">Subir</span></div>
+                        <div class="timeline-item">Espera el análisis automático (10-30 segundos)</div>
+                    </div>
+
+                    <p style="margin-top: 25px;"><strong>Test 2: Búsqueda Semántica</strong></p>
+                    <div class="timeline">
+                        <div class="timeline-item">Ve a la sección <span class="highlight">Consultar con IA</span> o <span class="highlight">Búsqueda</span></div>
+                        <div class="timeline-item">Escribe una pregunta: <em>"¿Cuáles son los derechos fundamentales en Ecuador?"</em></div>
+                        <div class="timeline-item">Haz clic en <span class="highlight">Buscar</span></div>
+                        <div class="timeline-item">Verás resultados relevantes con referencias exactas al documento</div>
+                    </div>
+
+                    <p style="margin-top: 25px; text-align: center;">
+                        <a href="file:///C:/Users/benito/poweria/legal/TESTING_GUIDE.md" class="button">
+                            📖 Ver Guía de Pruebas Completa
+                        </a>
+                        <a href="https://legal-rag-api-qnew.onrender.com/health" class="button secondary" target="_blank">
+                            🏥 Verificar API Health
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- TROUBLESHOOTING -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">❓</span>
+                    Troubleshooting
+                </div>
+                <div class="step-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Problema</th>
+                                <th>Solución</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Script no encontrado en SSH</td>
+                                <td>Espera a que el deployment termine. El script está en el commit <code>f199e25</code></td>
+                            </tr>
+                            <tr>
+                                <td>Error de conexión a DB</td>
+                                <td>La base de datos puede estar suspendida. Espera 30-60 segundos y reinténtalo</td>
+                            </tr>
+                            <tr>
+                                <td>Usuario ya existe</td>
+                                <td>Perfecto! El script actualiza el usuario existente a admin</td>
+                            </tr>
+                            <tr>
+                                <td>No puedo acceder al Shell</td>
+                                <td>Asegúrate de tener permisos de owner/admin en Render</td>
+                            </tr>
+                            <tr>
+                                <td>Login falla en frontend</td>
+                                <td>Verifica que el backend esté en estado "Live" y que usaste las credenciales exactas</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>🔗 Enlaces Importantes</h3>
+            <p style="margin: 20px 0;">
+                <a href="https://dashboard.render.com/" class="link" target="_blank">Render Dashboard</a> •
+                <a href="https://legal-rag-frontend.onrender.com" class="link" target="_blank">Frontend</a> •
+                <a href="https://legal-rag-api-qnew.onrender.com/health" class="link" target="_blank">Backend Health</a>
+            </p>
+            <p><strong>Legal RAG System v1.0</strong></p>
+            <p style="margin-top: 20px; color: #6b7280;">
+                © 2025 Legal RAG System | Documentación creada con Claude Code
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Copiado al portapapeles!');
+            });
+        }
+    </script>
+</body>
+</html>

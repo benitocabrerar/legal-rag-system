@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentación API - Legal RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .section h4 {
+            color: #555;
+            font-size: 1.1em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .endpoint {
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .method.post { background: #28a745; color: white; }
+        .method.get { background: #17a2b8; color: white; }
+        .method.put { background: #ffc107; color: black; }
+        .method.delete { background: #dc3545; color: white; }
+
+        .url {
+            font-family: 'Courier New', monospace;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .code-block .comment {
+            color: #6c757d;
+        }
+
+        .code-block .string {
+            color: #98c379;
+        }
+
+        .code-block .keyword {
+            color: #c678dd;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .param-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .param-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .param-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .param-table code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge.required {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge.optional {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge.admin {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .toc h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .toc li {
+            margin: 8px 0;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .toc a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .response-example {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .response-example h5 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        footer {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 API Legal RAG System</h1>
+            <p>Documentación Técnica Completa v2.0</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Base URL: <code>https://legal-rag-api-qnew.onrender.com/api/v1</code></p>
+        </div>
+
+        <div class="content">
+            <!-- TABLE OF CONTENTS -->
+            <div class="toc">
+                <h3>📋 Índice de Contenidos</h3>
+                <ul>
+                    <li><a href="#auth">1. Autenticación</a></li>
+                    <li><a href="#semantic-search">2. Búsqueda Semántica con IA ⭐</a></li>
+                    <li><a href="#create-document">3. Crear Documento Legal</a></li>
+                    <li><a href="#list-documents">4. Listar Documentos</a></li>
+                    <li><a href="#get-document">5. Obtener Documento por ID</a></li>
+                    <li><a href="#update-document">6. Actualizar Documento</a></li>
+                    <li><a href="#delete-document">7. Eliminar Documento</a></li>
+                    <li><a href="#create-revision">8. Crear Revisión de Documento</a></li>
+                    <li><a href="#get-enums">9. Obtener Valores Enum</a></li>
+                    <li><a href="#errors">10. Códigos de Error</a></li>
+                </ul>
+            </div>
+
+            <!-- AUTHENTICATION -->
+            <div class="section" id="auth">
+                <h2>1. Autenticación 🔐</h2>
+
+                <div class="info-box">
+                    <strong>ℹ️ Importante:</strong> Todos los endpoints excepto el login requieren autenticación mediante JWT Token en el header <code>Authorization: Bearer &lt;token&gt;</code>
+                </div>
+
+                <div class="endpoint">
+                    <h3>Login</h3>
+                    <p><span class="method post">POST</span> <code>/auth/login</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Content-Type</code></td>
+                                <td><code>application/json</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>email</code></td>
+                                <td>string</td>
+                                <td>Email del usuario</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>password</code></td>
+                                <td>string</td>
+                                <td>Contraseña del usuario</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "benitocabrerar@gmail.com",
+    "password": "Admin123!"
+  }'</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "user": {
+    "id": "a0344afb-2ee4-43bd-90d9-18574aac64d4",
+    "email": "benitocabrerar@gmail.com",
+    "name": "Benito Cabrera",
+    "role": "admin",
+    "planTier": "team"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEMANTIC SEARCH -->
+            <div class="section" id="semantic-search">
+                <h2>2. Búsqueda Semántica con IA ⭐</h2>
+
+                <div class="success-box">
+                    <strong>✨ Característica Principal:</strong> Búsqueda semántica potenciada por IA usando embeddings vectoriales de OpenAI. Encuentra contenido relevante aunque no coincida textualmente con la consulta.
+                </div>
+
+                <div class="endpoint">
+                    <h3>Buscar Documentos Legales</h3>
+                    <p><span class="method post">POST</span> <code>/legal-documents-v2/search</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Content-Type</code></td>
+                                <td><code>application/json</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>query</code></td>
+                                <td>string</td>
+                                <td>Pregunta o búsqueda en lenguaje natural</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>limit</code></td>
+                                <td>number</td>
+                                <td>Número máximo de resultados (default: 10)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL - Búsqueda Básica</h4>
+                    <div class="code-block">curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "query": "¿Cuáles son los derechos fundamentales de los ciudadanos?",
+    "limit": 3
+  }'</div>
+
+                    <h4>Ejemplo cURL - Búsqueda Avanzada</h4>
+                    <div class="code-block">curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/search \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "query": "normativas sobre medio ambiente y desarrollo sustentable",
+    "limit": 5
+  }'</div>
+
+                    <h4>Ejemplos de Consultas</h4>
+                    <ul style="margin: 15px 0; padding-left: 25px;">
+                        <li>"¿Qué dice la constitución sobre la libertad de expresión?"</li>
+                        <li>"Derechos de las personas con discapacidad"</li>
+                        <li>"Regulaciones sobre educación pública"</li>
+                        <li>"Protección del medio ambiente"</li>
+                        <li>"Deberes del Estado ecuatoriano"</li>
+                    </ul>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "results": [
+    {
+      "id": "426af1d2-7204-4f94-97e1-9892e4f54c47",
+      "title": null,
+      "category": null,
+      "content": "Art. 11.- El ejercicio de los derechos se regirá...",
+      "matched_content": "Todas las personas son iguales y gozarán...",
+      "similarity": 0.8945,
+      "normType": "CONSTITUTIONAL_NORM",
+      "legalHierarchy": "CONSTITUCION",
+      "publicationDate": "2008-10-20T00:00:00.000Z"
+    }
+  ],
+  "count": 3
+}</div>
+                    </div>
+
+                    <div class="info-box">
+                        <strong>💡 Cómo funciona:</strong>
+                        <ol style="margin: 10px 0; padding-left: 25px;">
+                            <li>La consulta se convierte en un vector de embeddings usando OpenAI</li>
+                            <li>Se calcula la similitud coseno con todos los documentos vectorizados</li>
+                            <li>Se devuelven los resultados más similares ordenados por relevancia</li>
+                            <li>El campo <code>similarity</code> indica qué tan relevante es (0-1)</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CREATE DOCUMENT -->
+            <div class="section" id="create-document">
+                <h2>3. Crear Documento Legal</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Permisos:</strong> Solo usuarios con rol <span class="badge admin">ADMIN</span> pueden crear documentos.
+                </div>
+
+                <div class="endpoint">
+                    <h3>Cargar Documento PDF</h3>
+                    <p><span class="method post">POST</span> <code>/legal-documents-v2</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Content-Type</code></td>
+                                <td><code>multipart/form-data</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Form Data</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>file</code></td>
+                                <td>File (PDF)</td>
+                                <td>Archivo PDF del documento legal</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>norm_type</code></td>
+                                <td>string</td>
+                                <td>Tipo de norma (ver enums)</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>norm_title</code></td>
+                                <td>string</td>
+                                <td>Título del documento</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>legal_hierarchy</code></td>
+                                <td>string</td>
+                                <td>Jerarquía legal (ver enums)</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>publication_type</code></td>
+                                <td>string</td>
+                                <td>Tipo de publicación (ver enums)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>publication_number</code></td>
+                                <td>string</td>
+                                <td>Número de registro oficial</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>publication_date</code></td>
+                                <td>date</td>
+                                <td>Fecha de publicación (YYYY-MM-DD)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>document_state</code></td>
+                                <td>string</td>
+                                <td>ORIGINAL o REFORMADO</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>jurisdiction</code></td>
+                                <td>string</td>
+                                <td>Jurisdicción territorial</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>last_reform_date</code></td>
+                                <td>date</td>
+                                <td>Fecha de última reforma (YYYY-MM-DD)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL - Subir PDF</h4>
+                    <div class="code-block">curl -X POST https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2 \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -F "file=@/path/to/constitucion.pdf" \
+  -F "norm_type=CONSTITUTIONAL_NORM" \
+  -F "norm_title=Constitución de la República del Ecuador" \
+  -F "legal_hierarchy=CONSTITUCION" \
+  -F "publication_type=ORDINARIO" \
+  -F "publication_number=449" \
+  -F "publication_date=2008-10-20" \
+  -F "document_state=ORIGINAL" \
+  -F "jurisdiction=NACIONAL"</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (201 Created)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "message": "✅ Documento cargado y vectorizado correctamente. Se generaron 435 embeddings de 435 fragmentos. El documento está listo para búsquedas semánticas con IA.",
+  "document": {
+    "id": "426af1d2-7204-4f94-97e1-9892e4f54c47",
+    "normType": "CONSTITUTIONAL_NORM",
+    "normTitle": "Constitución de la República del Ecuador",
+    "legalHierarchy": "CONSTITUCION",
+    "isActive": true,
+    "createdAt": "2025-01-10T12:00:00.000Z"
+  },
+  "vectorization": {
+    "totalChunks": 435,
+    "embeddingsGenerated": 435,
+    "embeddingsFailed": 0,
+    "successRate": "100%"
+  }
+}</div>
+                    </div>
+
+                    <div class="success-box">
+                        <strong>✨ Proceso Automático:</strong>
+                        <ol style="margin: 10px 0; padding-left: 25px;">
+                            <li>Extrae el texto del PDF</li>
+                            <li>Divide el contenido en fragmentos (chunks)</li>
+                            <li>Genera embeddings vectoriales con OpenAI</li>
+                            <li>Almacena los vectores en PostgreSQL con pgvector</li>
+                            <li>Crea índices HNSW para búsqueda rápida</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIST DOCUMENTS -->
+            <div class="section" id="list-documents">
+                <h2>4. Listar Documentos</h2>
+
+                <div class="endpoint">
+                    <h3>Obtener Lista de Documentos</h3>
+                    <p><span class="method get">GET</span> <code>/legal-documents-v2</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Query Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parámetro</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>page</code></td>
+                                <td>number</td>
+                                <td>Número de página (default: 1)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>limit</code></td>
+                                <td>number</td>
+                                <td>Documentos por página (default: 20)</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>normType</code></td>
+                                <td>string</td>
+                                <td>Filtrar por tipo de norma</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>legalHierarchy</code></td>
+                                <td>string</td>
+                                <td>Filtrar por jerarquía legal</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>searchTerm</code></td>
+                                <td>string</td>
+                                <td>Buscar en título</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL - Listar Todos</h4>
+                    <div class="code-block">curl -X GET "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</div>
+
+                    <h4>Ejemplo cURL - Con Filtros</h4>
+                    <div class="code-block">curl -X GET "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2?page=1&limit=10&normType=CONSTITUTIONAL_NORM&searchTerm=derechos" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "documents": [
+    {
+      "id": "426af1d2-7204-4f94-97e1-9892e4f54c47",
+      "normType": "CONSTITUTIONAL_NORM",
+      "normTitle": "Constitución de la República del Ecuador",
+      "legalHierarchy": "CONSTITUCION",
+      "publicationDate": "2008-10-20T00:00:00.000Z",
+      "documentState": "ORIGINAL",
+      "isActive": true
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "pages": 1
+  }
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GET DOCUMENT BY ID -->
+            <div class="section" id="get-document">
+                <h2>5. Obtener Documento por ID</h2>
+
+                <div class="endpoint">
+                    <h3>Consultar Documento Específico</h3>
+                    <p><span class="method get">GET</span> <code>/legal-documents-v2/:id</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Path Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parámetro</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>id</code></td>
+                                <td>string (UUID)</td>
+                                <td>ID único del documento</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X GET "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/426af1d2-7204-4f94-97e1-9892e4f54c47" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "document": {
+    "id": "426af1d2-7204-4f94-97e1-9892e4f54c47",
+    "normType": "CONSTITUTIONAL_NORM",
+    "normTitle": "Constitución de la República del Ecuador",
+    "legalHierarchy": "CONSTITUCION",
+    "content": "CONSTITUCIÓN DE LA REPÚBLICA DEL ECUADOR...",
+    "publicationType": "ORDINARIO",
+    "publicationNumber": "449",
+    "publicationDate": "2008-10-20T00:00:00.000Z",
+    "documentState": "ORIGINAL",
+    "jurisdiction": "NACIONAL",
+    "isActive": true,
+    "createdAt": "2025-01-10T12:00:00.000Z",
+    "updatedAt": "2025-01-10T12:00:00.000Z"
+  }
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UPDATE DOCUMENT -->
+            <div class="section" id="update-document">
+                <h2>6. Actualizar Documento</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Permisos:</strong> Solo usuarios con rol <span class="badge admin">ADMIN</span> pueden actualizar documentos.
+                </div>
+
+                <div class="endpoint">
+                    <h3>Modificar Documento Existente</h3>
+                    <p><span class="method put">PUT</span> <code>/legal-documents-v2/:id</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Content-Type</code></td>
+                                <td><code>application/json</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Request Body (todos los campos son opcionales)</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>normTitle</code></td>
+                                <td>string</td>
+                                <td>Nuevo título del documento</td>
+                            </tr>
+                            <tr>
+                                <td><code>documentState</code></td>
+                                <td>string</td>
+                                <td>ORIGINAL o REFORMADO</td>
+                            </tr>
+                            <tr>
+                                <td><code>lastReformDate</code></td>
+                                <td>date</td>
+                                <td>Fecha de última reforma</td>
+                            </tr>
+                            <tr>
+                                <td><code>isActive</code></td>
+                                <td>boolean</td>
+                                <td>Estado activo/inactivo</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X PUT "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/426af1d2-7204-4f94-97e1-9892e4f54c47" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "documentState": "REFORMADO",
+    "lastReformDate": "2024-05-30"
+  }'</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "document": {
+    "id": "426af1d2-7204-4f94-97e1-9892e4f54c47",
+    "documentState": "REFORMADO",
+    "lastReformDate": "2024-05-30T00:00:00.000Z",
+    "updatedAt": "2025-01-10T14:30:00.000Z"
+  }
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DELETE DOCUMENT -->
+            <div class="section" id="delete-document">
+                <h2>7. Eliminar Documento</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Permisos:</strong> Solo usuarios con rol <span class="badge admin">ADMIN</span> pueden eliminar documentos.
+                    <br><strong>ℹ️ Nota:</strong> Esta operación es un "soft delete" (el documento se marca como inactivo pero no se elimina físicamente).
+                </div>
+
+                <div class="endpoint">
+                    <h3>Eliminar Documento Legal</h3>
+                    <p><span class="method delete">DELETE</span> <code>/legal-documents-v2/:id</code></p>
+
+                    <h4>Headers</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Header</th>
+                                <th>Valor</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Authorization</code></td>
+                                <td><code>Bearer &lt;token&gt;</code></td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X DELETE "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/426af1d2-7204-4f94-97e1-9892e4f54c47" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "message": "Legal document deleted successfully"
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CREATE REVISION -->
+            <div class="section" id="create-revision">
+                <h2>8. Crear Revisión de Documento</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Permisos:</strong> Solo usuarios con rol <span class="badge admin">ADMIN</span> pueden crear revisiones.
+                </div>
+
+                <div class="endpoint">
+                    <h3>Registrar Cambio o Reforma</h3>
+                    <p><span class="method post">POST</span> <code>/legal-documents-v2/:id/revisions</code></p>
+
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Requerido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>revisionType</code></td>
+                                <td>string</td>
+                                <td>reform, correction, update</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>description</code></td>
+                                <td>string</td>
+                                <td>Descripción de los cambios</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>previousContent</code></td>
+                                <td>string</td>
+                                <td>Contenido anterior</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>newContent</code></td>
+                                <td>string</td>
+                                <td>Nuevo contenido</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>effectiveDate</code></td>
+                                <td>date</td>
+                                <td>Fecha de vigencia</td>
+                                <td><span class="badge required">SÍ</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>approvedBy</code></td>
+                                <td>string</td>
+                                <td>ID del aprobador</td>
+                                <td><span class="badge optional">NO</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X POST "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/426af1d2-7204-4f94-97e1-9892e4f54c47/revisions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "revisionType": "reform",
+    "description": "Tercera reforma constitucional 2024",
+    "effectiveDate": "2024-05-30",
+    "previousContent": "Art. 100.- Contenido original...",
+    "newContent": "Art. 100.- Contenido reformado..."
+  }'</div>
+                </div>
+            </div>
+
+            <!-- GET ENUMS -->
+            <div class="section" id="get-enums">
+                <h2>9. Obtener Valores Enum</h2>
+
+                <div class="info-box">
+                    <strong>ℹ️ Utilidad:</strong> Este endpoint devuelve todos los valores válidos para los campos enum. Útil para poblar dropdowns en el frontend.
+                </div>
+
+                <div class="endpoint">
+                    <h3>Consultar Enumeraciones</h3>
+                    <p><span class="method get">GET</span> <code>/legal-documents-v2/enums</code></p>
+
+                    <h4>Ejemplo cURL</h4>
+                    <div class="code-block">curl -X GET "https://legal-rag-api-qnew.onrender.com/api/v1/legal-documents-v2/enums" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</div>
+
+                    <div class="response-example">
+                        <h5>Respuesta Exitosa (200 OK)</h5>
+                        <div class="code-block">{
+  "success": true,
+  "enums": {
+    "normTypes": [
+      "CONSTITUTIONAL_NORM",
+      "ORGANIC_LAW",
+      "ORDINARY_LAW",
+      "ORGANIC_CODE",
+      "ORDINARY_CODE",
+      "REGULATION_GENERAL",
+      "REGULATION_EXECUTIVE",
+      "ORDINANCE_MUNICIPAL",
+      "ORDINANCE_METROPOLITAN",
+      "RESOLUTION_ADMINISTRATIVE",
+      "RESOLUTION_JUDICIAL",
+      "ADMINISTRATIVE_AGREEMENT",
+      "INTERNATIONAL_TREATY",
+      "JUDICIAL_PRECEDENT"
+    ],
+    "legalHierarchy": [
+      "CONSTITUCION",
+      "TRATADOS_INTERNACIONALES_DDHH",
+      "LEYES_ORGANICAS",
+      "LEYES_ORDINARIAS",
+      "CODIGOS_ORGANICOS",
+      "CODIGOS_ORDINARIOS",
+      "REGLAMENTOS",
+      "ORDENANZAS",
+      "RESOLUCIONES",
+      "ACUERDOS_ADMINISTRATIVOS"
+    ],
+    "publicationTypes": [
+      "ORDINARIO",
+      "SUPLEMENTO",
+      "SEGUNDO_SUPLEMENTO",
+      "SUPLEMENTO_ESPECIAL",
+      "EDICION_CONSTITUCIONAL"
+    ],
+    "documentStates": [
+      "ORIGINAL",
+      "REFORMADO"
+    ]
+  }
+}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ERROR CODES -->
+            <div class="section" id="errors">
+                <h2>10. Códigos de Error</h2>
+
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Ejemplo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>400</code></td>
+                            <td>Bad Request</td>
+                            <td>Datos de entrada inválidos o faltantes</td>
+                        </tr>
+                        <tr>
+                            <td><code>401</code></td>
+                            <td>Unauthorized</td>
+                            <td>Token JWT inválido o expirado</td>
+                        </tr>
+                        <tr>
+                            <td><code>403</code></td>
+                            <td>Forbidden</td>
+                            <td>Permisos insuficientes (no es admin)</td>
+                        </tr>
+                        <tr>
+                            <td><code>404</code></td>
+                            <td>Not Found</td>
+                            <td>Documento no encontrado</td>
+                        </tr>
+                        <tr>
+                            <td><code>500</code></td>
+                            <td>Internal Server Error</td>
+                            <td>Error del servidor</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Formato de Respuesta de Error</h4>
+                <div class="code-block">{
+  "error": "Validation Error",
+  "message": "Invalid input data",
+  "details": [
+    {
+      "field": "normType",
+      "message": "normType is required"
+    }
+  ]
+}</div>
+            </div>
+
+        </div>
+
+        <footer>
+            <p><strong>Legal RAG System API v2.0</strong></p>
+            <p>Desarrollado con ❤️ usando FastAPI, PostgreSQL, pgvector y OpenAI</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                📧 Admin: benitocabrerar@gmail.com |
+                🌐 Base URL: https://legal-rag-api-qnew.onrender.com
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
