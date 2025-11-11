@@ -870,13 +870,13 @@ export class QueryRouter {
         ldc.content,
         ld.norm_title,
         ld.id as document_id,
-        1 - (ldc.embedding <=> $1::vector) as similarity
+        1 - (ldc.embedding <=> ${embedding}::vector) as similarity
       FROM legal_document_chunks ldc
       JOIN legal_documents ld ON ldc.legal_document_id = ld.id
       WHERE ld.is_active = true
       ORDER BY similarity DESC
       LIMIT 20
-    `, JSON.stringify(embedding);
+    `;
 
     return results.map(r => ({
       id: r.document_id,
@@ -919,6 +919,7 @@ export class QueryRouter {
 
   private async metadataSearch(query: string, caseId: string): Promise<SearchResult[]> {
     // Search in document metadata and summaries
+    const searchPattern = `%${query}%`;
     const results = await this.prisma.$queryRaw<any[]>`
       SELECT
         ld.id,
@@ -930,11 +931,11 @@ export class QueryRouter {
       LEFT JOIN legal_document_summaries lds ON ld.id = lds.legal_document_id
       WHERE ld.is_active = true
         AND (
-          ld.norm_title ILIKE $1
-          OR lds.summary_text ILIKE $1
+          ld.norm_title ILIKE ${searchPattern}
+          OR lds.summary_text ILIKE ${searchPattern}
         )
       LIMIT 10
-    `, `%${query}%`;
+    `;
 
     return results.map(r => ({
       id: r.id,
@@ -955,14 +956,14 @@ export class QueryRouter {
         lds.summary_text as content,
         ld.norm_title,
         ld.id as document_id,
-        1 - (lds.embedding <=> $1::vector) as similarity
+        1 - (lds.embedding <=> ${embedding}::vector) as similarity
       FROM legal_document_summaries lds
       JOIN legal_documents ld ON lds.legal_document_id = ld.id
       WHERE ld.is_active = true
         AND lds.embedding IS NOT NULL
       ORDER BY similarity DESC
       LIMIT 10
-    `, JSON.stringify(embedding);
+    `;
 
     return results.map(r => ({
       id: r.document_id,
@@ -1008,9 +1009,9 @@ export class QueryRouter {
       const article = await this.prisma.$queryRaw<any[]>`
         SELECT *
         FROM legal_document_articles
-        WHERE article_number_text = $1
+        WHERE article_number_text = ${entity.normalizedValue}
         LIMIT 1
-      `, entity.normalizedValue;
+      `;
 
       if (article && article.length > 0) {
         return {

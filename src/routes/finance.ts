@@ -344,6 +344,59 @@ export async function financeRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // List all invoices for user
+  fastify.get('/finance/invoices', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as any).id;
+
+      const invoices = await prisma.invoiceFinance.findMany({
+        where: {
+          case: {
+            userId,
+          },
+        },
+        include: {
+          case: {
+            select: {
+              id: true,
+              title: true,
+              clientName: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              method: true,
+              status: true,
+              paymentDate: true,
+            },
+          },
+        },
+        orderBy: {
+          issueDate: 'desc',
+        },
+      });
+
+      const summary = {
+        total: invoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
+        paid: invoices.reduce((sum, inv) => sum + inv.paidAmount, 0),
+        outstanding: invoices.reduce((sum, inv) => sum + inv.balanceDue, 0),
+        count: invoices.length,
+      };
+
+      return reply.send({
+        invoices,
+        summary,
+      });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
   // Get invoices for a case
   fastify.get('/finance/cases/:caseId/invoices', {
     onRequest: [fastify.authenticate],
@@ -571,6 +624,55 @@ export async function financeRoutes(fastify: FastifyInstance) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({ error: error.errors });
       }
+      fastify.log.error(error);
+      return reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
+  // List all payments for user
+  fastify.get('/finance/payments', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as any).id;
+
+      const payments = await prisma.paymentFinance.findMany({
+        where: {
+          case: {
+            userId,
+          },
+        },
+        include: {
+          case: {
+            select: {
+              id: true,
+              title: true,
+              clientName: true,
+            },
+          },
+          invoice: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              clientName: true,
+            },
+          },
+        },
+        orderBy: {
+          paymentDate: 'desc',
+        },
+      });
+
+      const summary = {
+        total: payments.reduce((sum, pmt) => sum + pmt.amount, 0),
+        count: payments.length,
+      };
+
+      return reply.send({
+        payments,
+        summary,
+      });
+    } catch (error) {
       fastify.log.error(error);
       return reply.code(500).send({ error: 'Internal server error' });
     }
