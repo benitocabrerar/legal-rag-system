@@ -125,14 +125,14 @@ export async function calendarRoutes(fastify: FastifyInstance) {
             },
           },
           participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+            select: {
+              id: true,
+              userId: true,
+              email: true,
+              name: true,
+              role: true,
+              status: true,
+              responseTime: true,
             },
           },
           reminders: true,
@@ -208,14 +208,14 @@ export async function calendarRoutes(fastify: FastifyInstance) {
               },
             },
             participants: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  },
-                },
+              select: {
+                id: true,
+                userId: true,
+                email: true,
+                name: true,
+                role: true,
+                status: true,
+                responseTime: true,
               },
             },
             reminders: {
@@ -370,14 +370,14 @@ export async function calendarRoutes(fastify: FastifyInstance) {
             },
           },
           participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+            select: {
+              id: true,
+              userId: true,
+              email: true,
+              name: true,
+              role: true,
+              status: true,
+              responseTime: true,
             },
           },
           reminders: true,
