@@ -592,4 +592,245 @@ export class LegalDocumentService {
 
     return Array.from(documentMap.values());
   }
+
+  /**
+   * Regenerate embeddings for an existing document
+   * Deletes all existing chunks and recreates them with new embeddings
+   */
+  async regenerateEmbeddings(
+    documentId: string,
+    userId: string
+  ): Promise<{
+    success: boolean;
+    totalChunks: number;
+    embeddingsGenerated: number;
+    embeddingsFailed: number;
+    message: string;
+  }> {
+    // 1. Fetch the document
+    const document = await this.prisma.legalDocument.findUnique({
+      where: { id: documentId },
+      select: { id: true, content: true, normTitle: true, isActive: true },
+    });
+
+    if (!document) {
+      throw new Error('Legal document not found');
+    }
+
+    if (!document.isActive) {
+      throw new Error('Cannot regenerate embeddings for inactive document');
+    }
+
+    if (!document.content || document.content.trim().length === 0) {
+      throw new Error('Document has no content to vectorize');
+    }
+
+    console.log(`\n🔄 Regenerating embeddings for document: ${document.normTitle}`);
+    console.log(`📄 Document ID: ${documentId}`);
+
+    // 2. Delete all existing chunks (in transaction for safety)
+    const deletedCount = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.legalDocumentChunk.deleteMany({
+        where: { legalDocumentId: documentId },
+      });
+      return result.count;
+    });
+
+    console.log(`🗑️  Deleted ${deletedCount} existing chunks`);
+
+    // 3. Regenerate chunks and embeddings (async, outside transaction)
+    const vectorizationResult = await this.createDocumentChunksAsync(
+      documentId,
+      document.content
+    );
+
+    // 4. Create audit log
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'REGENERATE_EMBEDDINGS',
+        entity: 'LegalDocument',
+        entityId: documentId,
+        success: vectorizationResult.success,
+        metadata: {
+          totalChunks: vectorizationResult.totalChunks,
+          embeddingsGenerated: vectorizationResult.embeddingsGenerated,
+          embeddingsFailed: vectorizationResult.embeddingsFailed,
+          deletedChunks: deletedCount,
+        },
+      },
+    });
+
+    console.log(`✅ Embedding regeneration complete\n`);
+
+    // 5. Build result message
+    let message: string;
+    if (vectorizationResult.success) {
+      message = `Embeddings regenerados exitosamente. Se generaron ${vectorizationResult.embeddingsGenerated} embeddings de ${vectorizationResult.totalChunks} chunks.`;
+    } else {
+      message = `Regeneración parcial. Se generaron ${vectorizationResult.embeddingsGenerated} de ${vectorizationResult.totalChunks} embeddings. ${vectorizationResult.embeddingsFailed} chunks fallaron.`;
+    }
+
+    return {
+      success: vectorizationResult.success,
+      totalChunks: vectorizationResult.totalChunks,
+      embeddingsGenerated: vectorizationResult.embeddingsGenerated,
+      embeddingsFailed: vectorizationResult.embeddingsFailed,
+      message,
+    };
+  }
+
+  /**
+   * Extract metadata from document content using OpenAI GPT-4
+   * Returns suggested values for all metadata fields
+   */
+  async extractMetadataWithAI(
+    content: string
+  ): Promise<{
+    suggestions: {
+      normType: string;
+      normTitle: string;
+      legalHierarchy: string;
+      publicationType: string | null;
+      publicationNumber: string | null;
+      publicationDate: string | null;
+      documentState: string;
+      jurisdiction: string | null;
+      lastReformDate: string | null;
+      keywords: string[];
+    };
+    confidence: 'high' | 'medium' | 'low';
+    reasoning: string;
+  }> {
+    console.log('\n🤖 Extracting metadata with AI...');
+
+    // Truncate content if too long (GPT-4 has token limits)
+    const maxChars = 8000;
+    const truncatedContent = content.length > maxChars
+      ? content.slice(0, maxChars) + '...[contenido truncado]'
+      : content;
+
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: [
+          {
+            role: 'system',
+            content: `Eres un experto en derecho ecuatoriano. Tu tarea es analizar documentos legales y extraer metadatos estructurados.
+
+TIPOS DE NORMA (normType) válidos:
+- CONSTITUTIONAL_NORM: Normas constitucionales
+- ORGANIC_LAW: Leyes orgánicas
+- ORDINARY_LAW: Leyes ordinarias
+- ORGANIC_CODE: Códigos orgánicos
+- ORDINARY_CODE: Códigos ordinarios
+- REGULATION_GENERAL: Reglamentos generales
+- REGULATION_EXECUTIVE: Decretos ejecutivos
+- ORDINANCE_MUNICIPAL: Ordenanzas municipales
+- ORDINANCE_METROPOLITAN: Ordenanzas metropolitanas
+- RESOLUTION_ADMINISTRATIVE: Resoluciones administrativas
+- RESOLUTION_JUDICIAL: Resoluciones judiciales
+- ADMINISTRATIVE_AGREEMENT: Acuerdos ministeriales
+- INTERNATIONAL_TREATY: Tratados internacionales
+- JUDICIAL_PRECEDENT: Jurisprudencia
+
+JERARQUÍA LEGAL (legalHierarchy) válida:
+- CONSTITUCION: Constitución de la República
+- TRATADOS_INTERNACIONALES_DDHH: Tratados internacionales de DDHH
+- LEYES_ORGANICAS: Leyes orgánicas
+- LEYES_ORDINARIAS: Leyes ordinarias
+- CODIGOS_ORGANICOS: Códigos orgánicos
+- CODIGOS_ORDINARIOS: Códigos ordinarios
+- REGLAMENTOS: Reglamentos y decretos
+- ORDENANZAS: Ordenanzas
+- RESOLUCIONES: Resoluciones
+- ACUERDOS_ADMINISTRATIVOS: Acuerdos administrativos
+
+TIPO DE PUBLICACIÓN (publicationType) válido:
+- ORDINARIO: Registro oficial ordinario
+- SUPLEMENTO: Suplemento
+- SEGUNDO_SUPLEMENTO: Segundo suplemento
+- SUPLEMENTO_ESPECIAL: Suplemento especial
+- EDICION_CONSTITUCIONAL: Edición constitucional
+
+ESTADO DEL DOCUMENTO (documentState):
+- ORIGINAL: Documento original sin reformas
+- REFORMADO: Documento que ha sido reformado
+
+Extrae los metadatos del documento legal proporcionado. Responde en formato JSON con la siguiente estructura:
+{
+  "normType": "tipo de norma",
+  "normTitle": "título completo del documento",
+  "legalHierarchy": "jerarquía legal",
+  "publicationType": "tipo de publicación o null",
+  "publicationNumber": "número de publicación o null",
+  "publicationDate": "fecha YYYY-MM-DD o null",
+  "documentState": "estado del documento",
+  "jurisdiction": "jurisdicción (NACIONAL, PROVINCIAL, CANTONAL, etc.) o null",
+  "lastReformDate": "fecha YYYY-MM-DD o null",
+  "keywords": ["palabra1", "palabra2"],
+  "confidence": "high|medium|low",
+  "reasoning": "explicación de la extracción"
+}`
+          },
+          {
+            role: 'user',
+            content: `Analiza el siguiente documento legal ecuatoriano y extrae los metadatos:\n\n${truncatedContent}`
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3, // Lower temperature for more consistent extraction
+      });
+
+      const result = completion.choices[0].message.content;
+      if (!result) {
+        throw new Error('No response from OpenAI');
+      }
+
+      const parsed = JSON.parse(result);
+
+      console.log('✅ AI extraction complete');
+      console.log(`  📋 Norm Type: ${parsed.normType || 'N/A'}`);
+      console.log(`  📝 Title: ${parsed.normTitle || 'N/A'}`);
+      console.log(`  📊 Hierarchy: ${parsed.legalHierarchy || 'N/A'}`);
+      console.log(`  🎯 Confidence: ${parsed.confidence || 'medium'}`);
+
+      return {
+        suggestions: {
+          normType: parsed.normType || 'ORDINARY_LAW',
+          normTitle: parsed.normTitle || '',
+          legalHierarchy: parsed.legalHierarchy || 'LEYES_ORDINARIAS',
+          publicationType: parsed.publicationType || null,
+          publicationNumber: parsed.publicationNumber || null,
+          publicationDate: parsed.publicationDate || null,
+          documentState: parsed.documentState || 'ORIGINAL',
+          jurisdiction: parsed.jurisdiction || 'NACIONAL',
+          lastReformDate: parsed.lastReformDate || null,
+          keywords: parsed.keywords || [],
+        },
+        confidence: parsed.confidence || 'medium',
+        reasoning: parsed.reasoning || 'Análisis automático completado',
+      };
+    } catch (error: any) {
+      console.error('❌ AI extraction failed:', error.message);
+
+      // Return default values if AI extraction fails
+      return {
+        suggestions: {
+          normType: 'ORDINARY_LAW',
+          normTitle: '',
+          legalHierarchy: 'LEYES_ORDINARIAS',
+          publicationType: null,
+          publicationNumber: null,
+          publicationDate: null,
+          documentState: 'ORIGINAL',
+          jurisdiction: 'NACIONAL',
+          lastReformDate: null,
+          keywords: [],
+        },
+        confidence: 'low',
+        reasoning: 'Error en extracción automática. Por favor ingrese los metadatos manualmente.',
+      };
+    }
+  }
 }

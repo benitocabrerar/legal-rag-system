@@ -31,6 +31,25 @@ interface LegalDocument {
   };
 }
 
+// AI Extraction Response Types
+interface AIFieldSuggestion {
+  value: string;
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+}
+
+interface AIMetadataExtraction {
+  normTitle?: AIFieldSuggestion;
+  normType?: AIFieldSuggestion;
+  legalHierarchy?: AIFieldSuggestion;
+  publicationType?: AIFieldSuggestion;
+  publicationNumber?: AIFieldSuggestion;
+  publicationDate?: AIFieldSuggestion;
+  lastReformDate?: AIFieldSuggestion;
+  documentState?: AIFieldSuggestion;
+  jurisdiction?: AIFieldSuggestion;
+}
+
 // Enums from backend
 const NORM_TYPES = [
   { value: 'CONSTITUTIONAL_NORM', label: 'Norma Constitucional', icon: '⚖️' },
@@ -91,6 +110,31 @@ export default function LegalLibraryPage() {
   const [processingAfterUpload, setProcessingAfterUpload] = useState(false);
   const [filterHierarchy, setFilterHierarchy] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<LegalDocument | null>(null);
+  const [editForm, setEditForm] = useState({
+    normTitle: '',
+    normType: '',
+    legalHierarchy: '',
+    publicationType: '',
+    publicationNumber: '',
+    publicationDate: '',
+    lastReformDate: '',
+    documentState: '',
+    jurisdiction: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  // AI Extraction states
+  const [extractingMetadata, setExtractingMetadata] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AIMetadataExtraction | null>(null);
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+
+  // Regenerate embeddings states
+  const [regeneratingEmbeddings, setRegeneratingEmbeddings] = useState(false);
+  const [showRegenerateButton, setShowRegenerateButton] = useState(false);
 
   const [uploadForm, setUploadForm] = useState({
     norm_type: 'ORDINARY_LAW',
@@ -280,6 +324,149 @@ export default function LegalLibraryPage() {
       console.error('Error deleting document:', error);
       const errorMessage = error?.response?.data?.message || 'Error al eliminar documento';
       alert(`❌ ${errorMessage}`);
+    }
+  };
+
+  // Open edit modal and populate form
+  const handleEdit = (doc: LegalDocument) => {
+    setEditingDocument(doc);
+    setEditForm({
+      normTitle: doc.normTitle,
+      normType: doc.normType,
+      legalHierarchy: doc.legalHierarchy,
+      publicationType: doc.publicationType,
+      publicationNumber: doc.publicationNumber,
+      publicationDate: doc.publicationDate ? doc.publicationDate.split('T')[0] : '',
+      lastReformDate: doc.lastReformDate ? doc.lastReformDate.split('T')[0] : '',
+      documentState: doc.documentState,
+      jurisdiction: doc.jurisdiction,
+    });
+    setAiSuggestions(null);
+    setShowAISuggestions(false);
+    setShowRegenerateButton((doc._count?.chunks || 0) < 1);
+    setShowEditModal(true);
+  };
+
+  // Extract metadata with AI
+  const handleExtractMetadata = async () => {
+    if (!editingDocument) return;
+
+    setExtractingMetadata(true);
+    setAiSuggestions(null);
+    setShowAISuggestions(false);
+
+    try {
+      // First, get the document content (we'll need to fetch the PDF content)
+      // For now, we'll use the existing title as content placeholder
+      const response = await api.post('/legal-documents-v2/extract-metadata', {
+        content: editingDocument.normTitle, // In production, fetch actual PDF content
+      });
+
+      setAiSuggestions(response.data.metadata || response.data);
+      setShowAISuggestions(true);
+    } catch (error: any) {
+      console.error('Error extracting metadata:', error);
+      const errorMessage = error?.response?.data?.message || 'Error al extraer metadatos con IA';
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setExtractingMetadata(false);
+    }
+  };
+
+  // Apply AI suggestion to form
+  const applyAISuggestion = (field: keyof typeof editForm, value: string) => {
+    setEditForm({
+      ...editForm,
+      [field]: value,
+    });
+  };
+
+  // Save changes
+  const handleSaveChanges = async () => {
+    if (!editingDocument) return;
+
+    setSaving(true);
+
+    try {
+      const payload = {
+        normTitle: editForm.normTitle,
+        normType: editForm.normType,
+        legalHierarchy: editForm.legalHierarchy,
+        publicationType: editForm.publicationType,
+        publicationNumber: editForm.publicationNumber,
+        publicationDate: editForm.publicationDate || null,
+        lastReformDate: editForm.lastReformDate || null,
+        documentState: editForm.documentState,
+        jurisdiction: editForm.jurisdiction,
+      };
+
+      await api.put(`/legal-documents-v2/${editingDocument.id}`, payload);
+
+      alert('✅ Documento actualizado exitosamente');
+      setShowEditModal(false);
+      setEditingDocument(null);
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error updating document:', error);
+      const errorMessage = error?.response?.data?.message || 'Error al actualizar documento';
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Regenerate embeddings
+  const handleRegenerateEmbeddings = async () => {
+    if (!editingDocument) return;
+
+    const confirmed = confirm(
+      '¿Deseas regenerar los embeddings vectoriales de este documento?\n\nEsto puede tomar varios segundos dependiendo del tamaño del documento.'
+    );
+
+    if (!confirmed) return;
+
+    setRegeneratingEmbeddings(true);
+
+    try {
+      const response = await api.post(`/legal-documents-v2/${editingDocument.id}/regenerate-embeddings`);
+
+      const { message, vectorization } = response.data;
+
+      let alertMessage = message || '✅ Embeddings regenerados exitosamente';
+
+      if (vectorization) {
+        alertMessage += `\n\n📊 Resultados:`;
+        alertMessage += `\n• Total de fragmentos: ${vectorization.totalChunks}`;
+        alertMessage += `\n• Embeddings generados: ${vectorization.embeddingsGenerated}`;
+        alertMessage += `\n• Tasa de éxito: ${vectorization.successRate}`;
+
+        if (vectorization.embeddingsFailed > 0) {
+          alertMessage += `\n• ⚠️ Fallos: ${vectorization.embeddingsFailed}`;
+        }
+      }
+
+      alert(alertMessage);
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error regenerating embeddings:', error);
+      const errorMessage = error?.response?.data?.message || 'Error al regenerar embeddings';
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setRegeneratingEmbeddings(false);
+    }
+  };
+
+  // Get confidence color
+  const getConfidenceColor = (confidence: 'high' | 'medium' | 'low') => {
+    switch (confidence) {
+      case 'high':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'low':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -509,6 +696,12 @@ export default function LegalLibraryPage() {
                       ? '⏳ Procesando'
                       : '✗ Error'}
                   </span>
+                  <button
+                    onClick={() => handleEdit(doc)}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold hover:underline"
+                  >
+                    ✏️ Editar
+                  </button>
                   <button
                     onClick={() => handleDelete(doc.id, doc.normTitle, doc)}
                     className="text-xs text-red-600 hover:text-red-800 font-semibold hover:underline"
@@ -791,6 +984,298 @@ export default function LegalLibraryPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">✏️ Editar Documento Legal</h2>
+              <button
+                onClick={handleExtractMetadata}
+                disabled={extractingMetadata}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm"
+              >
+                {extractingMetadata ? (
+                  <span className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Extrayendo...</span>
+                  </span>
+                ) : (
+                  '🤖 Extraer Metadatos con IA'
+                )}
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Main Form - 2/3 width */}
+              <div className="md:col-span-2 space-y-4">
+                {/* Norm Title */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Título de la Norma *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.normTitle}
+                    onChange={(e) => setEditForm({ ...editForm, normTitle: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Norm Type & Legal Hierarchy */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tipo de Norma *
+                    </label>
+                    <select
+                      required
+                      value={editForm.normType}
+                      onChange={(e) => setEditForm({ ...editForm, normType: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {NORM_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.icon} {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Jerarquía Legal *
+                    </label>
+                    <select
+                      required
+                      value={editForm.legalHierarchy}
+                      onChange={(e) => setEditForm({ ...editForm, legalHierarchy: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {LEGAL_HIERARCHY.map((hier) => (
+                        <option key={hier.value} value={hier.value}>
+                          Nivel {hier.level}: {hier.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Publication Type & Number */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tipo de Publicación RO *
+                    </label>
+                    <select
+                      required
+                      value={editForm.publicationType}
+                      onChange={(e) => setEditForm({ ...editForm, publicationType: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {PUBLICATION_TYPES.map((pub) => (
+                        <option key={pub.value} value={pub.value}>
+                          {pub.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Número de Registro Oficial *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.publicationNumber}
+                      onChange={(e) => setEditForm({ ...editForm, publicationNumber: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Fecha de Publicación
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.publicationDate}
+                      onChange={(e) => setEditForm({ ...editForm, publicationDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Fecha de Última Reforma
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.lastReformDate}
+                      onChange={(e) => setEditForm({ ...editForm, lastReformDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Document State & Jurisdiction */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Estado del Documento *
+                    </label>
+                    <select
+                      required
+                      value={editForm.documentState}
+                      onChange={(e) => setEditForm({ ...editForm, documentState: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {DOCUMENT_STATES.map((state) => (
+                        <option key={state.value} value={state.value}>
+                          {state.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Jurisdicción *
+                    </label>
+                    <select
+                      required
+                      value={editForm.jurisdiction}
+                      onChange={(e) => setEditForm({ ...editForm, jurisdiction: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      {JURISDICTIONS.map((jur) => (
+                        <option key={jur.value} value={jur.value}>
+                          {jur.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Suggestions Panel - 1/3 width */}
+              {showAISuggestions && aiSuggestions && (
+                <div className="md:col-span-1 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4 max-h-[600px] overflow-y-auto">
+                  <h3 className="text-lg font-bold text-purple-900 mb-4">🤖 Sugerencias de IA</h3>
+
+                  {Object.entries(aiSuggestions).map(([field, suggestion]) => {
+                    if (!suggestion) return null;
+
+                    const fieldLabels: Record<string, string> = {
+                      normTitle: 'Título de la Norma',
+                      normType: 'Tipo de Norma',
+                      legalHierarchy: 'Jerarquía Legal',
+                      publicationType: 'Tipo de Publicación',
+                      publicationNumber: 'Número RO',
+                      publicationDate: 'Fecha de Publicación',
+                      lastReformDate: 'Última Reforma',
+                      documentState: 'Estado del Documento',
+                      jurisdiction: 'Jurisdicción',
+                    };
+
+                    return (
+                      <div key={field} className="mb-4 bg-white rounded-lg p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {fieldLabels[field as keyof typeof fieldLabels]}
+                          </span>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${getConfidenceColor(
+                              suggestion.confidence
+                            )}`}
+                          >
+                            {suggestion.confidence === 'high'
+                              ? 'Alta'
+                              : suggestion.confidence === 'medium'
+                              ? 'Media'
+                              : 'Baja'}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-900 mb-2">
+                          {suggestion.value}
+                        </div>
+                        {suggestion.reasoning && (
+                          <div className="text-xs text-gray-600 mb-2 italic">
+                            {suggestion.reasoning}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => applyAISuggestion(field as keyof typeof editForm, suggestion.value)}
+                          className="w-full px-3 py-1.5 bg-purple-600 text-white rounded-md text-xs font-semibold hover:bg-purple-700 transition-colors"
+                        >
+                          Aceptar Sugerencia
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-4 pt-6 mt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingDocument(null);
+                  setAiSuggestions(null);
+                  setShowAISuggestions(false);
+                }}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                disabled={saving || regeneratingEmbeddings}
+              >
+                Cancelar
+              </button>
+
+              {showRegenerateButton && (
+                <button
+                  type="button"
+                  onClick={handleRegenerateEmbeddings}
+                  disabled={saving || regeneratingEmbeddings}
+                  className="px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  {regeneratingEmbeddings ? (
+                    <span className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Regenerando...</span>
+                    </span>
+                  ) : (
+                    '🔄 Regenerar Embeddings'
+                  )}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSaveChanges}
+                disabled={saving || regeneratingEmbeddings}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {saving ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Guardando...</span>
+                  </span>
+                ) : (
+                  '💾 Guardar Cambios'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

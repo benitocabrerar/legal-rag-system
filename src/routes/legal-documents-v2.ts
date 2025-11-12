@@ -420,6 +420,130 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
   });
 
   // ============================================================================
+  // REGENERATE EMBEDDINGS
+  // ============================================================================
+  fastify.post('/legal-documents-v2/:id/regenerate-embeddings', {
+    onRequest: [fastify.authenticate],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = request.user as any;
+      const { id } = request.params as { id: string };
+
+      // Check admin permission
+      if (user.role !== 'admin') {
+        return reply.code(403).send({
+          error: 'Forbidden',
+          message: 'Only administrators can regenerate embeddings',
+        });
+      }
+
+      fastify.log.info(`Admin ${user.email} regenerating embeddings for document ${id}`);
+
+      const result = await documentService.regenerateEmbeddings(id, user.id);
+
+      // Build detailed response
+      const warnings: string[] = [];
+      if (!result.success) {
+        warnings.push(
+          `${result.embeddingsFailed} chunks no pudieron ser vectorizados.`,
+          `Estos chunks estarán disponibles solo mediante búsqueda de texto.`,
+          `Si el problema persiste, verifique la configuración de OpenAI o contacte al administrador.`
+        );
+      }
+
+      return reply.code(200).send({
+        success: result.success,
+        message: result.message,
+        warnings: warnings.length > 0 ? warnings : undefined,
+        vectorization: {
+          totalChunks: result.totalChunks,
+          embeddingsGenerated: result.embeddingsGenerated,
+          embeddingsFailed: result.embeddingsFailed,
+          successRate: `${Math.round((result.embeddingsGenerated / result.totalChunks) * 100)}%`,
+        },
+      });
+    } catch (error: any) {
+      fastify.log.error(error);
+
+      // Handle specific errors
+      if (error.message === 'Legal document not found') {
+        return reply.code(404).send({
+          error: 'Not Found',
+          message: 'Documento no encontrado',
+        });
+      }
+
+      if (error.message === 'Cannot regenerate embeddings for inactive document') {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'No se pueden regenerar embeddings para documentos inactivos',
+        });
+      }
+
+      if (error.message === 'Document has no content to vectorize') {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'El documento no tiene contenido para vectorizar',
+        });
+      }
+
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: error.message,
+      });
+    }
+  });
+
+  // ============================================================================
+  // EXTRACT METADATA WITH AI
+  // ============================================================================
+  fastify.post('/legal-documents-v2/extract-metadata', {
+    onRequest: [fastify.authenticate],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = request.user as any;
+      const { content } = request.body as { content: string };
+
+      // Check admin permission
+      if (user.role !== 'admin') {
+        return reply.code(403).send({
+          error: 'Forbidden',
+          message: 'Only administrators can extract metadata',
+        });
+      }
+
+      if (!content || content.trim().length === 0) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Content is required for metadata extraction',
+        });
+      }
+
+      if (content.length < 100) {
+        return reply.code(400).send({
+          error: 'Bad Request',
+          message: 'Content too short for reliable metadata extraction (minimum 100 characters)',
+        });
+      }
+
+      fastify.log.info(`Admin ${user.email} requesting AI metadata extraction`);
+
+      const result = await documentService.extractMetadataWithAI(content);
+
+      return reply.send({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: error.message,
+      });
+    }
+  });
+
+  // ============================================================================
   // LEGACY MIGRATION ENDPOINT
   // ============================================================================
   fastify.post('/legal-documents-v2/migrate', {
