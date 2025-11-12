@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import dynamic from 'next/dynamic';
+
+// Import PDFViewer dynamically to avoid SSR issues with react-pdf
+const PDFViewer = dynamic(() => import('@/components/PDFViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-gray-100">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando visor de PDF...</p>
+      </div>
+    </div>
+  ),
+});
 
 // Types matching backend schema (camelCase from Prisma)
 interface LegalDocument {
@@ -988,31 +1002,57 @@ export default function LegalLibraryPage() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Full Screen with PDF Viewer */}
       {showEditModal && editingDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">✏️ Editar Documento Legal</h2>
-              <button
-                onClick={handleExtractMetadata}
-                disabled={extractingMetadata}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm"
-              >
-                {extractingMetadata ? (
-                  <span className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Extrayendo...</span>
-                  </span>
-                ) : (
-                  '🤖 Extraer Metadatos con IA'
-                )}
-              </button>
+          <div className="bg-white rounded-2xl w-[95vw] h-[95vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+              <h2 className="text-2xl font-bold text-gray-900">✏️ Editar Documento Legal</h2>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleExtractMetadata}
+                  disabled={extractingMetadata}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md text-sm"
+                >
+                  {extractingMetadata ? (
+                    <span className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Extrayendo...</span>
+                    </span>
+                  ) : (
+                    '🤖 Extraer Metadatos con IA'
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingDocument(null);
+                    setAiSuggestions(null);
+                    setShowAISuggestions(false);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Main Form - 2/3 width */}
-              <div className="md:col-span-2 space-y-4">
+            {/* Main Content - Split Layout */}
+            <div className="flex-1 grid grid-cols-2 gap-0 overflow-hidden">
+              {/* Left Column: PDF Viewer */}
+              <div className="border-r border-gray-200 bg-gray-50 overflow-hidden">
+                <PDFViewer
+                  documentId={editingDocument.id}
+                  documentTitle={editingDocument.normTitle}
+                  fileSize={editingDocument.fileSize}
+                />
+              </div>
+
+              {/* Right Column: Edit Form + AI Suggestions */}
+              <div className="flex flex-col overflow-hidden">
+                {/* Form Section */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {/* Norm Title */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1165,11 +1205,11 @@ export default function LegalLibraryPage() {
                     </select>
                   </div>
                 </div>
-              </div>
+                </div>
 
-              {/* AI Suggestions Panel - 1/3 width */}
-              {showAISuggestions && aiSuggestions && (
-                <div className="md:col-span-1 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-4 max-h-[600px] overflow-y-auto">
+                {/* AI Suggestions Panel - Bottom of Right Column */}
+                {showAISuggestions && aiSuggestions && (
+                  <div className="border-t border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4 max-h-[300px] overflow-y-auto">
                   <h3 className="text-lg font-bold text-purple-900 mb-4">🤖 Sugerencias de IA</h3>
 
                   {Object.entries(aiSuggestions).map(([field, suggestion]) => {
@@ -1222,12 +1262,13 @@ export default function LegalLibraryPage() {
                       </div>
                     );
                   })}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-4 pt-6 mt-6 border-t border-gray-200">
+            {/* Footer: Action Buttons */}
+            <div className="flex items-center justify-between px-8 py-4 border-t border-gray-200 bg-gray-50 space-x-4">
               <button
                 type="button"
                 onClick={() => {
@@ -1236,7 +1277,7 @@ export default function LegalLibraryPage() {
                   setAiSuggestions(null);
                   setShowAISuggestions(false);
                 }}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-white transition-colors"
                 disabled={saving || regeneratingEmbeddings}
               >
                 Cancelar
@@ -1264,7 +1305,7 @@ export default function LegalLibraryPage() {
                 type="button"
                 onClick={handleSaveChanges}
                 disabled={saving || regeneratingEmbeddings}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {saving ? (
                   <span className="flex items-center justify-center space-x-2">

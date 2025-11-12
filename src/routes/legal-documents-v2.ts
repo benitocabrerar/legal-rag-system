@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
 import { LegalDocumentService } from '../services/legal-document-service';
+import { getS3Service } from '../services/s3-service';
 import {
   CreateLegalDocumentSchema,
   UpdateLegalDocumentSchema,
@@ -115,6 +116,84 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
           jurisdiction: formData.jurisdiction,
           lastReformDate: toISODateTime(formData.last_reform_date),
         };
+
+        // Validate with Zod schema
+        const validatedData = CreateLegalDocumentSchema.parse(documentData);
+
+        // Create document first to get the ID
+        const document = await documentService.createDocument(validatedData, user.id);
+
+        // Upload PDF to S3 with document ID
+        if (fileBuffer && filename) {
+          try {
+            const s3Service = getS3Service();
+            const uploadResult = await s3Service.uploadFile(
+              document.id,
+              filename,
+              fileBuffer,
+              {
+                normTitle: document.normTitle,
+                normType: document.normType,
+                uploadedBy: user.email,
+              }
+            );
+
+            // Update document with S3 key in metadata
+            await prisma.legalDocument.update({
+              where: { id: document.id },
+              data: {
+                metadata: {
+                  ...(document.metadata as any || {}),
+                  s3Key: uploadResult.key,
+                  s3Bucket: uploadResult.bucket,
+                  fileSize: uploadResult.size,
+                  originalFilename: filename,
+                },
+              },
+            });
+
+            fastify.log.info(`PDF uploaded to S3: ${uploadResult.key} (${uploadResult.size} bytes)`);
+          } catch (s3Error: any) {
+            fastify.log.error('S3 upload failed:', s3Error);
+            // Don't fail the entire request if S3 upload fails
+            // The document is already created, just log the error
+          }
+        }
+
+        // Return the created document with vectorization info
+        // Build detailed message about vectorization status
+        const vectorization = (document as any).vectorization;
+        let message: string;
+        let warnings: string[] = [];
+
+        if (vectorization && vectorization.success) {
+          // All embeddings generated successfully
+          message = `✅ Documento cargado y vectorizado correctamente. Se generaron ${vectorization.embeddingsGenerated} embeddings de ${vectorization.totalChunks} fragmentos. El documento está listo para búsquedas semánticas con IA.`;
+        } else if (vectorization && vectorization.embeddingsFailed > 0) {
+          // Some embeddings failed
+          message = `⚠️ Documento cargado pero la vectorización fue parcial. Se generaron ${vectorization.embeddingsGenerated} de ${vectorization.totalChunks} embeddings. ${vectorization.embeddingsFailed} fragmentos NO tienen embeddings.`;
+          warnings.push(
+            `${vectorization.embeddingsFailed} fragmentos no pudieron ser vectorizados y solo estarán disponibles mediante búsqueda de texto.`,
+            `Para búsquedas óptimas con IA, se recomienda eliminar este documento y volver a subirlo.`,
+            `Si el problema persiste, verifique su configuración de API de OpenAI o contacte al administrador del sistema.`
+          );
+        } else {
+          // No vectorization info (shouldn't happen but handle it)
+          message = `✅ Documento cargado correctamente.`;
+        }
+
+        return reply.code(201).send({
+          success: vectorization ? vectorization.success : true,
+          message,
+          warnings: warnings.length > 0 ? warnings : undefined,
+          document,
+          vectorization: vectorization ? {
+            totalChunks: vectorization.totalChunks,
+            embeddingsGenerated: vectorization.embeddingsGenerated,
+            embeddingsFailed: vectorization.embeddingsFailed,
+            successRate: `${Math.round((vectorization.embeddingsGenerated / vectorization.totalChunks) * 100)}%`,
+          } : undefined,
+        });
       } else {
         // Handle JSON request
         documentData = request.body;
@@ -295,11 +374,44 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         });
       }
 
+      // Get document to retrieve S3 key before deleting
+      const document = await prisma.legalDocument.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          metadata: true,
+        },
+      });
+
+      if (!document) {
+        return reply.code(404).send({
+          error: 'Not Found',
+          message: 'Legal document not found',
+        });
+      }
+
+      // Extract S3 key from metadata
+      const metadata = document.metadata as any;
+      const s3Key = metadata?.s3Key;
+
       // Soft delete by setting isActive to false
       await prisma.legalDocument.update({
         where: { id },
         data: { isActive: false },
       });
+
+      // Delete file from S3 if it exists
+      if (s3Key) {
+        try {
+          const s3Service = getS3Service();
+          await s3Service.deleteFile(s3Key);
+          fastify.log.info(`Deleted file from S3: ${s3Key}`);
+        } catch (s3Error: any) {
+          fastify.log.error('S3 delete error:', s3Error);
+          // Don't fail the entire request if S3 delete fails
+          // The document is already marked as inactive
+        }
+      }
 
       // Create audit log
       await prisma.auditLog.create({
@@ -316,6 +428,74 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         success: true,
         message: 'Legal document deleted successfully',
       });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.code(500).send({
+        error: 'Internal Server Error',
+        message: error.message,
+      });
+    }
+  });
+
+  // ============================================================================
+  // GET PDF FILE
+  // ============================================================================
+  fastify.get('/legal-documents-v2/:id/file', {
+    onRequest: [fastify.authenticate],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string };
+
+      // Get document to verify it exists and get S3 key
+      const document = await prisma.legalDocument.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          normTitle: true,
+          metadata: true,
+        },
+      });
+
+      if (!document) {
+        return reply.code(404).send({
+          error: 'Not Found',
+          message: 'Legal document not found',
+        });
+      }
+
+      // Extract S3 key from metadata
+      const metadata = document.metadata as any;
+      const s3Key = metadata?.s3Key;
+      const originalFilename = metadata?.originalFilename || `${document.normTitle}.pdf`;
+
+      if (!s3Key) {
+        return reply.code(404).send({
+          error: 'Not Found',
+          message: 'PDF file not found in storage. The file may not have been uploaded yet.',
+          documentId: id,
+          documentTitle: document.normTitle,
+        });
+      }
+
+      // Generate presigned URL from S3
+      try {
+        const s3Service = getS3Service();
+        const { url } = await s3Service.getDownloadUrl(
+          s3Key,
+          3600, // 1 hour expiration
+          originalFilename
+        );
+
+        // Redirect to presigned URL
+        return reply.redirect(url);
+      } catch (s3Error: any) {
+        fastify.log.error('S3 download error:', s3Error);
+        return reply.code(500).send({
+          error: 'Internal Server Error',
+          message: 'Failed to retrieve PDF from storage',
+          details: s3Error.message,
+        });
+      }
     } catch (error: any) {
       fastify.log.error(error);
       return reply.code(500).send({
