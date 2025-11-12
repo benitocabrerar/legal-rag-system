@@ -25,6 +25,7 @@ interface LegalDocument {
   };
   metadata?: {
     totalPages?: number;
+    fileSizeMB?: number | string;
     uploadedBy?: string;
     uploadedByEmail?: string;
   };
@@ -249,7 +250,7 @@ export default function LegalLibraryPage() {
       `🧩 Chunks: ${doc._count?.chunks || 0}`,
       `💾 Tamaño: ${
         doc.metadata?.fileSizeMB
-          ? `${parseFloat(doc.metadata.fileSizeMB).toFixed(2)} MB`
+          ? `${parseFloat(String(doc.metadata.fileSizeMB)).toFixed(2)} MB`
           : doc.fileSize
           ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB`
           : 'N/A'
@@ -455,7 +456,7 @@ export default function LegalLibraryPage() {
                       <span className="font-semibold text-gray-700">💾 Tamaño:</span>
                       <span className="ml-2 text-gray-600">
                         {doc.metadata?.fileSizeMB
-                          ? `${parseFloat(doc.metadata.fileSizeMB).toFixed(2)} MB`
+                          ? `${parseFloat(String(doc.metadata.fileSizeMB)).toFixed(2)} MB`
                           : doc.fileSize
                           ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB`
                           : 'N/A'}
