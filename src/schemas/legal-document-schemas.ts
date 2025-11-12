@@ -62,10 +62,10 @@ export const CreateLegalDocumentSchema = z.object({
   // Optional fields
   publicationType: PublicationTypeEnum.optional(),
   publicationNumber: z.string().max(100).optional(),
-  publicationDate: z.string().datetime().optional(),
+  publicationDate: z.string().optional(), // Accept YYYY-MM-DD or ISO datetime
 
   documentState: DocumentStateEnum.default('ORIGINAL'),
-  lastReformDate: z.string().datetime().optional(),
+  lastReformDate: z.string().optional(), // Accept YYYY-MM-DD or ISO datetime
   reformHistory: z.array(z.object({
     date: z.string().datetime(),
     description: z.string(),
@@ -97,10 +97,10 @@ export const UpdateLegalDocumentSchema = z.object({
 
   publicationType: PublicationTypeEnum.nullable().optional(),
   publicationNumber: z.string().max(100).nullable().optional(),
-  publicationDate: z.string().datetime().nullable().optional(),
+  publicationDate: z.string().nullable().optional(), // Accept YYYY-MM-DD or ISO datetime
 
   documentState: DocumentStateEnum.optional(),
-  lastReformDate: z.string().datetime().nullable().optional(),
+  lastReformDate: z.string().nullable().optional(), // Accept YYYY-MM-DD or ISO datetime
   reformHistory: z.array(z.object({
     date: z.string().datetime(),
     description: z.string(),
