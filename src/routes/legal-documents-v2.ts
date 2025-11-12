@@ -2,7 +2,6 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
 import { LegalDocumentService } from '../services/legal-document-service';
-import { getS3Service } from '../services/s3-service';
 import {
   CreateLegalDocumentSchema,
   UpdateLegalDocumentSchema,
@@ -124,6 +123,8 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
         const document = await documentService.createDocument(validatedData, user.id);
 
         // Upload PDF to S3 with document ID
+        // TEMPORARILY DISABLED - S3 integration not configured
+        /*
         if (fileBuffer && filename) {
           try {
             const s3Service = getS3Service();
@@ -159,6 +160,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
             // The document is already created, just log the error
           }
         }
+        */
 
         // Return the created document with vectorization info
         // Build detailed message about vectorization status
@@ -401,6 +403,8 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
       });
 
       // Delete file from S3 if it exists
+      // TEMPORARILY DISABLED - S3 integration not configured
+      /*
       if (s3Key) {
         try {
           const s3Service = getS3Service();
@@ -412,6 +416,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
           // The document is already marked as inactive
         }
       }
+      */
 
       // Create audit log
       await prisma.auditLog.create({
@@ -478,6 +483,16 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
       }
 
       // Generate presigned URL from S3
+      // TEMPORARILY DISABLED - S3 integration not configured
+      // Return error message instead
+      return reply.code(503).send({
+        error: 'Service Unavailable',
+        message: 'PDF download is temporarily unavailable. S3 storage integration is being configured.',
+        documentId: id,
+        documentTitle: document.normTitle,
+      });
+
+      /*
       try {
         const s3Service = getS3Service();
         const { url } = await s3Service.getDownloadUrl(
@@ -496,6 +511,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
           details: s3Error.message,
         });
       }
+      */
     } catch (error: any) {
       fastify.log.error(error);
       return reply.code(500).send({

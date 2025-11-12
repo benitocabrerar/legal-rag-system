@@ -2,20 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import dynamic from 'next/dynamic';
-
-// Import PDFViewer dynamically to avoid SSR issues with react-pdf
-const PDFViewer = dynamic(() => import('@/components/PDFViewer'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center h-full bg-gray-100">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Cargando visor de PDF...</p>
-      </div>
-    </div>
-  ),
-});
 
 // Types matching backend schema (camelCase from Prisma)
 interface LegalDocument {
@@ -1038,19 +1024,10 @@ export default function LegalLibraryPage() {
               </div>
             </div>
 
-            {/* Main Content - Split Layout */}
-            <div className="flex-1 grid grid-cols-2 gap-0 overflow-hidden">
-              {/* Left Column: PDF Viewer */}
-              <div className="border-r border-gray-200 bg-gray-50 overflow-hidden">
-                <PDFViewer
-                  documentId={editingDocument.id}
-                  documentTitle={editingDocument.normTitle}
-                  fileSize={editingDocument.fileSize}
-                />
-              </div>
-
-              {/* Right Column: Edit Form + AI Suggestions */}
-              <div className="flex flex-col overflow-hidden">
+            {/* Main Content - Full Width Layout */}
+            <div className="flex-1 overflow-hidden">
+              {/* Edit Form + AI Suggestions */}
+              <div className="flex flex-col h-full overflow-hidden">
                 {/* Form Section */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {/* Norm Title */}
