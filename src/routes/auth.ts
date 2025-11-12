@@ -64,7 +64,12 @@ export async function authRoutes(fastify: FastifyInstance) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({ error: error.errors });
       }
-      return reply.code(500).send({ error: 'Internal server error' });
+      console.error('Registration error:', error);
+      fastify.log.error('Registration error:', error);
+      return reply.code(500).send({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
