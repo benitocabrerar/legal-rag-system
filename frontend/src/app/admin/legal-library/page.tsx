@@ -361,7 +361,18 @@ export default function LegalLibraryPage() {
       const fullDocument = docResponse.data.document;
 
       if (!fullDocument.content) {
-        throw new Error('Document content not found');
+        throw new Error('El documento no tiene contenido disponible');
+      }
+
+      // Check minimum content length (backend requires 100 characters)
+      if (fullDocument.content.length < 100) {
+        throw new Error(
+          `El contenido del documento es demasiado corto para una extracción confiable.\n\n` +
+          `Contenido actual: ${fullDocument.content.length} caracteres\n` +
+          `Mínimo requerido: 100 caracteres\n\n` +
+          `Este documento podría ser un marcador de posición o estar dividido en partes. ` +
+          `Por favor, asegúrese de que el documento tenga contenido completo antes de extraer metadatos.`
+        );
       }
 
       // Extract metadata using the full document content
@@ -373,7 +384,7 @@ export default function LegalLibraryPage() {
       setShowAISuggestions(true);
     } catch (error: any) {
       console.error('Error extracting metadata:', error);
-      const errorMessage = error?.response?.data?.message || 'Error al extraer metadatos con IA';
+      const errorMessage = error?.response?.data?.message || error.message || 'Error al extraer metadatos con IA';
       alert(`❌ ${errorMessage}`);
     } finally {
       setExtractingMetadata(false);
