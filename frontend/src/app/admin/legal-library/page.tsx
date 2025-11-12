@@ -356,13 +356,20 @@ export default function LegalLibraryPage() {
     setShowAISuggestions(false);
 
     try {
-      // First, get the document content (we'll need to fetch the PDF content)
-      // For now, we'll use the existing title as content placeholder
+      // Fetch the full document content from the backend
+      const docResponse = await api.get(`/legal-documents-v2/${editingDocument.id}`);
+      const fullDocument = docResponse.data.document;
+
+      if (!fullDocument.content) {
+        throw new Error('Document content not found');
+      }
+
+      // Extract metadata using the full document content
       const response = await api.post('/legal-documents-v2/extract-metadata', {
-        content: editingDocument.normTitle, // In production, fetch actual PDF content
+        content: fullDocument.content,
       });
 
-      setAiSuggestions(response.data.metadata || response.data);
+      setAiSuggestions(response.data.suggestions || response.data);
       setShowAISuggestions(true);
     } catch (error: any) {
       console.error('Error extracting metadata:', error);
