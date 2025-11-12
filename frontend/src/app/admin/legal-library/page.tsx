@@ -18,6 +18,16 @@ interface LegalDocument {
   status: 'active' | 'processing' | 'error';
   fileSize: number;
   createdAt: string;
+  updatedAt?: string;
+  userId?: string;
+  _count?: {
+    chunks: number;
+  };
+  metadata?: {
+    totalPages?: number;
+    uploadedBy?: string;
+    uploadedByEmail?: string;
+  };
 }
 
 // Enums from backend
@@ -229,8 +239,35 @@ export default function LegalLibraryPage() {
     }
   };
 
-  const handleDelete = async (documentId: string, documentTitle: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar "${documentTitle}"?`)) {
+  const handleDelete = async (documentId: string, documentTitle: string, doc: LegalDocument) => {
+    // Build detailed information message
+    const details = [
+      `📄 Título: ${documentTitle}`,
+      `🏛️ Tipo: ${NORM_TYPES.find((t) => t.value === doc.normType)?.label || doc.normType}`,
+      `📊 Jerarquía: ${LEGAL_HIERARCHY.find((h) => h.value === doc.legalHierarchy)?.label || doc.legalHierarchy}`,
+      `📝 Páginas: ${doc.metadata?.totalPages || 'N/A'}`,
+      `🧩 Chunks: ${doc._count?.chunks || 0}`,
+      `💾 Tamaño: ${
+        doc.metadata?.fileSizeMB
+          ? `${parseFloat(doc.metadata.fileSizeMB).toFixed(2)} MB`
+          : doc.fileSize
+          ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB`
+          : 'N/A'
+      }`,
+      `⬆️ Cargado: ${new Date(doc.createdAt).toLocaleDateString('es-EC', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}`,
+    ];
+
+    if (doc.metadata?.uploadedBy || doc.metadata?.uploadedByEmail) {
+      details.push(`👤 Subido por: ${doc.metadata?.uploadedBy || doc.metadata?.uploadedByEmail}`);
+    }
+
+    const confirmMessage = `¿Estás seguro de que deseas eliminar este documento?\n\n${details.join('\n')}\n\n⚠️ Esta acción eliminará el documento y todos sus chunks asociados.`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -400,14 +437,57 @@ export default function LegalLibraryPage() {
                     </div>
                   </div>
 
-                  {doc.publicationDate && (
-                    <div className="mt-3 text-sm text-gray-600">
-                      📅 Publicado:{' '}
-                      {new Date(doc.publicationDate).toLocaleDateString('es-EC', {
+                  {/* Document Metadata Section */}
+                  <div className="mt-3 grid md:grid-cols-3 gap-3 text-sm">
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-semibold text-gray-700">📄 Páginas:</span>
+                      <span className="ml-2 text-gray-600">
+                        {doc.metadata?.totalPages || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-semibold text-gray-700">🧩 Chunks:</span>
+                      <span className="ml-2 text-gray-600">
+                        {doc._count?.chunks || 0}
+                      </span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="font-semibold text-gray-700">💾 Tamaño:</span>
+                      <span className="ml-2 text-gray-600">
+                        {doc.metadata?.fileSizeMB
+                          ? `${parseFloat(doc.metadata.fileSizeMB).toFixed(2)} MB`
+                          : doc.fileSize
+                          ? `${(doc.fileSize / 1024 / 1024).toFixed(2)} MB`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid md:grid-cols-2 gap-3 text-sm text-gray-600">
+                    {doc.publicationDate && (
+                      <div>
+                        📅 <span className="font-semibold">Publicado:</span>{' '}
+                        {new Date(doc.publicationDate).toLocaleDateString('es-EC', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    )}
+                    <div>
+                      ⬆️ <span className="font-semibold">Cargado:</span>{' '}
+                      {new Date(doc.createdAt).toLocaleDateString('es-EC', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                       })}
+                    </div>
+                  </div>
+
+                  {(doc.metadata?.uploadedBy || doc.metadata?.uploadedByEmail) && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      👤 <span className="font-semibold">Subido por:</span>{' '}
+                      {doc.metadata?.uploadedBy || doc.metadata?.uploadedByEmail}
                     </div>
                   )}
                 </div>
@@ -428,13 +508,8 @@ export default function LegalLibraryPage() {
                       ? '⏳ Procesando'
                       : '✗ Error'}
                   </span>
-                  {doc.fileSize && (
-                    <span className="text-xs text-gray-500">
-                      {(doc.fileSize / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  )}
                   <button
-                    onClick={() => handleDelete(doc.id, doc.normTitle)}
+                    onClick={() => handleDelete(doc.id, doc.normTitle, doc)}
                     className="text-xs text-red-600 hover:text-red-800 font-semibold hover:underline"
                   >
                     🗑️ Eliminar
