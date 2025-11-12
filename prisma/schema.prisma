@@ -94,12 +94,12 @@ model User {
   licenseState   String? @map("license_state")
   bio            String? @db.Text
 
-  // User Preferences (opcionales - no existen en BD actual)
-  language           String?
-  timezone           String?
-  theme              String?
-  emailNotifications Boolean?
-  marketingEmails    Boolean?
+  // User Preferences
+  language           String?  @map("language")
+  timezone           String?  @map("timezone")
+  theme              String?  @map("theme")
+  emailNotifications Boolean? @map("email_notifications")
+  marketingEmails    Boolean? @map("marketing_emails")
 
   cases                 Case[]
   documents             Document[]
