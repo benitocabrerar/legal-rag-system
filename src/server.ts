@@ -1,6 +1,8 @@
 // Week 5-6: Initialize OpenTelemetry BEFORE any other imports
-import { initializeTelemetry } from './config/telemetry.js';
-initializeTelemetry();
+// TEMPORARILY DISABLED: Path resolution issue in Render deployment
+// TODO: Fix path configuration and re-enable
+// import { initializeTelemetry } from './config/telemetry.js';
+// initializeTelemetry();
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';

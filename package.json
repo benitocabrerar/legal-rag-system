@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
-    "start": "cd src && tsx server.ts",
+    "start": "tsx src/server.ts",
     "start:prod": "node --loader ts-node/esm src/server.ts",
     "postinstall": "node scripts/resolve-failed-migrations.cjs",
     "prisma:generate": "prisma generate",
