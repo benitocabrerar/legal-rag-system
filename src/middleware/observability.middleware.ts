@@ -22,8 +22,17 @@ export async function requestMetricsMiddleware(
 ) {
   const startTime = Date.now();
 
-  // Add hook to record metrics after response is sent
-  reply.addHook('onSend', async (request, reply) => {
+  // Store start time on request object
+  (request as any).startTime = startTime;
+
+  // Add trace ID to response headers if available
+  const traceId = tracingService.getCurrentTraceId();
+  if (traceId) {
+    reply.header('X-Trace-Id', traceId);
+  }
+
+  // Use reply.raw.on to record metrics after response is sent
+  reply.raw.on('finish', () => {
     const duration = (Date.now() - startTime) / 1000; // Convert to seconds
     const method = request.method;
     const route = request.routerPath || request.url;
@@ -31,12 +40,6 @@ export async function requestMetricsMiddleware(
 
     // Record request metrics
     metricsService.recordRequest(method, route, statusCode, duration);
-
-    // Add trace ID to response headers if available
-    const traceId = tracingService.getCurrentTraceId();
-    if (traceId) {
-      reply.header('X-Trace-Id', traceId);
-    }
   });
 }
 
