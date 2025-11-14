@@ -132,6 +132,23 @@ model User {
   notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriptions")
   notificationQueueRecipient NotificationQueue[]      @relation("NotificationQueueRecipient")
 
+  // Phase 7: User Feedback Loop relations
+  searchInteractions    SearchInteraction[]  @relation("SearchInteractions")
+  abTestAssignments     ABTestAssignment[]   @relation("UserABTestAssignments")
+
+  // Phase 9: Advanced Search & User Experience relations
+  savedSearches         SavedSearch[]        @relation("UserSavedSearches")
+  documentCollections   DocumentCollection[] @relation("UserCollections")
+  sharedSearchLinks     SharedSearchLink[]   @relation("UserSharedLinks")
+
+  // Phase 10: AI & Analytics relations
+  aiConversations       AIConversation[]     @relation("UserAIConversations")
+  analyticsEvents       AnalyticsEvent[]     @relation("UserAnalyticsEvents")
+
+  // Phase 10 Week 3: NLP-RAG Integration relations
+  queryHistory          QueryHistory[]       @relation("UserQueryHistory")
+  userSessions          UserSession[]        @relation("UserSessions")
+
   @@map("users")
 }
 
@@ -229,6 +246,29 @@ model LegalDocument {
   articles             LegalDocumentArticle[]
   sections             LegalDocumentSection[]
   summaries            LegalDocumentSummary[]
+
+  // Phase 7: User Feedback Loop relations
+  clickEvents          ClickEvent[]          @relation("DocumentClickEvents")
+  relevanceFeedback    RelevanceFeedback[]   @relation("DocumentRelevanceFeedback")
+
+  // Phase 8: Cross-Reference Graph relations
+  sourceCitations      DocumentCitation[]    @relation("SourceCitations")
+  targetCitations      DocumentCitation[]    @relation("TargetCitations")
+  sourceRelationships  DocumentRelationship[] @relation("SourceRelationships")
+  targetRelationships  DocumentRelationship[] @relation("TargetRelationships")
+  authorityScore       DocumentAuthorityScore?
+  citationJobs         CitationExtractionJob[]
+
+  // Phase 9: Advanced Search & User Experience relations
+  collectionDocuments         CollectionDocument[]      @relation("DocumentInCollections")
+  sourceRecommendations       DocumentRecommendation[]  @relation("SourceRecommendations")
+  recommendedInDocuments      DocumentRecommendation[]  @relation("RecommendedDocuments")
+
+  // Phase 10: AI & Analytics relations
+  aiCitations                 AICitation[]              @relation("AIDocumentCitations")
+  documentAnalytics           DocumentAnalytics[]       @relation("DocumentAnalytics")
+  documentSummaries           DocumentSummary[]         @relation("DocumentSummaries")
+  articleAnalysis             ArticleAnalysis[]         @relation("DocumentArticleAnalysis")
 
   @@index([normType])
   @@index([legalHierarchy])
@@ -1615,4 +1655,806 @@ model NotificationQueue {
   @@index([scheduledAt])
   @@index([priority])
   @@map("notification_queue")
+}
+
+// ============================================================================
+// PHASE 7: USER FEEDBACK LOOP
+// Track user interactions, click-through rates, relevance feedback, and A/B testing
+// ============================================================================
+
+model SearchInteraction {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  query           String
+  timestamp       DateTime  @default(now())
+  resultsCount    Int       @default(0) @map("results_count")
+  filters         Json?
+  sortBy          String?   @map("sort_by")
+  sessionId       String?   @map("session_id")
+  userAgent       String?   @map("user_agent")
+  ipAddress       String?   @map("ip_address")
+
+  // Relations
+  user            User                @relation("SearchInteractions", fields: [userId], references: [id], onDelete: Cascade)
+  clickEvents     ClickEvent[]        @relation("SearchClickEvents")
+  relevanceFeedback RelevanceFeedback[] @relation("SearchRelevanceFeedback")
+
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([sessionId])
+  @@map("search_interactions")
+}
+
+model ClickEvent {
+  id                    String    @id @default(uuid())
+  searchInteractionId   String    @map("search_interaction_id")
+  documentId            String    @map("document_id")
+  position              Int
+  relevanceScore        Float?    @map("relevance_score")
+  timestamp             DateTime  @default(now())
+  dwellTime             Int?      @map("dwell_time") // milliseconds
+
+  // Relations
+  searchInteraction     SearchInteraction @relation("SearchClickEvents", fields: [searchInteractionId], references: [id], onDelete: Cascade)
+  document              LegalDocument     @relation("DocumentClickEvents", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([searchInteractionId])
+  @@index([documentId])
+  @@index([timestamp(sort: Desc)])
+  @@map("click_events")
+}
+
+model RelevanceFeedback {
+  id                    String    @id @default(uuid())
+  searchInteractionId   String    @map("search_interaction_id")
+  documentId            String    @map("document_id")
+  rating                Int       // 1-5 stars
+  isRelevant            Boolean?  @map("is_relevant")
+  comment               String?   @db.Text
+  timestamp             DateTime  @default(now())
+
+  // Relations
+  searchInteraction     SearchInteraction @relation("SearchRelevanceFeedback", fields: [searchInteractionId], references: [id], onDelete: Cascade)
+  document              LegalDocument     @relation("DocumentRelevanceFeedback", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([searchInteractionId])
+  @@index([documentId])
+  @@map("relevance_feedback")
+}
+
+model ABTestConfig {
+  id              String    @id @default(uuid())
+  name            String    @unique
+  description     String?   @db.Text
+  isActive        Boolean   @default(true) @map("is_active")
+  startDate       DateTime  @default(now()) @map("start_date")
+  endDate         DateTime? @map("end_date")
+  variants        Json      // Array of scoring weight configurations
+  trafficSplit    Json      @map("traffic_split") // Percentage allocation per variant
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  assignments     ABTestAssignment[] @relation("ABTestAssignments")
+
+  @@map("ab_test_configs")
+}
+
+model ABTestAssignment {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  testConfigId    String    @map("test_config_id")
+  variant         String
+  assignedAt      DateTime  @default(now()) @map("assigned_at")
+
+  // Relations
+  user            User          @relation("UserABTestAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  testConfig      ABTestConfig  @relation("ABTestAssignments", fields: [testConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, testConfigId])
+  @@index([userId, testConfigId])
+  @@map("ab_test_assignments")
+}
+
+// ============================================================================
+// PHASE 8: CROSS-REFERENCE GRAPH
+// Track document citations, relationships, and authority scores (PageRank)
+// ============================================================================
+
+enum CitationType {
+  REFERENCE
+  AMENDMENT
+  REPEAL
+  SUPERSEDES
+  IMPLEMENTS
+  JUDICIAL_PRECEDENT
+}
+
+enum RelationshipType {
+  SUPERSEDES
+  AMENDS
+  IMPLEMENTS
+  RELATED_TO
+  PRECEDENT
+  CONSOLIDATES
+}
+
+enum ExtractionMethod {
+  AUTOMATIC
+  MANUAL
+  AI_ASSISTED
+}
+
+model DocumentCitation {
+  id                String        @id @default(uuid())
+  sourceDocumentId  String        @map("source_document_id")
+  targetDocumentId  String?       @map("target_document_id")
+
+  // Citation details
+  citationText      String?       @map("citation_text") @db.Text
+  citationContext   String?       @map("citation_context") @db.Text
+  articleReference  String?       @map("article_reference")
+  sectionReference  String?       @map("section_reference")
+
+  // Citation type and strength
+  citationType      CitationType  @default(REFERENCE) @map("citation_type")
+  citationStrength  Float         @default(1.0) @map("citation_strength")
+  confidenceScore   Float?        @map("confidence_score")
+
+  // Extraction metadata
+  extractedBy       ExtractionMethod @default(AUTOMATIC) @map("extracted_by")
+  extractionMethod  String?       @map("extraction_method")
+  isValidated       Boolean       @default(false) @map("is_validated")
+  validatedBy       String?       @map("validated_by")
+  validatedAt       DateTime?     @map("validated_at")
+  validationNotes   String?       @map("validation_notes") @db.Text
+
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  sourceDocument    LegalDocument @relation("SourceCitations", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  targetDocument    LegalDocument? @relation("TargetCitations", fields: [targetDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([sourceDocumentId])
+  @@index([targetDocumentId])
+  @@index([citationType])
+  @@index([isValidated])
+  @@index([createdAt(sort: Desc)])
+  @@map("document_citations")
+}
+
+model DocumentRelationship {
+  id                  String           @id @default(uuid())
+  sourceDocumentId    String           @map("source_document_id")
+  targetDocumentId    String           @map("target_document_id")
+
+  // Relationship details
+  relationshipType    RelationshipType @map("relationship_type")
+  relationshipStrength Float           @default(1.0) @map("relationship_strength")
+  description         String?          @db.Text
+
+  // Temporal information
+  effectiveDate       DateTime?        @map("effective_date")
+  endDate             DateTime?        @map("end_date")
+  isActive            Boolean          @default(true) @map("is_active")
+
+  // Metadata
+  metadata            Json?
+  createdBy           String?          @map("created_by")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  sourceDocument      LegalDocument    @relation("SourceRelationships", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  targetDocument      LegalDocument    @relation("TargetRelationships", fields: [targetDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([sourceDocumentId])
+  @@index([targetDocumentId])
+  @@index([relationshipType])
+  @@index([isActive])
+  @@index([effectiveDate(sort: Desc)])
+  @@map("document_relationships")
+}
+
+model DocumentAuthorityScore {
+  id                    String        @id @default(uuid())
+  documentId            String        @unique @map("document_id")
+
+  // PageRank scores
+  pagerankScore         Float         @default(0.15) @map("pagerank_score")
+  weightedPagerank      Float         @default(0.15) @map("weighted_pagerank")
+  personalizedPagerank  Float?        @map("personalized_pagerank")
+
+  // Other authority metrics
+  citationCount         Int           @default(0) @map("citation_count")
+  citationInCount       Int           @default(0) @map("citation_in_count")
+  citationOutCount      Int           @default(0) @map("citation_out_count")
+  hIndex                Int           @default(0) @map("h_index")
+
+  // Impact metrics
+  impactScore           Float?        @map("impact_score")
+  recencyFactor         Float?        @map("recency_factor")
+  combinedAuthority     Float?        @map("combined_authority")
+
+  // Calculation metadata
+  lastCalculated        DateTime?     @map("last_calculated")
+  calculationVersion    String?       @map("calculation_version")
+  convergenceIterations Int?          @map("convergence_iterations")
+
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  // Relation
+  document              LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([pagerankScore(sort: Desc)])
+  @@index([combinedAuthority(sort: Desc)])
+  @@index([citationCount(sort: Desc)])
+  @@index([lastCalculated(sort: Desc)])
+  @@map("document_authority_scores")
+}
+
+model CitationExtractionJob {
+  id                  String        @id @default(uuid())
+  documentId          String        @map("document_id")
+
+  // Job details
+  status              String        @default("pending") @map("status") // pending, processing, completed, failed
+  priority            Int           @default(5)
+  extractionMethod    String        @default("regex") @map("extraction_method") // regex, nlp, hybrid, manual
+
+  // Results
+  citationsFound      Int?          @map("citations_found")
+  citationsValidated  Int?          @map("citations_validated")
+  processingTimeMs    Int?          @map("processing_time_ms")
+  errorMessage        String?       @map("error_message") @db.Text
+
+  // Job metadata
+  attempts            Int           @default(0)
+  maxAttempts         Int           @default(3) @map("max_attempts")
+  startedAt           DateTime?     @map("started_at")
+  completedAt         DateTime?     @map("completed_at")
+  failedAt            DateTime?     @map("failed_at")
+
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  // Relation
+  document            LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([status])
+  @@index([priority(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("citation_extraction_jobs")
+}
+
+model PageRankCalculationLog {
+  id                    String    @id @default(uuid())
+
+  // Calculation parameters
+  dampingFactor         Float     @default(0.85) @map("damping_factor")
+  maxIterations         Int       @default(100) @map("max_iterations")
+  convergenceThreshold  Float     @default(0.0001) @map("convergence_threshold")
+
+  // Results
+  documentsProcessed    Int       @default(0) @map("documents_processed")
+  iterationsRun         Int?      @map("iterations_run")
+  converged             Boolean   @default(false)
+  avgPagerank           Float?    @map("avg_pagerank")
+  maxPagerank           Float?    @map("max_pagerank")
+  minPagerank           Float?    @map("min_pagerank")
+
+  // Performance
+  processingTimeMs      Int?      @map("processing_time_ms")
+  calculationMethod     String?   @default("iterative") @map("calculation_method") // iterative, power_iteration, monte_carlo
+
+  // Metadata
+  triggeredBy           String?   @map("triggered_by")
+  notes                 String?   @db.Text
+
+  startedAt             DateTime  @map("started_at")
+  completedAt           DateTime? @map("completed_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  @@index([startedAt(sort: Desc)])
+  @@index([converged])
+  @@map("pagerank_calculation_logs")
+}
+
+// ============================================================================
+// PHASE 9: ADVANCED SEARCH & USER EXPERIENCE ENHANCEMENT
+// Advanced search with re-ranking, collections, sharing, and recommendations
+// ============================================================================
+
+enum RecommendationType {
+  SIMILAR
+  CITED_TOGETHER
+  COLLABORATIVE
+  PERSONALIZED
+}
+
+model SavedSearch {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  query         String
+  filters       Json?
+  resultsCount  Int?      @map("results_count")
+  isFavorite    Boolean   @default(false) @map("is_favorite")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relation
+  user          User      @relation("UserSavedSearches", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@index([isFavorite])
+  @@map("saved_searches")
+}
+
+model DocumentCollection {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  name          String
+  description   String?   @db.Text
+  isPublic      Boolean   @default(false) @map("is_public")
+  shareToken    String?   @unique @map("share_token")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user          User                  @relation("UserCollections", fields: [userId], references: [id], onDelete: Cascade)
+  documents     CollectionDocument[]  @relation("CollectionDocuments")
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([shareToken])
+  @@map("document_collections")
+}
+
+model CollectionDocument {
+  collectionId  String    @map("collection_id")
+  documentId    String    @map("document_id")
+  addedAt       DateTime  @default(now()) @map("added_at")
+  notes         String?   @db.Text
+
+  // Relations
+  collection    DocumentCollection @relation("CollectionDocuments", fields: [collectionId], references: [id], onDelete: Cascade)
+  document      LegalDocument      @relation("DocumentInCollections", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, documentId])
+  @@index([collectionId])
+  @@index([documentId])
+  @@map("collection_documents")
+}
+
+model SearchSuggestion {
+  id              String    @id @default(uuid())
+  suggestionText  String    @unique @map("suggestion_text")
+  searchCount     Int       @default(1) @map("search_count")
+  lastUsed        DateTime  @default(now()) @map("last_used")
+  category        String?   // legal_term, document_title, case_name, etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([suggestionText])
+  @@index([searchCount(sort: Desc)])
+  @@index([category])
+  @@map("search_suggestions")
+}
+
+model SharedSearchLink {
+  id            String    @id @default(uuid())
+  shareToken    String    @unique @map("share_token")
+  userId        String?   @map("user_id")
+  searchQuery   String    @map("search_query")
+  filters       Json?
+  resultIds     String[]  @map("result_ids")
+  expiresAt     DateTime? @map("expires_at")
+  accessCount   Int       @default(0) @map("access_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relation
+  user          User?     @relation("UserSharedLinks", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([shareToken])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("shared_search_links")
+}
+
+model DocumentRecommendation {
+  id                      String             @id @default(uuid())
+  sourceDocumentId        String             @map("source_document_id")
+  recommendedDocumentId   String             @map("recommended_document_id")
+  recommendationType      RecommendationType @map("recommendation_type")
+  score                   Float
+  reason                  String?            @db.Text
+  calculatedAt            DateTime           @default(now()) @map("calculated_at")
+
+  // Relations
+  sourceDocument          LegalDocument      @relation("SourceRecommendations", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  recommendedDocument     LegalDocument      @relation("RecommendedDocuments", fields: [recommendedDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([sourceDocumentId])
+  @@index([recommendationType])
+  @@index([score(sort: Desc)])
+  @@map("document_recommendations")
+}
+
+model QueryExpansion {
+  id            String    @id @default(uuid())
+  originalTerm  String    @map("original_term")
+  expandedTerms String[]  @map("expanded_terms")
+  context       String?   // legal_area, jurisdiction, etc.
+  usageCount    Int       @default(0) @map("usage_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([originalTerm])
+  @@index([usageCount(sort: Desc)])
+  @@map("query_expansions")
+}
+
+// ============================================================================
+// PHASE 10: AI-POWERED LEGAL ASSISTANT & ADVANCED ANALYTICS
+// AI chat conversations, NLP query processing, analytics, and ML predictions
+// ============================================================================
+
+// AI Conversation Management
+model AIConversation {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  title         String?
+  startedAt     DateTime    @default(now()) @map("started_at")
+  lastMessageAt DateTime    @updatedAt @map("last_message_at")
+  messageCount  Int         @default(0) @map("message_count")
+  isActive      Boolean     @default(true) @map("is_active")
+
+  // Relations
+  user          User        @relation("UserAIConversations", fields: [userId], references: [id], onDelete: Cascade)
+  messages      AIMessage[] @relation("ConversationMessages")
+
+  @@index([userId, startedAt(sort: Desc)])
+  @@index([userId, isActive])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id              String          @id @default(uuid())
+  conversationId  String          @map("conversation_id")
+  role            String          // "user" | "assistant" | "system"
+  content         String          @db.Text
+  timestamp       DateTime        @default(now())
+
+  // NLP Analysis
+  intent          String?
+  confidence      Float?
+  processingTimeMs Int?           @map("processing_time_ms")
+
+  // Citations
+  citedDocuments  Json?           @map("cited_documents")
+  citedChunks     Json?           @map("cited_chunks")
+
+  // Feedback
+  wasHelpful      Boolean?        @map("was_helpful")
+  feedbackText    String?         @db.Text @map("feedback_text")
+
+  // Relations
+  conversation    AIConversation  @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
+  citations       AICitation[]    @relation("MessageCitations")
+
+  @@index([conversationId, timestamp])
+  @@index([role])
+  @@map("ai_messages")
+}
+
+model AICitation {
+  id          String        @id @default(uuid())
+  messageId   String        @map("message_id")
+  documentId  String        @map("document_id")
+  chunkId     String?       @map("chunk_id")
+  relevance   Float         @default(1.0)
+  articleRef  String?       @map("article_ref")
+  timestamp   DateTime      @default(now())
+
+  // Relations
+  message     AIMessage     @relation("MessageCitations", fields: [messageId], references: [id], onDelete: Cascade)
+  document    LegalDocument @relation("AIDocumentCitations", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([documentId])
+  @@index([relevance(sort: Desc)])
+  @@map("ai_citations")
+}
+
+// Analytics & Metrics
+model AnalyticsEvent {
+  id           String    @id @default(uuid())
+  eventType    String    @map("event_type") // "search", "document_view", "ai_query", "download", "citation"
+  userId       String?   @map("user_id")
+  sessionId    String    @map("session_id")
+  timestamp    DateTime  @default(now())
+  metadata     Json?
+  durationMs   Int?      @map("duration_ms")
+  success      Boolean   @default(true)
+
+  // Relations
+  user         User?     @relation("UserAnalyticsEvents", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, timestamp(sort: Desc)])
+  @@index([userId, timestamp(sort: Desc)])
+  @@index([sessionId])
+  @@map("analytics_events")
+}
+
+model AnalyticsMetric {
+  id           String    @id @default(uuid())
+  metricName   String    @map("metric_name")
+  metricValue  Float     @map("metric_value")
+  dimensions   Json?     // Additional dimensions for filtering
+  timestamp    DateTime  @default(now())
+  periodStart  DateTime  @map("period_start")
+  periodEnd    DateTime  @map("period_end")
+
+  @@index([metricName, timestamp(sort: Desc)])
+  @@index([periodStart, periodEnd])
+  @@map("analytics_metrics")
+}
+
+model DocumentAnalytics {
+  id               String        @id @default(uuid())
+  documentId       String        @map("document_id")
+  viewCount        Int           @default(0) @map("view_count")
+  searchCount      Int           @default(0) @map("search_count")
+  citationCount    Int           @default(0) @map("citation_count")
+  downloadCount    Int           @default(0) @map("download_count")
+  avgTimeSpent     Float?        @map("avg_time_spent")
+  bounceRate       Float?        @map("bounce_rate")
+  relevanceScore   Float?        @map("relevance_score")
+  lastViewed       DateTime?     @map("last_viewed")
+  lastCited        DateTime?     @map("last_cited")
+  trendingScore    Float?        @map("trending_score")
+  periodStart      DateTime      @map("period_start")
+  periodEnd        DateTime      @map("period_end")
+
+  // Relations
+  document         LegalDocument @relation("DocumentAnalytics", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, periodStart])
+  @@index([trendingScore(sort: Desc)])
+  @@index([viewCount(sort: Desc)])
+  @@map("document_analytics")
+}
+
+model SearchAnalytics {
+  id              String    @id @default(uuid())
+  query           String
+  resultCount     Int       @map("result_count")
+  clickThroughRate Float?   @map("click_through_rate")
+  avgPosition     Float?    @map("avg_position")
+  searchCount     Int       @default(1) @map("search_count")
+  lastSearched    DateTime  @default(now()) @map("last_searched")
+
+  @@index([query])
+  @@index([searchCount(sort: Desc)])
+  @@index([clickThroughRate(sort: Desc)])
+  @@map("search_analytics")
+}
+
+// Machine Learning & Predictions
+model MLModel {
+  id          String       @id @default(uuid())
+  name        String
+  type        String       // "outcome_predictor", "trend_forecaster", "pattern_detector"
+  version     String
+  trainedAt   DateTime     @map("trained_at")
+  accuracy    Float?
+  precision   Float?
+  recall      Float?
+  config      Json
+  trainingSet Json?        @map("training_set")
+  isActive    Boolean      @default(true) @map("is_active")
+
+  // Relations
+  predictions  Prediction[] @relation("ModelPredictions")
+
+  @@index([type, isActive])
+  @@map("ml_models")
+}
+
+model Prediction {
+  id             String    @id @default(uuid())
+  modelId        String    @map("model_id")
+  predictionType String    @map("prediction_type")
+  inputData      Json      @map("input_data")
+  prediction     Json
+  confidence     Float
+  timestamp      DateTime  @default(now())
+
+  // Relations
+  model          MLModel   @relation("ModelPredictions", fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+  @@index([confidence(sort: Desc)])
+  @@index([timestamp(sort: Desc)])
+  @@map("predictions")
+}
+
+model LegalPattern {
+  id          String    @id @default(uuid())
+  patternType String    @map("pattern_type") // "amendment", "trend", "precedent", "correlation"
+  title       String
+  description String    @db.Text
+  confidence  Float
+  impact      String    // "high", "medium", "low"
+  timeframe   Json
+  evidence    Json
+  detectedAt  DateTime  @default(now()) @map("detected_at")
+  detectedBy  String    @map("detected_by")
+  isActive    Boolean   @default(true) @map("is_active")
+  verified    Boolean   @default(false)
+  verifiedBy  String?   @map("verified_by")
+  verifiedAt  DateTime? @map("verified_at")
+
+  @@index([patternType, detectedAt(sort: Desc)])
+  @@index([confidence(sort: Desc)])
+  @@map("legal_patterns")
+}
+
+model TrendForecast {
+  id              String    @id @default(uuid())
+  forecastType    String    @map("forecast_type")
+  targetMetric    String    @map("target_metric")
+  forecastPeriod  String    @map("forecast_period")
+  predictedValue  Float     @map("predicted_value")
+  confidence      Float
+  factors         Json
+  createdAt       DateTime  @default(now()) @map("created_at")
+  expiresAt       DateTime  @map("expires_at")
+
+  @@index([forecastType])
+  @@index([confidence(sort: Desc)])
+  @@index([expiresAt])
+  @@map("trend_forecasts")
+}
+
+// Document Summarization & Analysis
+model DocumentSummary {
+  id            String        @id @default(uuid())
+  documentId    String        @map("document_id")
+  summaryType   String        @map("summary_type") // "executive", "technical", "key_points"
+  summary       String        @db.Text
+  keyPoints     Json?         @map("key_points")
+  generatedAt   DateTime      @default(now()) @map("generated_at")
+  generatedBy   String        @map("generated_by") // "ai", "human"
+  version       String        @default("1.0")
+
+  // Relations
+  document      LegalDocument @relation("DocumentSummaries", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([summaryType])
+  @@map("document_summaries")
+}
+
+model ArticleAnalysis {
+  id               String        @id @default(uuid())
+  documentId       String        @map("document_id")
+  articleNumber    String        @map("article_number")
+  analysisType     String        @map("analysis_type") // "complexity", "impact", "precedent"
+  analysis         Json
+  score            Float?
+  generatedAt      DateTime      @default(now()) @map("generated_at")
+
+  // Relations
+  document         LegalDocument @relation("DocumentArticleAnalysis", fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([analysisType])
+  @@map("article_analysis")
+}
+
+model DocumentComparison {
+  id              String    @id @default(uuid())
+  document1Id     String    @map("document1_id")
+  document2Id     String    @map("document2_id")
+  similarityScore Float     @map("similarity_score")
+  differences     Json
+  similarities    Json
+  comparedAt      DateTime  @default(now()) @map("compared_at")
+  comparedBy      String?   @map("compared_by")
+
+  @@index([document1Id])
+  @@index([document2Id])
+  @@index([similarityScore(sort: Desc)])
+  @@map("document_comparisons")
+}
+
+// ============================================================================
+// PHASE 10 - WEEK 3: NLP-RAG INTEGRATION & CACHING
+// Query history, session management, caching, and relevance feedback
+// ============================================================================
+
+// Query History for analytics and suggestions
+model QueryHistory {
+  id              String   @id @default(cuid())
+  sessionId       String   @map("session_id")
+  userId          String?  @map("user_id")
+  query           String
+  queryHash       String   @map("query_hash")
+  intent          Json     // QueryIntent from NLP
+  entities        Json     // Extracted entities
+  filters         Json     // Applied filters
+  resultsCount    Int      @map("results_count")
+  clickedResults  Json[]   @map("clicked_results") // Result IDs that were clicked
+  responseTime    Int      @map("response_time") // milliseconds
+  cacheHit        Boolean  @default(false) @map("cache_hit")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session         UserSession?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user            User?         @relation("UserQueryHistory", fields: [userId], references: [id], onDelete: SetNull)
+  cache           QueryCache?   @relation(fields: [queryHash], references: [queryHash])
+
+  @@index([sessionId, createdAt])
+  @@index([userId, createdAt])
+  @@index([queryHash])
+  @@index([createdAt])
+  @@map("query_history")
+}
+
+// User Sessions for context tracking
+model UserSession {
+  id              String   @id @default(cuid())
+  userId          String?  @map("user_id")
+  sessionToken    String   @unique @map("session_token")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  isActive        Boolean  @default(true) @map("is_active")
+  queries         QueryHistory[]
+  context         Json     @default("{}") // Accumulated context
+  startedAt       DateTime @default(now()) @map("started_at")
+  lastActivityAt  DateTime @default(now()) @map("last_activity_at")
+  endedAt         DateTime? @map("ended_at")
+
+  user            User?    @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive, lastActivityAt])
+  @@index([sessionToken])
+  @@index([lastActivityAt])
+  @@map("user_sessions")
+}
+
+// Query Cache for L3 persistent caching
+model QueryCache {
+  id              String   @id @default(cuid())
+  queryHash       String   @unique @map("query_hash") // MD5 of normalized query + filters
+  query           String
+  filters         Json
+  cachedResponse  Json     @map("cached_response") // Full search response
+  hitCount        Int      @default(0) @map("hit_count")
+  lastHitAt       DateTime @default(now()) @map("last_hit_at")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  history         QueryHistory[]
+
+  @@index([queryHash, createdAt])
+  @@index([expiresAt])
+  @@index([lastHitAt])
+  @@map("query_cache")
+}
+
+// Query Suggestions based on history
+model QuerySuggestion {
+  id              String   @id @default(cuid())
+  suggestion      String   @unique
+  category        String   // "popular", "related", "autocomplete"
+  frequency       Int      @default(1)
+  lastUsedAt      DateTime @default(now()) @map("last_used_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([category, frequency])
+  @@index([suggestion])
+  @@map("query_suggestions")
 }

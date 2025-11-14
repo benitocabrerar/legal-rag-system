@@ -12,6 +12,7 @@ import {
   PublicationType,
   DocumentState
 } from '../schemas/legal-document-schemas';
+import { openAIConfig, isRetryableError, getRetryDelay } from '../config/openai.config';
 
 export class LegalDocumentService {
   constructor(
@@ -681,8 +682,9 @@ export class LegalDocumentService {
   }
 
   /**
-   * Extract metadata from document content using OpenAI GPT-4
+   * Extract metadata from document content using OpenAI GPT-4 with retry logic
    * Returns suggested values for all metadata fields
+   * Phase 1 Enhancement: Added retry logic, validation, and enrichment
    */
   async extractMetadataWithAI(
     content: string
@@ -701,8 +703,14 @@ export class LegalDocumentService {
     };
     confidence: 'high' | 'medium' | 'low';
     reasoning: string;
+    validationErrors?: string[];
   }> {
-    console.log('\n🤖 Extracting metadata with AI...');
+    console.log('\n🤖 Extracting metadata with AI (Phase 1 Enhanced)...');
+
+    // Validate input
+    if (!content || content.trim().length === 0) {
+      return this.getDefaultMetadata('Contenido vacío proporcionado');
+    }
 
     // Truncate content if too long (GPT-4 has token limits)
     const maxChars = 8000;
@@ -710,13 +718,15 @@ export class LegalDocumentService {
       ? content.slice(0, maxChars) + '...[contenido truncado]'
       : content;
 
-    try {
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `Eres un experto en derecho ecuatoriano. Tu tarea es analizar documentos legales y extraer metadatos estructurados.
+    // Retry with exponential backoff
+    for (let attempt = 0; attempt < openAIConfig.maxRetries; attempt++) {
+      try {
+        const completion = await this.openai.chat.completions.create({
+          model: openAIConfig.model,
+          messages: [
+            {
+              role: 'system',
+              content: `Eres un experto en derecho ecuatoriano. Tu tarea es analizar documentos legales y extraer metadatos estructurados.
 
 TIPOS DE NORMA (normType) válidos:
 - CONSTITUTIONAL_NORM: Normas constitucionales
@@ -772,65 +782,205 @@ Extrae los metadatos del documento legal proporcionado. Responde en formato JSON
   "confidence": "high|medium|low",
   "reasoning": "explicación de la extracción"
 }`
-          },
-          {
-            role: 'user',
-            content: `Analiza el siguiente documento legal ecuatoriano y extrae los metadatos:\n\n${truncatedContent}`
-          }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.3, // Lower temperature for more consistent extraction
-      });
+            },
+            {
+              role: 'user',
+              content: `Analiza el siguiente documento legal ecuatoriano y extrae los metadatos:\n\n${truncatedContent}`
+            }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: openAIConfig.temperature,
+          max_tokens: openAIConfig.maxTokens,
+          top_p: openAIConfig.topP,
+        });
 
-      const result = completion.choices[0].message.content;
-      if (!result) {
-        throw new Error('No response from OpenAI');
+        const result = completion.choices[0].message.content;
+        if (!result) {
+          throw new Error('No response from OpenAI');
+        }
+
+        const parsed = JSON.parse(result);
+
+        // Validate and enrich extracted metadata
+        const validated = this.validateAndEnrichMetadata(parsed);
+
+        console.log('✅ AI extraction complete (Phase 1)');
+        console.log(`  📋 Norm Type: ${validated.suggestions.normType}`);
+        console.log(`  📝 Title: ${validated.suggestions.normTitle.substring(0, 60)}...`);
+        console.log(`  📊 Hierarchy: ${validated.suggestions.legalHierarchy}`);
+        console.log(`  🎯 Confidence: ${validated.confidence}`);
+        if (validated.validationErrors && validated.validationErrors.length > 0) {
+          console.log(`  ⚠️  Validation warnings: ${validated.validationErrors.length}`);
+        }
+
+        return validated;
+
+      } catch (error: any) {
+        const isLastAttempt = attempt === openAIConfig.maxRetries - 1;
+
+        if (isRetryableError(error) && !isLastAttempt) {
+          const delay = getRetryDelay(attempt);
+          console.warn(`  ⚠️  Retry attempt ${attempt + 1}/${openAIConfig.maxRetries} after ${delay}ms...`);
+          console.warn(`  📋 Error: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // Non-retryable error or last attempt failed
+        console.error('❌ AI extraction failed:', error.message);
+        return this.getDefaultMetadata(`Error: ${error.message}`);
       }
-
-      const parsed = JSON.parse(result);
-
-      console.log('✅ AI extraction complete');
-      console.log(`  📋 Norm Type: ${parsed.normType || 'N/A'}`);
-      console.log(`  📝 Title: ${parsed.normTitle || 'N/A'}`);
-      console.log(`  📊 Hierarchy: ${parsed.legalHierarchy || 'N/A'}`);
-      console.log(`  🎯 Confidence: ${parsed.confidence || 'medium'}`);
-
-      return {
-        suggestions: {
-          normType: parsed.normType || 'ORDINARY_LAW',
-          normTitle: parsed.normTitle || '',
-          legalHierarchy: parsed.legalHierarchy || 'LEYES_ORDINARIAS',
-          publicationType: parsed.publicationType || null,
-          publicationNumber: parsed.publicationNumber || null,
-          publicationDate: parsed.publicationDate || null,
-          documentState: parsed.documentState || 'ORIGINAL',
-          jurisdiction: parsed.jurisdiction || 'NACIONAL',
-          lastReformDate: parsed.lastReformDate || null,
-          keywords: parsed.keywords || [],
-        },
-        confidence: parsed.confidence || 'medium',
-        reasoning: parsed.reasoning || 'Análisis automático completado',
-      };
-    } catch (error: any) {
-      console.error('❌ AI extraction failed:', error.message);
-
-      // Return default values if AI extraction fails
-      return {
-        suggestions: {
-          normType: 'ORDINARY_LAW',
-          normTitle: '',
-          legalHierarchy: 'LEYES_ORDINARIAS',
-          publicationType: null,
-          publicationNumber: null,
-          publicationDate: null,
-          documentState: 'ORIGINAL',
-          jurisdiction: 'NACIONAL',
-          lastReformDate: null,
-          keywords: [],
-        },
-        confidence: 'low',
-        reasoning: 'Error en extracción automática. Por favor ingrese los metadatos manualmente.',
-      };
     }
+
+    // Fallback (should never reach here)
+    return this.getDefaultMetadata('Máximo número de reintentos alcanzado');
+  }
+
+  /**
+   * Validate and enrich extracted metadata
+   * Phase 1 Enhancement: Ensure consistency and completeness
+   */
+  private validateAndEnrichMetadata(parsed: any): {
+    suggestions: {
+      normType: string;
+      normTitle: string;
+      legalHierarchy: string;
+      publicationType: string | null;
+      publicationNumber: string | null;
+      publicationDate: string | null;
+      documentState: string;
+      jurisdiction: string | null;
+      lastReformDate: string | null;
+      keywords: string[];
+    };
+    confidence: 'high' | 'medium' | 'low';
+    reasoning: string;
+    validationErrors?: string[];
+  } {
+    const validationErrors: string[] = [];
+
+    // Valid norm types
+    const validNormTypes = [
+      'CONSTITUTIONAL_NORM', 'ORGANIC_LAW', 'ORDINARY_LAW', 'ORGANIC_CODE',
+      'ORDINARY_CODE', 'REGULATION_GENERAL', 'REGULATION_EXECUTIVE',
+      'ORDINANCE_MUNICIPAL', 'ORDINANCE_METROPOLITAN', 'RESOLUTION_ADMINISTRATIVE',
+      'RESOLUTION_JUDICIAL', 'ADMINISTRATIVE_AGREEMENT', 'INTERNATIONAL_TREATY',
+      'JUDICIAL_PRECEDENT'
+    ];
+
+    // Valid hierarchies
+    const validHierarchies = [
+      'CONSTITUCION', 'TRATADOS_INTERNACIONALES_DDHH', 'LEYES_ORGANICAS',
+      'LEYES_ORDINARIAS', 'CODIGOS_ORGANICOS', 'CODIGOS_ORDINARIOS',
+      'REGLAMENTOS', 'ORDENANZAS', 'RESOLUCIONES', 'ACUERDOS_ADMINISTRATIVOS'
+    ];
+
+    // Validate normType
+    const normType = validNormTypes.includes(parsed.normType)
+      ? parsed.normType
+      : 'ORDINARY_LAW';
+    if (!validNormTypes.includes(parsed.normType)) {
+      validationErrors.push(`Tipo de norma inválido: ${parsed.normType}, usando ORDINARY_LAW`);
+    }
+
+    // Validate legalHierarchy
+    const legalHierarchy = validHierarchies.includes(parsed.legalHierarchy)
+      ? parsed.legalHierarchy
+      : 'LEYES_ORDINARIAS';
+    if (!validHierarchies.includes(parsed.legalHierarchy)) {
+      validationErrors.push(`Jerarquía inválida: ${parsed.legalHierarchy}, usando LEYES_ORDINARIAS`);
+    }
+
+    // Ensure normType and legalHierarchy are consistent
+    const hierarchyMapping: Record<string, string[]> = {
+      'CONSTITUCION': ['CONSTITUTIONAL_NORM'],
+      'LEYES_ORGANICAS': ['ORGANIC_LAW'],
+      'LEYES_ORDINARIAS': ['ORDINARY_LAW'],
+      'CODIGOS_ORGANICOS': ['ORGANIC_CODE'],
+      'CODIGOS_ORDINARIOS': ['ORDINARY_CODE'],
+      'REGLAMENTOS': ['REGULATION_GENERAL', 'REGULATION_EXECUTIVE'],
+      'ORDENANZAS': ['ORDINANCE_MUNICIPAL', 'ORDINANCE_METROPOLITAN'],
+      'RESOLUCIONES': ['RESOLUTION_ADMINISTRATIVE', 'RESOLUTION_JUDICIAL'],
+      'ACUERDOS_ADMINISTRATIVOS': ['ADMINISTRATIVE_AGREEMENT'],
+    };
+
+    // Validate date formats
+    const isValidDate = (dateStr: string | null): boolean => {
+      if (!dateStr) return true;
+      return /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+    };
+
+    if (parsed.publicationDate && !isValidDate(parsed.publicationDate)) {
+      validationErrors.push(`Fecha de publicación inválida: ${parsed.publicationDate}`);
+      parsed.publicationDate = null;
+    }
+
+    if (parsed.lastReformDate && !isValidDate(parsed.lastReformDate)) {
+      validationErrors.push(`Fecha de reforma inválida: ${parsed.lastReformDate}`);
+      parsed.lastReformDate = null;
+    }
+
+    // Adjust confidence based on validation errors
+    let confidence: 'high' | 'medium' | 'low' = parsed.confidence || 'medium';
+    if (validationErrors.length > 3) {
+      confidence = 'low';
+    } else if (validationErrors.length > 0) {
+      confidence = confidence === 'high' ? 'medium' : confidence;
+    }
+
+    return {
+      suggestions: {
+        normType,
+        normTitle: parsed.normTitle || '',
+        legalHierarchy,
+        publicationType: parsed.publicationType || null,
+        publicationNumber: parsed.publicationNumber || null,
+        publicationDate: parsed.publicationDate || null,
+        documentState: parsed.documentState || 'ORIGINAL',
+        jurisdiction: parsed.jurisdiction || 'NACIONAL',
+        lastReformDate: parsed.lastReformDate || null,
+        keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+      },
+      confidence,
+      reasoning: parsed.reasoning || 'Análisis automático completado',
+      validationErrors: validationErrors.length > 0 ? validationErrors : undefined,
+    };
+  }
+
+  /**
+   * Get default metadata when extraction fails
+   */
+  private getDefaultMetadata(reason: string): {
+    suggestions: {
+      normType: string;
+      normTitle: string;
+      legalHierarchy: string;
+      publicationType: string | null;
+      publicationNumber: string | null;
+      publicationDate: string | null;
+      documentState: string;
+      jurisdiction: string | null;
+      lastReformDate: string | null;
+      keywords: string[];
+    };
+    confidence: 'high' | 'medium' | 'low';
+    reasoning: string;
+  } {
+    return {
+      suggestions: {
+        normType: 'ORDINARY_LAW',
+        normTitle: '',
+        legalHierarchy: 'LEYES_ORDINARIAS',
+        publicationType: null,
+        publicationNumber: null,
+        publicationDate: null,
+        documentState: 'ORIGINAL',
+        jurisdiction: 'NACIONAL',
+        lastReformDate: null,
+        keywords: [],
+      },
+      confidence: 'low',
+      reasoning: `${reason}. Por favor ingrese los metadatos manualmente.`,
+    };
   }
 }

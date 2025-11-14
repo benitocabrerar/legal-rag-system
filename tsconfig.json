@@ -13,7 +13,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["bun-types"],
+    "downlevelIteration": true,
+    "types": ["bun-types", "jest"],
     "paths": {
       "@/*": ["./src/*"]
     }

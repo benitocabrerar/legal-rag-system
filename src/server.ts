@@ -1,3 +1,7 @@
+// Week 5-6: Initialize OpenTelemetry BEFORE any other imports
+import { initializeTelemetry } from './config/telemetry.js';
+initializeTelemetry();
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
@@ -34,10 +38,26 @@ import { notificationsEnhancedRoutes } from './routes/notifications-enhanced.js'
 import { financeRoutes } from './routes/finance.js';
 import { diagnosticsRoutes } from './routes/diagnostics.js';
 import { migrationRoutesEmbedded } from './routes/admin/migration-embedded.js';
+import { feedbackRoutes } from './routes/feedback.js';
+import { advancedSearchRoutes } from './routes/advanced-search.js';
+import { nlpRoutes } from './routes/nlp.js';
+import { aiAssistantRoutes } from './routes/ai-assistant.js';
+import { analyticsRoutes } from './routes/analytics.js';
+import { unifiedSearchRoutes } from './routes/unified-search.js';
+// Week 5-6: Observability routes and middleware
+import metricsRoutes from './routes/observability/metrics.routes.js';
+import healthRoutes from './routes/observability/health.routes.js';
+import { requestMetricsMiddleware } from './middleware/observability.middleware.js';
+import { applyPrismaMiddleware } from './middleware/prisma.middleware.js';
+import { getAlertingService } from './services/observability/alerting.service.js';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+
+// Week 5-6: Apply Prisma tracing middleware
+applyPrismaMiddleware(prisma);
+
 const app = Fastify({ logger: true });
 
 // Plugins
@@ -56,6 +76,9 @@ await app.register(rateLimit, {
   max: 100,
   timeWindow: '15 minutes',
 });
+
+// Week 5-6: Observability middleware - automatic request metrics
+app.addHook('onRequest', requestMetricsMiddleware);
 
 // Authentication decorator
 app.decorate('authenticate', async function(request: any, reply: any) {
@@ -89,15 +112,20 @@ app.get('/', async () => {
       'Calendar & Events',
       'Task Management',
       'Notifications',
-      'Financial Management'
+      'Financial Management',
+      'User Feedback & Analytics',
+      'Advanced Search & Query Expansion',
+      'NLP Query Transformation',
+      'Natural Language Legal Search',
+      'AI-Powered Legal Assistant',
+      'Advanced Analytics & Insights'
     ]
   };
 });
 
-// Health check
-app.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+// Week 5-6: Observability routes (Prometheus metrics, health checks)
+await app.register(metricsRoutes, { prefix: '/observability' });
+await app.register(healthRoutes, { prefix: '/observability' });
 
 // Register API routes
 await app.register(authRoutes, { prefix: '/api/v1' });
@@ -140,12 +168,35 @@ await app.register(diagnosticsRoutes, { prefix: '/api/v1' });
 // Register migration routes (TEMPORARY - remove after use)
 await app.register(migrationRoutesEmbedded, { prefix: '/api/v1/admin' });
 
+// Register feedback routes (Phase 7: User Feedback Loop)
+await app.register(feedbackRoutes, { prefix: '/api/v1/feedback' });
+
+// Register advanced search routes (Phase 9: Advanced Search & User Experience)
+await app.register(advancedSearchRoutes, { prefix: '/api/v1/search' });
+
+// Register NLP routes (Phase 9 Week 2: Query Transformation & NLP Integration)
+await app.register(nlpRoutes, { prefix: '/api/v1/nlp' });
+
+// Register AI & Analytics routes (Phase 10: AI-Powered Legal Assistant & Advanced Analytics)
+await app.register(aiAssistantRoutes, { prefix: '/api/v1' });
+await app.register(analyticsRoutes, { prefix: '/api/v1' });
+
+// Register Unified Search routes (Phase 10 Week 3: NLP-RAG Performance Optimization)
+await app.register(unifiedSearchRoutes, { prefix: '/api/v1/unified-search' });
+
 // Start server
 const start = async () => {
   try {
     const port = parseInt(process.env.PORT || '8000');
     await app.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Server running on port ${port}`);
+
+    // Week 5-6: Start automated alerting (check health every 60 seconds)
+    if (process.env.NODE_ENV === 'production') {
+      const alertingService = getAlertingService();
+      alertingService.startMonitoring(60);
+      console.log('✅ Automated alerting started');
+    }
   } catch (err) {
     app.log.error(err);
     process.exit(1);
