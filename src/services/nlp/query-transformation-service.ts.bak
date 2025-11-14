@@ -1,0 +1,715 @@
+/**
+ * Query Transformation Service
+ * Orchestrates the natural language to filter transformation pipeline
+ *
+ * @module query-transformation-service
+ * @author Legal RAG System
+ * @version 2.0.0
+ */
+
+import { QueryProcessor } from './query-processor';
+import { LegalEntityDictionary } from './legal-entity-dictionary';
+import { FilterBuilder } from './filter-builder';
+import { ContextPromptBuilder } from './context-prompt-builder';
+import { OpenAIService } from '../ai/openai-service';
+import { CacheService } from '../cache/cache-service';
+import { Logger } from '../../utils/logger';
+
+import type {
+  TransformationResult,
+  TransformationConfig,
+  SearchFilters,
+  Entity,
+  Intent,
+  ValidationResult,
+  ValidationError,
+  ValidationWarning,
+  QueryTransformationError,
+  PerformanceMetrics,
+  ConfidenceLevel,
+  TransformationDebugInfo
+} from '../../types/query-transformation.types';
+
+/**
+ * Main service for transforming natural language queries into structured search filters
+ *
+ * @example
+ * ```typescript
+ * const service = new QueryTransformationService(config);
+ * const result = await service.transformQuery(
+ *   "Buscar leyes laborales vigentes de 2023"
+ * );
+ * console.log(result.filters); // { normType: ['ley'], topics: ['laboral'], ... }
+ * ```
+ */
+export class QueryTransformationService {
+  private readonly logger = new Logger('QueryTransformationService');
+  private readonly queryProcessor: QueryProcessor;
+  private readonly entityDictionary: LegalEntityDictionary;
+  private readonly filterBuilder: FilterBuilder;
+  private readonly promptBuilder: ContextPromptBuilder;
+  private readonly openAI: OpenAIService;
+  private readonly cache: CacheService;
+  private readonly config: TransformationConfig;
+
+  /**
+   * Performance monitoring state
+   */
+  private metrics: PerformanceMetrics[] = [];
+
+  /**
+   * Creates a new QueryTransformationService instance
+   *
+   * @param config - Service configuration
+   */
+  constructor(config: Partial<TransformationConfig> = {}) {
+    this.config = {
+      debug: config.debug ?? false,
+      enableCaching: config.enableCaching ?? true,
+      cacheTTL: config.cacheTTL ?? 3600,
+      maxProcessingTime: config.maxProcessingTime ?? 2000,
+      llmModel: config.llmModel ?? 'gpt-4-turbo-preview',
+      llmTemperature: config.llmTemperature ?? 0.3,
+      maxLlmTokens: config.maxLlmTokens ?? 1000,
+      minConfidenceThreshold: config.minConfidenceThreshold ?? 0.5,
+      enablePerformanceMonitoring: config.enablePerformanceMonitoring ?? true
+    };
+
+    // Initialize dependencies
+    this.queryProcessor = new QueryProcessor();
+    this.entityDictionary = new LegalEntityDictionary();
+    this.filterBuilder = new FilterBuilder();
+    this.promptBuilder = new ContextPromptBuilder();
+    this.openAI = new OpenAIService();
+    this.cache = new CacheService();
+
+    this.logger.info('QueryTransformationService initialized', {
+      config: this.config
+    });
+  }
+
+  /**
+   * Transform a natural language query into structured search filters
+   *
+   * @param query - Natural language query in Spanish
+   * @returns Complete transformation result with filters, entities, and intent
+   * @throws {QueryTransformationError} If transformation fails
+   *
+   * @example
+   * ```typescript
+   * const result = await service.transformQuery(
+   *   "decretos presidenciales sobre educación del último año"
+   * );
+   * // Returns: { filters: { normType: ['decreto'], ... }, confidence: 0.85, ... }
+   * ```
+   */
+  async transformQuery(query: string): Promise<TransformationResult> {
+    const startTime = Date.now();
+
+    try {
+      this.logger.info('Starting query transformation', { query });
+
+      // Validate input
+      this.validateQueryInput(query);
+
+      // Check cache
+      if (this.config.enableCaching) {
+        const cached = await this.checkCache(query);
+        if (cached) {
+          this.logger.info('Returning cached result', { query });
+          return cached;
+        }
+      }
+
+      // Start performance monitoring
+      const preprocessMetric = this.startMetric('preprocessing');
+
+      // Preprocess query
+      const preprocessedQuery = this.preprocessQuery(query);
+
+      this.endMetric(preprocessMetric);
+
+      // Extract entities (parallel with intent classification)
+      const entityMetric = this.startMetric('entityExtraction');
+      const entitiesPromise = this.extractEntities(preprocessedQuery);
+
+      // Classify intent
+      const intentMetric = this.startMetric('intentClassification');
+      const intentPromise = this.classifyIntent(preprocessedQuery);
+
+      // Wait for both operations
+      const [entities, intent] = await Promise.all([
+        entitiesPromise,
+        intentPromise
+      ]);
+
+      this.endMetric(entityMetric);
+      this.endMetric(intentMetric);
+
+      // Build filters
+      const filterMetric = this.startMetric('filterBuilding');
+      const filters = await this.buildFilters(intent, entities);
+      this.endMetric(filterMetric);
+
+      // Validate filters
+      const validationMetric = this.startMetric('validation');
+      const validation = await this.validateFilters(filters);
+      this.endMetric(validationMetric);
+
+      // Calculate overall confidence
+      const confidence = this.calculateOverallConfidence(entities, intent);
+      const confidenceLevel = this.getConfidenceLevel(confidence);
+
+      // Generate refinement suggestions
+      const refinementSuggestions = this.generateRefinementSuggestions(
+        query,
+        entities,
+        intent,
+        filters
+      );
+
+      // Build result
+      const processingTimeMs = Date.now() - startTime;
+
+      // Check performance constraint
+      if (processingTimeMs > this.config.maxProcessingTime) {
+        this.logger.warn('Processing time exceeded target', {
+          actual: processingTimeMs,
+          target: this.config.maxProcessingTime
+        });
+      }
+
+      const result: TransformationResult = {
+        filters,
+        confidence,
+        confidenceLevel,
+        entities,
+        intent,
+        processingTimeMs,
+        validation,
+        refinementSuggestions,
+        ...(this.config.debug && {
+          debug: this.buildDebugInfo(
+            query,
+            preprocessedQuery,
+            entities,
+            intent,
+            filters
+          )
+        })
+      };
+
+      // Cache result
+      if (this.config.enableCaching && validation.isValid) {
+        await this.cacheResult(query, result);
+      }
+
+      this.logger.info('Query transformation completed', {
+        query,
+        processingTimeMs,
+        confidence,
+        entityCount: entities.length
+      });
+
+      return result;
+
+    } catch (error) {
+      this.logger.error('Query transformation failed', {
+        query,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new Error(
+        `Failed to transform query: ${error instanceof Error ? error.message : String(error)}`
+      ) as unknown as QueryTransformationError;
+    }
+  }
+
+  /**
+   * Build search filters from intent and entities
+   *
+   * @param intent - Detected query intent
+   * @param entities - Extracted entities
+   * @returns Structured search filters
+   *
+   * @example
+   * ```typescript
+   * const filters = await service.buildFilters(intent, entities);
+   * // Returns: { normType: ['ley'], jurisdiction: ['nacional'], ... }
+   * ```
+   */
+  async buildFilters(
+    intent: Intent,
+    entities: Entity[]
+  ): Promise<SearchFilters> {
+    try {
+      this.logger.debug('Building filters', {
+        intent: intent.primary,
+        entityCount: entities.length
+      });
+
+      // Build filters from entities
+      const entityFilters = this.filterBuilder.buildFromEntities(entities);
+
+      // Build filters from intent
+      const intentFilters = this.filterBuilder.buildFromIntent(intent);
+
+      // Combine and optimize
+      const combinedFilters = this.filterBuilder.combineFilters(
+        entityFilters,
+        intentFilters
+      );
+
+      const optimizedFilters = this.filterBuilder.optimizeFilters(
+        combinedFilters
+      );
+
+      this.logger.debug('Filters built successfully', {
+        filters: optimizedFilters
+      });
+
+      return optimizedFilters;
+
+    } catch (error) {
+      this.logger.error('Filter building failed', { error });
+      throw new Error(
+        'Failed to build filters'
+      ) as unknown as QueryTransformationError;
+    }
+  }
+
+  /**
+   * Validate search filters for correctness and compatibility
+   *
+   * @param filters - Search filters to validate
+   * @returns Validation result with errors and warnings
+   *
+   * @example
+   * ```typescript
+   * const validation = await service.validateFilters(filters);
+   * if (!validation.isValid) {
+   *   console.error('Validation errors:', validation.errors);
+   * }
+   * ```
+   */
+  async validateFilters(filters: SearchFilters): Promise<ValidationResult> {
+    const errors: ValidationError[] = [];
+    const warnings: ValidationWarning[] = [];
+    const suggestions = this.filterBuilder.generateSuggestions(filters);
+
+    try {
+      // Validate normType
+      if (filters.normType && filters.normType.length > 0) {
+        const validTypes = [
+          'ley', 'decreto', 'resolucion', 'ordenanza',
+          'acuerdo', 'reglamento', 'constitucion'
+        ];
+
+        const invalidTypes = filters.normType.filter(
+          type => !validTypes.includes(type.toLowerCase())
+        );
+
+        if (invalidTypes.length > 0) {
+          errors.push({
+            field: 'normType',
+            message: `Invalid normative types: ${invalidTypes.join(', ')}`,
+            code: 'INVALID_NORM_TYPE',
+            value: invalidTypes
+          });
+        }
+      }
+
+      // Validate jurisdiction
+      if (filters.jurisdiction && filters.jurisdiction.length > 0) {
+        const validJurisdictions = [
+          'nacional', 'provincial', 'municipal', 'institucional'
+        ];
+
+        const invalidJurisdictions = filters.jurisdiction.filter(
+          j => !validJurisdictions.includes(j.toLowerCase())
+        );
+
+        if (invalidJurisdictions.length > 0) {
+          errors.push({
+            field: 'jurisdiction',
+            message: `Invalid jurisdictions: ${invalidJurisdictions.join(', ')}`,
+            code: 'INVALID_JURISDICTION',
+            value: invalidJurisdictions
+          });
+        }
+      }
+
+      // Validate date range
+      if (filters.dateRange) {
+        const { from, to } = filters.dateRange;
+
+        if (from > to) {
+          errors.push({
+            field: 'dateRange',
+            message: 'Start date must be before end date',
+            code: 'INVALID_DATE_RANGE',
+            value: filters.dateRange
+          });
+        }
+
+        if (to > new Date()) {
+          warnings.push({
+            field: 'dateRange',
+            message: 'End date is in the future',
+            severity: 'medium'
+          });
+        }
+
+        const yearsDiff = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        if (yearsDiff > 50) {
+          warnings.push({
+            field: 'dateRange',
+            message: 'Date range is very broad (>50 years), results may be extensive',
+            severity: 'low'
+          });
+        }
+      }
+
+      // Validate keywords
+      if (filters.keywords && filters.keywords.length > 0) {
+        if (filters.keywords.length > 20) {
+          warnings.push({
+            field: 'keywords',
+            message: 'Large number of keywords may reduce performance',
+            severity: 'medium'
+          });
+        }
+
+        const shortKeywords = filters.keywords.filter(k => k.length < 3);
+        if (shortKeywords.length > 0) {
+          warnings.push({
+            field: 'keywords',
+            message: `Very short keywords may produce noisy results: ${shortKeywords.join(', ')}`,
+            severity: 'low'
+          });
+        }
+      }
+
+      // Validate limit
+      if (filters.limit !== undefined) {
+        if (filters.limit <= 0) {
+          errors.push({
+            field: 'limit',
+            message: 'Limit must be positive',
+            code: 'INVALID_LIMIT',
+            value: filters.limit
+          });
+        }
+
+        if (filters.limit > 1000) {
+          warnings.push({
+            field: 'limit',
+            message: 'Very large limit may impact performance',
+            severity: 'high'
+          });
+        }
+      }
+
+      const isValid = errors.length === 0;
+
+      return {
+        isValid,
+        errors,
+        warnings,
+        suggestions
+      };
+
+    } catch (error) {
+      this.logger.error('Filter validation failed', { error });
+
+      return {
+        isValid: false,
+        errors: [{
+          field: 'normType',
+          message: 'Validation failed due to internal error',
+          code: 'VALIDATION_ERROR',
+          value: error
+        }],
+        warnings: [],
+        suggestions: []
+      };
+    }
+  }
+
+  /**
+   * Extract entities from preprocessed query
+   */
+  private async extractEntities(query: string): Promise<Entity[]> {
+    try {
+      // Use QueryProcessor for initial entity extraction
+      const processorEntities = await this.queryProcessor.extractEntities(query);
+
+      // Enhance with dictionary lookups
+      const enhancedEntities: Entity[] = [];
+
+      for (const entity of processorEntities) {
+        // Look up in dictionary for metadata
+        const dictEntity = await this.entityDictionary.findEntity(entity.text);
+
+        if (dictEntity) {
+          enhancedEntities.push({
+            ...entity,
+            normalizedText: dictEntity.normalizedName,
+            metadata: dictEntity.metadata,
+            source: 'hybrid'
+          });
+        } else {
+          enhancedEntities.push(entity);
+        }
+      }
+
+      // Sort by confidence
+      return enhancedEntities.sort((a, b) => b.confidence - a.confidence);
+
+    } catch (error) {
+      this.logger.error('Entity extraction failed', { error });
+      return [];
+    }
+  }
+
+  /**
+   * Classify query intent
+   */
+  private async classifyIntent(query: string): Promise<Intent> {
+    try {
+      return await this.queryProcessor.classifyIntent(query);
+    } catch (error) {
+      this.logger.error('Intent classification failed', { error });
+
+      // Return default intent
+      return {
+        primary: 'GENERAL_SEARCH' as any,
+        confidence: 0.5,
+        secondary: [],
+        suggestions: []
+      };
+    }
+  }
+
+  /**
+   * Preprocess query for better extraction
+   */
+  private preprocessQuery(query: string): string {
+    // Trim whitespace
+    let processed = query.trim();
+
+    // Normalize quotes
+    processed = processed.replace(/[""]/g, '"');
+    processed = processed.replace(/['']/g, "'");
+
+    // Normalize spaces
+    processed = processed.replace(/\s+/g, ' ');
+
+    // Lowercase for pattern matching (keep original for display)
+    return processed;
+  }
+
+  /**
+   * Validate query input
+   */
+  private validateQueryInput(query: string): void {
+    if (!query || typeof query !== 'string') {
+      throw new Error(
+        'Query must be a non-empty string'
+      ) as unknown as QueryTransformationError;
+    }
+
+    if (query.trim().length === 0) {
+      throw new Error(
+        'Query cannot be empty'
+      ) as unknown as QueryTransformationError;
+    }
+
+    if (query.length > 1000) {
+      throw new Error(
+        'Query exceeds maximum length (1000 characters)'
+      ) as unknown as QueryTransformationError;
+    }
+  }
+
+  /**
+   * Calculate overall confidence from entities and intent
+   */
+  private calculateOverallConfidence(entities: Entity[], intent: Intent): number {
+    if (entities.length === 0) {
+      return intent.confidence * 0.5;
+    }
+
+    const avgEntityConfidence = entities.reduce(
+      (sum, e) => sum + e.confidence,
+      0
+    ) / entities.length;
+
+    // Weighted average: 40% intent, 60% entities
+    return intent.confidence * 0.4 + avgEntityConfidence * 0.6;
+  }
+
+  /**
+   * Get confidence level from score
+   */
+  private getConfidenceLevel(confidence: number): ConfidenceLevel {
+    if (confidence >= 0.8) return 'HIGH' as ConfidenceLevel;
+    if (confidence >= 0.5) return 'MEDIUM' as ConfidenceLevel;
+    if (confidence >= 0.3) return 'LOW' as ConfidenceLevel;
+    return 'VERY_LOW' as ConfidenceLevel;
+  }
+
+  /**
+   * Generate refinement suggestions
+   */
+  private generateRefinementSuggestions(
+    query: string,
+    entities: Entity[],
+    intent: Intent,
+    filters: SearchFilters
+  ): string[] {
+    const suggestions: string[] = [];
+
+    // Check if query is too broad
+    if (entities.length === 0 && !filters.keywords?.length) {
+      suggestions.push(
+        'Considera agregar términos más específicos como tipo de norma, jurisdicción o tema legal'
+      );
+    }
+
+    // Check for temporal specificity
+    if (!filters.dateRange) {
+      suggestions.push(
+        'Puedes especificar un rango de fechas para filtrar resultados'
+      );
+    }
+
+    // Check for jurisdiction
+    if (!filters.jurisdiction || filters.jurisdiction.length === 0) {
+      suggestions.push(
+        'Especificar la jurisdicción (nacional, provincial, municipal) puede mejorar la precisión'
+      );
+    }
+
+    // Check for norm type
+    if (!filters.normType || filters.normType.length === 0) {
+      suggestions.push(
+        'Indica el tipo de norma buscada (ley, decreto, resolución, etc.)'
+      );
+    }
+
+    // Check confidence level
+    if (intent.confidence < 0.5) {
+      suggestions.push(
+        'La consulta es ambigua. Intenta reformularla de manera más específica'
+      );
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Build debug information
+   */
+  private buildDebugInfo(
+    originalQuery: string,
+    preprocessedQuery: string,
+    entities: Entity[],
+    intent: Intent,
+    filters: SearchFilters
+  ): TransformationDebugInfo {
+    const entityExtraction = {
+      patternMatches: entities.filter(e => e.source === 'pattern').length,
+      dictionaryMatches: entities.filter(e => e.source === 'dictionary').length,
+      llmMatches: entities.filter(e => e.source === 'llm').length,
+      totalEntities: entities.length
+    };
+
+    const intentClassification = {
+      scores: { [intent.primary]: intent.confidence } as Record<any, number>,
+      reasoning: intent.reasoning || 'No reasoning provided'
+    };
+
+    const performanceBreakdown = this.metrics.reduce((acc, metric) => {
+      acc[metric.operation] = metric.duration;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      originalQuery,
+      preprocessedQuery,
+      entityExtraction,
+      intentClassification,
+      filterBuildingSteps: [],
+      performanceBreakdown
+    };
+  }
+
+  /**
+   * Start performance metric
+   */
+  private startMetric(operation: string): PerformanceMetrics {
+    const metric: PerformanceMetrics = {
+      operation,
+      startTime: Date.now(),
+      endTime: 0,
+      duration: 0
+    };
+
+    if (this.config.enablePerformanceMonitoring) {
+      this.metrics.push(metric);
+    }
+
+    return metric;
+  }
+
+  /**
+   * End performance metric
+   */
+  private endMetric(metric: PerformanceMetrics): void {
+    metric.endTime = Date.now();
+    metric.duration = metric.endTime - metric.startTime;
+  }
+
+  /**
+   * Check cache for existing result
+   */
+  private async checkCache(query: string): Promise<TransformationResult | null> {
+    try {
+      const cacheKey = `query_transform:${query}`;
+      return await this.cache.get<TransformationResult>(cacheKey);
+    } catch (error) {
+      this.logger.warn('Cache check failed', { error });
+      return null;
+    }
+  }
+
+  /**
+   * Cache transformation result
+   */
+  private async cacheResult(
+    query: string,
+    result: TransformationResult
+  ): Promise<void> {
+    try {
+      const cacheKey = `query_transform:${query}`;
+      await this.cache.set(cacheKey, result, this.config.cacheTTL);
+    } catch (error) {
+      this.logger.warn('Cache storage failed', { error });
+    }
+  }
+
+  /**
+   * Get performance metrics
+   */
+  getMetrics(): PerformanceMetrics[] {
+    return [...this.metrics];
+  }
+
+  /**
+   * Clear performance metrics
+   */
+  clearMetrics(): void {
+    this.metrics = [];
+  }
+}
