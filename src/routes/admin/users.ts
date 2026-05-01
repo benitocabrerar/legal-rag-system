@@ -1,9 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 const updateUserSchema = z.object({

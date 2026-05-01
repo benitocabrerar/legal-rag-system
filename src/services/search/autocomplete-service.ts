@@ -8,8 +8,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export interface AutocompleteSuggestion {
   text: string;
@@ -169,7 +168,7 @@ export class AutocompleteService {
       return popular.map(p => ({
         text: p.suggestionText,
         type: 'popular' as const,
-        category: p.category,
+        category: p.category ?? undefined,
         score: this.calculatePopularityScore(p.searchCount, p.lastUsed),
         metadata: {
           searchCount: p.searchCount,

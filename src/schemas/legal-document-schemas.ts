@@ -73,6 +73,8 @@ export const CreateLegalDocumentSchema = z.object({
   })).optional(),
 
   jurisdiction: z.string().max(200).optional(),
+  // ISO-3166 alpha-2 (EC, CO, MX...). Si NULL el trigger DB hereda del uploader.
+  countryCode: z.string().regex(/^[A-Z]{2}$/).optional(),
   effectiveFromDate: z.string().datetime().optional(),
 
   keywords: z.array(z.string()).optional(),
@@ -154,8 +156,8 @@ export const QueryLegalDocumentsSchema = z.object({
   keywords: z.array(z.string()).optional(),
 
   // Pagination
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(500).default(200),
 
   // Sorting
   sortBy: z.enum([
@@ -273,10 +275,10 @@ export const LegacyLegalDocumentSchema = z.object({
 
 // Transformation function type
 export type LegacyToNewTransform = {
-  mapLegacyCategory: (category: string) => LegalHierarchyEnum['_type'];
-  inferNormType: (title: string, category: string) => NormTypeEnum['_type'];
+  mapLegacyCategory: (category: string) => z.infer<typeof LegalHierarchyEnum>;
+  inferNormType: (title: string, category: string) => z.infer<typeof NormTypeEnum>;
   extractPublicationInfo: (metadata: any) => {
-    publicationType?: PublicationTypeEnum['_type'];
+    publicationType?: z.infer<typeof PublicationTypeEnum>;
     publicationNumber?: string;
     publicationDate?: Date;
   };

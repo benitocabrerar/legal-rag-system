@@ -1,9 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import path from 'path';
 import fs from 'fs/promises';
-
-const prisma = new PrismaClient();
 
 export async function userRoutes(app: FastifyInstance) {
   // GET /api/v1/user/profile - Get current user profile

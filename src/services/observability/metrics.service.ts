@@ -128,8 +128,8 @@ export class MetricsService {
    * Record search query
    */
   recordSearch(queryType: string, cacheHit: boolean, duration: number): void {
-    searchQueryCounter.inc({ query_type: queryType, cache_hit: cacheHit });
-    searchQueryDuration.observe({ query_type: queryType, cache_hit: cacheHit }, duration);
+    searchQueryCounter.inc({ query_type: queryType, cache_hit: cacheHit ? 'true' : 'false' });
+    searchQueryDuration.observe({ query_type: queryType, cache_hit: cacheHit ? 'true' : 'false' }, duration);
   }
 
   /**

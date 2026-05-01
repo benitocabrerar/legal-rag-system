@@ -72,7 +72,7 @@ export class DocumentRegistry {
       await this.rebuildHierarchy();
       this.logger.info('Document registry initialized successfully');
     } catch (error) {
-      this.logger.error('Failed to initialize document registry', error);
+      this.logger.error('Failed to initialize document registry', { error });
     }
   }
 
@@ -356,7 +356,7 @@ export class DocumentRegistry {
         }
       }
     } catch (error) {
-      this.logger.error(`Error getting document structure for ${documentId}`, error);
+      this.logger.error(`Error getting document structure for ${documentId}`, { error });
     }
 
     return nodes;
@@ -388,7 +388,7 @@ export class DocumentRegistry {
             {
               OR: [
                 { normTitle: { contains: query, mode: 'insensitive' } },
-                { metadata: { path: '$.keywords', array_contains: query } }
+                { content: { contains: query, mode: 'insensitive' } }
               ]
             }
           ]
@@ -496,12 +496,12 @@ export class DocumentRegistry {
 
       // Rebuild hierarchy asynchronously
       this.rebuildHierarchy().catch(error => {
-        this.logger.error('Error rebuilding hierarchy after document registration', error);
+        this.logger.error('Error rebuilding hierarchy after document registration', { error });
       });
 
       this.logger.info(`Document registered: ${documentId} (${documentType})`);
     } catch (error) {
-      this.logger.error(`Error registering document ${documentId}`, error);
+      this.logger.error(`Error registering document ${documentId}`, { error });
       throw error;
     }
   }
@@ -529,7 +529,7 @@ export class DocumentRegistry {
 
       this.logger.info(`Document updated in registry: ${documentId}`);
     } catch (error) {
-      this.logger.error(`Error updating document ${documentId} in registry`, error);
+      this.logger.error(`Error updating document ${documentId} in registry`, { error });
       throw error;
     }
   }
@@ -555,7 +555,7 @@ export class DocumentRegistry {
 
       this.logger.info(`Document unregistered: ${documentId}`);
     } catch (error) {
-      this.logger.error(`Error unregistering document ${documentId}`, error);
+      this.logger.error(`Error unregistering document ${documentId}`, { error });
       throw error;
     }
   }
@@ -596,7 +596,7 @@ export class DocumentRegistry {
 
       this.logger.info('Document hierarchy rebuilt successfully');
     } catch (error) {
-      this.logger.error('Error rebuilding document hierarchy', error);
+      this.logger.error('Error rebuilding document hierarchy', { error });
       throw error;
     }
   }

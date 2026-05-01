@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient, EventType, EventStatus } from '@prisma/client';
+import { EventType, EventStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const createEventSchema = z.object({
   title: z.string().min(1),
@@ -325,7 +324,7 @@ export async function calendarRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const body = updateEventSchema.parse({ ...request.body, id });
+      const body = updateEventSchema.parse({ ...(request.body as Record<string, unknown>), id });
       const userId = (request.user as any).id;
 
       // Verify ownership

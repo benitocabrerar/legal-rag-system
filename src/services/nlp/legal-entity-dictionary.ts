@@ -9,6 +9,7 @@
 
 import Fuse from 'fuse.js';
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import { Logger } from '../../utils/logger';
 
 import type {
@@ -32,7 +33,7 @@ import type {
  */
 export class LegalEntityDictionary {
   private readonly logger = new Logger('LegalEntityDictionary');
-  private readonly prisma = new PrismaClient();
+  private readonly prisma = prisma;
 
   /**
    * In-memory entity store for fast access

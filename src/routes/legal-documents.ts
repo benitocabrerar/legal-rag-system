@@ -1,22 +1,49 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { OpenAI } from 'openai';
-
-const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Enum values matching Prisma schema
+const NormType = z.enum([
+  'CONSTITUTIONAL_NORM', 'ORGANIC_LAW', 'ORDINARY_LAW', 'ORGANIC_CODE', 'ORDINARY_CODE',
+  'REGULATION_GENERAL', 'REGULATION_EXECUTIVE', 'ORDINANCE_MUNICIPAL', 'ORDINANCE_METROPOLITAN',
+  'RESOLUTION_ADMINISTRATIVE', 'RESOLUTION_JUDICIAL', 'ADMINISTRATIVE_AGREEMENT',
+  'INTERNATIONAL_TREATY', 'JUDICIAL_PRECEDENT'
+]);
+
+const LegalHierarchy = z.enum([
+  'CONSTITUCION', 'TRATADOS_INTERNACIONALES_DDHH', 'LEYES_ORGANICAS', 'LEYES_ORDINARIAS',
+  'CODIGOS_ORGANICOS', 'CODIGOS_ORDINARIOS', 'REGLAMENTOS', 'ORDENANZAS', 'RESOLUCIONES',
+  'ACUERDOS_ADMINISTRATIVOS'
+]);
+
+const PublicationType = z.enum([
+  'ORDINARIO', 'SUPLEMENTO', 'SEGUNDO_SUPLEMENTO', 'SUPLEMENTO_ESPECIAL', 'EDICION_CONSTITUCIONAL'
+]);
+
+const DocumentState = z.enum(['ORIGINAL', 'REFORMADO']);
+const Jurisdiction = z.enum(['NACIONAL', 'PROVINCIAL', 'MUNICIPAL', 'INTERNACIONAL']);
+
 const uploadLegalDocSchema = z.object({
-  title: z.string().min(1),
-  category: z.enum(['constitution', 'law', 'code', 'regulation', 'jurisprudence']),
+  // Required fields per Prisma schema
+  normType: NormType,
+  normTitle: z.string().min(1),
+  legalHierarchy: LegalHierarchy,
+  publicationType: PublicationType,
+  publicationNumber: z.string().min(1),
   content: z.string().min(1),
-  metadata: z.object({
-    year: z.number().optional(),
-    number: z.string().optional(),
-    jurisdiction: z.string().optional(),
-  }).optional(),
+  // Optional fields
+  publicationDate: z.string().datetime().optional(),
+  lastReformDate: z.string().datetime().optional(),
+  documentState: DocumentState.optional().default('ORIGINAL'),
+  jurisdiction: Jurisdiction.optional().default('NACIONAL'),
+  metadata: z.record(z.any()).optional(),
+  // Legacy fields (for backward compatibility)
+  title: z.string().optional(),
+  category: z.string().optional(),
 });
 
 export async function legalDocumentRoutes(fastify: FastifyInstance) {
@@ -34,13 +61,23 @@ export async function legalDocumentRoutes(fastify: FastifyInstance) {
 
       const body = uploadLegalDocSchema.parse(request.body);
 
-      // Create legal document
+      // Create legal document with new schema fields
       const document = await prisma.legalDocument.create({
         data: {
-          title: body.title,
-          category: body.category,
+          normType: body.normType,
+          normTitle: body.normTitle,
+          legalHierarchy: body.legalHierarchy,
+          publicationType: body.publicationType,
+          publicationNumber: body.publicationNumber,
           content: body.content,
+          publicationDate: body.publicationDate ? new Date(body.publicationDate) : null,
+          lastReformDate: body.lastReformDate ? new Date(body.lastReformDate) : null,
+          documentState: body.documentState || 'ORIGINAL',
+          jurisdiction: body.jurisdiction || 'NACIONAL',
           metadata: body.metadata || {},
+          // Legacy fields
+          title: body.title || body.normTitle,
+          category: body.category || body.legalHierarchy,
           uploadedBy: user.id,
         },
       });
@@ -76,8 +113,11 @@ export async function legalDocumentRoutes(fastify: FastifyInstance) {
       return reply.send({
         document: {
           id: document.id,
-          title: document.title,
-          category: document.category,
+          normType: document.normType,
+          normTitle: document.normTitle,
+          legalHierarchy: document.legalHierarchy,
+          publicationType: document.publicationType,
+          publicationNumber: document.publicationNumber,
           createdAt: document.createdAt,
           chunksCount: chunks.length,
         },
@@ -96,16 +136,29 @@ export async function legalDocumentRoutes(fastify: FastifyInstance) {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     try {
-      const { category } = request.query as { category?: string };
+      const { legalHierarchy, normType, jurisdiction } = request.query as {
+        legalHierarchy?: string;
+        normType?: string;
+        jurisdiction?: string;
+      };
 
-      const where = category ? { category } : {};
+      const where: any = { isActive: true };
+      if (legalHierarchy) where.legalHierarchy = legalHierarchy;
+      if (normType) where.normType = normType;
+      if (jurisdiction) where.jurisdiction = jurisdiction;
 
       const documents = await prisma.legalDocument.findMany({
         where,
         select: {
           id: true,
-          title: true,
-          category: true,
+          normType: true,
+          normTitle: true,
+          legalHierarchy: true,
+          publicationType: true,
+          publicationNumber: true,
+          publicationDate: true,
+          documentState: true,
+          jurisdiction: true,
           metadata: true,
           createdAt: true,
           updatedAt: true,

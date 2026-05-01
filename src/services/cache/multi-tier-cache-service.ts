@@ -93,7 +93,7 @@ export class MultiTierCacheService {
       ttl: this.tierConfigs.L1.ttl * 1000, // Convert to milliseconds
       updateAgeOnGet: true,
       updateAgeOnHas: false,
-      dispose: (value, key) => {
+      dispose: (value: CacheEntry, key: string) => {
         this.stats.L1.evictions++;
         this.logger.debug('L1 cache eviction', { key });
       }
@@ -205,9 +205,9 @@ export class MultiTierCacheService {
    */
   async invalidatePattern(pattern: string): Promise<void> {
     // Clear from memory cache
-    const memoryKeys = Array.from(this.memoryCache.keys());
+    const memoryKeys = Array.from(this.memoryCache.keys()) as string[];
     for (const key of memoryKeys) {
-      if (this.matchesPattern(key, pattern)) {
+      if (this.matchesPattern(key as string, pattern)) {
         this.memoryCache.delete(key);
       }
     }

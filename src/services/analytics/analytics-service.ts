@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { prisma as prismaClient } from '../../lib/prisma.js';
 
 interface AnalyticsEventData {
   eventType: string;
@@ -30,7 +31,7 @@ export class AnalyticsService {
   private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prismaClient;
   }
 
   /**

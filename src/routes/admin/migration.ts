@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,7 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function migrationRoutes(app: FastifyInstance) {
-  const prisma = new PrismaClient();
 
   // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO)
   app.post('/migration/apply', async (request, reply) => {
@@ -72,7 +71,7 @@ export async function migrationRoutes(app: FastifyInstance) {
       });
 
     } catch (error) {
-      app.log.error('❌ Error aplicando migración:', error);
+      app.log.error({ error }, '❌ Error aplicando migración');
       return reply.code(500).send({
         error: 'Error aplicando migración',
         details: error instanceof Error ? error.message : String(error)

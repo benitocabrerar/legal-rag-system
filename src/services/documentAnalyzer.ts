@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 interface DocumentStructure {
   titles: StructureElement[];
@@ -83,7 +83,7 @@ export class DocumentAnalyzer {
       await this.prisma.legalDocument.update({
         where: { id: documentId },
         data: {
-          metadata: {
+          metadata: JSON.parse(JSON.stringify({
             totalArticles: articles.length,
             totalSections: structure.sections.length,
             totalChapters: structure.chapters.length,
@@ -95,9 +95,9 @@ export class DocumentAnalyzer {
             summaryText: summaries.executive,
             keyEntities: entities,
             crossReferences: crossReferences,
-            lastAnalyzedAt: new Date(),
+            lastAnalyzedAt: new Date().toISOString(),
             analysisVersion: '2.0'
-          }
+          }))
         }
       });
 
@@ -373,11 +373,16 @@ export class DocumentAnalyzer {
    * Generate table of contents
    */
   private generateTableOfContents(structure: DocumentStructure): any {
-    const toc = {
+    const toc: {
+      titles: { number: string; title: string; chapters: { number: string; title: string; sections: { number: string; title: string }[] }[] }[];
+      totalArticles: number;
+      totalSections: number;
+      totalChapters: number;
+    } = {
       titles: structure.titles.map(t => ({
         number: t.number,
         title: t.title,
-        chapters: []
+        chapters: [] as { number: string; title: string; sections: { number: string; title: string }[] }[]
       })),
       totalArticles: structure.articles.length,
       totalSections: structure.sections.length,

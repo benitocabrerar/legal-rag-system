@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Jurisdiction } from '@prisma/client';
 import { OpenAI } from 'openai';
 import {
   CreateLegalDocument,
@@ -45,7 +45,7 @@ export class LegalDocumentService {
           documentState: data.documentState || 'ORIGINAL',
           lastReformDate: data.lastReformDate ? new Date(data.lastReformDate) : null,
 
-          jurisdiction: data.jurisdiction || 'NACIONAL',
+          jurisdiction: (data.jurisdiction as Jurisdiction) || Jurisdiction.NACIONAL,
 
           metadata: data.metadata || {},
 
@@ -62,6 +62,17 @@ export class LegalDocumentService {
         },
       });
 
+      // Si el cliente envió countryCode explícito, sobrescribir el valor que
+      // el trigger BEFORE INSERT puso (que viene de users.preferred_country_code).
+      // Si no, queda lo que el trigger asignó.
+      if (data.countryCode) {
+        await tx.$executeRawUnsafe(
+          `UPDATE public.legal_documents SET country_code = $1 WHERE id = $2`,
+          data.countryCode,
+          document.id
+        );
+      }
+
       // Create audit log entry
       await tx.auditLog.create({
         data: {
@@ -73,6 +84,7 @@ export class LegalDocumentService {
             normType: data.normType,
             normTitle: data.normTitle,
             legalHierarchy: data.legalHierarchy,
+            countryCode: data.countryCode || '(inherited)',
           },
           success: true,
         },
@@ -128,14 +140,14 @@ export class LegalDocumentService {
           legalHierarchy: data.legalHierarchy,
           content: data.content,
 
-          publicationType: data.publicationType,
-          publicationNumber: data.publicationNumber,
+          publicationType: data.publicationType || undefined,
+          publicationNumber: data.publicationNumber || undefined,
           publicationDate: data.publicationDate ? new Date(data.publicationDate) : undefined,
 
-          documentState: data.documentState,
+          documentState: data.documentState || undefined,
           lastReformDate: data.lastReformDate ? new Date(data.lastReformDate) : undefined,
 
-          jurisdiction: data.jurisdiction,
+          jurisdiction: data.jurisdiction ? (data.jurisdiction as Jurisdiction) : undefined,
 
           metadata: data.metadata,
 
@@ -199,9 +211,9 @@ export class LegalDocumentService {
 
       return {
         ...updated,
-        chunksCount: updated._count.chunks,
+        chunksCount: (updated as any)._count?.chunks ?? 0,
         revisionsCount: 0,
-      } as LegalDocumentResponse;
+      } as unknown as LegalDocumentResponse;
     });
   }
 
@@ -217,7 +229,7 @@ export class LegalDocumentService {
       ...(query.legalHierarchy && { legalHierarchy: query.legalHierarchy }),
       ...(query.publicationType && { publicationType: query.publicationType }),
       ...(query.documentState && { documentState: query.documentState }),
-      ...(query.jurisdiction && { jurisdiction: query.jurisdiction }),
+      ...(query.jurisdiction && { jurisdiction: query.jurisdiction as Jurisdiction }),
       // Filter active documents by default unless explicitly specified
       isActive: query.isActive !== undefined ? query.isActive : true,
       ...(query.search && {
@@ -226,11 +238,13 @@ export class LegalDocumentService {
           { content: { contains: query.search, mode: 'insensitive' } },
         ],
       }),
-      ...(query.keywords && {
-        keywords: {
-          hasSome: query.keywords,
-        },
-      }),
+      // Note: keywords filter not supported - keywords stored in metadata JSON field
+      // To filter by keywords, search in metadata instead
+      // ...(query.keywords && {
+      //   keywords: {
+      //     hasSome: query.keywords,
+      //   },
+      // }),
       ...(query.publicationDateFrom || query.publicationDateTo
         ? {
             publicationDate: {
@@ -293,7 +307,7 @@ export class LegalDocumentService {
     }));
 
     return {
-      documents: transformedDocs as LegalDocumentResponse[],
+      documents: transformedDocs as unknown as LegalDocumentResponse[],
       pagination: {
         total,
         page: query.page,
@@ -346,7 +360,7 @@ export class LegalDocumentService {
       ...document,
       chunksCount: document._count.chunks,
       revisionsCount: 0,
-    } as LegalDocumentResponse;
+    } as unknown as LegalDocumentResponse;
   }
 
   /**
@@ -491,7 +505,7 @@ export class LegalDocumentService {
           legalDocumentId: documentId,
           content: chunk,
           chunkIndex: i,
-          embedding: embedding,
+          embedding: embedding ?? Prisma.JsonNull,
         },
       });
 
@@ -543,7 +557,7 @@ export class LegalDocumentService {
           legalDocumentId: documentId,
           content: chunk,
           chunkIndex: i,
-          embedding: null,
+          embedding: Prisma.JsonNull,
         },
       });
 
@@ -653,7 +667,7 @@ export class LegalDocumentService {
         entity: 'LegalDocument',
         entityId: documentId,
         success: vectorizationResult.success,
-        metadata: {
+        changes: {
           totalChunks: vectorizationResult.totalChunks,
           embeddingsGenerated: vectorizationResult.embeddingsGenerated,
           embeddingsFailed: vectorizationResult.embeddingsFailed,

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 export interface QueryClassification {
   type: 'metadata' | 'navigation' | 'content' | 'comparison' | 'summary' | 'unknown';

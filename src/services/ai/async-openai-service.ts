@@ -179,7 +179,8 @@ export class AsyncOpenAIService extends EventEmitter {
           });
         });
 
-        const result = completion.choices[0]?.message?.content || '';
+        const chatCompletion = completion as OpenAI.Chat.ChatCompletion;
+        const result = chatCompletion.choices[0]?.message?.content || '';
 
         // Update metrics
         this.metrics.successfulRequests++;
@@ -233,7 +234,8 @@ export class AsyncOpenAIService extends EventEmitter {
         ...options
       });
 
-      for await (const chunk of stream) {
+      const streamResponse = stream as AsyncIterable<OpenAI.Chat.ChatCompletionChunk>;
+      for await (const chunk of streamResponse) {
         const content = chunk.choices[0]?.delta?.content;
         if (content) {
           yield content;

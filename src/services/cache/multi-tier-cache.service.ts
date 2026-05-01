@@ -1,4 +1,6 @@
-import NodeCache from 'node-cache';
+import NodeCacheModule from 'node-cache';
+const NodeCache = NodeCacheModule;
+type NodeCacheType = InstanceType<typeof NodeCache>;
 import { getRedisCacheService } from './redis-cache.service';
 
 /**
@@ -10,7 +12,7 @@ import { getRedisCacheService } from './redis-cache.service';
  * - L3: Redis warm cache (persistent QueryCache model) - 24 hours TTL
  */
 export class MultiTierCacheService {
-  private l1Cache: NodeCache;
+  private l1Cache: NodeCacheType;
   private redisCache = getRedisCacheService();
   
   private l1TTL: number;
@@ -144,7 +146,7 @@ export class MultiTierCacheService {
   async invalidatePattern(pattern: string): Promise<number> {
     // L1: Get all keys and filter by pattern
     const l1Keys = this.l1Cache.keys();
-    const l1Matches = l1Keys.filter(key => key.includes(pattern));
+    const l1Matches = l1Keys.filter((key: string) => key.includes(pattern));
     this.l1Cache.del(l1Matches);
 
     // L2 and L3: Use Redis pattern matching

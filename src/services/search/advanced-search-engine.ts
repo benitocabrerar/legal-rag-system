@@ -9,12 +9,11 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import { queryExpansionService, type QueryExpansionResult } from './query-expansion';
 import { spellCheckerService, type SpellCheckResult } from './spell-checker';
 import { rerankingService, type DocumentWithScores } from './reranking-service';
 import { autocompleteService } from './autocomplete-service';
-
-const prisma = new PrismaClient();
 
 export interface SearchFilters {
   legalHierarchy?: string[];
@@ -149,7 +148,7 @@ export class AdvancedSearchEngine {
         original: query,
         corrected: spellCheckResult?.hasCorrections ? processedQuery : undefined,
         expanded: expansionResult?.expandedTerms,
-        suggestions: spellCheckResult ? spellCheckerService.generateSuggestion(spellCheckResult) : undefined
+        suggestions: spellCheckResult ? spellCheckerService.generateSuggestion(spellCheckResult) ?? undefined : undefined
       },
       filters,
       pagination: {

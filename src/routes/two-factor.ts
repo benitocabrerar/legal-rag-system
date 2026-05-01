@@ -1,10 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const setupTwoFactorSchema = z.object({
   enable2FA: z.boolean(),

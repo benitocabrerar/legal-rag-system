@@ -1,4 +1,4 @@
-import Bull from 'bull';
+import Bull, { Queue, Job } from 'bull';
 import { OpenAI } from 'openai';
 
 interface OpenAIJob {
@@ -24,7 +24,7 @@ interface OpenAIJobResult {
  * - Failed job tracking
  */
 export class OpenAIQueueService {
-  private queue: Bull.Queue<OpenAIJob>;
+  private queue: Queue<OpenAIJob>;
   private openai: OpenAI;
   private maxConcurrent: number;
 
@@ -64,19 +64,19 @@ export class OpenAIQueueService {
   }
 
   private setupProcessors(): void {
-    this.queue.process('embedding', this.maxConcurrent, async (job) => {
+    this.queue.process('embedding', this.maxConcurrent, async (job: Job<OpenAIJob>) => {
       return this.processEmbedding(job.data.payload);
     });
 
-    this.queue.process('chat', this.maxConcurrent, async (job) => {
+    this.queue.process('chat', this.maxConcurrent, async (job: Job<OpenAIJob>) => {
       return this.processChatCompletion(job.data.payload);
     });
 
-    this.queue.process('extraction', this.maxConcurrent, async (job) => {
+    this.queue.process('extraction', this.maxConcurrent, async (job: Job<OpenAIJob>) => {
       return this.processExtraction(job.data.payload);
     });
 
-    this.queue.on('failed', (job, error) => {
+    this.queue.on('failed', (job: Job<OpenAIJob>, error: Error) => {
       console.error(`Job ${job.id} failed:`, error.message);
     });
   }
@@ -164,13 +164,13 @@ export class OpenAIQueueService {
     }
   }
 
-  async addJob(job: OpenAIJob): Promise<Bull.Job<OpenAIJob>> {
+  async addJob(job: OpenAIJob): Promise<Job<OpenAIJob>> {
     return this.queue.add(job.type, job, {
       priority: job.priority || 5,
     });
   }
 
-  async getJobStatus(jobId: string): Promise<'completed' | 'failed' | 'active' | 'waiting' | 'delayed' | null> {
+  async getJobStatus(jobId: string): Promise<'completed' | 'failed' | 'active' | 'waiting' | 'delayed' | 'paused' | 'stuck' | null> {
     const job = await this.queue.getJob(jobId);
     if (!job) return null;
 

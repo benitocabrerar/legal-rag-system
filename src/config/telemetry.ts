@@ -9,8 +9,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { Resource } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { FastifyInstrumentation } from '@opentelemetry/instrumentation-fastify';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
@@ -31,9 +31,9 @@ const metricExporter = new OTLPMetricExporter({
 });
 
 // Resource configuration
-const resource = new Resource({
-  [SEMRESATTRS_SERVICE_NAME]: serviceName,
-  [SEMRESATTRS_SERVICE_VERSION]: serviceVersion,
+const resource = resourceFromAttributes({
+  [ATTR_SERVICE_NAME]: serviceName,
+  [ATTR_SERVICE_VERSION]: serviceVersion,
   'deployment.environment': environment,
   'service.namespace': 'legal-rag',
 });
@@ -68,7 +68,8 @@ const sdk = new NodeSDK({
     new HttpInstrumentation({
       requestHook: (span, request) => {
         // Add custom attributes to HTTP spans
-        span.setAttribute('http.client.host', request.host || 'unknown');
+        const host = 'headers' in request && request.headers?.host;
+        span.setAttribute('http.client.host', host || 'unknown');
       },
     }),
   ],

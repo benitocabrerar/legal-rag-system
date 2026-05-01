@@ -72,11 +72,22 @@ export async function unifiedSearchRoutes(app: FastifyInstance) {
 
         // Execute unified search
         const startTime = Date.now();
+
+        // Transform filters to match SearchFilters interface
+        const transformedFilters = filters ? {
+          category: filters.documentType ? [filters.documentType] : undefined,
+          jurisdiction: filters.jurisdiction ? [filters.jurisdiction] : undefined,
+          dateRange: (filters.dateFrom || filters.dateTo) ? {
+            start: filters.dateFrom ? new Date(filters.dateFrom) : new Date(0),
+            end: filters.dateTo ? new Date(filters.dateTo) : new Date(),
+          } : undefined,
+        } : undefined;
+
         const result = await orchestrator.search({
           query,
           userId,
           sessionId,
-          filters,
+          filters: transformedFilters,
           limit: validatedLimit,
           offset: offset || 0,
         });
@@ -86,12 +97,14 @@ export async function unifiedSearchRoutes(app: FastifyInstance) {
         return reply.send({
           success: true,
           data: {
-            documents: result.documents,
+            documents: result.results, // SearchResponse uses 'results' not 'documents'
             totalCount: result.totalCount,
             responseTime: result.responseTime,
             totalProcessingTime: totalTime,
             metadata: {
-              ...result.metadata,
+              nlpProcessing: result.nlpProcessing,
+              cacheHit: result.cacheHit,
+              cacheTier: result.cacheTier,
               timestamp: new Date().toISOString(),
             },
           },

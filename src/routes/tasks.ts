@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient, TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskStatus, TaskPriority } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -390,7 +389,7 @@ export async function taskRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
-      const body = updateTaskSchema.parse({ ...request.body, id });
+      const body = updateTaskSchema.parse({ ...(request.body as Record<string, unknown>), id });
       const userId = (request.user as any).id;
 
       // Verify access

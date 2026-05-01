@@ -4,10 +4,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import { EcuadorianCitationParser } from './citationParser';
 import { CitationValidator } from './citationValidator';
-
-const prisma = new PrismaClient();
 
 export interface CitationExtractionResult {
   documentId: string;

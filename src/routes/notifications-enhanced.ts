@@ -1,10 +1,11 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient, NotificationChannel } from '@prisma/client';
+import { NotificationChannel } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { emailService } from '../services/emailService.js';
 import EmailTemplates from '../templates/emailTemplates.js';
-
-const prisma = new PrismaClient();
+import twilio from 'twilio';
+import * as admin from 'firebase-admin';
 
 const createTemplateSchema = z.object({
   name: z.string().min(1),
@@ -36,6 +37,40 @@ const listNotificationsQuerySchema = z.object({
   limit: z.number().min(1).max(100).default(50),
   offset: z.number().min(0).default(0),
 });
+
+// Helper function to initialize Twilio client
+const getTwilioClient = () => {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!accountSid || !authToken) {
+    throw new Error('Twilio credentials not configured');
+  }
+
+  return twilio(accountSid, authToken);
+};
+
+// Helper function to initialize Firebase Admin
+const getFirebaseAdmin = () => {
+  if (!admin.apps.length) {
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error('Firebase credentials not configured');
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+    });
+  }
+  return admin;
+};
 
 export async function notificationsEnhancedRoutes(fastify: FastifyInstance) {
   // Create notification template (admin only)
@@ -402,10 +437,18 @@ async function sendNotificationViaChannel(
       break;
 
     case NotificationChannel.SMS:
-      // TODO: Integrate with Twilio
-      console.log('Sending SMS to:', data.recipient);
-      console.log('Message:', data.body);
-      // For now, just log - SMS integration can be added later
+      // Twilio SMS integration
+      try {
+        const twilioClient = getTwilioClient();
+        await twilioClient.messages.create({
+          body: data.body,
+          from: process.env.TWILIO_PHONE_NUMBER!,
+          to: data.recipient,
+        });
+      } catch (error) {
+        console.error('Failed to send SMS via Twilio:', error);
+        throw new Error('Failed to send SMS notification');
+      }
       break;
 
     case NotificationChannel.IN_APP:
@@ -415,10 +458,25 @@ async function sendNotificationViaChannel(
       break;
 
     case NotificationChannel.PUSH:
-      // TODO: Integrate with Firebase/OneSignal
-      console.log('Sending push notification to:', data.recipient);
-      console.log('Message:', data.body);
-      // For now, just log - Push notification integration can be added later
+      // Firebase Cloud Messaging integration
+      try {
+        const firebaseAdmin = getFirebaseAdmin();
+        const message: admin.messaging.Message = {
+          token: data.recipient, // device token
+          notification: {
+            title: data.subject || 'Poweria Legal Notification',
+            body: data.body,
+          },
+          data: {
+            type: 'notification',
+            timestamp: new Date().toISOString(),
+          },
+        };
+        await firebaseAdmin.messaging().send(message);
+      } catch (error) {
+        console.error('Failed to send push notification via Firebase:', error);
+        throw new Error('Failed to send push notification');
+      }
       break;
 
     default:

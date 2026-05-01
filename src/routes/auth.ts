@@ -1,9 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -65,7 +63,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: error.errors });
       }
       console.error('Registration error:', error);
-      fastify.log.error('Registration error:', error);
+      fastify.log.error({ error }, 'Registration error');
       return reply.code(500).send({
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'

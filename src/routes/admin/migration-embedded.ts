@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+import { prisma as prismaClient } from '../../lib/prisma.js';
 import { Client } from 'pg';
 
 const MIGRATION_SQL = `-- =====================================================
@@ -387,7 +388,7 @@ CREATE TRIGGER maintain_hierarchy
 -- Grant permissions removed (not applicable to Render PostgreSQL)`;
 
 export async function migrationRoutesEmbedded(app: FastifyInstance) {
-  const prisma = new PrismaClient();
+  const prisma = prismaClient;
 
   // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO)
   app.post('/migration/apply-embedded', async (request, reply) => {
@@ -455,7 +456,7 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
       });
 
     } catch (error) {
-      app.log.error('❌ Error aplicando migración:', error);
+      app.log.error({ error }, '❌ Error aplicando migración');
       return reply.code(500).send({
         error: 'Error aplicando migración',
         details: error instanceof Error ? error.message : String(error)
@@ -551,7 +552,7 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
       });
 
     } catch (error) {
-      app.log.error('❌ Error resolviendo migración:', error);
+      app.log.error({ error }, '❌ Error resolviendo migración');
       return reply.code(500).send({
         error: 'Error resolviendo migración',
         details: error instanceof Error ? error.message : String(error)

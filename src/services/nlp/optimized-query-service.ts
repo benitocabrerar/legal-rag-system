@@ -3,14 +3,10 @@
  * Implements caching, batch processing, and optimized database queries
  */
 
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
+import { prisma } from '../../lib/prisma.js';
+import * as crypto from 'crypto';
 
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'error', 'warn']
-    : ['error'],
-});
+// Task 2: Using centralized PrismaClient singleton for connection pooling
 
 interface NLPResult {
   intent: string;
@@ -166,13 +162,12 @@ export class OptimizedNLPQueryService {
     return await prisma.userSession.upsert({
       where: { sessionToken: token },
       update: {
-        lastActivity: new Date(),
-        totalQueries: { increment: 1 }
+        lastActivityAt: new Date()
       },
       create: {
         userId,
         sessionToken: token,
-        contextType: 'general',
+        context: {},
         startedAt: new Date()
       },
       include: {
@@ -180,9 +175,8 @@ export class OptimizedNLPQueryService {
           orderBy: { createdAt: 'desc' },
           take: 5,
           select: {
-            originalQuery: true,
-            intent: true,
-            confidence: true
+            query: true,
+            intent: true
           }
         }
       }
@@ -203,7 +197,8 @@ export class OptimizedNLPQueryService {
           {
             OR: [
               { title: { contains: query, mode: 'insensitive' } },
-              { summary: { contains: query, mode: 'insensitive' } }
+              { normTitle: { contains: query, mode: 'insensitive' } },
+              { content: { contains: query, mode: 'insensitive' } }
             ]
           },
           { isActive: true },
@@ -213,36 +208,23 @@ export class OptimizedNLPQueryService {
       select: {
         id: true,
         title: true,
+        normTitle: true,
         normType: true,
-        hierarchy: true,
+        legalHierarchy: true,
         publicationDate: true,
-        summary: true,
-        // Only load analytics if recent
-        analytics: {
+        viewCount: true,
+        // Load summaries
+        summaries: {
           select: {
-            viewCount: true,
-            relevanceScore: true,
-            trendingScore: true
+            summaryText: true,
+            summaryType: true
           },
-          where: {
-            periodEnd: { gte: new Date() }
-          },
-          orderBy: { periodStart: 'desc' },
           take: 1
-        },
-        // Load recent citations
-        citedBy: {
-          select: {
-            citingDocumentId: true,
-            confidence: true
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 5
         }
       },
       orderBy: [
         { publicationDate: 'desc' },
-        { hierarchy: 'asc' }
+        { legalHierarchy: 'asc' }
       ],
       take: limit
     });
@@ -289,19 +271,15 @@ export class OptimizedNLPQueryService {
     wasClicked: boolean = false
   ): Promise<void> {
     await prisma.querySuggestion.upsert({
-      where: { suggestionText: query },
+      where: { suggestion: query },
       update: {
-        usageCount: { increment: 1 },
-        clickCount: wasClicked ? { increment: 1 } : undefined,
-        lastUsed: new Date(),
-        popularityScore: { increment: wasClicked ? 0.1 : 0.01 }
+        frequency: { increment: 1 },
+        lastUsedAt: new Date()
       },
       create: {
-        suggestionText: query,
-        suggestionType: 'autocomplete',
-        usageCount: 1,
-        clickCount: wasClicked ? 1 : 0,
-        popularityScore: wasClicked ? 0.1 : 0.01
+        suggestion: query,
+        category: 'autocomplete',
+        frequency: 1
       }
     });
   }
@@ -317,12 +295,11 @@ export class OptimizedNLPQueryService {
     return hash.digest('hex');
   }
 
-  private async checkCache(cacheKey: string): Promise<any> {
+  private async checkCache(queryHash: string): Promise<any> {
     return await prisma.queryCache.findFirst({
       where: {
-        cacheKey,
-        expiresAt: { gt: new Date() },
-        isValid: true
+        queryHash,
+        expiresAt: { gt: new Date() }
       }
     });
   }
@@ -332,27 +309,23 @@ export class OptimizedNLPQueryService {
       where: { id: cacheId },
       data: {
         hitCount: { increment: 1 },
-        lastHit: new Date()
+        lastHitAt: new Date()
       }
     });
   }
 
   private async cacheResult(
-    cacheKey: string,
+    queryHash: string,
     originalQuery: string,
     result: any
   ): Promise<void> {
     await prisma.queryCache.create({
       data: {
-        cacheKey,
-        cacheType: 'nlp_transformation',
-        originalInput: originalQuery,
-        cachedOutput: result,
-        intent: result.intent,
-        confidence: result.confidence,
-        entities: result.entities,
-        expiresAt: new Date(Date.now() + this.cacheExpiryMs),
-        computeTimeMs: result.processingTime
+        queryHash,
+        query: originalQuery,
+        filters: {},
+        cachedResponse: result,
+        expiresAt: new Date(Date.now() + this.cacheExpiryMs)
       }
     });
   }
@@ -362,19 +335,22 @@ export class OptimizedNLPQueryService {
     result: any,
     context: QueryContext
   ): Promise<void> {
+    if (!context.sessionId) return; // sessionId is required
+
+    const queryHash = this.generateCacheKey(query, context);
     await prisma.queryHistory.create({
       data: {
         userId: context.userId,
         sessionId: context.sessionId,
-        originalQuery: query,
-        transformedQuery: result.transformedQuery || query,
-        queryType: result.queryType || 'general',
-        intent: result.intent,
-        confidence: result.confidence,
-        entities: result.entities,
-        processingTimeMs: result.processingTime,
-        resultCount: result.resultCount || 0,
-        resultIds: result.resultIds || []
+        query: query,
+        queryHash: queryHash,
+        intent: { type: result.intent, confidence: result.confidence },
+        entities: result.entities || [],
+        filters: {},
+        resultsCount: result.resultCount || 0,
+        clickedResults: [],
+        responseTime: result.processingTime || 0,
+        cacheHit: false
       }
     });
   }
@@ -485,8 +461,8 @@ export class OptimizedNLPQueryService {
       conditions.push({ normType: filters.normType });
     }
 
-    if (filters.hierarchy) {
-      conditions.push({ hierarchy: filters.hierarchy });
+    if (filters.hierarchy || filters.legalHierarchy) {
+      conditions.push({ legalHierarchy: filters.hierarchy || filters.legalHierarchy });
     }
 
     if (filters.dateFrom || filters.dateTo) {
@@ -511,12 +487,12 @@ export class OptimizedNLPQueryService {
    * Get performance metrics
    */
   async getPerformanceMetrics(): Promise<any> {
-    const metrics = await prisma.$queryRaw`
+    const metrics = await prisma.$queryRaw<Array<Record<string, any>>>`
       SELECT
         (SELECT COUNT(*) FROM query_history WHERE created_at > NOW() - INTERVAL '1 minute') AS queries_per_minute,
-        (SELECT AVG(processing_time_ms) FROM query_history WHERE created_at > NOW() - INTERVAL '5 minutes') AS avg_query_time_5m,
-        (SELECT COUNT(*) FROM user_sessions WHERE is_active = true AND last_activity > NOW() - INTERVAL '5 minutes') AS active_sessions,
-        (SELECT SUM(hit_count)::float / COUNT(*) FROM query_cache WHERE last_hit > NOW() - INTERVAL '1 hour') AS cache_efficiency
+        (SELECT AVG(response_time) FROM query_history WHERE created_at > NOW() - INTERVAL '5 minutes') AS avg_query_time_5m,
+        (SELECT COUNT(*) FROM user_sessions WHERE last_activity_at > NOW() - INTERVAL '5 minutes') AS active_sessions,
+        (SELECT COALESCE(SUM(hit_count)::float / NULLIF(COUNT(*), 0), 0) FROM query_cache WHERE last_hit_at > NOW() - INTERVAL '1 hour') AS cache_efficiency
     `;
 
     return metrics[0];

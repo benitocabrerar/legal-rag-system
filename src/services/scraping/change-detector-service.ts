@@ -3,7 +3,7 @@
  * Uses hash-based comparison to track document versions over time
  */
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 export interface DocumentSnapshot {
   url: string;

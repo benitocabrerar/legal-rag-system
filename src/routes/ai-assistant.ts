@@ -4,6 +4,9 @@ import { queryProcessor } from '../services/nlp/query-processor.js';
 import { analyticsService } from '../services/analytics/analytics-service.js';
 
 export async function aiAssistantRoutes(fastify: FastifyInstance) {
+  // Aplicar authenticate a TODAS las rutas AI
+  fastify.addHook('onRequest', (fastify as any).authenticate);
+
   // Initialize a new conversation
   fastify.post('/api/ai/conversation', {
     schema: {
@@ -125,6 +128,72 @@ export async function aiAssistantRoutes(fastify: FastifyInstance) {
       });
 
       return reply.code(500).send({ error: 'Failed to process query' });
+    }
+  });
+
+  // Process a query with streaming response (SSE)
+  fastify.get('/api/ai/stream', {
+    schema: {
+      querystring: {
+        type: 'object',
+        required: ['conversationId', 'query'],
+        properties: {
+          conversationId: { type: 'string' },
+          query: { type: 'string' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { conversationId, query } = request.query as {
+      conversationId: string;
+      query: string;
+    };
+
+    const userId = (request.user as any)?.id;
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Set SSE headers
+      reply.raw.setHeader('Content-Type', 'text/event-stream');
+      reply.raw.setHeader('Cache-Control', 'no-cache');
+      reply.raw.setHeader('Connection', 'keep-alive');
+      reply.raw.setHeader('Access-Control-Allow-Origin', '*');
+
+      // Process query with NLP first
+      const processedQuery = await queryProcessor.processQuery(query);
+
+      // Stream response chunks
+      for await (const chunk of legalAssistant.processQueryStreaming(
+        conversationId,
+        query,
+        [] // Search results can be added via separate endpoint
+      )) {
+        reply.raw.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+
+      // Track analytics
+      await analyticsService.trackEvent({
+        eventType: 'ai_streaming_query_completed',
+        userId,
+        sessionId: request.id,
+        metadata: {
+          conversationId,
+          intent: processedQuery.intent.type
+        }
+      });
+
+      reply.raw.end();
+    } catch (error) {
+      console.error('Error in streaming response:', error);
+
+      // Send error event before closing
+      reply.raw.write(`data: ${JSON.stringify({
+        type: 'error',
+        error: (error as Error).message
+      })}\n\n`);
+      reply.raw.end();
     }
   });
 

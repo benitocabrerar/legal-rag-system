@@ -2,7 +2,7 @@ import { getOpenAIQueueService } from '../queue/openai-queue.service';
 import { getMultiTierCacheService } from '../cache/multi-tier-cache.service';
 import { getTracingService } from '../observability/tracing.service';
 import { getMetricsService } from '../observability/metrics.service';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 /**
  * Async OpenAI Service

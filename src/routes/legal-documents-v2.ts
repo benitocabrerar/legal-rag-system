@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { OpenAI } from 'openai';
 import { LegalDocumentService } from '../services/legal-document-service';
 import {
@@ -7,11 +7,9 @@ import {
   UpdateLegalDocumentSchema,
   QueryLegalDocumentsSchema,
   LegacyLegalDocumentSchema,
-  CreateDocumentRevisionSchema,
+  // CreateDocumentRevisionSchema, // DISABLED: Model does not exist in schema
 } from '../schemas/legal-document-schemas';
 import { PDFExtract } from 'pdf.js-extract';
-
-const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
@@ -523,7 +521,10 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
 
   // ============================================================================
   // CREATE DOCUMENT REVISION
+  // TEMPORARILY DISABLED: LegalDocumentRevision model does not exist in schema
+  // This feature requires schema migration to add the revision tracking model
   // ============================================================================
+  /*
   fastify.post('/legal-documents-v2/:id/revisions', {
     onRequest: [fastify.authenticate],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -590,6 +591,7 @@ export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
       });
     }
   });
+  */
 
   // ============================================================================
   // SEMANTIC SEARCH

@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient, ServiceItemType, InvoiceStatus, PaymentStatus, PaymentMethodType } from '@prisma/client';
+import { ServiceItemType, InvoiceStatus, PaymentStatus, PaymentMethodType } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Agreement schemas
 const createAgreementSchema = z.object({

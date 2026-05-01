@@ -6,9 +6,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
 import Redis from 'ioredis';
-
-const prisma = new PrismaClient();
 
 export interface HealthCheck {
   status: 'healthy' | 'unhealthy' | 'degraded';

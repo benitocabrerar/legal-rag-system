@@ -9,8 +9,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export interface RerankingConfig {
   weights?: {
@@ -200,11 +199,12 @@ export class RerankingService {
     const hierarchyBoost = this.getHierarchyBoost(doc.legalHierarchy);
 
     // Calculate weighted sum
+    const weights = this.config.weights;
     const baseScore =
-      this.config.weights.semanticSimilarity * semanticScore +
-      this.config.weights.pageRankScore * normalizedPageRank +
-      this.config.weights.userFeedback * feedbackScore +
-      this.config.weights.recencyScore * recencyScore;
+      (weights?.semanticSimilarity ?? 0.4) * semanticScore +
+      (weights?.pageRankScore ?? 0.2) * normalizedPageRank +
+      (weights?.userFeedback ?? 0.2) * feedbackScore +
+      (weights?.recencyScore ?? 0.2) * recencyScore;
 
     // Apply hierarchy boost (multiplicative)
     const finalScore = baseScore * hierarchyBoost;

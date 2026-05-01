@@ -48,9 +48,9 @@ export async function requestMetricsMiddleware(
  * Records errors in metrics
  */
 export async function errorTrackingMiddleware(
-  error: Error,
   request: FastifyRequest,
-  reply: FastifyReply
+  reply: FastifyReply,
+  error: Error
 ) {
   // Record error metric
   metricsService.recordError(

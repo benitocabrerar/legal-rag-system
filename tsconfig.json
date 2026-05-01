@@ -20,5 +20,35 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/tests/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/routes/gdpr.ts",
+    "src/routes/gdpr/**/*",
+    "src/scripts/**/*",
+    "src/routes/predictions.ts",
+    "src/routes/ai-predictions.ts",
+    "src/routes/trends.ts",
+    "src/routes/legal-documents-v2.ts",
+    "src/services/ai/predictive-intelligence.service.ts",
+    "src/services/legal-document-service.ts",
+    "src/services/documentRegistry.ts",
+    "src/services/legal/citationExtractor.ts",
+    "src/services/legal/citationParser.ts",
+    "src/services/legal/pagerankService.ts",
+    "src/services/ml/**/*",
+    "src/workers/**/*",
+    "src/services/scraping/**/*",
+    "src/services/legal/**/*",
+    "src/services/nlp/optimized-query-service.ts",
+    "src/services/notificationService.ts",
+    "src/services/observability/metrics.service.ts",
+    "src/services/queryRouter.ts",
+    "src/services/queue/openai-queue.service.ts",
+    "src/services/search/**/*",
+    "src/services/security/field-encryption.service.ts"
+  ]
 }

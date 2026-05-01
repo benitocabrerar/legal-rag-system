@@ -1,14 +1,14 @@
 import { getMultiTierCacheService } from '../cache/multi-tier-cache.service.js';
 import { getAsyncOpenAIService } from '../ai/async-openai.service.js';
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { PrismaClient, Prisma } from '@prisma/client';
+import { prisma } from '../../lib/prisma.js';
+import * as crypto from 'crypto';
 
 // Interfaces
 export interface SearchQuery {
   query: string;
   userId?: string;
+  sessionId?: string;  // Added for query tracking
   filters?: {
     category?: string[];
     dateRange?: { start: Date; end: Date };
@@ -90,10 +90,8 @@ export class UnifiedSearchOrchestrator {
 
         // Promote cache entry to higher tier if needed
         if (cacheResult.tier === 'L3' || cacheResult.tier === 'L2') {
-          await this.cacheService.set(cacheKey, cacheResult.value, {
-            ttl: 3600, // 1 hour for promoted entries
-            tier: 'L1'
-          });
+          // Note: set() stores to all tiers automatically with configured TTLs
+          await this.cacheService.set(cacheKey, cacheResult.value);
         }
 
         const responseTime = Date.now() - startTime;
@@ -116,10 +114,8 @@ export class UnifiedSearchOrchestrator {
         responseTime
       };
 
-      await this.cacheService.set(cacheKey, response, {
-        ttl: 3600, // 1 hour
-        tier: 'L1'
-      });
+      // Store in all cache tiers (L1, L2, L3) with configured TTLs
+      await this.cacheService.set(cacheKey, response);
 
       // Step 4: Track query
       await this.trackQuery(query, response, responseTime);
@@ -324,7 +320,7 @@ Respond in JSON format:
           {
             summaries: {
               some: {
-                summary: { contains: query, mode: 'insensitive' }
+                summaryText: { contains: query, mode: 'insensitive' }  // Fixed: use summaryText field from LegalDocumentSummary
               }
             }
           }
@@ -370,12 +366,12 @@ Respond in JSON format:
       // Transform to SearchResult format
       const searchResults: SearchResult[] = results.map(doc => ({
         id: doc.id,
-        title: doc.title,
+        title: doc.title || 'Sin título', // Handle null title
         content: doc.content.substring(0, 500), // First 500 chars
         category: doc.category || undefined,
         relevanceScore: 0.5, // Base score, will be enhanced by RAG
         metadata: {
-          ...(doc.metadata as Record<string, any>),
+          ...(doc.metadata as Record<string, any> | null),
           jurisdiction: doc.jurisdiction,
           createdAt: doc.createdAt
         },
@@ -432,6 +428,14 @@ Respond in JSON format:
       // Generate query embedding
       const queryEmbedding = await this.aiService.generateEmbedding(query);
 
+      // If embedding generation failed, return results with default scoring
+      if (!queryEmbedding) {
+        return results.map((result, index) => ({
+          ...result,
+          relevanceScore: 1 - (index * 0.1) // Simple descending score
+        }));
+      }
+
       // Re-rank results based on embedding similarity
       const rankedResults = await this.rerankWithEmbedding(
         queryEmbedding,
@@ -458,25 +462,29 @@ Respond in JSON format:
     results: SearchResult[]
   ): Promise<SearchResult[]> {
     try {
-      // For now, fetch embeddings from database and calculate similarity
-      // In production, this would use pgvector's <-> operator for efficiency
+      // Fixed: Use LegalDocumentChunk embeddings (actual storage location)
+      // The Embedding model doesn't exist - embeddings are stored in chunks
       const documentIds = results.map(r => r.id);
 
-      const embeddings = await prisma.embedding.findMany({
+      const chunks = await prisma.legalDocumentChunk.findMany({
         where: {
-          documentId: { in: documentIds }
+          legalDocumentId: { in: documentIds },
+          embedding: { not: Prisma.DbNull }
         },
         select: {
-          documentId: true,
+          legalDocumentId: true,
           embedding: true
         }
       });
 
-      // Create embedding lookup
+      // Create embedding lookup (use first chunk per document)
       const embeddingMap = new Map<string, number[]>();
-      for (const emb of embeddings) {
-        if (emb.embedding && Array.isArray(emb.embedding)) {
-          embeddingMap.set(emb.documentId, emb.embedding as number[]);
+      for (const chunk of chunks) {
+        if (chunk.embedding && Array.isArray(chunk.embedding)) {
+          // Take first chunk's embedding per document
+          if (!embeddingMap.has(chunk.legalDocumentId)) {
+            embeddingMap.set(chunk.legalDocumentId, chunk.embedding as number[]);
+          }
         }
       }
 
@@ -662,7 +670,7 @@ Respond in JSON format:
         take: 10
       });
       const topIntents = intentGroups.map(g => ({
-        intent: g.intent || 'unknown',
+        intent: String(g.intent ?? 'unknown'),
         count: g._count.intent
       }));
 

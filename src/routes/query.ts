@@ -1,9 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { OpenAI } from 'openai';
-
-const prisma = new PrismaClient();
+import { getUserCountryContext, jurisdictionPromptFragment } from '../lib/country-context.js';
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -227,10 +226,14 @@ export async function queryRoutes(fastify: FastifyInstance) {
       // If no documents are available, use general legal assistant mode
       const hasDocuments = allChunks.length > 0;
 
+      // Resolver contexto jurisdiccional del usuario
+      const countryCtx = await getUserCountryContext(userId);
+      const jurisdictionPrefix = jurisdictionPromptFragment(countryCtx, 'es');
+
       const systemPrompt = hasDocuments
-        ? `You are a legal assistant for Ecuador helping with case analysis.
+        ? `${jurisdictionPrefix}
 You have access to TWO sources of information:
-1. 📚 Legal Library: Official legal documents from Ecuador (Constitution, laws, codes, regulations)
+1. 📚 Legal Library: Official legal documents from ${countryCtx.nameEn} (Constitution, laws, codes, regulations)
 2. 📄 Case Documents: Specific documents uploaded by the user for this case
 
 Use the provided context to answer the user's question accurately.
@@ -238,9 +241,9 @@ When citing information, always specify which source you're using (Legal Library
 If the context doesn't contain enough information to answer the question, say so clearly.
 Always respond in Spanish unless the user asks in English.
 Provide specific article numbers and legal references when citing from the Legal Library.`
-        : `You are a legal assistant for Ecuador helping with general legal questions.
+        : `${jurisdictionPrefix}
 Answer the user's legal questions to the best of your ability in Spanish.
-Provide general legal information, principles, and guidance based on Ecuadorian law.
+Provide general legal information, principles, and guidance based on ${countryCtx.nameEn}'s law.
 Note: The user can ask about specific laws and the system will search the legal database.
 Always clarify that your answers are general legal information and not specific legal advice.`;
 
