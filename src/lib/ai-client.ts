@@ -42,12 +42,15 @@ async function loadSettings(): Promise<AiSettings> {
   );
   const row = r[0];
   const settings: AiSettings = {
-    provider: row?.provider ?? 'openai',
-    model: row?.model ?? 'gpt-4o-mini',
+    // Default por convención del producto: Claude (Anthropic) en su última
+    // versión disponible para el hosting. Si la operadora cambia el plan
+    // a OpenAI desde /admin/ai-settings, esto se ignora.
+    provider: row?.provider ?? 'anthropic',
+    model: row?.model ?? 'claude-opus-4-7',
     embedding_model: row?.embedding_model ?? 'text-embedding-3-small',
     api_key: row?.api_key ?? null,
-    temperature: Number(row?.temperature ?? 0.3),
-    max_tokens: Number(row?.max_tokens ?? 4000),
+    temperature: Number(row?.temperature ?? 0.2),
+    max_tokens: Number(row?.max_tokens ?? 6000),
   };
   cache = { settings, fetchedAt: Date.now() };
   return settings;

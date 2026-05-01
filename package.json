@@ -62,6 +62,7 @@
     "bullmq": "^5.63.0",
     "cron": "^4.3.4",
     "dd-trace": "^5.77.0",
+    "docx": "^9.6.1",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.0",
     "fastify-multer": "^2.0.3",

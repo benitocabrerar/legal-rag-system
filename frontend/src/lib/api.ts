@@ -654,6 +654,36 @@ export const eventsExtractAPI = {
   },
 };
 
+export interface LegalDocPreflight {
+  status: 'ok' | 'incomplete';
+  docType: string;
+  docLabel: string;
+  missing: Array<{ key: string; label: string; hint?: string }>;
+  present: Array<{ key: string; label: string; value: string }>;
+  country: { code: string; name: string; flag?: string };
+  caseHasDocuments: number;
+}
+
+export const legalDocGenAPI = {
+  preflight: async (
+    caseId: string,
+    docType: string,
+    supplied?: Record<string, string>,
+  ): Promise<LegalDocPreflight> => {
+    const r = await api.post(`/cases/${caseId}/generate-document/preflight`, { docType, supplied });
+    return r.data;
+  },
+  generateUrl: (caseId: string) => `/api/v1/cases/${caseId}/generate-document`,
+  save: async (
+    caseId: string,
+    data: { docType: string; content: string; title?: string },
+  ): Promise<{ document: { id: string; title: string; createdAt: string } }> => {
+    const r = await api.post(`/cases/${caseId}/generate-document/save`, data);
+    return r.data;
+  },
+  downloadDocxUrl: (docId: string) => `/api/v1/documents/${docId}/download.docx`,
+};
+
 export const litigationAPI = {
   brief: async (caseId: string): Promise<LitigationBrief> => {
     const r = await api.get(`/cases/${caseId}/litigation-brief`);

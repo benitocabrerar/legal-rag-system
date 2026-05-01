@@ -13,6 +13,7 @@ import { FinancePanel } from '@/components/case-detail/FinancePanel';
 import { ProcessPipeline } from '@/components/case-detail/ProcessPipeline';
 import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts';
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
+import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
 import {
   FileText,
   Upload,
@@ -97,6 +98,7 @@ export default function CaseDetailPage() {
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
+  const [showLegalDocGen, setShowLegalDocGen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [coherenceKey, setCoherenceKey] = useState(0);
@@ -881,11 +883,11 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
             </h3>
             <div className="space-y-2">
               <button
-                onClick={() => setShowGenerateDocModal(true)}
-                className="w-full px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+                onClick={() => setShowLegalDocGen(true)}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg font-medium hover:scale-[1.01] hover:shadow-lg shadow-violet-500/30 transition-all shadow-sm flex items-center gap-2"
               >
-                <FileText className="w-4 h-4" />
-                Generar Documento
+                <Sparkles className="w-4 h-4" />
+                Generar Documento Legal
               </button>
               <button
                 onClick={() => setShowExportModal(true)}
@@ -1146,6 +1148,13 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           </div>
         </div>
       )}
+
+      {/* Generador profesional de documentos legales con IA */}
+      <LegalDocGenDialog
+        isOpen={showLegalDocGen}
+        onClose={() => setShowLegalDocGen(false)}
+        caseId={caseId}
+      />
     </div>
   );
 }
