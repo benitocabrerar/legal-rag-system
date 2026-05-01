@@ -28,21 +28,22 @@ interface GoogleUserInfo {
 }
 
 export async function oauthRoutes(fastify: FastifyInstance) {
-  // Initiate Google OAuth flow
+  // Initiate Google OAuth flow.
+  //
+  // Legacy clients (older PWA bundles cached on phones) hit this route
+  // directly. We don't have a backend Google OAuth Client configured here
+  // (that lives in Supabase Auth Providers now), so this used to 302 to
+  // Google with client_id="" and produced "Missing required parameter:
+  // client_id" — exactly what users were seeing on iOS Safari with stale
+  // cache. Forward to Supabase Authorize so any old client recovers.
   fastify.get('/auth/google', async (request, reply) => {
-    const redirectUri = GOOGLE_CALLBACK_URL;
-    const scope = 'openid email profile';
-    const responseType = 'code';
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${encodeURIComponent(GOOGLE_CLIENT_ID)}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=${responseType}&` +
-      `scope=${encodeURIComponent(scope)}&` +
-      `access_type=offline&` +
-      `prompt=consent`;
-
-    return reply.redirect(authUrl);
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const frontendUrl = process.env.FRONTEND_URL
+      || process.env.NEXT_PUBLIC_SITE_URL
+      || 'https://poweria-legal.vercel.app';
+    const redirectTo = `${frontendUrl}/auth/callback`;
+    const target = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+    return reply.redirect(target);
   });
 
   // Google OAuth callback
