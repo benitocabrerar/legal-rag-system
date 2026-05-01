@@ -3,13 +3,25 @@
  * GET  /api/v1/admin/embeddings/stats  — totales globales
  * POST /api/v1/admin/embeddings/test-search — query de prueba al RAG
  *
- * Cualquier user autenticado puede consultar; solo admin puede reindexar.
+ * Solo admin. Antes la ruta solo exigía autenticación, lo que dejaba que
+ * cualquier abogado/cliente leyera el inventario completo de documentos
+ * legales y consultara el corpus directamente. Cerramos con un guard de
+ * rol además del onRequest authenticate.
  */
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
 
+async function requireAdmin(request: any, reply: any) {
+  const user = request.user;
+  if (!user || user.role !== 'admin') {
+    return reply.code(403).send({ error: 'Forbidden — admin only' });
+  }
+}
+
 export async function adminEmbeddingsRoutes(fastify: FastifyInstance) {
   fastify.addHook('onRequest', (fastify as any).authenticate);
+  // Defensa en profundidad: también validamos rol antes de cualquier handler.
+  fastify.addHook('preHandler', requireAdmin);
 
   // STATS
   fastify.get('/admin/embeddings/stats', async (_req, reply) => {

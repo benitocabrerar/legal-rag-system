@@ -390,16 +390,28 @@ CREATE TRIGGER maintain_hierarchy
 export async function migrationRoutesEmbedded(app: FastifyInstance) {
   const prisma = prismaClient;
 
-  // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO)
-  app.post('/migration/apply-embedded', async (request, reply) => {
-    try {
-      // Verificar secret de seguridad
-      const { secret } = request.body as { secret?: string };
-      const MIGRATION_SECRET = process.env.MIGRATION_SECRET || 'temp-migration-secret-12345';
+  // Defensa en capas para todas las rutas de migration: bearer token de
+  // admin Y secret env (sin secret env configurado, bloquea por defecto).
+  const requireAdminAndSecret = async (request: any, reply: any) => {
+    const user = request.user;
+    if (!user || user.role !== 'admin') {
+      return reply.code(403).send({ error: 'Forbidden — admin only' });
+    }
+    const { secret } = (request.body ?? {}) as { secret?: string };
+    const MIGRATION_SECRET = process.env.MIGRATION_SECRET;
+    if (!MIGRATION_SECRET) {
+      return reply.code(503).send({ error: 'Migration secret not configured' });
+    }
+    if (secret !== MIGRATION_SECRET) {
+      return reply.code(403).send({ error: 'Forbidden - Invalid secret' });
+    }
+  };
 
-      if (secret !== MIGRATION_SECRET) {
-        return reply.code(403).send({ error: 'Forbidden - Invalid secret' });
-      }
+  app.addHook('onRequest', (app as any).authenticate);
+
+  // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO)
+  app.post('/migration/apply-embedded', { preHandler: requireAdminAndSecret }, async (_request, reply) => {
+    try {
 
       app.log.info('🔄 Iniciando aplicación de migración (embedded SQL)...');
 
@@ -465,7 +477,13 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
   });
 
   // Endpoint para verificar estado de migración
-  app.get('/migration/status', async (request, reply) => {
+  app.get('/migration/status', {
+    preHandler: async (request: any, reply: any) => {
+      if (!request.user || request.user.role !== 'admin') {
+        return reply.code(403).send({ error: 'Forbidden — admin only' });
+      }
+    },
+  }, async (request, reply) => {
     try {
       const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
         SELECT table_name
@@ -513,15 +531,9 @@ export async function migrationRoutesEmbedded(app: FastifyInstance) {
   });
 
   // Endpoint para resolver migración fallida
-  app.post('/migration/resolve-failed', async (request, reply) => {
+  app.post('/migration/resolve-failed', { preHandler: requireAdminAndSecret }, async (request, reply) => {
     try {
-      // Verificar secret de seguridad
-      const { secret, migrationName } = request.body as { secret?: string; migrationName?: string };
-      const MIGRATION_SECRET = process.env.MIGRATION_SECRET || 'temp-migration-secret-12345';
-
-      if (secret !== MIGRATION_SECRET) {
-        return reply.code(403).send({ error: 'Forbidden - Invalid secret' });
-      }
+      const { migrationName } = request.body as { secret?: string; migrationName?: string };
 
       const targetMigration = migrationName || '20241110_document_analysis_system';
 

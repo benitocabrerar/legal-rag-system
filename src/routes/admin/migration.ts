@@ -9,13 +9,28 @@ const __dirname = path.dirname(__filename);
 
 export async function migrationRoutes(app: FastifyInstance) {
 
-  // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO)
-  app.post('/migration/apply', async (request, reply) => {
+  // Endpoint temporal para aplicar migración (ELIMINAR DESPUÉS DE USO).
+  // Defensa en capas: requiere bearer token de admin Y un secret env adicional.
+  // Antes solo exigía el secret, lo que abría la ruta a cualquier atacante con
+  // el valor por defecto cableado.
+  app.post('/migration/apply', {
+    onRequest: [(app as any).authenticate],
+  }, async (request, reply) => {
     try {
+      const user = (request as any).user;
+      if (!user || user.role !== 'admin') {
+        return reply.code(403).send({ error: 'Forbidden — admin only' });
+      }
+
       // Verificar secret de seguridad
       const { secret } = request.body as { secret?: string };
-      const MIGRATION_SECRET = process.env.MIGRATION_SECRET || 'temp-migration-secret-12345';
+      const MIGRATION_SECRET = process.env.MIGRATION_SECRET;
 
+      // Si no hay secret configurado en producción, bloquea por defecto
+      // en lugar de aceptar el placeholder débil.
+      if (!MIGRATION_SECRET) {
+        return reply.code(503).send({ error: 'Migration secret not configured' });
+      }
       if (secret !== MIGRATION_SECRET) {
         return reply.code(403).send({ error: 'Forbidden - Invalid secret' });
       }
