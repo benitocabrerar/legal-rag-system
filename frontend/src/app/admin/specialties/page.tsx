@@ -133,76 +133,15 @@ export default function SpecialtiesPage() {
     setShowEditModal(true);
   };
 
-  const renderTreeNode = (specialty: Specialty, depth = 0) => {
-    const hasChildren = specialty.children && specialty.children.length > 0;
-    const [expanded, setExpanded] = useState(true);
-
-    return (
-      <div key={specialty.id} className="mb-2">
-        <div
-          className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-            depth === 0
-              ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200'
-              : depth === 1
-              ? 'bg-blue-50 border-blue-200'
-              : 'bg-white border-gray-200 hover:bg-gray-50'
-          }`}
-          style={{ marginLeft: `${depth * 24}px` }}
-        >
-          <div className="flex items-center space-x-3">
-            {hasChildren && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                {expanded ? '▼' : '▶'}
-              </button>
-            )}
-            {!hasChildren && <span className="w-4" />}
-
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="font-semibold text-gray-900">{specialty.name}</h3>
-                <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
-                  Nivel {specialty.level}
-                </span>
-                {specialty._count && specialty._count.cases > 0 && (
-                  <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">
-                    {specialty._count.cases} casos
-                  </span>
-                )}
-              </div>
-              {specialty.description && (
-                <p className="text-sm text-gray-600 mt-1">{specialty.description}</p>
-              )}
-              <p className="text-xs text-gray-400 mt-1">{specialty.path}</p>
-            </div>
-          </div>
-
-          <div className="flex space-x-2">
-            <button
-              onClick={() => openEditModal(specialty)}
-              className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-            >
-              Editar
-            </button>
-            <button
-              onClick={() => handleDelete(specialty.id, specialty.name)}
-              className="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
-            >
-              Eliminar
-            </button>
-          </div>
-        </div>
-
-        {hasChildren && expanded && (
-          <div className="mt-2">
-            {specialty.children!.map((child) => renderTreeNode(child, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderTreeNode = (specialty: Specialty, depth = 0) => (
+    <TreeNode
+      key={specialty.id}
+      specialty={specialty}
+      depth={depth}
+      onEdit={openEditModal}
+      onDelete={handleDelete}
+    />
+  );
 
   const renderFlatList = () => (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -487,6 +426,93 @@ export default function SpecialtiesPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface TreeNodeProps {
+  specialty: Specialty;
+  depth: number;
+  onEdit: (s: Specialty) => void;
+  onDelete: (id: string, name: string) => void;
+}
+
+function TreeNode({ specialty, depth, onEdit, onDelete }: TreeNodeProps) {
+  const hasChildren = !!(specialty.children && specialty.children.length > 0);
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="mb-2">
+      <div
+        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+          depth === 0
+            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200'
+            : depth === 1
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-white border-gray-200 hover:bg-gray-50'
+        }`}
+        style={{ marginLeft: `${depth * 24}px` }}
+      >
+        <div className="flex items-center space-x-3">
+          {hasChildren ? (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              {expanded ? '▼' : '▶'}
+            </button>
+          ) : (
+            <span className="w-4" />
+          )}
+
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-gray-900">{specialty.name}</h3>
+              <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
+                Nivel {specialty.level}
+              </span>
+              {specialty._count && specialty._count.cases > 0 && (
+                <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-700">
+                  {specialty._count.cases} casos
+                </span>
+              )}
+            </div>
+            {specialty.description && (
+              <p className="text-sm text-gray-600 mt-1">{specialty.description}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">{specialty.path}</p>
+          </div>
+        </div>
+
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onEdit(specialty)}
+            className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+          >
+            Editar
+          </button>
+          <button
+            onClick={() => onDelete(specialty.id, specialty.name)}
+            className="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+
+      {hasChildren && expanded && (
+        <div className="mt-2">
+          {specialty.children!.map((child) => (
+            <TreeNode
+              key={child.id}
+              specialty={child}
+              depth={depth + 1}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
         </div>
       )}
     </div>
