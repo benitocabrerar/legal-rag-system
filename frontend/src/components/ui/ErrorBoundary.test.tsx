@@ -44,20 +44,31 @@ const ToggleError: React.FC<{ triggerError?: boolean }> = ({ triggerError = fals
 };
 
 describe('ErrorBoundary', () => {
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+  // vitest's MockInstance signature changed; let TS infer to keep us forward-compatible.
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn> | any;
   const originalNodeEnv = process.env.NODE_ENV;
 
+  // Helper: in Node 20+ process.env.NODE_ENV is a read-only string property.
+  // We bypass the read-only check via Reflect.defineProperty so the tests
+  // can still toggle dev/prod behaviour without touching the type system.
+  const setNodeEnv = (v: string | undefined) => {
+    Reflect.defineProperty(process.env, 'NODE_ENV', {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: v,
+    });
+  };
+
   beforeEach(() => {
-    // Mock console.error to prevent test noise (in addition to global mock)
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    // Mock window.location.href
     delete (window as any).location;
     window.location = { href: '' } as any;
   });
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
-    process.env.NODE_ENV = originalNodeEnv;
+    setNodeEnv(originalNodeEnv);
   });
 
   describe('Normal Operation', () => {
@@ -109,7 +120,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('displays error message in development mode', () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
 
       render(
         <ErrorBoundary>
@@ -122,7 +133,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('hides error details in production mode', () => {
-      process.env.NODE_ENV = 'production';
+      setNodeEnv('production');
 
       render(
         <ErrorBoundary>
@@ -135,7 +146,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('shows stack trace in development mode', () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
 
       const error = new Error('Error with stack');
       error.stack = 'Error: Error with stack\n    at Component (file.js:1:1)';
@@ -172,7 +183,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('logs error to console in development mode', () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
       consoleErrorSpy.mockRestore(); // Remove the mock to test actual logging
       const newSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -187,7 +198,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('does not log error to console in production mode', () => {
-      process.env.NODE_ENV = 'production';
+      setNodeEnv('production');
       consoleErrorSpy.mockRestore();
       const newSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -441,7 +452,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('handles errors with very long messages', () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
       const longMessage = 'Error: ' + 'x'.repeat(1000);
 
       render(
@@ -454,7 +465,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('handles errors with special characters', () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
       const specialMessage = '<script>alert("XSS")</script>';
 
       render(
@@ -522,7 +533,7 @@ describe('ErrorBoundary', () => {
 
   describe('Error Boundary State', () => {
     it('maintains error state until reset', async () => {
-      process.env.NODE_ENV = 'development';
+      setNodeEnv('development');
 
       render(
         <ErrorBoundary>

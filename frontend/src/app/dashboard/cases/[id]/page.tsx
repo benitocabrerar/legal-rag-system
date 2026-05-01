@@ -523,8 +523,8 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
 
   const filteredDocuments = documents.filter((doc) => {
     if (selectedCategory === 'all') return true;
-    // Simple categorization based on filename
-    const filename = doc.filename.toLowerCase();
+    // Simple categorization based on filename (puede no existir en docs viejos).
+    const filename = (doc.filename ?? doc.title ?? '').toLowerCase();
     if (selectedCategory === 'contracts') return filename.includes('contrato') || filename.includes('contract');
     if (selectedCategory === 'evidence') return filename.includes('prueba') || filename.includes('evidence');
     if (selectedCategory === 'reports') return filename.includes('informe') || filename.includes('report');
@@ -611,7 +611,6 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                   onChange={handleFileUpload}
                   className="hidden"
                   disabled={uploading}
-                  accept=".pdf,.doc,.docx,.txt"
                 />
                 <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md">
                   {uploading ? (

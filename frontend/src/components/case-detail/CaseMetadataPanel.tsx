@@ -376,7 +376,14 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
   );
 }
 
-function Input({ label, value, onChange, type = 'text', placeholder = '' }: any) {
+interface InputProps {
+  label: string;
+  value: string | number | null | undefined;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+}
+function Input({ label, value, onChange, type = 'text', placeholder = '' }: InputProps) {
   return (
     <label className="block">
       <span className="text-xs font-semibold text-gray-700">{label}</span>
@@ -391,7 +398,13 @@ function Input({ label, value, onChange, type = 'text', placeholder = '' }: any)
   );
 }
 
-function Textarea({ label, value, onChange, placeholder = '' }: any) {
+interface TextareaProps {
+  label?: string;
+  value: string | null | undefined;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+function Textarea({ label, value, onChange, placeholder = '' }: TextareaProps) {
   return (
     <label className="block">
       {label && <span className="text-xs font-semibold text-gray-700">{label}</span>}
@@ -406,7 +419,13 @@ function Textarea({ label, value, onChange, placeholder = '' }: any) {
   );
 }
 
-function Select({ label, value, onChange, options }: any) {
+interface SelectProps {
+  label: string;
+  value: string | null | undefined;
+  onChange: (value: string) => void;
+  options: Array<[string, string]>;
+}
+function Select({ label, value, onChange, options }: SelectProps) {
   return (
     <label className="block">
       <span className="text-xs font-semibold text-gray-700">{label}</span>
