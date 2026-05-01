@@ -6,7 +6,7 @@ import {
   CheckCircle2, ScrollText, Gavel, FileSpreadsheet, Mail, Bell, BookOpen, Handshake, Scale,
   RotateCcw,
 } from 'lucide-react';
-import { legalDocGenAPI, type LegalDocPreflight } from '@/lib/api';
+import { legalDocGenAPI, type LegalDocPreflight, type LegalDocRecommendation } from '@/lib/api';
 import { getAuthToken } from '@/lib/get-auth-token';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +57,37 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
   const [copyOk, setCopyOk] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Recomendación IA del docType según etapa procesal del caso.
+  const [recommendation, setRecommendation] = useState<LegalDocRecommendation | null>(null);
+  const [loadingReco, setLoadingReco] = useState(false);
+  const [showRecoBanner, setShowRecoBanner] = useState(false);
+  const [userPickedManually, setUserPickedManually] = useState(false);
+  const [flashRecoCard, setFlashRecoCard] = useState(false);
+
+  // Cuando se abre el diálogo, dispara la recomendación una vez.
+  useEffect(() => {
+    if (!isOpen || recommendation || loadingReco) return;
+    let cancelled = false;
+    setLoadingReco(true);
+    legalDocGenAPI.recommend(caseId)
+      .then((r) => {
+        if (cancelled) return;
+        setRecommendation(r);
+        setShowRecoBanner(true);
+        // Auto-seleccionar la recomendación si el usuario aún no eligió manualmente.
+        if (!userPickedManually) {
+          setDocType(r.recommendedDocType as DocType);
+        }
+        // Flash 2s en la card recomendada.
+        setFlashRecoCard(true);
+        setTimeout(() => setFlashRecoCard(false), 2200);
+      })
+      .catch(() => { /* fallback silencioso: el dialog sigue funcionando sin reco */ })
+      .finally(() => !cancelled && setLoadingReco(false));
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, caseId]);
+
   useEffect(() => {
     if (!isOpen) {
       // Reset al cerrar — pero conservamos el doc generado por si lo reabren.
@@ -74,6 +105,10 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
     setStreaming(false);
     setSavedDocId(null);
     setError('');
+    setRecommendation(null);
+    setShowRecoBanner(false);
+    setUserPickedManually(false);
+    setFlashRecoCard(false);
   };
 
   const closeAndReset = () => {
@@ -118,7 +153,13 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
           docType,
           supplied,
           specialty: specialty.trim() || undefined,
-          customInstructions: customInstructions.trim() || undefined,
+          // Si la IA recomendó este tipo y el usuario no escribió hint propia,
+          // pasamos el reasoning como instrucción adicional para guiar el doc.
+          customInstructions:
+            customInstructions.trim()
+            || (recommendation?.recommendedDocType === docType
+                ? `Contexto detectado por IA al elegir este documento: ${recommendation.reasoning}`
+                : undefined),
           acceptIncomplete,
         }),
         signal: controller.signal,
@@ -301,25 +342,108 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
 
           {step === 'pick' && (
             <>
+              {/* AI recommendation banner */}
+              {loadingReco && (
+                <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3 flex items-center gap-2.5 text-[12px] text-violet-800">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Analizando la etapa procesal del caso para recomendarte el documento ideal…</span>
+                </div>
+              )}
+              {!loadingReco && recommendation && showRecoBanner && (() => {
+                const recoOption = DOC_OPTIONS.find((d) => d.id === recommendation.recommendedDocType);
+                if (!recoOption) return null;
+                const RIcon = recoOption.icon;
+                return (
+                  <div className="relative rounded-xl border-2 border-violet-300 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50 p-4 overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
+                    <button
+                      onClick={() => setShowRecoBanner(false)}
+                      className="absolute top-2 right-2 p-1 rounded text-violet-400 hover:text-violet-700"
+                      aria-label="Ocultar recomendación"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <div className="flex items-start gap-3 pr-6">
+                      <div className={cn('shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow bg-gradient-to-br', recoOption.gradient)}>
+                        <RIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-violet-700">
+                            <Sparkles className="w-3 h-3" />
+                            Recomendado por IA
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-slate-500 bg-white/60 rounded px-1.5 py-0.5">
+                            {Math.round(recommendation.confidence * 100)}% confianza
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 mt-0.5">{recoOption.label}</h3>
+                        <p className="text-[12px] text-slate-700 leading-relaxed mt-1">{recommendation.reasoning}</p>
+
+                        {recommendation.alternatives.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-violet-200/60">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">También podrías considerar</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {recommendation.alternatives.map((a) => {
+                                const altOption = DOC_OPTIONS.find((d) => d.id === a.docType);
+                                if (!altOption) return null;
+                                return (
+                                  <button
+                                    key={a.docType}
+                                    onClick={() => {
+                                      setDocType(a.docType as DocType);
+                                      setUserPickedManually(true);
+                                    }}
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-violet-200 text-violet-800 hover:bg-violet-100 hover:border-violet-300 transition"
+                                    title={a.reasoning}
+                                  >
+                                    {altOption.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {docType === recommendation.recommendedDocType && (
+                      <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Tipo seleccionado · pulsa "Verificar datos" cuando estés listo
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Tipo de documento</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {DOC_OPTIONS.map((d) => {
                     const I = d.icon;
                     const active = docType === d.id;
+                    const recommended = recommendation?.recommendedDocType === d.id;
                     return (
                       <button
                         key={d.id}
-                        onClick={() => setDocType(d.id)}
+                        onClick={() => { setDocType(d.id); setUserPickedManually(true); }}
                         className={cn(
-                          'flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left',
+                          'relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left',
                           active
                             ? 'bg-gradient-to-br ' + d.gradient + ' text-white border-transparent shadow-md'
+                            : recommended
+                            ? 'bg-white border-violet-300 text-slate-900 ring-2 ring-violet-200 hover:ring-violet-300'
                             : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300',
+                          recommended && flashRecoCard && 'animate-doc-reco-flash',
                         )}
                       >
                         <I className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{d.label}</span>
+                        {recommended && !active && (
+                          <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md ring-2 ring-white">
+                            <Sparkles className="w-2.5 h-2.5" />
+                          </span>
+                        )}
                       </button>
                     );
                   })}

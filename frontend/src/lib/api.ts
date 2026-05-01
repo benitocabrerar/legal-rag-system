@@ -679,7 +679,18 @@ export interface LegalDocPreflight {
   caseHasDocuments: number;
 }
 
+export interface LegalDocRecommendation {
+  recommendedDocType: string;
+  confidence: number;
+  reasoning: string;
+  alternatives: Array<{ docType: string; reasoning: string }>;
+}
+
 export const legalDocGenAPI = {
+  recommend: async (caseId: string): Promise<LegalDocRecommendation> => {
+    const r = await api.post(`/cases/${caseId}/generate-document/recommend`);
+    return r.data;
+  },
   preflight: async (
     caseId: string,
     docType: string,

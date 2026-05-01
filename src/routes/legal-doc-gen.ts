@@ -234,6 +234,104 @@ function expertSystemPrompt(opts: {
 
 export async function legalDocGenRoutes(fastify: FastifyInstance) {
   /**
+   * POST /cases/:id/generate-document/recommend
+   * Recomienda QUÉ documento generar a continuación según la etapa procesal
+   * inferida del caso, los documentos cargados, los eventos próximos y la
+   * descripción. Devuelve uno de los 12 docTypes válidos + razón en español.
+   */
+  fastify.post<{ Params: { id: string } }>(
+    '/cases/:id/generate-document/recommend',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const c = await loadCaseForGeneration(request.params.id, userId);
+      if (!c) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      const VALID_TYPES = Object.keys(DOC_LABELS);
+      const docList = c.documents
+        .map((d, i) => `[Doc ${i + 1}] ${d.title}: ${d.excerpt.slice(0, 350)}`)
+        .join('\n');
+      const events = c.events.slice(0, 8)
+        .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}`)
+        .join('\n');
+      const labelsList = VALID_TYPES.map((k) => `  · ${k} = ${DOC_LABELS[k as DocType]}`).join('\n');
+
+      const systemPrompt =
+        'Eres un(a) abogado(a) senior en ' + c.country.nameEs + '. ' +
+        'Te entrego un caso real y debes recomendar QUÉ documento legal el abogado debería generar a continuación, ' +
+        'basándote ÚNICAMENTE en la información del caso (etapa procesal inferida, documentos cargados, próximos eventos, descripción). ' +
+        'Si la etapa no es clara, recomienda lo más útil dada la información disponible.' +
+        '\n\nDevuelve SOLO un JSON minificado, sin markdown:\n' +
+        '{"recommendedDocType":"<UNO_DE_LOS_VALIDOS>","confidence":0.0,"reasoning":"<1-2 frases en español, sin tecnicismos innecesarios>","alternatives":[{"docType":"<otro>","reasoning":"<1 frase>"}]}\n\n' +
+        'Tipos válidos:\n' + labelsList + '\n\n' +
+        'Reglas:\n' +
+        '- recommendedDocType debe ser uno de los códigos exactos.\n' +
+        '- confidence entre 0 y 1.\n' +
+        '- reasoning describe POR QUÉ ese documento ahora — alude a algo concreto del caso.\n' +
+        '- alternatives: 1 o 2 opciones plausibles con su justificación corta.\n' +
+        '- Si no hay nada de información (caso vacío), recomienda ESCRITO_GENERAL con confidence baja.';
+
+      const userPrompt = [
+        '=== CASO ===',
+        `Título: ${c.title}`,
+        c.caseNumber ? `Número: ${c.caseNumber}` : '',
+        c.clientName ? `Cliente: ${c.clientName}` : '',
+        c.description ? `Descripción: ${c.description}` : '',
+        '',
+        '=== DOCUMENTOS DEL EXPEDIENTE ===',
+        docList || '(sin documentos)',
+        '',
+        '=== EVENTOS / CRONOLOGÍA ===',
+        events || '(sin eventos)',
+      ].filter(Boolean).join('\n');
+
+      try {
+        const aiClient = await getAiClient();
+        const completion = await aiClient.chat.completions.create({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+          max_tokens: 500,
+        });
+        const raw = completion.choices?.[0]?.message?.content?.trim() ?? '';
+        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        let parsed: any;
+        try { parsed = JSON.parse(cleaned); } catch {
+          return reply.code(502).send({ error: 'AI_INVALID_JSON', raw: cleaned.slice(0, 200) });
+        }
+        const docType = String(parsed.recommendedDocType ?? '').toUpperCase();
+        if (!VALID_TYPES.includes(docType)) {
+          return {
+            recommendedDocType: 'ESCRITO_GENERAL',
+            confidence: 0.4,
+            reasoning: 'No fue posible inferir la etapa procesal con certeza. Sugiero un escrito general; cámbialo si necesitas otro tipo.',
+            alternatives: [],
+          };
+        }
+        return {
+          recommendedDocType: docType,
+          confidence: typeof parsed.confidence === 'number' ? Math.max(0, Math.min(1, parsed.confidence)) : 0.6,
+          reasoning: String(parsed.reasoning ?? '').slice(0, 400),
+          alternatives: Array.isArray(parsed.alternatives)
+            ? parsed.alternatives
+                .filter((a: any) => VALID_TYPES.includes(String(a?.docType ?? '').toUpperCase()))
+                .slice(0, 2)
+                .map((a: any) => ({
+                  docType: String(a.docType).toUpperCase(),
+                  reasoning: String(a.reasoning ?? '').slice(0, 240),
+                }))
+            : [],
+        };
+      } catch (err: any) {
+        request.log.error({ err }, 'recommend doctype failed');
+        return reply.code(500).send({ error: 'AI_FAILED', message: err?.message });
+      }
+    },
+  );
+
+  /**
    * POST /cases/:id/generate-document/preflight
    * Body: { docType, supplied?: Record<string,string> }
    */
