@@ -14,7 +14,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "downlevelIteration": true,
-    "types": ["bun-types", "jest"],
+    "ignoreDeprecations": "5.0",
+    "types": [],
     "paths": {
       "@/*": ["./src/*"]
     }
