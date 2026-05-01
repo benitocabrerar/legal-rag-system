@@ -73,6 +73,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Logs de auditoría y consultas IA',
     },
     {
+      name: 'Auth Events',
+      href: '/admin/auth-events',
+      icon: '📡',
+      description: 'Logs de signup, login, OAuth y errores de autenticación',
+    },
+    {
       name: 'Base de Datos',
       href: '/admin/database',
       icon: '🗄️',
