@@ -71,39 +71,19 @@ export default function AnalyticsPage() {
   }, []);
 
   const loadAnalytics = async () => {
+    setLoading(true);
     try {
-      // This endpoint would need to be created in the backend
-      // const response = await api.get(`/admin/analytics?period=${period}`);
-      // setData(response.data);
-
-      // Placeholder data
-      setData({
-        usage: {
-          totalQueries: 0,
-          queriesThisMonth: 0,
-          averageQueriesPerDay: 0,
-          mostActiveUsers: [],
-        },
-        documents: {
-          totalDocuments: 0,
-          documentsThisMonth: 0,
-          mostViewedDocuments: [],
-          documentsByCategory: [],
-        },
-        costs: {
-          totalCostsThisMonth: 0,
-          openaiCosts: 0,
-          averageCostPerQuery: 0,
-          costTrend: [],
-        },
-        performance: {
-          averageResponseTime: 0,
-          successRate: 0,
-          mostCommonQueries: [],
-        },
-      });
+      const response = await api.get(`/admin/analytics?period=${period}`);
+      setData(response.data);
     } catch (error) {
       console.error('Error loading analytics:', error);
+      // Fallback to empty shape so UI does not crash
+      setData({
+        usage: { totalQueries: 0, queriesThisMonth: 0, averageQueriesPerDay: 0, mostActiveUsers: [] },
+        documents: { totalDocuments: 0, documentsThisMonth: 0, mostViewedDocuments: [], documentsByCategory: [] },
+        costs: { totalCostsThisMonth: 0, openaiCosts: 0, averageCostPerQuery: 0, costTrend: [] },
+        performance: { averageResponseTime: 0, successRate: 0, mostCommonQueries: [] },
+      });
     } finally {
       setLoading(false);
     }
