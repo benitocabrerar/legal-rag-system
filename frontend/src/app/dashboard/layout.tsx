@@ -190,9 +190,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </Link>
                     <hr className="my-1 border-gray-200" />
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setShowUserMenu(false);
-                        logout();
+                        await logout();
+                        // Bypass the layout's auto-redirect to /login;
+                        // explicit logout always returns to the landing.
+                        router.replace('/');
                       }}
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >

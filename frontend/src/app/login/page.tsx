@@ -80,9 +80,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-4 py-6 relative">
+      {/* Back-to-landing button — top-left on desktop, above card on mobile. */}
+      <Link
+        href="/"
+        className="self-start sm:absolute sm:top-4 sm:left-4 mb-4 sm:mb-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium backdrop-blur transition"
+      >
+        <span aria-hidden>←</span>
+        Volver al inicio
+      </Link>
+
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 mb-4 group/logo"
+            aria-label="Ir al inicio"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover/logo:shadow-indigo-500/50 transition">
+              <span className="text-white font-bold text-sm">⚖️</span>
+            </div>
+            <span className="font-bold text-gray-900 tracking-tight">Poweria Legal</span>
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('landing.heroTitle')}</h1>
           <p className="text-gray-600">
             {requires2FA ? t('settings.twoFactor') : t('auth.loginSubtitle')}
