@@ -191,17 +191,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
-          <p className="text-gray-600">{t('dashboard.uploadAndProcess')}</p>
+      {/* Page Header — wraps on phones, button stays usable. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">{t('dashboard.title')}</h1>
+          <p className="text-sm sm:text-base text-gray-600">{t('dashboard.uploadAndProcess')}</p>
         </div>
         <button
           onClick={() => setShowNewCaseModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
+          className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md text-sm sm:text-base"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           {t('dashboard.newCase')}
         </button>
       </div>

@@ -127,10 +127,13 @@ export default function CalendarPage() {
       />
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
-        <div className="mb-3 flex items-end justify-between">
-          <div>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Calendario</h1>
-            <p className="text-sm text-slate-500">Audiencias, plazos y reuniones — atajos: <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">M</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">S</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">D</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">A</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">T</kbd>oday</p>
+            <p className="text-sm text-slate-500">
+              Audiencias, plazos y reuniones
+              <span className="hidden lg:inline"> — atajos: <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">M</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">S</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">D</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">A</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">T</kbd>oday</span>
+            </p>
           </div>
         </div>
 

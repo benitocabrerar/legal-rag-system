@@ -95,23 +95,23 @@ export default function LitigationPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 overflow-hidden flex flex-col">
-      {/* Top bar */}
-      <header className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Top bar — wraps onto two rows on phones so nothing gets clipped. */}
+      <header className="shrink-0 flex flex-wrap items-center justify-between gap-y-1 px-3 py-2 border-b border-slate-800/80 bg-slate-950/60 backdrop-blur">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
             onClick={() => router.push(`/dashboard/cases/${caseId}`)}
             className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-slate-300 hover:bg-slate-800/60 hover:text-slate-100 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            Salir
+            <span className="hidden xs:inline sm:inline">Salir</span>
           </button>
-          <span className="text-slate-600">/</span>
-          <span className="text-[10px] uppercase tracking-wider font-bold text-violet-400">Sala de Litigación</span>
+          <span className="hidden sm:inline text-slate-600">/</span>
+          <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-bold text-violet-400">Sala de Litigación</span>
           {data?.case?.title && (
-            <span className="text-sm font-semibold text-slate-100 truncate ml-2">{data.case.title}</span>
+            <span className="text-sm font-semibold text-slate-100 truncate ml-1 sm:ml-2 min-w-0">{data.case.title}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <AudienceTimer />
           <button
             onClick={toggleFullscreen}
@@ -138,18 +138,18 @@ export default function LitigationPage() {
           </button>
         </div>
       ) : (
-        <main className="flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden">
+        <main className="flex-1 grid grid-cols-12 gap-3 p-3 overflow-y-auto md:overflow-hidden">
           {/* Left column: Brief + Timeline */}
-          <aside className="col-span-12 md:col-span-3 flex flex-col gap-3 overflow-y-auto">
+          <aside className="col-span-12 md:col-span-3 flex flex-col gap-3 md:overflow-y-auto">
             <BriefPanel data={data} />
             <TimelinePanel events={data.timeline} />
           </aside>
 
           {/* Center column: tabbed work area */}
-          <section className="col-span-12 md:col-span-6 flex flex-col gap-3 overflow-hidden">
+          <section className="col-span-12 md:col-span-6 flex flex-col gap-3 md:overflow-hidden">
             <CenterTabBar tab={centerTab} setTab={setCenterTab} />
 
-            <div className="flex-1 overflow-y-auto space-y-3">
+            <div className="flex-1 md:overflow-y-auto space-y-3">
               {centerTab === 'deck' && (
                 <ArgumentDeck caseId={caseId} onLookupArticle={lookupArticle} />
               )}
@@ -164,8 +164,8 @@ export default function LitigationPage() {
             </div>
           </section>
 
-          {/* Right column: AI chat */}
-          <aside className="col-span-12 md:col-span-3 rounded-xl bg-slate-900/40 border border-slate-700/50 overflow-hidden flex flex-col min-h-0">
+          {/* Right column: AI chat — keeps a usable height on phones. */}
+          <aside className="col-span-12 md:col-span-3 rounded-xl bg-slate-900/40 border border-slate-700/50 overflow-hidden flex flex-col min-h-[60vh] md:min-h-0">
             <LitigationChat
               caseId={caseId}
               suggestions={[
@@ -179,9 +179,9 @@ export default function LitigationPage() {
         </main>
       )}
 
-      {/* Footer with shortcuts hint */}
-      <footer className="shrink-0 px-4 py-1 border-t border-slate-800/80 bg-slate-950/60 text-[10px] text-slate-500 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Footer — keyboard hints hidden on phones (no physical keyboard). */}
+      <footer className="shrink-0 px-3 py-1 border-t border-slate-800/80 bg-slate-950/60 text-[10px] text-slate-500 flex items-center justify-between">
+        <div className="hidden lg:flex items-center gap-3">
           <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">1</kbd> tarjetas</span>
           <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">2</kbd> notas</span>
           <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">3</kbd> docs</span>
@@ -191,21 +191,21 @@ export default function LitigationPage() {
           <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">P</kbd> presentador</span>
           <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">F</kbd> fullscreen</span>
         </div>
-        <span>Sala de Litigación · Poweria Legal</span>
+        <span className="text-[10px]">Sala de Litigación · Poweria Legal</span>
       </footer>
     </div>
   );
 }
 
 function CenterTabBar({ tab, setTab }: { tab: CenterTab; setTab: (t: CenterTab) => void }) {
-  const tabs: Array<{ id: CenterTab; label: string; hint: string }> = [
-    { id: 'deck',       label: '🎴 Tarjetas IA',       hint: '1' },
-    { id: 'arguments',  label: 'Argumentos & notas',   hint: '2' },
-    { id: 'documents',  label: 'Documentos',           hint: '3' },
-    { id: 'article',    label: 'Buscar artículo',      hint: '4' },
+  const tabs: Array<{ id: CenterTab; label: string; short: string; hint: string }> = [
+    { id: 'deck',       label: '🎴 Tarjetas IA',       short: '🎴 Tarjetas',  hint: '1' },
+    { id: 'arguments',  label: 'Argumentos & notas',   short: 'Argumentos',   hint: '2' },
+    { id: 'documents',  label: 'Documentos',           short: 'Docs',         hint: '3' },
+    { id: 'article',    label: 'Buscar artículo',      short: 'Artículo',     hint: '4' },
   ];
   return (
-    <div className="inline-flex items-center bg-slate-900/60 border border-slate-700/50 rounded-xl p-1 self-start shadow-sm">
+    <div className="inline-flex items-center bg-slate-900/60 border border-slate-700/50 rounded-xl p-1 self-start shadow-sm overflow-x-auto max-w-full">
       {tabs.map((t) => {
         const active = tab === t.id;
         return (
@@ -213,14 +213,15 @@ function CenterTabBar({ tab, setTab }: { tab: CenterTab; setTab: (t: CenterTab) 
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+              'shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all',
               active
                 ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-100',
             )}
           >
-            {t.label}
-            <kbd className="opacity-50 font-mono text-[9px]">{t.hint}</kbd>
+            <span className="hidden sm:inline">{t.label}</span>
+            <span className="sm:hidden">{t.short}</span>
+            <kbd className="hidden lg:inline opacity-50 font-mono text-[9px]">{t.hint}</kbd>
           </button>
         );
       })}

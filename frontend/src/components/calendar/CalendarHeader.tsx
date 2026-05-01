@@ -39,7 +39,7 @@ export function CalendarHeader({ anchor, view, onChangeView, onAnchorChange }: P
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
         <button
           onClick={goToday}
           className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors"
@@ -55,10 +55,10 @@ export function CalendarHeader({ anchor, view, onChangeView, onAnchorChange }: P
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <h2 className="ml-1 text-lg font-bold text-slate-900 capitalize">{title}</h2>
+        <h2 className="ml-1 text-base sm:text-lg font-bold text-slate-900 capitalize truncate">{title}</h2>
       </div>
 
-      <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+      <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm overflow-x-auto max-w-full">
         {views.map((v) => {
           const Icon = v.icon;
           const active = view === v.id;

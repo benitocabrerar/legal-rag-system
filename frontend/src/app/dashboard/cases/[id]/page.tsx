@@ -729,7 +729,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           <SpecializedPrompts legalType={legalType} onPromptSelect={handlePromptSelect} />
 
           {/* Chat Interface */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[60vh] min-h-[420px] sm:h-[600px]">
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
               <div className="flex items-center gap-2">

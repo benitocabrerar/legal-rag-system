@@ -169,7 +169,7 @@ function Column({
         </button>
       </div>
 
-      <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto max-h-[calc(100vh-22rem)]">
+      <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto max-h-[60vh] md:max-h-[calc(100vh-22rem)]">
         {adding && (
           <div className="rounded-xl bg-white p-2 border border-indigo-200 shadow-sm">
             <textarea
@@ -260,7 +260,7 @@ export function TaskKanban({ tasks, onTaskClick, onStatusChange, onQuickAdd }: P
       </div>
       <DragOverlay>
         {activeTask && (
-          <div className="rounded-xl bg-white p-3 border-2 border-indigo-400 shadow-2xl rotate-2 max-w-[260px]">
+          <div className="rounded-xl bg-white p-3 border-2 border-indigo-400 shadow-2xl rotate-2 max-w-[min(260px,calc(100vw-2rem))]">
             <div className="text-sm font-semibold text-slate-900 line-clamp-2">{activeTask.title}</div>
           </div>
         )}

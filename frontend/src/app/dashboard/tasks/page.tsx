@@ -141,13 +141,13 @@ export default function TasksPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 bg-gradient-to-br from-slate-50 to-white min-h-[calc(100vh-4rem)]">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tareas</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 hidden sm:block">
             Tablero kanban con drag-and-drop, sugerencias con IA y plantillas legales
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsTemplatesOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm"

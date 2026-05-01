@@ -20,7 +20,7 @@ export function MethodMixCard({ mix }: { mix: FinanceDashboard['methodMix'] }) {
       {data.length === 0 ? (
         <p className="text-xs text-slate-400 py-6 text-center">Sin pagos registrados</p>
       ) : (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="w-32 h-32 relative shrink-0">
             <ResponsiveContainer>
               <PieChart>

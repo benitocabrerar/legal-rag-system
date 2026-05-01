@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
-import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon } from 'lucide-react';
+import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, logout, loading } = useAuth();
   const { t } = useTranslation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -54,7 +55,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-4 md:space-x-8">
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setShowMobileNav((v) => !v)}
+                className="md:hidden p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                aria-label="Abrir navegación"
+              >
+                {showMobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
               <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
                 Legal RAG
               </Link>
@@ -198,8 +207,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </nav>
 
+      {/* Mobile drawer */}
+      {showMobileNav && (
+        <div className="md:hidden fixed inset-0 z-40 bg-slate-900/40" onClick={() => setShowMobileNav(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-xl py-2 px-4 space-y-0.5"
+          >
+            <Link onClick={() => setShowMobileNav(false)} href="/dashboard"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <Briefcase className="w-4 h-4" />{t('navigation.cases')}
+            </Link>
+            <Link onClick={() => setShowMobileNav(false)} href="/dashboard/calendar"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <Calendar className="w-4 h-4" />{t('navigation.calendar')}
+            </Link>
+            <Link onClick={() => setShowMobileNav(false)} href="/dashboard/tasks"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <CheckSquare className="w-4 h-4" />{t('navigation.tasks')}
+            </Link>
+            <Link onClick={() => setShowMobileNav(false)} href="/dashboard/finance"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <DollarSign className="w-4 h-4" />{t('navigation.finance')}
+            </Link>
+            <Link onClick={() => setShowMobileNav(false)} href="/dashboard/settings"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <Settings className="w-4 h-4" />{t('settings.security')}
+            </Link>
+            <Link onClick={() => setShowMobileNav(false)} href="/pricing"
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+              <CreditCard className="w-4 h-4" />{t('navigation.pricing')}
+            </Link>
+            {user.role === 'admin' && (
+              <Link onClick={() => setShowMobileNav(false)} href="/admin"
+                className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
+                <User className="w-4 h-4" />{t('navigation.admin')}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {children}
       </main>
 

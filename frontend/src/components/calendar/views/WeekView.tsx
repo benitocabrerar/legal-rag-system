@@ -50,6 +50,8 @@ export function WeekView({ anchor, events, onEventClick, onSlotClick }: Props) {
 
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+      <div className="min-w-[640px]">
       <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50/80">
         <div />
         {days.map((d) => (
@@ -110,6 +112,8 @@ export function WeekView({ anchor, events, onEventClick, onSlotClick }: Props) {
             </div>
           );
         })}
+      </div>
+      </div>
       </div>
     </div>
   );

@@ -80,7 +80,7 @@ export function TaskFilters({ value, onChange }: Props) {
         placeholder="Buscar…"
         value={value.search}
         onChange={(e) => set({ search: e.target.value })}
-        className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition w-44"
+        className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition w-full sm:w-44"
       />
 
       {isActiveFilter && (

@@ -73,7 +73,7 @@ function DroppableCell({
       ref={setNodeRef}
       onClick={() => onDateClick(date)}
       className={cn(
-        'group/cell relative flex flex-col min-h-[120px] border-r border-b border-slate-200 p-1.5 cursor-pointer transition-colors',
+        'group/cell relative flex flex-col min-h-[80px] sm:min-h-[120px] border-r border-b border-slate-200 p-1 sm:p-1.5 cursor-pointer transition-colors',
         inMonth ? 'bg-white' : 'bg-slate-50/40',
         isOver && 'bg-indigo-50 ring-2 ring-inset ring-indigo-500',
         !isOver && 'hover:bg-slate-50',

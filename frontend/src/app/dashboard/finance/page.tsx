@@ -51,13 +51,13 @@ export default function FinancePage() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 bg-gradient-to-br from-slate-50 to-white min-h-[calc(100vh-4rem)]">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Finanzas</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 hidden sm:block">
             Tu CFO virtual — facturación, cobranza y proyecciones en un solo lugar
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <a
             href={financeAPI.exportCsvUrl()}
             target="_blank"
@@ -77,7 +77,7 @@ export default function FinancePage() {
         </div>
       </div>
 
-      <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm mb-5">
+      <div className="inline-flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm mb-5 overflow-x-auto max-w-full">
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;

@@ -160,7 +160,7 @@ export function TaskDialog({ isOpen, onClose, onSave, task }: TaskDialogProps) {
           onClick={onClose}
         />
 
-        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
+        <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full max-w-[calc(100vw-1rem)] mx-2 sm:mx-4 sm:my-8 sm:max-w-2xl">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
               {task ? 'Editar tarea' : 'Nueva tarea'}
