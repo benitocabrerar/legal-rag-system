@@ -543,7 +543,8 @@ function PricingDeck() {
   );
 }
 
-function PlanCard({ name, priceMonthly, priceYearly, description, features, cta, popular, yearly }: {
+function PlanCard({ code, name, priceMonthly, priceYearly, description, features, cta, popular, yearly }: {
+  code: string;
   name: string;
   priceMonthly: number;
   priceYearly: number;
@@ -555,6 +556,13 @@ function PlanCard({ name, priceMonthly, priceYearly, description, features, cta,
 }) {
   const monthlyEquiv = yearly ? priceYearly / 12 : priceMonthly;
   const showFree = priceMonthly === 0;
+  // Free plans skip checkout (just register). Paid plans go straight to
+  // /pricing with the plan + billing cycle pre-selected — that page reads
+  // the URL params and auto-opens the payment-method modal (PayPal /
+  // bank transfer / etc.) so the buyer is one click from paying.
+  const cta_href = showFree
+    ? '/register'
+    : `/pricing?plan=${encodeURIComponent(code)}&cycle=${yearly ? 'yearly' : 'monthly'}`;
   return (
     <div
       className={`relative rounded-2xl p-5 sm:p-6 transition-all flex flex-col ${
@@ -606,7 +614,7 @@ function PlanCard({ name, priceMonthly, priceYearly, description, features, cta,
       </ul>
 
       <Link
-        href="/register"
+        href={cta_href}
         className={`mt-6 inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
           popular
             ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/40 hover:shadow-violet-500/60 hover:scale-[1.01]'

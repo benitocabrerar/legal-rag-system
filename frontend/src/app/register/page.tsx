@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { parseApiError } from '@/lib/api';
@@ -9,6 +9,12 @@ import { useTranslation } from '@/lib/i18n';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const safeRedirect = (() => {
+    const r = searchParams?.get('redirect');
+    if (!r || !r.startsWith('/')) return '/dashboard';
+    return r;
+  })();
   const { register } = useAuth();
   const { t } = useTranslation();
   const [name, setName] = useState('');
@@ -36,7 +42,7 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, name);
-      router.push('/dashboard');
+      router.push(safeRedirect);
     } catch (err: any) {
       const errorMessage = parseApiError(err);
       setError(errorMessage);
@@ -187,7 +193,10 @@ export default function RegisterPage() {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             {t('auth.hasAccount')}{' '}
-            <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+            <Link
+              href={`/login${safeRedirect !== '/dashboard' ? `?redirect=${encodeURIComponent(safeRedirect)}` : ''}`}
+              className="text-indigo-600 hover:text-indigo-700 font-semibold"
+            >
               {t('auth.loginButton')}
             </Link>
           </p>

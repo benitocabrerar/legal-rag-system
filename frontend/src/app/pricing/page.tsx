@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
@@ -22,16 +22,35 @@ interface HubPlan {
 
 export default function PricingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [plans, setPlans] = useState<HubPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(() => {
+    // Honor ?cycle=yearly|monthly from the landing.
+    const c = searchParams?.get('cycle');
+    return c === 'yearly' ? 'yearly' : 'monthly';
+  });
   const [selectedPlanCode, setSelectedPlanCode] = useState<string | null>(null);
   const [methodModal, setMethodModal] = useState<HubPlan | null>(null);
+  const [autoOpenedFor, setAutoOpenedFor] = useState<string | null>(null);
 
   useEffect(() => {
     loadPlans();
   }, [billingCycle]);
+
+  // Deep-link from landing: /pricing?plan=<code>&cycle=<monthly|yearly>
+  // After plans load, auto-open the payment-method modal for that plan
+  // (or redirect to register/dashboard if it's free).
+  useEffect(() => {
+    const code = searchParams?.get('plan');
+    if (!code || autoOpenedFor === code || plans.length === 0) return;
+    const target = plans.find((p) => p.code === code);
+    if (!target) return;
+    setAutoOpenedFor(code);
+    handleSelectPlan(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plans, searchParams, autoOpenedFor]);
 
   const loadPlans = async () => {
     setLoading(true);
@@ -49,7 +68,10 @@ export default function PricingPage() {
   const handleSelectPlan = (plan: HubPlan) => {
     const token = localStorage.getItem('token');
     if (!token) {
-      router.push(`/login?redirect=/pricing&plan=${plan.code}`);
+      // Preserve plan + cycle through the auth roundtrip so the modal
+      // re-opens automatically once the user is signed in.
+      const back = `/pricing?plan=${encodeURIComponent(plan.code)}&cycle=${billingCycle}`;
+      router.push(`/login?redirect=${encodeURIComponent(back)}`);
       return;
     }
     if (plan.price_cents === 0) {

@@ -2,7 +2,7 @@
 
 // Force rebuild with new chunk hashes - v2
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { parseApiError } from '@/lib/api';
@@ -13,7 +13,15 @@ const USE_SUPABASE_AUTH = process.env.NEXT_PUBLIC_AUTH_BACKEND === 'supabase';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
+  // Honor ?redirect=/pricing?plan=pro&cycle=yearly so users land back where
+  // they came from (with the payment modal pre-armed).
+  const safeRedirect = (() => {
+    const r = searchParams?.get('redirect');
+    if (!r || !r.startsWith('/')) return '/dashboard';
+    return r;
+  })();
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +38,7 @@ export default function LoginPage() {
     try {
       // Usa el AuthContext (legacy o Supabase según NEXT_PUBLIC_AUTH_BACKEND).
       await login(email, password);
-      router.push('/dashboard');
+      router.push(safeRedirect);
     } catch (err: any) {
       // Detect 2FA solo en flow legacy (Supabase no expone esto via signInWithPassword).
       if (err?.requires2FA) {
@@ -70,7 +78,7 @@ export default function LoginPage() {
       // Store auth data and redirect
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard');
+      router.push(safeRedirect);
     } catch (err: any) {
       const errorMessage = parseApiError(err);
       setError(errorMessage);
@@ -250,7 +258,10 @@ export default function LoginPage() {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               {t('auth.noAccount')}{' '}
-              <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+              <Link
+                href={`/register${safeRedirect !== '/dashboard' ? `?redirect=${encodeURIComponent(safeRedirect)}` : ''}`}
+                className="text-indigo-600 hover:text-indigo-700 font-semibold"
+              >
                 {t('auth.registerButton')}
               </Link>
             </p>
