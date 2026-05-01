@@ -129,10 +129,47 @@ export async function adminAnalyticsRoutes(fastify: FastifyInstance) {
         costTrend: [],
       };
 
+      // ── SYSTEM (always-available metrics) ───────────────────
+      const sysRow = await prisma.$queryRawUnsafe<any[]>(`
+        SELECT
+          (SELECT COUNT(*)::int FROM users) AS total_users,
+          (SELECT COUNT(*)::int FROM users WHERE is_active = true) AS active_users,
+          (SELECT COUNT(*)::int FROM users WHERE created_at >= now() - interval '${interval}') AS new_users_period,
+          (SELECT COUNT(*)::int FROM cases) AS total_cases,
+          (SELECT COUNT(*)::int FROM cases WHERE created_at >= now() - interval '${interval}') AS new_cases_period,
+          (SELECT COUNT(*)::int FROM tasks) AS total_tasks,
+          (SELECT COUNT(*)::int FROM legal_documents) AS legal_library_size,
+          (SELECT COUNT(*)::int FROM auth_events WHERE event_type IN ('login_success','oauth_callback','signup_success') AND success = true) AS total_logins,
+          (SELECT COUNT(*)::int FROM auth_events WHERE event_type IN ('login_success','oauth_callback','signup_success') AND success = true AND created_at >= now() - interval '${interval}') AS logins_period,
+          (SELECT COUNT(*)::int FROM auth_events WHERE event_type LIKE '%_error' AND created_at >= now() - interval '24 hours') AS auth_errors_24h,
+          (SELECT COUNT(*)::int FROM ai_conversations) AS total_conversations
+      `);
+      const sys = sysRow[0] ?? {};
+
+      // Fallback: if ai_messages is empty, totalQueries shows total_conversations
+      // as a proxy so the dashboard does not look completely dead.
+      const queriesProxy = totalQueries > 0
+        ? { source: 'ai_messages', value: totalQueries }
+        : { source: 'ai_conversations (proxy)', value: sys.total_conversations ?? 0 };
+
       return reply.send({
         period,
+        system: {
+          totalUsers: sys.total_users ?? 0,
+          activeUsers: sys.active_users ?? 0,
+          newUsersPeriod: sys.new_users_period ?? 0,
+          totalCases: sys.total_cases ?? 0,
+          newCasesPeriod: sys.new_cases_period ?? 0,
+          totalTasks: sys.total_tasks ?? 0,
+          legalLibrarySize: sys.legal_library_size ?? 0,
+          totalLogins: sys.total_logins ?? 0,
+          loginsPeriod: sys.logins_period ?? 0,
+          authErrors24h: sys.auth_errors_24h ?? 0,
+          totalConversations: sys.total_conversations ?? 0,
+        },
+        queriesProxy,
         usage: {
-          totalQueries,
+          totalQueries: queriesProxy.value,
           queriesThisMonth: queriesPeriod,
           averageQueriesPerDay: avgPerDay,
           mostActiveUsers: mostActiveUsers.map((u) => ({

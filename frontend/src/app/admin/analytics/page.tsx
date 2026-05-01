@@ -5,16 +5,30 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 
 interface AnalyticsData {
+  system?: {
+    totalUsers: number;
+    activeUsers: number;
+    newUsersPeriod: number;
+    totalCases: number;
+    newCasesPeriod: number;
+    totalTasks: number;
+    legalLibrarySize: number;
+    totalLogins: number;
+    loginsPeriod: number;
+    authErrors24h: number;
+    totalConversations: number;
+  };
+  queriesProxy?: { source: string; value: number };
   usage: {
     totalQueries: number;
     queriesThisMonth: number;
     averageQueriesPerDay: number;
-    mostActiveUsers: Array<{ name: string; queries: number }>;
+    mostActiveUsers: Array<{ name: string; queries?: number; queryCount?: number; email?: string }>;
   };
   documents: {
     totalDocuments: number;
     documentsThisMonth: number;
-    mostViewedDocuments: Array<{ title: string; views: number }>;
+    mostViewedDocuments: Array<{ title: string; views?: number; viewCount?: number }>;
     documentsByCategory: Array<{ category: string; count: number }>;
   };
   costs: {
@@ -138,6 +152,54 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* System overview — always-available metrics */}
+      {data.system && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Estado del Sistema</h2>
+            <span className="text-xs text-gray-500">Datos en tiempo real</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Usuarios</div>
+              <div className="text-2xl font-bold text-gray-900 mt-1">{data.system.totalUsers}</div>
+              <div className="text-xs text-emerald-600 mt-0.5">
+                {data.system.activeUsers} activos · +{data.system.newUsersPeriod} nuevos
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Casos</div>
+              <div className="text-2xl font-bold text-gray-900 mt-1">{data.system.totalCases}</div>
+              <div className="text-xs text-emerald-600 mt-0.5">+{data.system.newCasesPeriod} en período</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Tareas</div>
+              <div className="text-2xl font-bold text-gray-900 mt-1">{data.system.totalTasks}</div>
+              <div className="text-xs text-gray-500 mt-0.5">total</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Biblioteca</div>
+              <div className="text-2xl font-bold text-gray-900 mt-1">{data.system.legalLibrarySize}</div>
+              <div className="text-xs text-gray-500 mt-0.5">docs legales base</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Logins</div>
+              <div className="text-2xl font-bold text-gray-900 mt-1">{data.system.totalLogins}</div>
+              <div className="text-xs text-emerald-600 mt-0.5">+{data.system.loginsPeriod} en período</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Errores Auth (24h)</div>
+              <div className={`text-2xl font-bold mt-1 ${data.system.authErrors24h === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {data.system.authErrors24h}
+              </div>
+              <Link href="/admin/auth-events" className="text-xs text-indigo-600 hover:underline mt-0.5 inline-block">
+                Ver detalle →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Key Metrics */}
       <div className="grid md:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
@@ -213,7 +275,7 @@ export default function AnalyticsPage() {
                     <span className="font-medium text-gray-900">{user.name}</span>
                   </div>
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
-                    {user.queries} consultas
+                    {user.queryCount ?? user.queries ?? 0} consultas
                   </span>
                 </div>
               ))}
@@ -238,7 +300,7 @@ export default function AnalyticsPage() {
                     <span className="font-medium text-gray-900 truncate">{doc.title}</span>
                   </div>
                   <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
-                    {doc.views} vistas
+                    {doc.viewCount ?? doc.views ?? 0} vistas
                   </span>
                 </div>
               ))}
