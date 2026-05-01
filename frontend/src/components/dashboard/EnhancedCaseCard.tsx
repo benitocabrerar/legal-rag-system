@@ -1,11 +1,26 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { Clock, FileText, MessageSquare, MoreVertical } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, FileText, MessageSquare, MoreVertical, Sparkles } from 'lucide-react';
 import { legalTypeConfig, LegalType, Priority } from '@/lib/design-tokens';
 import { LegalTypeBadge } from '@/components/ui/LegalTypeBadge';
 import { PriorityBadge } from '@/components/ui/PriorityBadge';
+import { CaseAiSummaryModal } from './CaseAiSummaryModal';
+
+interface AiSummary {
+  headline?: string;
+  teaser?: string;
+  summary?: string;
+  keyFacts?: string[];
+  legalAreas?: string[];
+  risks?: string[];
+  nextSteps?: string[];
+  estimatedComplexity?: 'baja' | 'media' | 'alta';
+  urgency?: 'baja' | 'media' | 'alta' | 'crítica';
+  generatedAt?: string;
+  model?: string;
+  provider?: string;
+}
 
 interface EnhancedCaseCardProps {
   caseData: {
@@ -25,6 +40,7 @@ interface EnhancedCaseCardProps {
     documentCount?: number;
     queryCount?: number;
     createdAt: string;
+    aiSummary?: AiSummary | null;
   };
 }
 
@@ -37,10 +53,24 @@ export function EnhancedCaseCard({ caseData }: EnhancedCaseCardProps) {
   const documentCount = caseData.documentCount || 0;
   const queryCount = caseData.queryCount || 0;
 
+  const [showSummary, setShowSummary] = useState(false);
+
+  const teaser =
+    caseData.aiSummary?.teaser ||
+    caseData.aiSummary?.headline ||
+    'Toca para generar un super-resumen IA del caso';
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowSummary(true);
+  };
+
   return (
-    <Link href={`/dashboard/cases/${caseData.id}`} className="block group">
+    <>
       <article
-        className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-6 border-l-4 h-full flex flex-col"
+        onClick={handleCardClick}
+        className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 p-6 border-l-4 h-full flex flex-col cursor-pointer group"
         style={{ borderLeftColor: config.color }}
       >
         {/* Header */}
@@ -48,7 +78,7 @@ export function EnhancedCaseCard({ caseData }: EnhancedCaseCardProps) {
           <div className="flex items-start gap-3 flex-1">
             <div className="text-3xl">{config.icon}</div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+              <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors">
                 {caseData.title}
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -60,12 +90,29 @@ export function EnhancedCaseCard({ caseData }: EnhancedCaseCardProps) {
           <button
             onClick={(e) => {
               e.preventDefault();
-              // Handle menu click
+              e.stopPropagation();
             }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <MoreVertical className="w-5 h-5 text-gray-400" />
           </button>
+        </div>
+
+        {/* AI Teaser — el super-resumen breve */}
+        <div
+          className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-3 mb-4 group-hover:border-emerald-400 group-hover:shadow-sm transition-all"
+        >
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                Super-resumen IA
+              </p>
+              <p className="text-sm text-emerald-900 line-clamp-2 leading-snug">
+                {teaser}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Client Info */}
@@ -136,6 +183,15 @@ export function EnhancedCaseCard({ caseData }: EnhancedCaseCardProps) {
           </div>
         </div>
       </article>
-    </Link>
+
+      {showSummary && (
+        <CaseAiSummaryModal
+          caseId={caseData.id}
+          caseTitle={caseData.title}
+          initialSummary={caseData.aiSummary || null}
+          onClose={() => setShowSummary(false)}
+        />
+      )}
+    </>
   );
 }

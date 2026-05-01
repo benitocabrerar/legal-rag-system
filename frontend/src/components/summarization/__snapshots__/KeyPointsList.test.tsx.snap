@@ -1,0 +1,1663 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot for default state 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Key Points
+        </h2>
+      </div>
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="text-xs dark:text-gray-300 dark:border-gray-600"
+          data-testid="badge"
+          data-variant="outline"
+        >
+          5
+           total
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="destructive"
+        >
+          2
+           high
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="warning"
+        >
+          1
+           medium
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <ul
+      class="space-y-4"
+      role="list"
+    >
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            1
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              High
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Security
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Critical security vulnerability found in authentication system
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  CVE-2024-1234
+                </span>
+              </li>
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Section 5.2
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            2
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="warning"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              Medium
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Performance
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Performance improvements in database queries
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Benchmark Report Q4
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            3
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="secondary"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-circle"
+              />
+              Low
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              UI/UX
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Minor UI adjustments for better UX
+          </p>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            4
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="secondary"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-circle"
+              />
+              Low
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Documentation
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Documentation updates for API endpoints
+          </p>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            5
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              High
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Security
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Critical data breach in user authentication
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Incident Report 2024-01
+                </span>
+              </li>
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Security Audit
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot for empty state 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Key Points
+        </h2>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <div
+      class="text-center py-8"
+    >
+      <svg
+        aria-hidden="true"
+        class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3"
+        data-testid="icon-alert-circle"
+      />
+      <p
+        class="text-sm text-gray-500 dark:text-gray-400"
+      >
+        No key points available
+      </p>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot for grouped view 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Key Points
+        </h2>
+      </div>
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="text-xs dark:text-gray-300 dark:border-gray-600"
+          data-testid="badge"
+          data-variant="outline"
+        >
+          5
+           total
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="destructive"
+        >
+          2
+           high
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="warning"
+        >
+          1
+           medium
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <div
+      class="space-y-4"
+    >
+      <div
+        class="space-y-3"
+      >
+        <button
+          aria-controls="category-Security"
+          aria-expanded="true"
+          class="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        >
+          <div
+            class="flex items-center gap-3"
+          >
+            <h3
+              class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              Security
+            </h3>
+            <div
+              class="flex items-center gap-1.5"
+            >
+              <span
+                class="text-xs text-gray-500 dark:text-gray-400"
+              >
+                2
+                 
+                points
+              </span>
+              <div
+                class="text-xs px-1.5 py-0"
+                data-testid="badge"
+                data-variant="destructive"
+              >
+                2
+              </div>
+            </div>
+          </div>
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4 text-gray-500"
+            data-testid="icon-chevron-up"
+          />
+        </button>
+        <ul
+          class="space-y-4 pt-2"
+          id="category-Security"
+          role="list"
+        >
+          <li
+            class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+          >
+            <div
+              class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+            >
+              <span
+                class="text-xs font-bold"
+              >
+                1
+              </span>
+            </div>
+            <div
+              class="space-y-2"
+            >
+              <div
+                class="flex items-center gap-2 flex-wrap"
+              >
+                <div
+                  class="text-xs"
+                  data-testid="badge"
+                  data-variant="destructive"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="w-3 h-3 mr-1"
+                    data-testid="icon-alert-circle"
+                  />
+                  High
+                </div>
+                <div
+                  class="text-xs dark:text-gray-300 dark:border-gray-600"
+                  data-testid="badge"
+                  data-variant="outline"
+                >
+                  Security
+                </div>
+              </div>
+              <p
+                class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+              >
+                Critical security vulnerability found in authentication system
+              </p>
+              <div
+                class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+              >
+                <p
+                  class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
+                  References:
+                </p>
+                <ul
+                  class="space-y-1"
+                >
+                  <li
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                      data-testid="icon-check-circle"
+                    />
+                    <span>
+                      CVE-2024-1234
+                    </span>
+                  </li>
+                  <li
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                      data-testid="icon-check-circle"
+                    />
+                    <span>
+                      Section 5.2
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li
+            class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+          >
+            <div
+              class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+            >
+              <span
+                class="text-xs font-bold"
+              >
+                2
+              </span>
+            </div>
+            <div
+              class="space-y-2"
+            >
+              <div
+                class="flex items-center gap-2 flex-wrap"
+              >
+                <div
+                  class="text-xs"
+                  data-testid="badge"
+                  data-variant="destructive"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="w-3 h-3 mr-1"
+                    data-testid="icon-alert-circle"
+                  />
+                  High
+                </div>
+                <div
+                  class="text-xs dark:text-gray-300 dark:border-gray-600"
+                  data-testid="badge"
+                  data-variant="outline"
+                >
+                  Security
+                </div>
+              </div>
+              <p
+                class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+              >
+                Critical data breach in user authentication
+              </p>
+              <div
+                class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+              >
+                <p
+                  class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
+                  References:
+                </p>
+                <ul
+                  class="space-y-1"
+                >
+                  <li
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                      data-testid="icon-check-circle"
+                    />
+                    <span>
+                      Incident Report 2024-01
+                    </span>
+                  </li>
+                  <li
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                      data-testid="icon-check-circle"
+                    />
+                    <span>
+                      Security Audit
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <button
+          aria-controls="category-Performance"
+          aria-expanded="false"
+          class="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        >
+          <div
+            class="flex items-center gap-3"
+          >
+            <h3
+              class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              Performance
+            </h3>
+            <div
+              class="flex items-center gap-1.5"
+            >
+              <span
+                class="text-xs text-gray-500 dark:text-gray-400"
+              >
+                1
+                 
+                point
+              </span>
+              <div
+                class="text-xs px-1.5 py-0"
+                data-testid="badge"
+                data-variant="warning"
+              >
+                1
+              </div>
+            </div>
+          </div>
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4 text-gray-500"
+            data-testid="icon-chevron-down"
+          />
+        </button>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <button
+          aria-controls="category-UI/UX"
+          aria-expanded="false"
+          class="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        >
+          <div
+            class="flex items-center gap-3"
+          >
+            <h3
+              class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              UI/UX
+            </h3>
+            <div
+              class="flex items-center gap-1.5"
+            >
+              <span
+                class="text-xs text-gray-500 dark:text-gray-400"
+              >
+                1
+                 
+                point
+              </span>
+            </div>
+          </div>
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4 text-gray-500"
+            data-testid="icon-chevron-down"
+          />
+        </button>
+      </div>
+      <div
+        class="space-y-3"
+      >
+        <button
+          aria-controls="category-Documentation"
+          aria-expanded="false"
+          class="w-full flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+        >
+          <div
+            class="flex items-center gap-3"
+          >
+            <h3
+              class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            >
+              Documentation
+            </h3>
+            <div
+              class="flex items-center gap-1.5"
+            >
+              <span
+                class="text-xs text-gray-500 dark:text-gray-400"
+              >
+                1
+                 
+                point
+              </span>
+            </div>
+          </div>
+          <svg
+            aria-hidden="true"
+            class="w-4 h-4 text-gray-500"
+            data-testid="icon-chevron-down"
+          />
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot for loading state 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Key Points
+        </h2>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <div
+      aria-label="Loading key points"
+      class="space-y-4"
+      role="status"
+    >
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <div
+            data-height="24"
+            data-testid="skeleton"
+            data-variant="circular"
+            data-width="24"
+          />
+          <div
+            data-height="20px"
+            data-testid="skeleton"
+            data-variant="text"
+            data-width="100px"
+          />
+        </div>
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="100%"
+        />
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="85%"
+        />
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <div
+            data-height="24"
+            data-testid="skeleton"
+            data-variant="circular"
+            data-width="24"
+          />
+          <div
+            data-height="20px"
+            data-testid="skeleton"
+            data-variant="text"
+            data-width="100px"
+          />
+        </div>
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="100%"
+        />
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="85%"
+        />
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <div
+            data-height="24"
+            data-testid="skeleton"
+            data-variant="circular"
+            data-width="24"
+          />
+          <div
+            data-height="20px"
+            data-testid="skeleton"
+            data-variant="text"
+            data-width="100px"
+          />
+        </div>
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="100%"
+        />
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="85%"
+        />
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <div
+            data-height="24"
+            data-testid="skeleton"
+            data-variant="circular"
+            data-width="24"
+          />
+          <div
+            data-height="20px"
+            data-testid="skeleton"
+            data-variant="text"
+            data-width="100px"
+          />
+        </div>
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="100%"
+        />
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="85%"
+        />
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex items-center gap-2"
+        >
+          <div
+            data-height="24"
+            data-testid="skeleton"
+            data-variant="circular"
+            data-width="24"
+          />
+          <div
+            data-height="20px"
+            data-testid="skeleton"
+            data-variant="text"
+            data-width="100px"
+          />
+        </div>
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="100%"
+        />
+        <div
+          data-height="16px"
+          data-testid="skeleton"
+          data-variant="text"
+          data-width="85%"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot with custom title 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700 custom-class"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Custom Analysis
+        </h2>
+      </div>
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="text-xs dark:text-gray-300 dark:border-gray-600"
+          data-testid="badge"
+          data-variant="outline"
+        >
+          5
+           total
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="destructive"
+        >
+          2
+           high
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="warning"
+        >
+          1
+           medium
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <ul
+      class="space-y-4"
+      role="list"
+    >
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            1
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              High
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Security
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Critical security vulnerability found in authentication system
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  CVE-2024-1234
+                </span>
+              </li>
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Section 5.2
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            2
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="warning"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              Medium
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Performance
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Performance improvements in database queries
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Benchmark Report Q4
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            3
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="secondary"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-circle"
+              />
+              Low
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              UI/UX
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Minor UI adjustments for better UX
+          </p>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-gray-300 bg-gray-50 dark:bg-gray-800 dark:border-gray-600"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            4
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="secondary"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-circle"
+              />
+              Low
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Documentation
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Documentation updates for API endpoints
+          </p>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            5
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              High
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Security
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Critical data breach in user authentication
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Incident Report 2024-01
+                </span>
+              </li>
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Security Audit
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`KeyPointsList > Snapshot Tests > should match snapshot with maxVisible 1`] = `
+<div
+  class="dark:bg-gray-900 dark:border-gray-700"
+  data-testid="card"
+>
+  <div
+    data-testid="card-header"
+  >
+    <div
+      class="flex items-start justify-between gap-4"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+          data-testid="icon-list-checks"
+        />
+        <h2
+          class="text-lg dark:text-gray-100"
+          data-testid="card-title"
+        >
+          Key Points
+        </h2>
+      </div>
+      <div
+        class="flex items-center gap-2 flex-wrap"
+      >
+        <div
+          class="text-xs dark:text-gray-300 dark:border-gray-600"
+          data-testid="badge"
+          data-variant="outline"
+        >
+          5
+           total
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="destructive"
+        >
+          2
+           high
+        </div>
+        <div
+          class="text-xs"
+          data-testid="badge"
+          data-variant="warning"
+        >
+          1
+           medium
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-content"
+  >
+    <ul
+      class="space-y-4"
+      role="list"
+    >
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-red-600 bg-red-50 dark:bg-red-900/20 dark:border-red-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            1
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              High
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Security
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Critical security vulnerability found in authentication system
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  CVE-2024-1234
+                </span>
+              </li>
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Section 5.2
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+      <li
+        class="relative pl-8 pb-4 border-l-2 transition-colors border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-500"
+      >
+        <div
+          class="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-900 border-2 border-current"
+        >
+          <span
+            class="text-xs font-bold"
+          >
+            2
+          </span>
+        </div>
+        <div
+          class="space-y-2"
+        >
+          <div
+            class="flex items-center gap-2 flex-wrap"
+          >
+            <div
+              class="text-xs"
+              data-testid="badge"
+              data-variant="warning"
+            >
+              <svg
+                aria-hidden="true"
+                class="w-3 h-3 mr-1"
+                data-testid="icon-alert-circle"
+              />
+              Medium
+            </div>
+            <div
+              class="text-xs dark:text-gray-300 dark:border-gray-600"
+              data-testid="badge"
+              data-variant="outline"
+            >
+              Performance
+            </div>
+          </div>
+          <p
+            class="text-sm leading-relaxed text-gray-900 dark:text-gray-100"
+          >
+            Performance improvements in database queries
+          </p>
+          <div
+            class="mt-2 pl-3 border-l-2 border-gray-200 dark:border-gray-700"
+          >
+            <p
+              class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
+              References:
+            </p>
+            <ul
+              class="space-y-1"
+            >
+              <li
+                class="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-500"
+                  data-testid="icon-check-circle"
+                />
+                <span>
+                  Benchmark Report Q4
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </li>
+    </ul>
+    <div
+      class="mt-6 text-center"
+    >
+      <button
+        aria-expanded="false"
+        class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors border border-gray-200 dark:border-gray-700"
+      >
+        <svg
+          aria-hidden="true"
+          class="inline w-4 h-4 mr-1"
+          data-testid="icon-chevron-down"
+        />
+        Show 
+        3
+         More
+      </button>
+    </div>
+  </div>
+</div>
+`;
