@@ -37,7 +37,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary
       onError={(error, errorInfo) => {
-        // Log to error tracking service (e.g., Sentry)
+        // Stale tab after a deploy: HTML references chunk hashes that no
+        // longer exist on Vercel. Auto-recover by hard-reloading once.
+        const msg = (error?.message || '') + ' ' + (error?.name || '');
+        if (
+          /ChunkLoadError|Loading chunk \d+ failed|css chunk \d+ failed/i.test(msg) &&
+          typeof window !== 'undefined'
+        ) {
+          const KEY = 'poweria-chunk-reload-at';
+          const last = Number(sessionStorage.getItem(KEY) || '0');
+          // Avoid an infinite reload loop — only reload once per minute.
+          if (Date.now() - last > 60_000) {
+            sessionStorage.setItem(KEY, String(Date.now()));
+            window.location.reload();
+            return;
+          }
+        }
         console.error('Application Error:', error, errorInfo);
       }}
     >
