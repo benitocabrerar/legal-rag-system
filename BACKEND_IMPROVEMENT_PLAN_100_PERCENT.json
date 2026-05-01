@@ -1,0 +1,477 @@
+{
+  "metadata": {
+    "projectName": "Legal RAG System",
+    "currentScore": "85%",
+    "targetScore": "100%",
+    "createdAt": "2025-12-11",
+    "estimatedTotalEffort": "80-100 hours",
+    "priority": "High",
+    "version": "1.0.0"
+  },
+  "currentAssessment": {
+    "strengths": [
+      "Excellent route implementation (95%) - 32+ API routes well-organized",
+      "Strong observability (90%) - OpenTelemetry integration complete",
+      "Good service architecture (85%) - 15+ specialized services",
+      "Comprehensive authentication (JWT, OAuth2, 2FA)",
+      "Advanced features (NLP, RAG, AI assistant, analytics)",
+      "Multi-tier caching (L1/L2/L3) with Redis",
+      "Async processing with Bull queues"
+    ],
+    "weaknesses": [
+      "Inconsistent error handling across routes (75%)",
+      "Missing request validation middleware (80%)",
+      "No circuit breaker for external services",
+      "Disabled routes (documents-enhanced, legal-documents-enhanced)",
+      "API versioning not fully implemented",
+      "No global error handler",
+      "Missing custom error classes",
+      "Inconsistent response formats across endpoints"
+    ],
+    "gaps": [
+      "Error handling standardization",
+      "Request validation layer",
+      "Circuit breaker pattern",
+      "API versioning strategy",
+      "Missing error monitoring integration",
+      "No request/response logging middleware",
+      "Limited input sanitization"
+    ]
+  },
+  "improvementTasks": [
+    {
+      "id": "TASK-001",
+      "category": "Error Handling",
+      "title": "Implement Custom Error Classes Hierarchy",
+      "priority": "Critical",
+      "estimatedHours": 8,
+      "status": "Not Started",
+      "description": "Create a comprehensive error class hierarchy for consistent error handling across the application",
+      "implementation": {
+        "files": [
+          "src/errors/base.error.ts",
+          "src/errors/http.errors.ts",
+          "src/errors/business.errors.ts",
+          "src/errors/validation.errors.ts",
+          "src/errors/external.errors.ts",
+          "src/errors/index.ts"
+        ],
+        "codePatterns": {
+          "baseError": "export class BaseError extends Error {\n  constructor(\n    public code: string,\n    public message: string,\n    public statusCode: number = 500,\n    public details?: any,\n    public isOperational: boolean = true\n  ) {\n    super(message);\n    this.name = this.constructor.name;\n    Error.captureStackTrace(this, this.constructor);\n  }\n\n  toJSON() {\n    return {\n      code: this.code,\n      message: this.message,\n      statusCode: this.statusCode,\n      details: this.details,\n      timestamp: new Date().toISOString()\n    };\n  }\n}",
+          "httpErrors": "export class NotFoundError extends BaseError {\n  constructor(resource: string, id?: string) {\n    super(\n      'NOT_FOUND',\n      `${resource}${id ? ` with id ${id}` : ''} not found`,\n      404\n    );\n  }\n}\n\nexport class UnauthorizedError extends BaseError {\n  constructor(message = 'Unauthorized access') {\n    super('UNAUTHORIZED', message, 401);\n  }\n}\n\nexport class ForbiddenError extends BaseError {\n  constructor(message = 'Forbidden') {\n    super('FORBIDDEN', message, 403);\n  }\n}\n\nexport class ConflictError extends BaseError {\n  constructor(message: string) {\n    super('CONFLICT', message, 409);\n  }\n}\n\nexport class TooManyRequestsError extends BaseError {\n  constructor(retryAfter?: number) {\n    super(\n      'TOO_MANY_REQUESTS',\n      'Rate limit exceeded',\n      429,\n      { retryAfter }\n    );\n  }\n}",
+          "businessErrors": "export class InsufficientCreditsError extends BaseError {\n  constructor(required: number, available: number) {\n    super(\n      'INSUFFICIENT_CREDITS',\n      `Insufficient credits. Required: ${required}, Available: ${available}`,\n      402,\n      { required, available }\n    );\n  }\n}\n\nexport class DocumentProcessingError extends BaseError {\n  constructor(documentId: string, reason: string) {\n    super(\n      'DOCUMENT_PROCESSING_FAILED',\n      `Failed to process document: ${reason}`,\n      422,\n      { documentId, reason }\n    );\n  }\n}\n\nexport class EmbeddingGenerationError extends BaseError {\n  constructor(reason: string) {\n    super(\n      'EMBEDDING_GENERATION_FAILED',\n      `Failed to generate embeddings: ${reason}`,\n      500,\n      { reason }\n    );\n  }\n}",
+          "validationErrors": "export class ValidationError extends BaseError {\n  constructor(errors: any[]) {\n    super(\n      'VALIDATION_ERROR',\n      'Request validation failed',\n      400,\n      { errors }\n    );\n  }\n}\n\nexport class ZodValidationError extends ValidationError {\n  constructor(zodError: z.ZodError) {\n    const errors = zodError.errors.map(err => ({\n      field: err.path.join('.'),\n      message: err.message,\n      code: err.code\n    }));\n    super(errors);\n  }\n}",
+          "externalErrors": "export class OpenAIError extends BaseError {\n  constructor(message: string, details?: any) {\n    super(\n      'OPENAI_ERROR',\n      `OpenAI API error: ${message}`,\n      503,\n      details,\n      false\n    );\n  }\n}\n\nexport class DatabaseError extends BaseError {\n  constructor(operation: string, details?: any) {\n    super(\n      'DATABASE_ERROR',\n      `Database operation failed: ${operation}`,\n      503,\n      details,\n      false\n    );\n  }\n}\n\nexport class RedisError extends BaseError {\n  constructor(operation: string, details?: any) {\n    super(\n      'REDIS_ERROR',\n      `Redis operation failed: ${operation}`,\n      503,\n      details,\n      false\n    );\n  }\n}"
+        }
+      },
+      "testCriteria": [
+        "Error classes properly extend base error",
+        "Error serialization works correctly",
+        "Stack traces are captured",
+        "Error codes are unique and descriptive"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "category": "Error Handling",
+      "title": "Implement Global Error Handler Middleware",
+      "priority": "Critical",
+      "estimatedHours": 6,
+      "status": "Not Started",
+      "dependencies": ["TASK-001"],
+      "description": "Create a global error handler that catches all errors and formats responses consistently",
+      "implementation": {
+        "files": [
+          "src/middleware/error-handler.ts"
+        ],
+        "codePatterns": {
+          "errorHandler": "import { FastifyRequest, FastifyReply, FastifyError } from 'fastify';\nimport { BaseError } from '../errors/base.error.js';\nimport { ZodError } from 'zod';\nimport { Prisma } from '@prisma/client';\nimport { getMetricsService } from '../services/observability/metrics.service.js';\nimport { getTracingService } from '../services/observability/tracing.service.js';\n\nconst metricsService = getMetricsService();\nconst tracingService = getTracingService();\n\nexport async function globalErrorHandler(\n  error: Error | FastifyError | BaseError,\n  request: FastifyRequest,\n  reply: FastifyReply\n) {\n  // Log error to observability\n  const route = request.routerPath || request.url;\n  metricsService.recordError(error.name, route);\n  tracingService.addEvent('error', {\n    'error.type': error.name,\n    'error.message': error.message,\n    'error.stack': error.stack\n  });\n\n  // Handle BaseError (custom errors)\n  if (error instanceof BaseError) {\n    return reply.code(error.statusCode).send(error.toJSON());\n  }\n\n  // Handle Zod validation errors\n  if (error instanceof ZodError) {\n    const validationErrors = error.errors.map(err => ({\n      field: err.path.join('.'),\n      message: err.message,\n      code: err.code\n    }));\n    return reply.code(400).send({\n      code: 'VALIDATION_ERROR',\n      message: 'Request validation failed',\n      statusCode: 400,\n      details: { errors: validationErrors },\n      timestamp: new Date().toISOString()\n    });\n  }\n\n  // Handle Prisma errors\n  if (error instanceof Prisma.PrismaClientKnownRequestError) {\n    return handlePrismaError(error, reply);\n  }\n\n  // Handle Fastify errors\n  if ('statusCode' in error && error.statusCode) {\n    return reply.code(error.statusCode).send({\n      code: 'FASTIFY_ERROR',\n      message: error.message,\n      statusCode: error.statusCode,\n      timestamp: new Date().toISOString()\n    });\n  }\n\n  // Unknown errors - log and return generic message\n  request.log.error({\n    err: error,\n    request: {\n      method: request.method,\n      url: request.url,\n      headers: request.headers,\n      body: request.body\n    }\n  }, 'Unhandled error occurred');\n\n  return reply.code(500).send({\n    code: 'INTERNAL_SERVER_ERROR',\n    message: process.env.NODE_ENV === 'production'\n      ? 'An unexpected error occurred'\n      : error.message,\n    statusCode: 500,\n    timestamp: new Date().toISOString()\n  });\n}\n\nfunction handlePrismaError(\n  error: Prisma.PrismaClientKnownRequestError,\n  reply: FastifyReply\n) {\n  switch (error.code) {\n    case 'P2002': // Unique constraint violation\n      return reply.code(409).send({\n        code: 'CONFLICT',\n        message: 'A record with this value already exists',\n        statusCode: 409,\n        details: { field: error.meta?.target },\n        timestamp: new Date().toISOString()\n      });\n    case 'P2025': // Record not found\n      return reply.code(404).send({\n        code: 'NOT_FOUND',\n        message: 'Record not found',\n        statusCode: 404,\n        timestamp: new Date().toISOString()\n      });\n    case 'P2003': // Foreign key constraint failed\n      return reply.code(400).send({\n        code: 'INVALID_REFERENCE',\n        message: 'Referenced record does not exist',\n        statusCode: 400,\n        details: { field: error.meta?.field_name },\n        timestamp: new Date().toISOString()\n      });\n    default:\n      return reply.code(500).send({\n        code: 'DATABASE_ERROR',\n        message: 'Database operation failed',\n        statusCode: 500,\n        timestamp: new Date().toISOString()\n      });\n  }\n}",
+          "serverIntegration": "// In src/server.ts\nimport { globalErrorHandler } from './middleware/error-handler.js';\n\n// Register error handler\napp.setErrorHandler(globalErrorHandler);"
+        }
+      },
+      "testCriteria": [
+        "All error types are handled correctly",
+        "Response format is consistent",
+        "Errors are logged to observability",
+        "Sensitive information is not exposed in production"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "category": "Request Validation",
+      "title": "Create Request Validation Middleware with Zod",
+      "priority": "High",
+      "estimatedHours": 10,
+      "status": "Not Started",
+      "description": "Implement a reusable validation middleware using Zod schemas for all routes",
+      "implementation": {
+        "files": [
+          "src/middleware/validate.ts",
+          "src/schemas/common.schemas.ts",
+          "src/schemas/auth.schemas.ts",
+          "src/schemas/document.schemas.ts",
+          "src/schemas/query.schemas.ts"
+        ],
+        "codePatterns": {
+          "validationMiddleware": "import { FastifyRequest, FastifyReply } from 'fastify';\nimport { z } from 'zod';\nimport { ZodValidationError } from '../errors/validation.errors.js';\n\ninterface ValidationSchemas {\n  body?: z.ZodSchema;\n  query?: z.ZodSchema;\n  params?: z.ZodSchema;\n  headers?: z.ZodSchema;\n}\n\nexport function validate(schemas: ValidationSchemas) {\n  return async (request: FastifyRequest, reply: FastifyReply) => {\n    try {\n      // Validate body\n      if (schemas.body) {\n        request.body = schemas.body.parse(request.body);\n      }\n\n      // Validate query parameters\n      if (schemas.query) {\n        request.query = schemas.query.parse(request.query);\n      }\n\n      // Validate route parameters\n      if (schemas.params) {\n        request.params = schemas.params.parse(request.params);\n      }\n\n      // Validate headers\n      if (schemas.headers) {\n        schemas.headers.parse(request.headers);\n      }\n    } catch (error) {\n      if (error instanceof z.ZodError) {\n        throw new ZodValidationError(error);\n      }\n      throw error;\n    }\n  };\n}",
+          "commonSchemas": "import { z } from 'zod';\n\nexport const paginationSchema = z.object({\n  page: z.coerce.number().int().min(1).default(1),\n  limit: z.coerce.number().int().min(1).max(100).default(20),\n  sortBy: z.string().optional(),\n  sortOrder: z.enum(['asc', 'desc']).default('desc')\n});\n\nexport const uuidSchema = z.string().uuid();\n\nexport const dateRangeSchema = z.object({\n  from: z.coerce.date().optional(),\n  to: z.coerce.date().optional()\n}).refine(data => {\n  if (data.from && data.to) {\n    return data.from <= data.to;\n  }\n  return true;\n}, { message: 'from date must be before to date' });",
+          "documentSchemas": "import { z } from 'zod';\n\nexport const createDocumentSchema = z.object({\n  title: z.string().min(1).max(500),\n  content: z.string().min(1),\n  caseId: z.string().uuid().optional(),\n  type: z.enum(['PDF', 'DOCX', 'TXT']).optional(),\n  metadata: z.record(z.unknown()).optional()\n});\n\nexport const updateDocumentSchema = createDocumentSchema.partial();\n\nexport const getDocumentsSchema = z.object({\n  caseId: z.string().uuid().optional(),\n  search: z.string().optional(),\n  type: z.enum(['PDF', 'DOCX', 'TXT']).optional()\n}).merge(paginationSchema);",
+          "usageExample": "// In route file\nimport { validate } from '../middleware/validate.js';\nimport { createDocumentSchema } from '../schemas/document.schemas.js';\n\nfastify.post('/documents',\n  {\n    onRequest: [\n      fastify.authenticate,\n      validate({ body: createDocumentSchema })\n    ]\n  },\n  async (request, reply) => {\n    // request.body is now type-safe and validated\n    const { title, content } = request.body;\n    // ...\n  }\n);"
+        }
+      },
+      "testCriteria": [
+        "All routes have validation schemas",
+        "Invalid requests are rejected with clear error messages",
+        "Type safety is maintained with TypeScript",
+        "Performance impact is minimal"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "category": "Circuit Breaker",
+      "title": "Implement Circuit Breaker for External Services",
+      "priority": "High",
+      "estimatedHours": 12,
+      "status": "Not Started",
+      "description": "Add circuit breaker pattern for OpenAI, Redis, and other external services to handle failures gracefully",
+      "implementation": {
+        "files": [
+          "src/utils/circuit-breaker.ts",
+          "src/services/ai/resilient-openai.service.ts",
+          "src/services/cache/resilient-redis.service.ts"
+        ],
+        "codePatterns": {
+          "circuitBreaker": "export enum CircuitState {\n  CLOSED = 'CLOSED',     // Normal operation\n  OPEN = 'OPEN',         // Too many failures, reject requests\n  HALF_OPEN = 'HALF_OPEN' // Testing if service recovered\n}\n\nexport interface CircuitBreakerOptions {\n  failureThreshold: number;    // Number of failures before opening\n  successThreshold: number;    // Number of successes to close from half-open\n  timeout: number;             // Time to wait before half-open (ms)\n  monitoringPeriod: number;   // Time window for counting failures (ms)\n}\n\nexport class CircuitBreaker<T extends any[], R> {\n  private state: CircuitState = CircuitState.CLOSED;\n  private failureCount = 0;\n  private successCount = 0;\n  private nextAttempt = Date.now();\n  private failures: number[] = [];\n\n  constructor(\n    private fn: (...args: T) => Promise<R>,\n    private options: CircuitBreakerOptions = {\n      failureThreshold: 5,\n      successThreshold: 2,\n      timeout: 60000,\n      monitoringPeriod: 120000\n    },\n    private fallback?: (...args: T) => Promise<R>\n  ) {}\n\n  async execute(...args: T): Promise<R> {\n    // Check if circuit is open\n    if (this.state === CircuitState.OPEN) {\n      if (Date.now() < this.nextAttempt) {\n        if (this.fallback) {\n          return this.fallback(...args);\n        }\n        throw new Error('Circuit breaker is OPEN');\n      }\n      // Try to recover\n      this.state = CircuitState.HALF_OPEN;\n      this.successCount = 0;\n    }\n\n    try {\n      const result = await this.fn(...args);\n      this.onSuccess();\n      return result;\n    } catch (error) {\n      this.onFailure();\n      if (this.fallback && this.state === CircuitState.OPEN) {\n        return this.fallback(...args);\n      }\n      throw error;\n    }\n  }\n\n  private onSuccess(): void {\n    this.failureCount = 0;\n\n    if (this.state === CircuitState.HALF_OPEN) {\n      this.successCount++;\n      if (this.successCount >= this.options.successThreshold) {\n        this.state = CircuitState.CLOSED;\n        this.successCount = 0;\n      }\n    }\n  }\n\n  private onFailure(): void {\n    const now = Date.now();\n    this.failures.push(now);\n\n    // Remove old failures outside monitoring period\n    this.failures = this.failures.filter(\n      time => now - time < this.options.monitoringPeriod\n    );\n\n    this.failureCount = this.failures.length;\n\n    if (this.failureCount >= this.options.failureThreshold) {\n      this.state = CircuitState.OPEN;\n      this.nextAttempt = now + this.options.timeout;\n    }\n  }\n\n  getState(): CircuitState {\n    return this.state;\n  }\n\n  getStats() {\n    return {\n      state: this.state,\n      failureCount: this.failureCount,\n      successCount: this.successCount,\n      nextAttempt: this.nextAttempt\n    };\n  }\n}",
+          "resilientOpenAI": "import { OpenAI } from 'openai';\nimport { CircuitBreaker } from '../../utils/circuit-breaker.js';\nimport { OpenAIError } from '../../errors/external.errors.js';\nimport { getMetricsService } from '../observability/metrics.service.js';\n\nexport class ResilientOpenAIService {\n  private openai: OpenAI;\n  private embeddingBreaker: CircuitBreaker<any[], any>;\n  private chatBreaker: CircuitBreaker<any[], any>;\n  private metrics = getMetricsService();\n\n  constructor() {\n    this.openai = new OpenAI({\n      apiKey: process.env.OPENAI_API_KEY,\n      timeout: 30000,\n      maxRetries: 2\n    });\n\n    // Circuit breaker for embeddings\n    this.embeddingBreaker = new CircuitBreaker(\n      this.generateEmbeddingInternal.bind(this),\n      {\n        failureThreshold: 5,\n        successThreshold: 2,\n        timeout: 60000,\n        monitoringPeriod: 120000\n      },\n      this.embeddingFallback.bind(this)\n    );\n\n    // Circuit breaker for chat completions\n    this.chatBreaker = new CircuitBreaker(\n      this.generateChatInternal.bind(this),\n      {\n        failureThreshold: 3,\n        successThreshold: 2,\n        timeout: 90000,\n        monitoringPeriod: 180000\n      }\n    );\n  }\n\n  async generateEmbedding(text: string): Promise<number[]> {\n    try {\n      return await this.embeddingBreaker.execute(text);\n    } catch (error: any) {\n      this.metrics.recordError('OpenAI', 'embedding');\n      throw new OpenAIError('Embedding generation failed', {\n        circuitState: this.embeddingBreaker.getState(),\n        originalError: error.message\n      });\n    }\n  }\n\n  private async generateEmbeddingInternal(text: string): Promise<number[]> {\n    const response = await this.openai.embeddings.create({\n      model: 'text-embedding-3-small',\n      input: text\n    });\n    return response.data[0].embedding;\n  }\n\n  private async embeddingFallback(text: string): Promise<number[]> {\n    // Return cached embedding or default vector\n    console.warn('Using embedding fallback for:', text.substring(0, 50));\n    return new Array(1536).fill(0);\n  }\n\n  getCircuitStats() {\n    return {\n      embedding: this.embeddingBreaker.getStats(),\n      chat: this.chatBreaker.getStats()\n    };\n  }\n}"
+        }
+      },
+      "testCriteria": [
+        "Circuit opens after threshold failures",
+        "Circuit closes after successful recovery",
+        "Fallback mechanisms work correctly",
+        "Metrics are recorded for circuit state changes"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "category": "API Versioning",
+      "title": "Implement Comprehensive API Versioning Strategy",
+      "priority": "Medium",
+      "estimatedHours": 8,
+      "status": "Not Started",
+      "description": "Improve API versioning with support for v2 routes and deprecation warnings",
+      "implementation": {
+        "files": [
+          "src/middleware/api-version.ts",
+          "src/routes/v2/index.ts",
+          "src/utils/deprecation.ts"
+        ],
+        "codePatterns": {
+          "versionMiddleware": "import { FastifyRequest, FastifyReply } from 'fastify';\n\nexport interface ApiVersion {\n  major: number;\n  minor: number;\n  patch?: number;\n}\n\nexport function parseApiVersion(version: string): ApiVersion | null {\n  const match = version.match(/^v?(\\d+)\\.(\\d+)(?:\\.(\\d+))?$/);\n  if (!match) return null;\n  \n  return {\n    major: parseInt(match[1]),\n    minor: parseInt(match[2]),\n    patch: match[3] ? parseInt(match[3]) : undefined\n  };\n}\n\nexport function apiVersionMiddleware(\n  request: FastifyRequest,\n  reply: FastifyReply\n) {\n  // Extract version from URL path (/api/v1/...) or header\n  const pathVersion = request.url.match(/\\/api\\/(v\\d+)\\//)?.[1];\n  const headerVersion = request.headers['api-version'] as string;\n  \n  const version = pathVersion || headerVersion || 'v1';\n  \n  // Add version to request context\n  (request as any).apiVersion = version;\n  \n  // Add version header to response\n  reply.header('X-API-Version', version);\n}",
+          "deprecation": "import { FastifyRequest, FastifyReply } from 'fastify';\n\ninterface DeprecationInfo {\n  endpoint: string;\n  version: string;\n  sunsetDate?: string;\n  alternativeEndpoint?: string;\n  message?: string;\n}\n\nconst deprecatedEndpoints = new Map<string, DeprecationInfo>();\n\nexport function deprecate(info: DeprecationInfo) {\n  return async (request: FastifyRequest, reply: FastifyReply) => {\n    // Add deprecation headers\n    reply.header('Deprecation', 'true');\n    \n    if (info.sunsetDate) {\n      reply.header('Sunset', info.sunsetDate);\n    }\n    \n    // Add warning header\n    const warning = `299 - \"This endpoint is deprecated${info.sunsetDate ? `. Will be removed on ${info.sunsetDate}` : ''}${info.alternativeEndpoint ? `. Use ${info.alternativeEndpoint} instead` : ''}\"`;\n    reply.header('Warning', warning);\n    \n    // Log deprecation usage\n    request.log.warn({\n      deprecation: info,\n      url: request.url,\n      method: request.method\n    }, 'Deprecated endpoint accessed');\n  };\n}\n\n// Usage:\n// fastify.get('/api/v1/old-endpoint',\n//   { onRequest: [deprecate({\n//     endpoint: '/api/v1/old-endpoint',\n//     version: 'v1',\n//     sunsetDate: '2025-12-31',\n//     alternativeEndpoint: '/api/v2/new-endpoint'\n//   })] },\n//   handler\n// );"
+        }
+      },
+      "testCriteria": [
+        "Version detection works from path and headers",
+        "Deprecation warnings are sent correctly",
+        "v2 routes can coexist with v1",
+        "Breaking changes are isolated to new versions"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "category": "Route Implementation",
+      "title": "Re-enable Disabled Routes",
+      "priority": "Medium",
+      "estimatedHours": 6,
+      "status": "Not Started",
+      "description": "Fix dependencies and re-enable documents-enhanced and legal-documents-enhanced routes",
+      "implementation": {
+        "files": [
+          "src/routes/documents-enhanced.ts",
+          "src/routes/legal-documents-enhanced.ts"
+        ],
+        "steps": [
+          {
+            "step": 1,
+            "action": "Install missing dependencies",
+            "command": "npm install fastify-multer@2.0.3",
+            "verification": "Check package.json for fastify-multer"
+          },
+          {
+            "step": 2,
+            "action": "Fix nodemailer import issues",
+            "code": "// Use dynamic import instead of static\nconst nodemailer = await import('nodemailer');\n// OR use existing emailService.ts",
+            "verification": "No import errors on server start"
+          },
+          {
+            "step": 3,
+            "action": "Update route implementations",
+            "details": "Ensure routes use new validation middleware and error handling"
+          },
+          {
+            "step": 4,
+            "action": "Re-enable in server.ts",
+            "code": "await app.register(documentRoutesEnhanced, { prefix: '/api/v1' });\nawait app.register(legalDocumentRoutesEnhanced, { prefix: '/api/v1' });"
+          }
+        ]
+      },
+      "testCriteria": [
+        "Routes load without errors",
+        "All endpoints are accessible",
+        "File uploads work correctly",
+        "Email notifications are sent"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "category": "Middleware",
+      "title": "Implement Request/Response Logging Middleware",
+      "priority": "Medium",
+      "estimatedHours": 4,
+      "status": "Not Started",
+      "description": "Add comprehensive logging middleware for debugging and auditing",
+      "implementation": {
+        "files": [
+          "src/middleware/request-logger.ts"
+        ],
+        "codePatterns": {
+          "requestLogger": "import { FastifyRequest, FastifyReply } from 'fastify';\nimport { v4 as uuidv4 } from 'uuid';\n\nexport async function requestLoggerMiddleware(\n  request: FastifyRequest,\n  reply: FastifyReply\n) {\n  const requestId = uuidv4();\n  const startTime = Date.now();\n  \n  // Add request ID to context\n  (request as any).requestId = requestId;\n  reply.header('X-Request-ID', requestId);\n  \n  // Log request\n  request.log.info({\n    requestId,\n    method: request.method,\n    url: request.url,\n    userAgent: request.headers['user-agent'],\n    ip: request.ip,\n    userId: (request as any).user?.id\n  }, 'Incoming request');\n  \n  // Log response\n  reply.raw.on('finish', () => {\n    const duration = Date.now() - startTime;\n    request.log.info({\n      requestId,\n      method: request.method,\n      url: request.url,\n      statusCode: reply.statusCode,\n      duration,\n      userId: (request as any).user?.id\n    }, 'Request completed');\n  });\n}",
+          "sensitiveDataFilter": "// Filter sensitive data from logs\nconst SENSITIVE_FIELDS = ['password', 'token', 'secret', 'apiKey', 'authorization'];\n\nexport function sanitizeForLogging(obj: any): any {\n  if (typeof obj !== 'object' || obj === null) {\n    return obj;\n  }\n  \n  const sanitized: any = Array.isArray(obj) ? [] : {};\n  \n  for (const [key, value] of Object.entries(obj)) {\n    if (SENSITIVE_FIELDS.some(field => key.toLowerCase().includes(field))) {\n      sanitized[key] = '[REDACTED]';\n    } else if (typeof value === 'object') {\n      sanitized[key] = sanitizeForLogging(value);\n    } else {\n      sanitized[key] = value;\n    }\n  }\n  \n  return sanitized;\n}"
+        }
+      },
+      "testCriteria": [
+        "All requests are logged with unique IDs",
+        "Sensitive data is redacted",
+        "Performance impact is minimal",
+        "Logs are structured for easy parsing"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "category": "Security",
+      "title": "Implement Input Sanitization Middleware",
+      "priority": "High",
+      "estimatedHours": 6,
+      "status": "Not Started",
+      "description": "Add middleware to sanitize inputs and prevent injection attacks",
+      "implementation": {
+        "files": [
+          "src/middleware/sanitize.ts",
+          "src/utils/sanitization.ts"
+        ],
+        "codePatterns": {
+          "sanitizer": "import { FastifyRequest, FastifyReply } from 'fastify';\nimport DOMPurify from 'isomorphic-dompurify';\n\nexport interface SanitizationOptions {\n  body?: boolean;\n  query?: boolean;\n  params?: boolean;\n  allowedTags?: string[];\n  allowedAttributes?: string[];\n}\n\nexport function sanitize(options: SanitizationOptions = {}) {\n  const {\n    body = true,\n    query = true,\n    params = true,\n    allowedTags = [],\n    allowedAttributes = []\n  } = options;\n\n  return async (request: FastifyRequest, reply: FastifyReply) => {\n    if (body && request.body) {\n      request.body = sanitizeObject(request.body, allowedTags, allowedAttributes);\n    }\n    \n    if (query && request.query) {\n      request.query = sanitizeObject(request.query, allowedTags, allowedAttributes);\n    }\n    \n    if (params && request.params) {\n      request.params = sanitizeObject(request.params, allowedTags, allowedAttributes);\n    }\n  };\n}\n\nfunction sanitizeObject(\n  obj: any,\n  allowedTags: string[],\n  allowedAttributes: string[]\n): any {\n  if (typeof obj === 'string') {\n    return DOMPurify.sanitize(obj, {\n      ALLOWED_TAGS: allowedTags,\n      ALLOWED_ATTR: allowedAttributes\n    });\n  }\n  \n  if (Array.isArray(obj)) {\n    return obj.map(item => sanitizeObject(item, allowedTags, allowedAttributes));\n  }\n  \n  if (typeof obj === 'object' && obj !== null) {\n    const sanitized: any = {};\n    for (const [key, value] of Object.entries(obj)) {\n      sanitized[key] = sanitizeObject(value, allowedTags, allowedAttributes);\n    }\n    return sanitized;\n  }\n  \n  return obj;\n}",
+          "sqlInjectionPrevention": "// Prisma already prevents SQL injection, but add extra layer\nexport function escapeSQL(input: string): string {\n  return input.replace(/[\\x00\\x08\\x09\\x1a\\n\\r\"'\\\\%]/g, char => {\n    switch (char) {\n      case '\\x00': return '\\\\0';\n      case '\\x08': return '\\\\b';\n      case '\\x09': return '\\\\t';\n      case '\\x1a': return '\\\\z';\n      case '\\n': return '\\\\n';\n      case '\\r': return '\\\\r';\n      case '\"':\n      case \"'\":\n      case '\\\\':\n      case '%':\n        return '\\\\' + char;\n      default:\n        return char;\n    }\n  });\n}"
+        }
+      },
+      "testCriteria": [
+        "XSS attacks are prevented",
+        "SQL injection attempts are blocked",
+        "Valid HTML tags are preserved when needed",
+        "Performance impact is acceptable"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "category": "Testing",
+      "title": "Implement Comprehensive Error Handling Tests",
+      "priority": "Medium",
+      "estimatedHours": 8,
+      "status": "Not Started",
+      "dependencies": ["TASK-001", "TASK-002"],
+      "description": "Create test suite for error handling scenarios",
+      "implementation": {
+        "files": [
+          "src/tests/error-handling.test.ts",
+          "src/tests/middleware/error-handler.test.ts",
+          "src/tests/middleware/validation.test.ts"
+        ],
+        "codePatterns": {
+          "errorTests": "import { describe, it, expect, beforeAll, afterAll } from 'vitest';\nimport Fastify from 'fastify';\nimport { NotFoundError, ValidationError } from '../errors/index.js';\nimport { globalErrorHandler } from '../middleware/error-handler.js';\n\ndescribe('Error Handling', () => {\n  let app: any;\n\n  beforeAll(async () => {\n    app = Fastify();\n    app.setErrorHandler(globalErrorHandler);\n    \n    // Test routes\n    app.get('/test/not-found', async () => {\n      throw new NotFoundError('User', '123');\n    });\n    \n    app.post('/test/validation', async (request) => {\n      throw new ValidationError([{\n        field: 'email',\n        message: 'Invalid email format'\n      }]);\n    });\n  });\n\n  it('should return 404 for NotFoundError', async () => {\n    const response = await app.inject({\n      method: 'GET',\n      url: '/test/not-found'\n    });\n    \n    expect(response.statusCode).toBe(404);\n    const json = response.json();\n    expect(json.code).toBe('NOT_FOUND');\n    expect(json.message).toContain('User');\n  });\n\n  it('should return 400 for ValidationError', async () => {\n    const response = await app.inject({\n      method: 'POST',\n      url: '/test/validation',\n      payload: { email: 'invalid' }\n    });\n    \n    expect(response.statusCode).toBe(400);\n    const json = response.json();\n    expect(json.code).toBe('VALIDATION_ERROR');\n  });\n\n  afterAll(async () => {\n    await app.close();\n  });\n});"
+        }
+      },
+      "testCriteria": [
+        "All error types have test coverage",
+        "Error responses match expected format",
+        "Edge cases are handled",
+        "Test coverage >= 80%"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "category": "Documentation",
+      "title": "Update API Documentation with Error Codes",
+      "priority": "Low",
+      "estimatedHours": 4,
+      "status": "Not Started",
+      "dependencies": ["TASK-001", "TASK-002"],
+      "description": "Document all error codes and response formats",
+      "implementation": {
+        "files": [
+          "docs/ERROR_CODES.md",
+          "docs/API_ERROR_REFERENCE.md"
+        ],
+        "content": "Create comprehensive documentation including:\n- All error codes and their meanings\n- Example error responses for each code\n- Troubleshooting guide for common errors\n- Best practices for error handling in client applications"
+      },
+      "testCriteria": [
+        "All error codes are documented",
+        "Examples are accurate and tested",
+        "Documentation is easily searchable"
+      ]
+    }
+  ],
+  "codeExamples": {
+    "errorHandlingExample": {
+      "description": "Example of using custom errors in a route",
+      "code": "import { FastifyInstance } from 'fastify';\nimport { validate } from '../middleware/validate.js';\nimport { NotFoundError, InsufficientCreditsError } from '../errors/index.js';\nimport { createDocumentSchema } from '../schemas/document.schemas.js';\n\nexport async function documentRoutes(fastify: FastifyInstance) {\n  fastify.post('/documents',\n    {\n      onRequest: [\n        fastify.authenticate,\n        validate({ body: createDocumentSchema })\n      ]\n    },\n    async (request, reply) => {\n      const { title, content, caseId } = request.body;\n      const userId = request.user.id;\n\n      // Check user credits\n      const user = await fastify.prisma.user.findUnique({\n        where: { id: userId }\n      });\n\n      if (!user) {\n        throw new NotFoundError('User', userId);\n      }\n\n      if (user.credits < 10) {\n        throw new InsufficientCreditsError(10, user.credits);\n      }\n\n      // Create document\n      const document = await fastify.prisma.document.create({\n        data: { title, content, userId, caseId }\n      });\n\n      return reply.code(201).send({ document });\n    }\n  );\n}"
+    },
+    "circuitBreakerExample": {
+      "description": "Example of using circuit breaker with OpenAI",
+      "code": "import { getResilientOpenAIService } from '../services/ai/resilient-openai.service.js';\n\nexport async function generateEmbeddings(texts: string[]) {\n  const aiService = getResilientOpenAIService();\n  \n  const embeddings = await Promise.all(\n    texts.map(async (text) => {\n      try {\n        return await aiService.generateEmbedding(text);\n      } catch (error) {\n        // Circuit breaker will handle retries and fallback\n        console.error('Failed to generate embedding:', error);\n        return null;\n      }\n    })\n  );\n  \n  return embeddings.filter(e => e !== null);\n}"
+    },
+    "validationExample": {
+      "description": "Complete validation example with custom schemas",
+      "code": "import { z } from 'zod';\nimport { validate } from '../middleware/validate.js';\nimport { paginationSchema } from '../schemas/common.schemas.js';\n\n// Define schema\nconst searchDocumentsSchema = z.object({\n  query: z.string().min(1).max(500),\n  filters: z.object({\n    jurisdiction: z.string().optional(),\n    documentType: z.enum(['LAW', 'REGULATION', 'DECREE']).optional(),\n    dateFrom: z.coerce.date().optional(),\n    dateTo: z.coerce.date().optional()\n  }).optional()\n}).merge(paginationSchema);\n\n// Use in route\nfastify.get('/search',\n  {\n    onRequest: [validate({ query: searchDocumentsSchema })]\n  },\n  async (request, reply) => {\n    // request.query is now type-safe and validated\n    const { query, filters, page, limit } = request.query;\n    // ... implement search\n  }\n);"
+    }
+  },
+  "implementationPlan": {
+    "phase1": {
+      "name": "Foundation - Error Handling & Validation",
+      "duration": "2-3 weeks",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "goals": [
+        "Establish error handling framework",
+        "Implement validation middleware",
+        "Update core routes with new patterns"
+      ],
+      "deliverables": [
+        "Custom error classes",
+        "Global error handler",
+        "Validation middleware",
+        "Updated 10+ routes"
+      ]
+    },
+    "phase2": {
+      "name": "Resilience & Security",
+      "duration": "2 weeks",
+      "tasks": ["TASK-004", "TASK-008"],
+      "goals": [
+        "Add circuit breakers for external services",
+        "Implement input sanitization",
+        "Improve system resilience"
+      ],
+      "deliverables": [
+        "Circuit breaker implementation",
+        "Sanitization middleware",
+        "Resilient service wrappers"
+      ]
+    },
+    "phase3": {
+      "name": "API Improvements & Route Recovery",
+      "duration": "1-2 weeks",
+      "tasks": ["TASK-005", "TASK-006", "TASK-007"],
+      "goals": [
+        "Improve API versioning",
+        "Re-enable disabled routes",
+        "Add request logging"
+      ],
+      "deliverables": [
+        "API version middleware",
+        "All routes enabled",
+        "Comprehensive logging"
+      ]
+    },
+    "phase4": {
+      "name": "Testing & Documentation",
+      "duration": "1 week",
+      "tasks": ["TASK-009", "TASK-010"],
+      "goals": [
+        "Achieve 80%+ test coverage for error handling",
+        "Complete API documentation",
+        "Create troubleshooting guides"
+      ],
+      "deliverables": [
+        "Test suite",
+        "Error code documentation",
+        "Updated API docs"
+      ]
+    }
+  },
+  "metrics": {
+    "currentState": {
+      "errorHandlingConsistency": "75%",
+      "requestValidation": "60%",
+      "circuitBreakerCoverage": "0%",
+      "apiVersioningCompleteness": "40%",
+      "testCoverage": "45%",
+      "documentationCoverage": "70%"
+    },
+    "targetState": {
+      "errorHandlingConsistency": "100%",
+      "requestValidation": "100%",
+      "circuitBreakerCoverage": "100%",
+      "apiVersioningCompleteness": "100%",
+      "testCoverage": "80%",
+      "documentationCoverage": "95%"
+    }
+  },
+  "riskAssessment": {
+    "technicalRisks": [
+      {
+        "risk": "Breaking changes in error response format",
+        "impact": "High",
+        "mitigation": "Implement gradually with API versioning, maintain backward compatibility in v1"
+      },
+      {
+        "risk": "Performance degradation from validation middleware",
+        "impact": "Medium",
+        "mitigation": "Benchmark before/after, optimize Zod schemas, use caching where appropriate"
+      },
+      {
+        "risk": "Circuit breaker false positives",
+        "impact": "Medium",
+        "mitigation": "Fine-tune thresholds based on monitoring, implement gradual rollout"
+      }
+    ],
+    "implementationRisks": [
+      {
+        "risk": "Incomplete migration to new error handling",
+        "impact": "Medium",
+        "mitigation": "Use TypeScript strict mode, comprehensive testing, gradual rollout"
+      },
+      {
+        "risk": "Missing edge cases in validation",
+        "impact": "Low",
+        "mitigation": "Comprehensive test suite, security audit, user feedback"
+      }
+    ]
+  },
+  "successCriteria": [
+    "All API routes return consistent error formats",
+    "100% of routes have request validation",
+    "Circuit breakers active for all external services (OpenAI, Redis, PostgreSQL)",
+    "API versioning supports v1 and v2 simultaneously",
+    "Test coverage >= 80% for error handling",
+    "All disabled routes are re-enabled and functional",
+    "Documentation complete and accurate",
+    "Performance degradation < 5%",
+    "Zero critical security vulnerabilities",
+    "Backend assessment score reaches 95%+"
+  ],
+  "postImplementationReview": {
+    "monitoring": [
+      "Error rate metrics by type and endpoint",
+      "Circuit breaker state transitions",
+      "Validation failure rates",
+      "API response times",
+      "Test coverage trends"
+    ],
+    "optimization": [
+      "Review circuit breaker thresholds after 1 week",
+      "Optimize validation schemas based on performance data",
+      "Refine error messages based on user feedback",
+      "Update documentation based on support tickets"
+    ]
+  }
+}

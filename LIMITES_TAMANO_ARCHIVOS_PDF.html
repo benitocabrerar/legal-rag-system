@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Límites de Tamaño de Archivos PDF - Documentación Técnica</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .metadata {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+
+        .metadata p {
+            margin: 5px 0;
+        }
+
+        nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #764ba2;
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #0c5460;
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #155724;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #856404;
+            color: #856404;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #721c24;
+            color: #721c24;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .badge-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .code-block code {
+            background: none;
+            color: #f8f8f2;
+        }
+
+        .limitation-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .config-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .step-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .file-path {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+            font-family: monospace;
+            margin: 10px 0;
+            display: inline-block;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 5px solid #4caf50;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 5px solid #ff9800;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        footer p {
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            header {
+                padding: 40px 20px;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            main, nav {
+                padding: 20px;
+            }
+
+            nav ul {
+                flex-direction: column;
+            }
+
+            table {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📄 LÍMITES DE TAMAÑO DE ARCHIVOS PDF</h1>
+            <h2>Documentación Técnica para Administradores</h2>
+            <div class="metadata">
+                <p><strong>Sistema:</strong> Legal RAG - Carga de Documentos Legales</p>
+                <p><strong>Fecha:</strong> 11 de Enero, 2025</p>
+                <p><strong>Versión:</strong> 1.0.0</p>
+                <p><strong>Audiencia:</strong> Administradores de Sistema</p>
+            </div>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#limites-actuales">Límites Actuales</a></li>
+                <li><a href="#ubicaciones">Ubicaciones en Código</a></li>
+                <li><a href="#como-modificar">Cómo Modificar</a></li>
+                <li><a href="#consideraciones">Consideraciones</a></li>
+                <li><a href="#mejores-practicas">Mejores Prácticas</a></li>
+                <li><a href="#troubleshooting">Solución de Problemas</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="limites-actuales">
+                <h2>📊 Límites Actuales de Tamaño</h2>
+
+                <div class="alert alert-info">
+                    <h3>Límite Principal Configurado</h3>
+                    <p><strong>Tamaño máximo de archivo PDF:</strong> <span class="badge badge-primary">50 MB</span></p>
+                    <p>Este límite se aplica cuando los usuarios suben documentos legales a través del panel de administración.</p>
+                </div>
+
+                <h3>Ubicaciones de los Límites</h3>
+                <p>El límite de 50MB está configurado en <strong>tres capas</strong> del sistema para máxima seguridad:</p>
+
+                <div class="limitation-card">
+                    <h4><span class="badge badge-info">Capa 1</span> Frontend (Validación Cliente)</h4>
+                    <div class="file-path">frontend/src/app/admin/legal-library/page.tsx</div>
+                    <pre><code>if (file.size > 50 * 1024 * 1024) {
+  alert('El archivo no debe superar 50MB');
+  return;
+}</code></pre>
+                    <p><strong>Propósito:</strong> Validación inmediata antes de enviar al servidor, mejora UX.</p>
+                </div>
+
+                <div class="limitation-card">
+                    <h4><span class="badge badge-info">Capa 2</span> Backend Multer (Middleware de Upload)</h4>
+                    <div class="file-path">src/routes/documents-enhanced.ts</div>
+                    <pre><code>const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/png'
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, DOC, DOCX, TXT, JPG, and PNG files are allowed.'));
+    }
+  }
+});</code></pre>
+                    <p><strong>Propósito:</strong> Protección del servidor contra uploads excesivos.</p>
+                </div>
+
+                <div class="limitation-card">
+                    <h4><span class="badge badge-info">Capa 3</span> Fastify Multipart (Configuración Global)</h4>
+                    <div class="file-path">src/server.ts</div>
+                    <pre><code>await app.register(multipart);</code></pre>
+                    <p><strong>Límite por defecto de @fastify/multipart:</strong> <span class="badge badge-warning">Sin límite explícito</span></p>
+                    <p>⚠️ Fastify no tiene límite de body configurado explícitamente en el servidor principal.</p>
+                </div>
+
+                <h3>Tipos de Archivo Permitidos</h3>
+                <table>
+                    <tr>
+                        <th>Tipo de Archivo</th>
+                        <th>MIME Type</th>
+                        <th>Extensión</th>
+                        <th>Estado</th>
+                    </tr>
+                    <tr>
+                        <td>PDF</td>
+                        <td><code>application/pdf</code></td>
+                        <td>.pdf</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                    <tr>
+                        <td>Word Document (Old)</td>
+                        <td><code>application/msword</code></td>
+                        <td>.doc</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                    <tr>
+                        <td>Word Document (New)</td>
+                        <td><code>application/vnd.openxmlformats-officedocument.wordprocessingml.document</code></td>
+                        <td>.docx</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                    <tr>
+                        <td>Texto Plano</td>
+                        <td><code>text/plain</code></td>
+                        <td>.txt</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                    <tr>
+                        <td>Imagen JPEG</td>
+                        <td><code>image/jpeg</code></td>
+                        <td>.jpg, .jpeg</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                    <tr>
+                        <td>Imagen PNG</td>
+                        <td><code>image/png</code></td>
+                        <td>.png</td>
+                        <td><span class="badge badge-success">Permitido</span></td>
+                    </tr>
+                </table>
+            </section>
+
+            <section id="ubicaciones">
+                <h2>🗺️ Mapa de Ubicaciones en el Código</h2>
+
+                <h3>Archivos que Controlan los Límites</h3>
+
+                <div class="config-box">
+                    <h4>1. Frontend - Validación del Cliente</h4>
+                    <div class="file-path">C:\Users\benito\poweria\legal\frontend\src\app\admin\legal-library\page.tsx</div>
+                    <p><strong>Línea:</strong> 127-130</p>
+                    <p><strong>Función:</strong> <code>handleFileChange()</code></p>
+                    <p><strong>Límite:</strong> 50 MB (50 * 1024 * 1024 bytes)</p>
+
+                    <h5>Código relevante:</h5>
+                    <pre><code>const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    if (file.type !== 'application/pdf') {
+      alert('Por favor selecciona un archivo PDF');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      alert('El archivo no debe superar 50MB');
+      return;
+    }
+    setUploadForm({ ...uploadForm, file });
+  }
+};</code></pre>
+                </div>
+
+                <div class="config-box">
+                    <h4>2. Backend - Middleware Multer</h4>
+                    <div class="file-path">C:\Users\benito\poweria\legal\src\routes\documents-enhanced.ts</div>
+                    <p><strong>Línea:</strong> 29-52</p>
+                    <p><strong>Middleware:</strong> <code>multer</code></p>
+                    <p><strong>Límite:</strong> 50 MB (50 * 1024 * 1024 bytes)</p>
+
+                    <h5>Configuración completa:</h5>
+                    <pre><code>// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/png'
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, DOC, DOCX, TXT, JPG, and PNG files are allowed.'));
+    }
+  }
+});</code></pre>
+
+                    <div class="alert alert-warning">
+                        <strong>⚠️ NOTA IMPORTANTE:</strong> Esta ruta está <strong>temporalmente deshabilitada</strong> en server.ts (línea 108-109) debido a dependencias faltantes de <code>fastify-multer</code>.
+                    </div>
+                </div>
+
+                <div class="config-box">
+                    <h4>3. Backend - Ruta Activa (Legal Documents V2)</h4>
+                    <div class="file-path">C:\Users\benito\poweria\legal\src\routes\legal-documents-v2.ts</div>
+                    <p><strong>Línea:</strong> 25-173</p>
+                    <p><strong>Método:</strong> <code>POST /legal-documents-v2</code></p>
+                    <p><strong>Plugin:</strong> <code>@fastify/multipart</code></p>
+                    <p><strong>Límite:</strong> <span class="badge badge-warning">No explícito - usa default de Fastify</span></p>
+
+                    <h5>Flujo de procesamiento:</h5>
+                    <pre><code>// Handle multipart file upload
+if (request.isMultipart()) {
+  const parts = request.parts();
+  const formData: any = {};
+  let fileBuffer: Buffer | null = null;
+  let filename: string | null = null;
+
+  // Process all parts
+  for await (const part of parts) {
+    if (part.type === 'file') {
+      // Get file buffer
+      fileBuffer = await part.toBuffer();
+      filename = part.filename;
+    } else {
+      // Regular form field
+      formData[part.fieldname] = (part as any).value;
+    }
+  }
+
+  if (!fileBuffer) {
+    return reply.code(400).send({
+      error: 'Bad Request',
+      message: 'No file provided',
+    });
+  }
+
+  // Extract text from PDF
+  const pdfExtract = new PDFExtract();
+  const pdfData = await pdfExtract.extractBuffer(fileBuffer);
+
+  // ... procesamiento continúa
+}</code></pre>
+                </div>
+
+                <div class="config-box">
+                    <h4>4. Servidor Fastify - Configuración Global</h4>
+                    <div class="file-path">C:\Users\benito\poweria\legal\src\server.ts</div>
+                    <p><strong>Línea:</strong> 41, 53</p>
+                    <p><strong>Plugin:</strong> <code>@fastify/multipart</code></p>
+
+                    <h5>Configuración actual:</h5>
+                    <pre><code>const app = Fastify({ logger: true });
+
+// ... otros plugins ...
+
+await app.register(multipart);  // Sin opciones explícitas</code></pre>
+
+                    <div class="alert alert-info">
+                        <strong>ℹ️ Límites por defecto de @fastify/multipart:</strong>
+                        <ul>
+                            <li><code>fileSize</code>: Infinity (sin límite)</li>
+                            <li><code>files</code>: Infinity (sin límite)</li>
+                            <li><code>parts</code>: 1000</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="como-modificar">
+                <h2>⚙️ Cómo Modificar los Límites</h2>
+
+                <div class="alert alert-warning">
+                    <h3>⚠️ ADVERTENCIA IMPORTANTE</h3>
+                    <p>Modificar los límites de tamaño de archivos afecta:</p>
+                    <ul>
+                        <li><strong>Rendimiento del servidor:</strong> Archivos más grandes consumen más memoria RAM</li>
+                        <li><strong>Tiempo de procesamiento:</strong> Vectorización de archivos grandes es intensiva en CPU</li>
+                        <li><strong>Costos de API:</strong> OpenAI cobra por tokens (más texto = más costo)</li>
+                        <li><strong>Experiencia del usuario:</strong> Uploads largos pueden causar timeouts</li>
+                        <li><strong>Almacenamiento:</strong> AWS S3 cobra por GB almacenado</li>
+                    </ul>
+                </div>
+
+                <h3>Método 1: Modificar Frontend (Validación Cliente)</h3>
+
+                <div class="step-card">
+                    <span class="step-number">1</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Abrir archivo de componente React</h4>
+                        <div class="file-path">frontend/src/app/admin/legal-library/page.tsx</div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">2</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Localizar la validación de tamaño (línea ~127)</h4>
+                        <pre><code>if (file.size > 50 * 1024 * 1024) {
+  alert('El archivo no debe superar 50MB');
+  return;
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">3</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Cambiar el límite</h4>
+                        <p>Para aumentar a <strong>100MB</strong>:</p>
+                        <pre><code>if (file.size > 100 * 1024 * 1024) {  // Cambiar 50 a 100
+  alert('El archivo no debe superar 100MB');  // Actualizar mensaje
+  return;
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">4</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Compilar el frontend</h4>
+                        <pre><code>cd frontend
+npm run build</code></pre>
+                    </div>
+                </div>
+
+                <h3>Método 2: Modificar Backend (Multer Middleware)</h3>
+
+                <div class="alert alert-danger">
+                    <strong>⚠️ IMPORTANTE:</strong> Esta ruta (<code>documents-enhanced.ts</code>) está temporalmente deshabilitada. Si deseas usarla, primero debes:
+                    <ol>
+                        <li>Instalar dependencia faltante: <code>npm install fastify-multer</code></li>
+                        <li>Descomentar línea 109 en <code>src/server.ts</code></li>
+                    </ol>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">1</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Abrir archivo de rutas</h4>
+                        <div class="file-path">src/routes/documents-enhanced.ts</div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">2</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Localizar configuración de multer (línea ~31)</h4>
+                        <pre><code>const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  // ...
+});</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">3</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Cambiar el límite</h4>
+                        <p>Para aumentar a <strong>100MB</strong>:</p>
+                        <pre><code>const upload = multer({
+  storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max
+  },
+  // ...
+});</code></pre>
+                    </div>
+                </div>
+
+                <h3>Método 3: Configurar Límite Global de Fastify</h3>
+
+                <div class="step-card">
+                    <span class="step-number">1</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Abrir archivo del servidor</h4>
+                        <div class="file-path">src/server.ts</div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">2</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Localizar registro de multipart (línea ~53)</h4>
+                        <pre><code>await app.register(multipart);</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">3</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Agregar configuración de límites</h4>
+                        <pre><code>await app.register(multipart, {
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max por archivo
+    files: 10,                     // Máximo 10 archivos por request
+    parts: 1000                    // Máximo 1000 parts en multipart
+  }
+});</code></pre>
+                    </div>
+                </div>
+
+                <h3>Método 4: Usar Variables de Entorno (Recomendado)</h3>
+
+                <div class="recommendation">
+                    <h4>✅ MEJOR PRÁCTICA: Configuración por Variables de Entorno</h4>
+                    <p>Permite cambiar límites sin recompilar código. Ideal para diferentes entornos (desarrollo, producción).</p>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">1</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Agregar variable al archivo .env</h4>
+                        <div class="file-path">.env</div>
+                        <pre><code># Límite de tamaño de archivos (en MB)
+MAX_FILE_SIZE_MB=50
+
+# Límite de archivos por request
+MAX_FILES_PER_REQUEST=10</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">2</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Modificar server.ts para leer la variable</h4>
+                        <pre><code>// Leer límite de tamaño desde variable de entorno
+const maxFileSizeMB = parseInt(process.env.MAX_FILE_SIZE_MB || '50');
+const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
+
+await app.register(multipart, {
+  limits: {
+    fileSize: maxFileSizeBytes,
+    files: parseInt(process.env.MAX_FILES_PER_REQUEST || '10'),
+    parts: 1000
+  }
+});</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">3</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Modificar frontend para leer la variable</h4>
+                        <p>Crear variable de entorno en frontend:</p>
+                        <div class="file-path">frontend/.env.local</div>
+                        <pre><code>NEXT_PUBLIC_MAX_FILE_SIZE_MB=50</code></pre>
+
+                        <p>Usar en el componente:</p>
+                        <pre><code>const MAX_FILE_SIZE_MB = parseInt(
+  process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB || '50'
+);
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+// En la validación:
+if (file.size > MAX_FILE_SIZE_BYTES) {
+  alert(`El archivo no debe superar ${MAX_FILE_SIZE_MB}MB`);
+  return;
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <span class="step-number">4</span>
+                    <div style="display: inline-block; vertical-align: top; width: calc(100% - 60px);">
+                        <h4>Actualizar en Render (producción)</h4>
+                        <ol>
+                            <li>Ir a Render Dashboard → Tu servicio</li>
+                            <li>Ir a "Environment" → "Environment Variables"</li>
+                            <li>Agregar: <code>MAX_FILE_SIZE_MB = 100</code></li>
+                            <li>Guardar y redesplegar</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <h3>Método 5: Panel de Administración (Futuro)</h3>
+
+                <div class="alert alert-info">
+                    <h4>🚀 Funcionalidad Futura Sugerida</h4>
+                    <p>Para facilitar la gestión, se recomienda implementar un panel de configuración en la interfaz de administración:</p>
+
+                    <h5>Características sugeridas:</h5>
+                    <ul>
+                        <li><strong>Configuración visual:</strong> Slider para ajustar límite de MB</li>
+                        <li><strong>Validación en tiempo real:</strong> Advertencias si el límite es muy alto</li>
+                        <li><strong>Historial de cambios:</strong> Auditoría de quién cambió qué</li>
+                        <li><strong>Límites por rol:</strong> Admins pueden subir más que usuarios normales</li>
+                        <li><strong>Estadísticas de uso:</strong> Tamaño promedio de archivos subidos</li>
+                    </ul>
+
+                    <h5>Ubicación sugerida:</h5>
+                    <div class="file-path">frontend/src/app/admin/settings/page.tsx</div>
+                </div>
+            </section>
+
+            <section id="consideraciones">
+                <h2>⚖️ Consideraciones Técnicas</h2>
+
+                <h3>1. Impacto en Rendimiento</h3>
+
+                <table>
+                    <tr>
+                        <th>Tamaño de Archivo</th>
+                        <th>Memoria RAM Requerida</th>
+                        <th>Tiempo de Procesamiento</th>
+                        <th>Costo OpenAI (Aprox.)</th>
+                    </tr>
+                    <tr>
+                        <td>10 MB (PDF)</td>
+                        <td>~30-50 MB RAM</td>
+                        <td>5-10 segundos</td>
+                        <td>$0.05 - $0.15</td>
+                    </tr>
+                    <tr>
+                        <td>50 MB (PDF)</td>
+                        <td>~150-250 MB RAM</td>
+                        <td>30-60 segundos</td>
+                        <td>$0.25 - $0.75</td>
+                    </tr>
+                    <tr>
+                        <td>100 MB (PDF)</td>
+                        <td>~300-500 MB RAM</td>
+                        <td>60-120 segundos</td>
+                        <td>$0.50 - $1.50</td>
+                    </tr>
+                    <tr>
+                        <td>200 MB (PDF)</td>
+                        <td>~600 MB - 1 GB RAM</td>
+                        <td>120-240 segundos</td>
+                        <td>$1.00 - $3.00</td>
+                    </tr>
+                </table>
+
+                <div class="warning-box">
+                    <h4>⚠️ Límites de Render (Free Tier)</h4>
+                    <ul>
+                        <li><strong>RAM:</strong> 256 MB</li>
+                        <li><strong>Timeout:</strong> 60 segundos por request</li>
+                        <li><strong>Conexiones concurrentes:</strong> Limitadas</li>
+                    </ul>
+                    <p>Con el plan gratuito de Render, archivos de más de 50MB pueden causar:</p>
+                    <ul>
+                        <li>❌ Out of Memory (OOM) errors</li>
+                        <li>❌ Request timeouts</li>
+                        <li>❌ Servidor colgado/reiniciado</li>
+                    </ul>
+                </div>
+
+                <h3>2. Impacto en Costos</h3>
+
+                <div class="config-box">
+                    <h4>OpenAI API (text-embedding-ada-002)</h4>
+                    <ul>
+                        <li><strong>Costo:</strong> $0.0001 por 1,000 tokens</li>
+                        <li><strong>Tokens por página:</strong> ~500-800 tokens promedio</li>
+                        <li><strong>PDF de 50MB:</strong> ~500-1000 páginas = 250,000 - 800,000 tokens</li>
+                        <li><strong>Costo estimado 50MB:</strong> $0.025 - $0.08 por documento</li>
+                    </ul>
+                </div>
+
+                <div class="config-box">
+                    <h4>AWS S3 (Almacenamiento)</h4>
+                    <ul>
+                        <li><strong>Costo:</strong> $0.023 por GB/mes (US-East)</li>
+                        <li><strong>100 documentos de 50MB:</strong> 5 GB = $0.115/mes</li>
+                        <li><strong>1000 documentos de 50MB:</strong> 50 GB = $1.15/mes</li>
+                    </ul>
+                </div>
+
+                <div class="config-box">
+                    <h4>Render PostgreSQL</h4>
+                    <ul>
+                        <li><strong>Free Tier:</strong> 256 MB RAM, 1 GB storage</li>
+                        <li><strong>Embeddings por documento 50MB:</strong> ~500-1000 vectores × 6KB = 3-6 MB</li>
+                        <li><strong>Límite aprox:</strong> 150-300 documentos de 50MB antes de necesitar upgrade</li>
+                    </ul>
+                </div>
+
+                <h3>3. Límites de Terceros</h3>
+
+                <table>
+                    <tr>
+                        <th>Servicio</th>
+                        <th>Límite</th>
+                        <th>Configurable</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Render (Free Tier)</strong></td>
+                        <td>256 MB RAM, 60s timeout</td>
+                        <td><span class="badge badge-danger">No</span> (upgrade requerido)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OpenAI API</strong></td>
+                        <td>8,191 tokens por request (ada-002)</td>
+                        <td><span class="badge badge-danger">No</span> (límite del modelo)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AWS S3</strong></td>
+                        <td>5 TB por objeto (PUT), sin límite total</td>
+                        <td><span class="badge badge-success">Sí</span> (prácticamente ilimitado)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cloudinary (si se usa)</strong></td>
+                        <td>10 MB en Free tier</td>
+                        <td><span class="badge badge-warning">Limitado</span> (upgrade requerido)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PostgreSQL</strong></td>
+                        <td>1 GB en Render Free</td>
+                        <td><span class="badge badge-warning">Limitado</span> (upgrade requerido)</td>
+                    </tr>
+                </table>
+
+                <h3>4. Timeouts HTTP</h3>
+
+                <div class="alert alert-danger">
+                    <h4>⏱️ Riesgo de Timeouts</h4>
+                    <p>Subir archivos grandes puede causar timeouts en varios niveles:</p>
+
+                    <table>
+                        <tr>
+                            <th>Capa</th>
+                            <th>Timeout Default</th>
+                            <th>Impacto en 100MB</th>
+                        </tr>
+                        <tr>
+                            <td>Browser (Frontend)</td>
+                            <td>~2-5 minutos</td>
+                            <td><span class="badge badge-success">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>Fastify (Backend)</td>
+                            <td>60 segundos</td>
+                            <td><span class="badge badge-danger">Riesgo Alto</span></td>
+                        </tr>
+                        <tr>
+                            <td>Render Platform</td>
+                            <td>60 segundos</td>
+                            <td><span class="badge badge-danger">Riesgo Alto</span></td>
+                        </tr>
+                        <tr>
+                            <td>Nginx/Load Balancer</td>
+                            <td>60 segundos</td>
+                            <td><span class="badge badge-danger">Riesgo Alto</span></td>
+                        </tr>
+                    </table>
+
+                    <h5>Solución: Aumentar timeouts</h5>
+                    <pre><code>// En server.ts - Configuración de Fastify
+const app = Fastify({
+  logger: true,
+  bodyLimit: 100 * 1024 * 1024, // 100MB
+  requestTimeout: 300000,        // 5 minutos
+  connectionTimeout: 300000,     // 5 minutos
+});</code></pre>
+                </div>
+            </section>
+
+            <section id="mejores-practicas">
+                <h2>✅ Mejores Prácticas</h2>
+
+                <div class="recommendation">
+                    <h3>1. Validación en Múltiples Capas</h3>
+                    <p>Implementar validaciones redundantes para máxima seguridad:</p>
+                    <ul>
+                        <li><span class="badge badge-success">✅</span> <strong>Cliente (JavaScript):</strong> Feedback inmediato, mejor UX</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Servidor (Middleware):</strong> Protección contra bypasseo de frontend</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Base de datos (Constraints):</strong> Última línea de defensa</li>
+                    </ul>
+                </div>
+
+                <div class="recommendation">
+                    <h3>2. Monitoreo de Recursos</h3>
+                    <p>Implementar métricas para detectar problemas:</p>
+                    <pre><code>// Logging de tamaño de archivos
+fastify.log.info({
+  event: 'file_uploaded',
+  fileSize: file.size,
+  fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+  filename: file.filename,
+  userId: user.id
+});
+
+// Alertas si se acerca al límite de RAM
+if (process.memoryUsage().heapUsed > 200 * 1024 * 1024) {
+  fastify.log.warn('High memory usage detected');
+}</code></pre>
+                </div>
+
+                <div class="recommendation">
+                    <h3>3. Procesamiento Asíncrono</h3>
+                    <p>Para archivos grandes, usar jobs en background:</p>
+                    <pre><code>// En lugar de procesar inmediatamente:
+// ❌ await processDocument(fileBuffer); // Bloquea request
+
+// Mejor: Encolar para procesamiento asíncrono
+// ✅
+await documentQueue.add('process-large-document', {
+  documentId: document.id,
+  fileUrl: s3Url
+});
+
+return reply.send({
+  message: 'Documento subido. Procesamiento en curso...',
+  documentId: document.id,
+  status: 'processing'
+});</code></pre>
+                </div>
+
+                <div class="recommendation">
+                    <h3>4. Límites Progresivos por Plan</h3>
+                    <p>Diferentes límites según el tipo de usuario:</p>
+                    <pre><code>const fileSizeLimits = {
+  free: 10 * 1024 * 1024,        // 10MB
+  basic: 25 * 1024 * 1024,       // 25MB
+  professional: 50 * 1024 * 1024, // 50MB
+  enterprise: 200 * 1024 * 1024   // 200MB
+};
+
+const userPlan = await getUserPlan(user.id);
+const maxSize = fileSizeLimits[userPlan] || fileSizeLimits.free;
+
+if (file.size > maxSize) {
+  return reply.code(413).send({
+    error: 'Payload Too Large',
+    message: `Su plan ${userPlan} permite archivos de hasta ${maxSize / (1024 * 1024)}MB`,
+    upgradeUrl: '/subscription/upgrade'
+  });
+}</code></pre>
+                </div>
+
+                <div class="recommendation">
+                    <h3>5. Compresión y Optimización</h3>
+                    <p>Optimizar PDFs antes de procesar:</p>
+                    <ul>
+                        <li><strong>Remover imágenes innecesarias:</strong> Extraer solo texto</li>
+                        <li><strong>Comprimir imágenes embebidas:</strong> Reducir calidad a 72 DPI</li>
+                        <li><strong>Eliminar metadata:</strong> Remover propiedades no esenciales</li>
+                        <li><strong>OCR solo cuando necesario:</strong> Detectar si es PDF de imagen</li>
+                    </ul>
+                </div>
+
+                <div class="recommendation">
+                    <h3>6. Caché de Embeddings</h3>
+                    <p>Evitar reprocesar documentos idénticos:</p>
+                    <pre><code>// Generar hash del contenido
+const contentHash = crypto
+  .createHash('sha256')
+  .update(fileBuffer)
+  .digest('hex');
+
+// Buscar si ya existe
+const existingDocument = await prisma.legalDocument.findFirst({
+  where: { contentHash }
+});
+
+if (existingDocument) {
+  return reply.send({
+    message: 'Este documento ya existe en el sistema',
+    documentId: existingDocument.id,
+    duplicate: true
+  });
+}</code></pre>
+                </div>
+
+                <div class="recommendation">
+                    <h3>7. Chunking Inteligente</h3>
+                    <p>Dividir documentos grandes en fragmentos óptimos:</p>
+                    <pre><code>const CHUNK_SIZE = 1000; // caracteres
+const CHUNK_OVERLAP = 200; // solapamiento entre chunks
+
+function smartChunk(text: string): string[] {
+  const chunks = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = start + CHUNK_SIZE;
+
+    // Buscar el último punto antes del límite
+    if (end < text.length) {
+      const lastPeriod = text.lastIndexOf('.', end);
+      if (lastPeriod > start) {
+        end = lastPeriod + 1;
+      }
+    }
+
+    chunks.push(text.slice(start, end));
+    start = end - CHUNK_OVERLAP; // Overlap para contexto
+  }
+
+  return chunks;
+}</code></pre>
+                </div>
+            </section>
+
+            <section id="troubleshooting">
+                <h2>🔧 Solución de Problemas Comunes</h2>
+
+                <h3>Problema 1: Error "Payload Too Large"</h3>
+                <div class="alert alert-danger">
+                    <h4>Síntoma</h4>
+                    <p><code>413 Payload Too Large</code> o <code>Request entity too large</code></p>
+
+                    <h4>Causa</h4>
+                    <p>El archivo excede el límite configurado en el servidor.</p>
+
+                    <h4>Solución</h4>
+                    <ol>
+                        <li>Verificar límite en <code>src/routes/documents-enhanced.ts</code></li>
+                        <li>Verificar límite en <code>src/server.ts</code> (multipart config)</li>
+                        <li>Aumentar límites según método 3 o 4 en sección "Cómo Modificar"</li>
+                        <li>Reiniciar servidor después de cambios</li>
+                    </ol>
+                </div>
+
+                <h3>Problema 2: Timeout durante Upload</h3>
+                <div class="alert alert-warning">
+                    <h4>Síntoma</h4>
+                    <p>Request se cancela después de ~60 segundos, especialmente con archivos grandes.</p>
+
+                    <h4>Causa</h4>
+                    <p>El procesamiento del PDF toma más tiempo que el timeout configurado.</p>
+
+                    <h4>Solución</h4>
+                    <pre><code>// En server.ts
+const app = Fastify({
+  logger: true,
+  requestTimeout: 300000,    // 5 minutos
+  connectionTimeout: 300000  // 5 minutos
+});
+
+// O implementar procesamiento asíncrono (recomendado)</code></pre>
+                </div>
+
+                <h3>Problema 3: Out of Memory (OOM)</h3>
+                <div class="alert alert-danger">
+                    <h4>Síntoma</h4>
+                    <p>Servidor se reinicia o crashea al procesar archivos grandes. Error: <code>JavaScript heap out of memory</code></p>
+
+                    <h4>Causa</h4>
+                    <p>El archivo completo se carga en memoria RAM, excediendo los límites de Render Free (256MB).</p>
+
+                    <h4>Solución</h4>
+                    <ol>
+                        <li><strong>Corto plazo:</strong> Reducir límite de archivo a 25-30MB</li>
+                        <li><strong>Medio plazo:</strong> Usar procesamiento por streams en lugar de buffers</li>
+                        <li><strong>Largo plazo:</strong> Upgrade a plan de Render con más RAM (Starter: 512MB, $7/mes)</li>
+                    </ol>
+
+                    <pre><code>// Procesamiento por streams (reduce uso de memoria)
+import { pipeline } from 'stream/promises';
+
+const readStream = fs.createReadStream(filePath);
+const pdfParser = new PDFParser();
+
+await pipeline(
+  readStream,
+  pdfParser,
+  processChunks // Procesar de a poco
+);</code></pre>
+                </div>
+
+                <h3>Problema 4: Frontend no Valida Correctamente</h3>
+                <div class="alert alert-warning">
+                    <h4>Síntoma</h4>
+                    <p>El frontend permite subir archivos que exceden el límite del backend.</p>
+
+                    <h4>Causa</h4>
+                    <p>Límite en frontend no coincide con límite en backend.</p>
+
+                    <h4>Solución</h4>
+                    <p>Sincronizar límites usando variable de entorno compartida:</p>
+                    <pre><code>// .env (backend)
+MAX_FILE_SIZE_MB=50
+
+// frontend/.env.local
+NEXT_PUBLIC_MAX_FILE_SIZE_MB=50
+
+// Validación consistente en ambos lados</code></pre>
+                </div>
+
+                <h3>Problema 5: Costos Elevados de OpenAI</h3>
+                <div class="alert alert-info">
+                    <h4>Síntoma</h4>
+                    <p>Factura de OpenAI más alta de lo esperado.</p>
+
+                    <h4>Causa</h4>
+                    <p>Procesar documentos grandes genera muchos embeddings (muchos tokens).</p>
+
+                    <h4>Solución</h4>
+                    <ol>
+                        <li><strong>Implementar caché:</strong> No reprocesar documentos duplicados</li>
+                        <li><strong>Optimizar chunks:</strong> Reducir solapamiento entre fragmentos</li>
+                        <li><strong>Filtrar texto:</strong> Remover encabezados/pies de página repetitivos</li>
+                        <li><strong>Límite inteligente:</strong> Cobrar a usuarios enterprise por documentos >50MB</li>
+                    </ol>
+
+                    <pre><code>// Estimación de costo antes de procesar
+const estimatedTokens = Math.ceil(textLength / 4);
+const estimatedCost = (estimatedTokens / 1000) * 0.0001;
+
+if (estimatedCost > 1.0 && userPlan !== 'enterprise') {
+  return reply.code(402).send({
+    error: 'Payment Required',
+    message: `Este documento generaría un costo estimado de $${estimatedCost.toFixed(2)}.
+               Solo usuarios Enterprise pueden procesar documentos de este tamaño.`,
+    upgradeUrl: '/subscription/upgrade'
+  });
+}</code></pre>
+                </div>
+
+                <h3>Problema 6: Almacenamiento S3 Lleno</h3>
+                <div class="alert alert-info">
+                    <h4>Síntoma</h4>
+                    <p>Errores al subir nuevos documentos o costos elevados de S3.</p>
+
+                    <h4>Causa</h4>
+                    <p>Acumulación de archivos sin política de limpieza.</p>
+
+                    <h4>Solución</h4>
+                    <ol>
+                        <li><strong>Lifecycle policies:</strong> Eliminar archivos >90 días automáticamente</li>
+                        <li><strong>Versioning:</strong> Mantener solo última versión</li>
+                        <li><strong>Intelligent-Tiering:</strong> Mover archivos viejos a storage más barato</li>
+                    </ol>
+                </div>
+            </section>
+
+            <section id="recomendaciones-finales">
+                <h2>🎯 Recomendaciones Finales</h2>
+
+                <div class="recommendation">
+                    <h3>Para Entornos de Producción</h3>
+                    <ul>
+                        <li><span class="badge badge-success">✅</span> <strong>Límite recomendado:</strong> 50MB (balanceo entre usabilidad y recursos)</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Usar variables de entorno:</strong> Facilita cambios sin recompilar</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Implementar monitoreo:</strong> Alertas cuando archivos grandes se procesan</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Procesamiento asíncrono:</strong> Usar BullMQ para archivos >25MB</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Upgrade Render:</strong> Mínimo Starter plan ($7/mes) para 512MB RAM</li>
+                    </ul>
+                </div>
+
+                <div class="recommendation">
+                    <h3>Para Entornos de Desarrollo/Testing</h3>
+                    <ul>
+                        <li><span class="badge badge-info">💡</span> <strong>Límite relajado:</strong> 100MB para probar casos extremos</li>
+                        <li><span class="badge badge-info">💡</span> <strong>Logs verbosos:</strong> Registrar todo el proceso de upload</li>
+                        <li><span class="badge badge-info">💡</span> <strong>Archivos de prueba:</strong> Generar PDFs de diferentes tamaños para testing</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h3>⚠️ Límites NO Recomendados</h3>
+                    <table>
+                        <tr>
+                            <th>Límite</th>
+                            <th>Riesgo</th>
+                            <th>Razón</th>
+                        </tr>
+                        <tr>
+                            <td>&gt; 100MB</td>
+                            <td><span class="badge badge-danger">Alto</span></td>
+                            <td>Requiere >512MB RAM, timeouts frecuentes</td>
+                        </tr>
+                        <tr>
+                            <td>&gt; 200MB</td>
+                            <td><span class="badge badge-danger">Muy Alto</span></td>
+                            <td>Prácticamente imposible en Render sin upgrade mayor</td>
+                        </tr>
+                        <tr>
+                            <td>&lt; 10MB</td>
+                            <td><span class="badge badge-warning">Medio</span></td>
+                            <td>Muy restrictivo, usuarios se frustrarán</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="config-box">
+                    <h3>📋 Checklist de Implementación</h3>
+                    <p>Antes de cambiar límites de producción, verificar:</p>
+
+                    <ul style="list-style: none;">
+                        <li>☐ Límites sincronizados en frontend y backend</li>
+                        <li>☐ Variables de entorno configuradas en Render</li>
+                        <li>☐ Timeouts aumentados si límite >50MB</li>
+                        <li>☐ Plan de Render con suficiente RAM</li>
+                        <li>☐ Monitoreo de uso de memoria implementado</li>
+                        <li>☐ Procesamiento asíncrono configurado</li>
+                        <li>☐ Alertas de costos de OpenAI configuradas</li>
+                        <li>☐ Políticas de lifecycle en S3 configuradas</li>
+                        <li>☐ Pruebas con archivos del nuevo límite realizadas</li>
+                        <li>☐ Documentación actualizada para usuarios</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><strong>Documentación Técnica - Límites de Tamaño de Archivos PDF</strong></p>
+            <p>Sistema Legal RAG - Panel de Administración</p>
+            <p>Generado: 11 de Enero, 2025</p>
+            <p>Versión: 1.0.0</p>
+        </footer>
+    </div>
+</body>
+</html>

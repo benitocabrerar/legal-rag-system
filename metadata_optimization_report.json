@@ -1,0 +1,114 @@
+{
+  "summary": {
+    "total_fields": 7,
+    "essential_fields": 5,
+    "redundant_fields": 1,
+    "storage_reduction": "2.6%",
+    "recommended_new_fields": 6
+  },
+  "top_features": [
+    {
+      "field": "tipo_norma",
+      "predictive_power": 95,
+      "user_frequency": 85,
+      "redundancy": 0.08,
+      "importance_score": 91.9,
+      "essential": true,
+      "can_derive": false
+    },
+    {
+      "field": "fecha_publicacion",
+      "predictive_power": 85,
+      "user_frequency": 70,
+      "redundancy": 0.15,
+      "importance_score": 82.0,
+      "essential": true,
+      "can_derive": false
+    },
+    {
+      "field": "estado_documento",
+      "predictive_power": 80,
+      "user_frequency": 40,
+      "redundancy": 0.25,
+      "importance_score": 69.0,
+      "essential": true,
+      "can_derive": false
+    }
+  ],
+  "redundancies": [
+    {
+      "field_pair": "jerarquia <-> tipo_norma",
+      "correlation": 0.92,
+      "recommendation": "Remove jerarquia, derive from tipo_norma"
+    },
+    {
+      "field_pair": "fecha_publicacion <-> numero_registro_oficial",
+      "correlation": 0.85,
+      "recommendation": "Keep both fields, moderate correlation"
+    }
+  ],
+  "query_patterns": {
+    "filter_usage": {
+      "jerarquia": 0.0,
+      "tipo_norma": 92.5,
+      "numero_registro_oficial": 7.5,
+      "fecha_publicacion": 52.6,
+      "fecha_reforma": 0.0,
+      "estado_documento": 12.4,
+      "jurisdiccion": 19.2
+    },
+    "pattern_distribution": {
+      "tipo_norma_only": 26.900000000000002,
+      "tipo_norma_date": 40.2,
+      "jurisdiccion_tipo": 13.0,
+      "registro_lookup": 7.5,
+      "complex_multi": 12.4
+    }
+  },
+  "temporal_insights": {
+    "recency_bias": {
+      "description": "Percentage of searches for recent documents",
+      "value": 70,
+      "time_window": "< 5 years"
+    },
+    "publication_seasonality": {
+      "Q1": 125,
+      "Q2": 85,
+      "Q3": 120,
+      "Q4": 70
+    },
+    "reform_cycles": {
+      "average_years": 3.5,
+      "std_dev": 1.8,
+      "min": 0.5,
+      "max": 12
+    },
+    "document_lifetime": {
+      "unreformed_5_years": 85,
+      "unreformed_10_years": 65,
+      "ever_reformed": 35
+    }
+  },
+  "optimization_actions": [
+    {
+      "action": "Remove jerarquia field",
+      "impact": "High",
+      "effort": "Low"
+    },
+    {
+      "action": "Add materia field",
+      "impact": "Very High",
+      "effort": "Medium"
+    },
+    {
+      "action": "Add vigencia_status",
+      "impact": "High",
+      "effort": "Low"
+    },
+    {
+      "action": "Make fecha_reforma nullable",
+      "impact": "Medium",
+      "effort": "Low"
+    }
+  ]
+}

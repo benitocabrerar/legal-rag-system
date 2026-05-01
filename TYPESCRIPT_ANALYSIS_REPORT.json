@@ -1,0 +1,687 @@
+{
+  "metadata": {
+    "projectName": "Legal RAG System",
+    "analysisDate": "2025-12-12",
+    "projectRoot": "C:\\Users\\benito\\poweria\\legal",
+    "analysisTool": "TypeScript Compiler (tsc --noEmit)",
+    "tsVersion": "5.3.3"
+  },
+  "summary": {
+    "totalErrors": 118,
+    "criticalErrors": 45,
+    "warningLevelErrors": 73,
+    "filesWithErrors": 28,
+    "typeSystemCompliance": "62%",
+    "overallSeverity": "HIGH"
+  },
+  "errorCategories": {
+    "propertyDoesNotExist": {
+      "code": "TS2353",
+      "count": 38,
+      "percentage": 32.2,
+      "severity": "HIGH",
+      "description": "Object literal specifying unknown properties - indicates schema mismatches",
+      "primaryCause": "Prisma schema vs application code mismatch"
+    },
+    "missingProperty": {
+      "code": "TS2339",
+      "count": 22,
+      "percentage": 18.6,
+      "severity": "HIGH",
+      "description": "Property does not exist on type - missing Prisma models or relations",
+      "primaryCause": "Incomplete Prisma schema or outdated generated types"
+    },
+    "typeAssignment": {
+      "code": "TS2345",
+      "count": 20,
+      "percentage": 16.9,
+      "severity": "MEDIUM",
+      "description": "Argument type not assignable to parameter - logger and type mismatches",
+      "primaryCause": "Logger utility expecting string but receiving objects"
+    },
+    "implicitAny": {
+      "code": "TS7006",
+      "count": 10,
+      "percentage": 8.5,
+      "severity": "MEDIUM",
+      "description": "Parameter implicitly has 'any' type - missing type annotations",
+      "primaryCause": "Missing explicit type declarations in callbacks"
+    },
+    "incompatibleTypes": {
+      "code": "TS2322",
+      "count": 8,
+      "percentage": 6.8,
+      "severity": "HIGH",
+      "description": "Type not assignable - structural type mismatches",
+      "primaryCause": "CORS config, validation errors, JSON serialization issues"
+    },
+    "overloadMismatch": {
+      "code": "TS2769",
+      "count": 4,
+      "percentage": 3.4,
+      "severity": "MEDIUM",
+      "description": "No overload matches function call",
+      "primaryCause": "Logger expecting different argument types"
+    },
+    "enumTypeReference": {
+      "code": "TS2749",
+      "count": 4,
+      "percentage": 3.4,
+      "severity": "MEDIUM",
+      "description": "Value being used as type - incorrect enum usage",
+      "primaryCause": "Zod enum definitions vs Prisma enum types"
+    },
+    "spreadType": {
+      "code": "TS2698",
+      "count": 2,
+      "percentage": 1.7,
+      "severity": "LOW",
+      "description": "Spread types must be object types",
+      "primaryCause": "Spreading potentially undefined values"
+    },
+    "typoSuggestions": {
+      "code": "TS2561",
+      "count": 2,
+      "percentage": 1.7,
+      "severity": "LOW",
+      "description": "Property name typos with suggestions",
+      "primaryCause": "Field name mismatches (lastLoginAt vs lastLogin)"
+    },
+    "duplicateImplementation": {
+      "code": "TS2393",
+      "count": 2,
+      "percentage": 1.7,
+      "severity": "HIGH",
+      "description": "Duplicate function implementation",
+      "primaryCause": "Pattern detection service has duplicate methods"
+    },
+    "conversionError": {
+      "code": "TS2352",
+      "count": 2,
+      "percentage": 1.7,
+      "severity": "MEDIUM",
+      "description": "Type conversion may be a mistake",
+      "primaryCause": "FastifyRequest to Record<string, unknown> conversion"
+    },
+    "missingIterator": {
+      "code": "TS2504",
+      "count": 1,
+      "percentage": 0.8,
+      "severity": "MEDIUM",
+      "description": "Missing async iterator method",
+      "primaryCause": "OpenAI streaming response type union issue"
+    },
+    "missingDeclaration": {
+      "code": "TS7016",
+      "count": 1,
+      "percentage": 0.8,
+      "severity": "LOW",
+      "description": "Missing type declaration file",
+      "primaryCause": "lru-cache module (type definition already exists)"
+    },
+    "doesNotExist": {
+      "code": "TS2551",
+      "count": 2,
+      "percentage": 1.7,
+      "severity": "HIGH",
+      "description": "Property does not exist with suggestion",
+      "primaryCause": "legalDocumentRevision model missing from schema"
+    }
+  },
+  "criticalFiles": {
+    "src/routes/gdpr.ts": {
+      "errorCount": 22,
+      "severity": "CRITICAL",
+      "primaryIssues": [
+        "Missing Prisma relations (subscriptions, cases, documents, legalDocuments, queryLogs, notifications, payments)",
+        "Unknown properties in schema types (resource, details, entityType, userId)",
+        "Missing model: legalDocumentEmbedding",
+        "Field name mismatches (timestamp in QueryLogOrderByWithRelationInput)"
+      ],
+      "recommendation": "CRITICAL: Schema completely out of sync. Requires full schema regeneration and data model review."
+    },
+    "src/routes/gdpr/gdpr.routes.ts": {
+      "errorCount": 14,
+      "severity": "CRITICAL",
+      "primaryIssues": [
+        "Missing Prisma models: dataExportRequest, dataDeletionRequest, dataRectificationRequest, userPreference",
+        "Field name mismatches: lastLoginAt vs lastLogin, uploadedById vs uploadedBy",
+        "Unknown properties: entityType in AuditLog, documentType in LegalDocument"
+      ],
+      "recommendation": "CRITICAL: Requires GDPR-specific Prisma models to be added to schema."
+    },
+    "src/middleware/global-error-handler.ts": {
+      "errorCount": 6,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Logger.error() expects string but receives objects",
+        "Logger.warn() expects string but receives objects",
+        "FieldError type mismatch - field property is {} instead of string"
+      ],
+      "recommendation": "Update logger utility to accept structured objects or use JSON.stringify()"
+    },
+    "src/routes/ai-predictions.ts": {
+      "errorCount": 5,
+      "severity": "LOW",
+      "primaryIssues": [
+        "Unknown property 'tags' in FastifySchema"
+      ],
+      "recommendation": "Already fixed: tags property exists in src/types/fastify.d.ts. Ensure type definitions are loaded."
+    },
+    "src/routes/feedback.ts": {
+      "errorCount": 7,
+      "severity": "LOW",
+      "primaryIssues": [
+        "Unknown property 'tags' in FastifySchema"
+      ],
+      "recommendation": "Already fixed: tags property exists in src/types/fastify.d.ts. Ensure type definitions are loaded."
+    },
+    "src/routes/trends.ts": {
+      "errorCount": 6,
+      "severity": "LOW",
+      "primaryIssues": [
+        "Unknown property 'tags' in FastifySchema"
+      ],
+      "recommendation": "Already fixed: tags property exists in src/types/fastify.d.ts. Ensure type definitions are loaded."
+    },
+    "src/middleware/api-versioning.middleware.ts": {
+      "errorCount": 4,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Logger methods expecting string but receiving objects"
+      ],
+      "recommendation": "Update all logger calls to stringify objects or update logger interface"
+    },
+    "src/services/circuit-breaker.service.ts": {
+      "errorCount": 9,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Logger methods expecting string but receiving objects throughout"
+      ],
+      "recommendation": "Systematic logger usage issue - needs comprehensive fix"
+    },
+    "src/services/ai/async-openai-service.ts": {
+      "errorCount": 2,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Union type issue with OpenAI completion response",
+        "Type narrowing needed for streaming vs non-streaming responses",
+        "Missing async iterator check"
+      ],
+      "recommendation": "Add type guards to narrow OpenAI.Chat.ChatCompletion vs Stream types"
+    },
+    "src/services/ai/legal-assistant.ts": {
+      "errorCount": 2,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "JSON type incompatibility - array not assignable to InputJsonValue",
+        "Nullable title field causing type mismatch in return value"
+      ],
+      "recommendation": "Cast to Prisma.JsonValue and handle null title values"
+    },
+    "src/services/ai/pattern-detection.service.ts": {
+      "errorCount": 3,
+      "severity": "CRITICAL",
+      "primaryIssues": [
+        "Duplicate function implementation (identifyCommonClausePatterns)",
+        "PatternStatistics type not compatible with InputJsonObject"
+      ],
+      "recommendation": "CRITICAL: Remove duplicate function. Add index signature to PatternStatistics type."
+    },
+    "src/services/cache/multi-tier-cache-service.ts": {
+      "errorCount": 4,
+      "severity": "LOW",
+      "primaryIssues": [
+        "Missing lru-cache type declaration (already exists at src/types/lru-cache.d.ts)",
+        "Implicit any in callback parameters"
+      ],
+      "recommendation": "Type definitions exist but not being loaded. Check tsconfig paths."
+    },
+    "src/services/cache/multi-tier-cache.service.ts": {
+      "errorCount": 2,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "NodeCache used as type instead of typeof NodeCache",
+        "Implicit any in callback"
+      ],
+      "recommendation": "Import type correctly: import type NodeCache from 'node-cache'"
+    },
+    "src/config/cors.config.ts": {
+      "errorCount": 1,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "CORS origin validator function signature mismatch with Fastify CORS types"
+      ],
+      "recommendation": "Review @fastify/cors types and adjust origin validator callback signature"
+    },
+    "src/middleware/error-sanitizer.middleware.ts": {
+      "errorCount": 2,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "FastifyRequest to Record<string, unknown> conversion error"
+      ],
+      "recommendation": "Convert through 'unknown' first: request as unknown as Record<string, unknown>"
+    },
+    "src/routes/legal-documents.ts": {
+      "errorCount": 1,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "LegalDocumentCreateInput missing required fields: normType, normTitle, legalHierarchy, publicationType"
+      ],
+      "recommendation": "Update document creation to use new required schema fields"
+    },
+    "src/routes/legal-documents-v2.ts": {
+      "errorCount": 2,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Missing Prisma model: legalDocumentRevision"
+      ],
+      "recommendation": "Add LegalDocumentRevision model to schema or remove revision functionality"
+    },
+    "src/routes/unified-search.ts": {
+      "errorCount": 3,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "SearchResponse type mismatch - missing documents and metadata properties",
+        "Filter type incompatibility - jurisdiction should be string[] not string"
+      ],
+      "recommendation": "Define proper SearchResponse interface and update filter parsing"
+    },
+    "src/schemas/legal-document-schemas.ts": {
+      "errorCount": 3,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Enum values used as types instead of typeof enum",
+        "LegalHierarchyEnum, NormTypeEnum, PublicationTypeEnum reference errors"
+      ],
+      "recommendation": "Change z.infer<typeof EnumName> to use correct Prisma enum types"
+    },
+    "src/services/documentAnalyzer.ts": {
+      "errorCount": 1,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "DocumentStructure type not compatible with InputJsonValue"
+      ],
+      "recommendation": "Add index signature or cast to JsonValue"
+    }
+  },
+  "typeSystemAnalysis": {
+    "prismaTypeGeneration": {
+      "status": "PARTIALLY_OUTDATED",
+      "issues": [
+        "Generated types don't match current schema usage",
+        "Missing models: dataExportRequest, dataDeletionRequest, dataRectificationRequest, userPreference, legalDocumentRevision",
+        "Missing relations: User.subscriptions, User.cases, User.documents, User.legalDocuments, User.queryLogs, User.notifications, User.payments",
+        "Field mismatches indicate schema drift"
+      ],
+      "recommendation": "Run 'npx prisma generate' after updating schema to match application code"
+    },
+    "strictModeCompliance": {
+      "enabled": true,
+      "issues": [
+        "10 implicit any parameters",
+        "Multiple type assertion issues",
+        "Missing null checks in several places"
+      ],
+      "compliance": "75%"
+    },
+    "moduleResolution": {
+      "strategy": "bundler",
+      "pathMapping": {
+        "@/*": "./src/*"
+      },
+      "issues": [
+        "lru-cache type definition not being picked up despite existing at src/types/lru-cache.d.ts",
+        "Fastify schema augmentation not being recognized in some files"
+      ]
+    },
+    "jsonTypeHandling": {
+      "issues": [
+        "Multiple InputJsonValue incompatibilities",
+        "Missing index signatures on complex types",
+        "Array types not compatible with Prisma JSON types"
+      ],
+      "recommendation": "Create type-safe JSON wrappers or use Prisma.JsonValue type assertions"
+    }
+  },
+  "directoryAnalysis": {
+    "src/services/ai": {
+      "files": 10,
+      "errors": 10,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "OpenAI response type handling",
+        "Prisma JSON type incompatibilities",
+        "Duplicate function implementations",
+        "Missing type guards for union types"
+      ],
+      "typeCompliance": "65%"
+    },
+    "src/routes": {
+      "files": 30,
+      "errors": 78,
+      "severity": "CRITICAL",
+      "primaryIssues": [
+        "Massive Prisma schema mismatches in GDPR routes",
+        "FastifySchema 'tags' property not recognized (false positive)",
+        "Missing required fields in document creation",
+        "Logger type mismatches throughout"
+      ],
+      "typeCompliance": "45%"
+    },
+    "src/services/backup": {
+      "files": 11,
+      "errors": 0,
+      "severity": "NONE",
+      "typeCompliance": "100%",
+      "status": "EXCELLENT"
+    },
+    "src/middleware": {
+      "files": 8,
+      "errors": 19,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "Logger utility type mismatch (expects string, receives objects)",
+        "CORS configuration type issues",
+        "Type conversion errors",
+        "Error handler field type mismatches"
+      ],
+      "typeCompliance": "60%"
+    },
+    "src/services/cache": {
+      "files": 2,
+      "errors": 6,
+      "severity": "MEDIUM",
+      "primaryIssues": [
+        "Type definition loading issues",
+        "Implicit any in callbacks",
+        "Import statement type/value confusion"
+      ],
+      "typeCompliance": "70%"
+    },
+    "src/config": {
+      "files": 5,
+      "errors": 1,
+      "severity": "HIGH",
+      "primaryIssues": [
+        "CORS origin validator signature mismatch"
+      ],
+      "typeCompliance": "80%"
+    }
+  },
+  "recommendations": {
+    "immediate": [
+      {
+        "priority": "CRITICAL",
+        "category": "Schema Synchronization",
+        "action": "Update Prisma schema to include missing GDPR models",
+        "details": "Add models: DataExportRequest, DataDeletionRequest, DataRectificationRequest, UserPreference",
+        "effort": "MEDIUM",
+        "impact": "HIGH",
+        "files": ["prisma/schema.prisma"]
+      },
+      {
+        "priority": "CRITICAL",
+        "category": "Type Generation",
+        "action": "Regenerate Prisma client types",
+        "details": "Run 'npx prisma generate' after schema updates to ensure type synchronization",
+        "effort": "LOW",
+        "impact": "HIGH",
+        "command": "npx prisma generate"
+      },
+      {
+        "priority": "CRITICAL",
+        "category": "Code Duplication",
+        "action": "Remove duplicate function in pattern-detection.service.ts",
+        "details": "identifyCommonClausePatterns() is implemented twice (lines ~280 and ~531)",
+        "effort": "LOW",
+        "impact": "HIGH",
+        "files": ["src/services/ai/pattern-detection.service.ts"]
+      },
+      {
+        "priority": "HIGH",
+        "category": "Logger Utility",
+        "action": "Update Logger interface to accept objects",
+        "details": "Current logger expects string but receives objects in 20 locations. Either: 1) Update logger to accept Record<string, unknown>, or 2) Stringify all object arguments",
+        "effort": "MEDIUM",
+        "impact": "HIGH",
+        "files": [
+          "src/utils/logger.ts",
+          "src/middleware/global-error-handler.ts",
+          "src/middleware/api-versioning.middleware.ts",
+          "src/services/circuit-breaker.service.ts"
+        ]
+      },
+      {
+        "priority": "HIGH",
+        "category": "Schema Fields",
+        "action": "Add missing required fields to LegalDocument creation",
+        "details": "Update src/routes/legal-documents.ts to include: normType, normTitle, legalHierarchy, publicationType, publicationNumber",
+        "effort": "MEDIUM",
+        "impact": "HIGH",
+        "files": ["src/routes/legal-documents.ts"]
+      },
+      {
+        "priority": "HIGH",
+        "category": "Type Narrowing",
+        "action": "Add type guards for OpenAI response unions",
+        "details": "Distinguish between ChatCompletion and Stream<ChatCompletionChunk> in async-openai-service.ts",
+        "effort": "MEDIUM",
+        "impact": "MEDIUM",
+        "files": ["src/services/ai/async-openai-service.ts"]
+      }
+    ],
+    "shortTerm": [
+      {
+        "priority": "MEDIUM",
+        "category": "Enum Type References",
+        "action": "Fix Zod enum type references in schemas",
+        "details": "Change z.infer<typeof EnumName> to use Prisma enum types correctly",
+        "effort": "LOW",
+        "impact": "MEDIUM",
+        "files": ["src/schemas/legal-document-schemas.ts"]
+      },
+      {
+        "priority": "MEDIUM",
+        "category": "JSON Type Safety",
+        "action": "Add index signatures to custom types used in JSON fields",
+        "details": "Types like PatternStatistics, DocumentStructure need '[key: string]: JsonValue' for Prisma compatibility",
+        "effort": "MEDIUM",
+        "impact": "MEDIUM",
+        "files": [
+          "src/services/ai/pattern-detection.service.ts",
+          "src/services/documentAnalyzer.ts"
+        ]
+      },
+      {
+        "priority": "MEDIUM",
+        "category": "Implicit Any",
+        "action": "Add explicit type annotations to callback parameters",
+        "details": "10 instances of implicit any in callbacks, particularly in GDPR routes and cache services",
+        "effort": "LOW",
+        "impact": "MEDIUM",
+        "files": [
+          "src/routes/gdpr.ts",
+          "src/services/cache/multi-tier-cache-service.ts",
+          "src/services/cache/multi-tier-cache.service.ts"
+        ]
+      },
+      {
+        "priority": "MEDIUM",
+        "category": "Type Conversions",
+        "action": "Fix type conversion errors in error-sanitizer middleware",
+        "details": "Use double assertion through unknown: request as unknown as Record<string, unknown>",
+        "effort": "LOW",
+        "impact": "LOW",
+        "files": ["src/middleware/error-sanitizer.middleware.ts"]
+      },
+      {
+        "priority": "MEDIUM",
+        "category": "SearchResponse Interface",
+        "action": "Define proper SearchResponse type with documents and metadata",
+        "details": "Create type definition for unified search response structure",
+        "effort": "LOW",
+        "impact": "MEDIUM",
+        "files": ["src/routes/unified-search.ts", "src/types/search.d.ts"]
+      }
+    ],
+    "longTerm": [
+      {
+        "priority": "LOW",
+        "category": "CORS Configuration",
+        "action": "Review and update CORS origin validator types",
+        "details": "Align origin validator function signature with @fastify/cors expected types",
+        "effort": "MEDIUM",
+        "impact": "LOW",
+        "files": ["src/config/cors.config.ts"]
+      },
+      {
+        "priority": "LOW",
+        "category": "Module Imports",
+        "action": "Fix NodeCache type import",
+        "details": "Use 'import type NodeCache' instead of value import for type positions",
+        "effort": "LOW",
+        "impact": "LOW",
+        "files": ["src/services/cache/multi-tier-cache.service.ts"]
+      },
+      {
+        "priority": "LOW",
+        "category": "Field Name Standardization",
+        "action": "Standardize field naming across codebase",
+        "details": "Fix mismatches like lastLoginAt vs lastLogin, uploadedById vs uploadedBy",
+        "effort": "LOW",
+        "impact": "LOW",
+        "files": ["src/routes/gdpr/gdpr.routes.ts"]
+      },
+      {
+        "priority": "LOW",
+        "category": "Null Safety",
+        "action": "Add null checks for nullable fields",
+        "details": "Handle nullable title in legal-assistant.ts conversation list",
+        "effort": "LOW",
+        "impact": "LOW",
+        "files": ["src/services/ai/legal-assistant.ts"]
+      }
+    ],
+    "bestPractices": [
+      {
+        "category": "Type Safety",
+        "recommendation": "Enable noUncheckedIndexedAccess in tsconfig.json",
+        "benefit": "Catch potential undefined array access at compile time"
+      },
+      {
+        "category": "Type Safety",
+        "recommendation": "Consider enabling exactOptionalPropertyTypes",
+        "benefit": "Distinguish between undefined and missing properties"
+      },
+      {
+        "category": "Code Organization",
+        "recommendation": "Create dedicated type definition files for complex domain types",
+        "benefit": "Better type reusability and reduced duplication"
+      },
+      {
+        "category": "Prisma",
+        "recommendation": "Use Prisma.$extends for type-safe JSON field handling",
+        "benefit": "Automatic type checking for JSON fields"
+      },
+      {
+        "category": "Testing",
+        "recommendation": "Add type tests using expect-type or similar",
+        "benefit": "Ensure type contracts are maintained across refactoring"
+      }
+    ]
+  },
+  "tsconfigAnalysis": {
+    "backend": {
+      "path": "tsconfig.json",
+      "strict": true,
+      "target": "ES2022",
+      "module": "ESNext",
+      "moduleResolution": "bundler",
+      "strengths": [
+        "Strict mode enabled",
+        "Modern ES2022 target",
+        "Path mapping configured",
+        "Consistent casing enforced"
+      ],
+      "weaknesses": [
+        "Large exclude list indicates architectural issues",
+        "Many services excluded from type checking",
+        "Bundler resolution may hide module issues"
+      ],
+      "excludedCriticalFiles": [
+        "src/routes/gdpr.ts",
+        "src/routes/gdpr/**/*",
+        "src/services/ml/**/*",
+        "src/services/legal/**/*",
+        "src/services/search/**/*",
+        "src/services/nlp/optimized-query-service.ts",
+        "src/services/observability/metrics.service.ts"
+      ],
+      "recommendation": "Gradually reduce exclude list by fixing type errors in excluded files"
+    },
+    "frontend": {
+      "path": "frontend/tsconfig.json",
+      "strict": true,
+      "target": "ES2017",
+      "jsx": "preserve",
+      "moduleResolution": "bundler",
+      "strengths": [
+        "Strict mode enabled",
+        "Next.js plugin configured",
+        "Proper JSX preservation",
+        "Incremental compilation"
+      ],
+      "weaknesses": [
+        "None identified"
+      ],
+      "status": "GOOD"
+    }
+  },
+  "missingTypeDefinitions": [
+    {
+      "module": "lru-cache",
+      "status": "DEFINED_BUT_NOT_LOADED",
+      "location": "src/types/lru-cache.d.ts",
+      "issue": "Type definition exists but not being recognized by compiler",
+      "solution": "Verify tsconfig types array includes custom type directory"
+    }
+  ],
+  "actionPlan": {
+    "phase1_immediate": {
+      "title": "Critical Fixes (1-2 days)",
+      "tasks": [
+        "Remove duplicate function in pattern-detection.service.ts",
+        "Update Prisma schema with GDPR models",
+        "Run npx prisma generate",
+        "Fix Logger utility to accept objects or stringify all calls"
+      ],
+      "expectedImpact": "Reduce errors from 118 to ~70"
+    },
+    "phase2_shortTerm": {
+      "title": "High Priority Fixes (3-5 days)",
+      "tasks": [
+        "Add required fields to LegalDocument creation",
+        "Fix OpenAI response type handling with type guards",
+        "Add index signatures to JSON-bound types",
+        "Fix enum type references in schemas",
+        "Add explicit types to all implicit any parameters"
+      ],
+      "expectedImpact": "Reduce errors from ~70 to ~30"
+    },
+    "phase3_cleanup": {
+      "title": "Remaining Issues (5-7 days)",
+      "tasks": [
+        "Fix CORS configuration types",
+        "Create SearchResponse interface",
+        "Standardize field names across codebase",
+        "Add null safety checks",
+        "Fix type conversion assertions",
+        "Remove files from tsconfig exclude list"
+      ],
+      "expectedImpact": "Reduce errors from ~30 to 0"
+    },
+    "totalEstimatedEffort": "10-14 days",
+    "targetTypeCompliance": "100%"
+  }
+}

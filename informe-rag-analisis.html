@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Análisis Arquitectónico RAG · Legal RAG vs Supabase · COGNITEX</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          serif: ['"Source Serif Pro"', 'Georgia', 'serif'],
+        },
+        colors: {
+          ink:    { 50:'#f6f7f9', 100:'#eceef2', 200:'#d4d8e0', 300:'#aab1bf', 400:'#7d8597', 500:'#5b6377', 600:'#444b5c', 700:'#363c4b', 800:'#262b37', 900:'#171a23', 950:'#0c0e15' },
+          brand:  { 50:'#eef4ff', 100:'#dde9ff', 200:'#bdd2ff', 300:'#90b1ff', 400:'#5e87ff', 500:'#3a62f5', 600:'#2843dd', 700:'#1f33b4', 800:'#1c2c8e', 900:'#1c2972', 950:'#101748' },
+          accent: { 500:'#0bb38b', 600:'#089672' },
+          warn:   { 500:'#e7a52f', 600:'#c98717' },
+          danger: { 500:'#dc3a3a', 600:'#b62929' },
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.10)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Source+Serif+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; color: #171a23; background: #fafbfc; }
+  .num { font-feature-settings: "tnum" 1, "lnum" 1; }
+  .prose-tight p { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+  .h-anchor { scroll-margin-top: 80px; }
+  .grad-corp { background: linear-gradient(135deg,#101748 0%, #1f33b4 50%, #2843dd 100%); }
+  .grad-soft { background: linear-gradient(180deg,#fafbfc 0%, #eef4ff 100%); }
+  .ring-card { border: 1px solid #d4d8e0; }
+  .badge { display:inline-flex; align-items:center; gap:.25rem; padding:.15rem .5rem; border-radius:9999px; font-size:.7rem; font-weight:600; }
+  .b-ok    { background:#dcfce7; color:#065f46; }
+  .b-warn  { background:#fef3c7; color:#92400e; }
+  .b-bad   { background:#fee2e2; color:#991b1b; }
+  .b-info  { background:#dbeafe; color:#1e40af; }
+  .b-neutral{ background:#e5e7eb; color:#374151; }
+  pre.code { font-family:'JetBrains Mono',monospace; font-size:.78rem; line-height:1.45; background:#0c0e15; color:#e5e7eb; padding:1rem 1.1rem; border-radius:.5rem; overflow-x:auto; }
+  pre.code .kw { color:#ff79c6; }
+  pre.code .st { color:#f1fa8c; }
+  pre.code .cm { color:#6272a4; font-style: italic; }
+  pre.code .fn { color:#8be9fd; }
+  pre.code .nm { color:#bd93f9; }
+  table.tbl { width:100%; border-collapse: collapse; }
+  table.tbl th, table.tbl td { padding: .65rem .8rem; vertical-align: top; border-bottom:1px solid #eceef2; text-align:left; font-size:.875rem; }
+  table.tbl thead th { background:#f6f7f9; font-weight:600; color:#363c4b; text-transform:uppercase; font-size:.7rem; letter-spacing:.04em; }
+  table.tbl tr:hover td { background:#fafbfc; }
+  .toc a { color:#363c4b; }
+  .toc a:hover { color:#2843dd; }
+  .pillar-card { transition: transform .15s ease; }
+  .pillar-card:hover { transform: translateY(-2px); }
+  /* Print */
+  @media print {
+    body { background:white; font-size:11pt; }
+    .no-print { display:none !important; }
+    section { page-break-inside: avoid; }
+    h1,h2,h3 { page-break-after: avoid; }
+    .grad-corp { background: #101748 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ring-card { border-color: #aaa !important; }
+    pre.code { background:#0c0e15 !important; color:#e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  details > summary { cursor: pointer; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] summary .chev { transform: rotate(90deg); }
+  .chev { transition: transform .15s ease; display:inline-block; }
+  .mermaid { background: white; border-radius: .5rem; padding: 1rem; border: 1px solid #d4d8e0; }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- =============== NAV / TOC =============== -->
+<nav class="no-print fixed top-0 inset-x-0 z-40 bg-white/85 backdrop-blur border-b border-ink-100">
+  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded grad-corp grid place-items-center text-white font-bold text-sm">C</div>
+      <div>
+        <div class="text-xs font-semibold text-ink-900">COGNITEX · Análisis Arquitectónico</div>
+        <div class="text-[11px] text-ink-500">Legal RAG vs Supabase · 2026-04-28</div>
+      </div>
+    </div>
+    <div class="hidden md:flex items-center gap-4 text-xs font-medium text-ink-600">
+      <a href="#resumen" class="hover:text-brand-600">Resumen</a>
+      <a href="#fase1" class="hover:text-brand-600">Fase 1</a>
+      <a href="#fase2" class="hover:text-brand-600">Fase 2</a>
+      <a href="#fase3" class="hover:text-brand-600">Fase 3</a>
+      <a href="#fase4" class="hover:text-brand-600">Veredicto</a>
+      <a href="#roadmap" class="hover:text-brand-600">Roadmap</a>
+      <a href="#apendice" class="hover:text-brand-600">Apéndice</a>
+    </div>
+  </div>
+</nav>
+
+<!-- =============== PORTADA =============== -->
+<header id="portada" class="grad-corp text-white pt-28 pb-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center gap-2 text-brand-200 text-xs uppercase tracking-widest font-semibold mb-6">
+      <span class="w-8 h-px bg-brand-200"></span>
+      <span>Informe Técnico Confidencial · v1.0</span>
+    </div>
+    <h1 class="font-serif text-5xl md:text-6xl font-bold leading-tight tracking-tight">
+      Análisis Arquitectónico Exhaustivo<br />
+      <span class="text-brand-200">del Sistema Legal RAG</span>
+    </h1>
+    <p class="mt-6 text-xl text-brand-100 max-w-3xl">
+      Auditoría técnica del stack actual sobre PostgreSQL <em>vanilla</em> y comparación punto por punto con una reimplementación equivalente sobre <strong class="text-white">Supabase + pgvector</strong>. Veredicto fundamentado, plan de migración y matriz de decisión cuantitativa.
+    </p>
+
+    <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl">
+      <div class="bg-white/10 backdrop-blur p-4 rounded-lg ring-1 ring-white/15">
+        <div class="text-[11px] uppercase tracking-wider text-brand-200">Autor</div>
+        <div class="font-semibold mt-1">COGNITEX</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur p-4 rounded-lg ring-1 ring-white/15">
+        <div class="text-[11px] uppercase tracking-wider text-brand-200">Fecha</div>
+        <div class="font-semibold mt-1">28 abr. 2026</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur p-4 rounded-lg ring-1 ring-white/15">
+        <div class="text-[11px] uppercase tracking-wider text-brand-200">Repositorio</div>
+        <div class="font-semibold mt-1 truncate">poweria/legal</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur p-4 rounded-lg ring-1 ring-white/15">
+        <div class="text-[11px] uppercase tracking-wider text-brand-200">Veredicto</div>
+        <div class="font-semibold mt-1 text-accent-500">B · Migrar</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- =============== RESUMEN EJECUTIVO =============== -->
+<section id="resumen" class="h-anchor max-w-6xl mx-auto px-6 py-16">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="badge b-info">Resumen Ejecutivo</span>
+    <span class="text-xs text-ink-500">Lectura: 90 segundos</span>
+  </div>
+  <h2 class="font-serif text-3xl font-bold text-ink-900">Cinco hallazgos no negociables</h2>
+  <p class="mt-3 text-ink-600 max-w-3xl">El sistema RAG actual presenta defectos arquitectónicos que <strong>invalidan la suposición de "95% completo"</strong> declarada en el README: el motor de búsqueda no es realmente semántico a escala, el aislamiento multi‑tenant depende de disciplina manual, y existen tres rutas de retrieval coexistentes y mutuamente inconsistentes.</p>
+
+  <ol class="mt-8 grid md:grid-cols-2 gap-4 list-none">
+    <li class="bg-white ring-card rounded-xl p-5 shadow-card">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl font-bold text-danger-500 num">1</div>
+        <div>
+          <div class="font-semibold text-ink-900">Embeddings sin pgvector real</div>
+          <p class="text-sm text-ink-600 mt-1">La columna <code class="font-mono text-xs bg-ink-100 px-1 rounded">embedding</code> es <code class="font-mono text-xs bg-ink-100 px-1 rounded">jsonb</code>, no <code class="font-mono text-xs bg-ink-100 px-1 rounded">vector(1536)</code>. La extensión y los índices IVFFlat están comentados en migraciones. Cosine similarity se calcula en memoria JS sobre &gt;1.000 chunks por query.</p>
+        </div>
+      </div>
+    </li>
+    <li class="bg-white ring-card rounded-xl p-5 shadow-card">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl font-bold text-danger-500 num">2</div>
+        <div>
+          <div class="font-semibold text-ink-900">Tres pipelines de retrieval coexistiendo</div>
+          <p class="text-sm text-ink-600 mt-1"><code class="font-mono text-xs bg-ink-100 px-1 rounded">routes/query.ts</code> (brute‑force JS), <code class="font-mono text-xs bg-ink-100 px-1 rounded">unified-search-orchestrator.ts</code> (ILIKE + rerank) y <code class="font-mono text-xs bg-ink-100 px-1 rounded">queryRouter.ts</code> (SQL con <code class="font-mono text-xs bg-ink-100 px-1 rounded">&lt;=&gt;</code> y FTS) usan modelos y semánticas distintas.</p>
+        </div>
+      </div>
+    </li>
+    <li class="bg-white ring-card rounded-xl p-5 shadow-card">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl font-bold text-warn-600 num">3</div>
+        <div>
+          <div class="font-semibold text-ink-900">Multi‑tenant sin RLS</div>
+          <p class="text-sm text-ink-600 mt-1">Cero <code class="font-mono text-xs bg-ink-100 px-1 rounded">CREATE POLICY</code> y cero <code class="font-mono text-xs bg-ink-100 px-1 rounded">ENABLE ROW LEVEL SECURITY</code> en todo el repo. El aislamiento depende de un <code class="font-mono text-xs bg-ink-100 px-1 rounded">where: { userId }</code> en cada handler — un único olvido convierte un endpoint en un IDOR.</p>
+        </div>
+      </div>
+    </li>
+    <li class="bg-white ring-card rounded-xl p-5 shadow-card">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl font-bold text-warn-600 num">4</div>
+        <div>
+          <div class="font-semibold text-ink-900">Chunking naïve + modelos inconsistentes</div>
+          <p class="text-sm text-ink-600 mt-1">La ingestión usa <em>fixed‑size 1.000 chars sin overlap</em>; el <code class="font-mono text-xs bg-ink-100 px-1 rounded">hierarchicalChunker.ts</code> existe pero no se invoca. Conviven <code class="font-mono text-xs bg-ink-100 px-1 rounded">ada-002</code> y <code class="font-mono text-xs bg-ink-100 px-1 rounded">text-embedding-3-small</code> en distintas rutas.</p>
+        </div>
+      </div>
+    </li>
+    <li class="bg-white ring-card rounded-xl p-5 shadow-card md:col-span-2">
+      <div class="flex items-start gap-3">
+        <div class="text-2xl font-bold text-accent-600 num">5</div>
+        <div>
+          <div class="font-semibold text-ink-900">Veredicto: <span class="text-brand-600">B · Migrar a Supabase por fases</span></div>
+          <p class="text-sm text-ink-600 mt-1">Supabase no introduce un cambio de paradigma — es PostgreSQL nativo con pgvector, RLS, Auth, Storage, Realtime y Vault gestionados. La migración resuelve simultáneamente los cuatro hallazgos anteriores con <strong>esfuerzo estimado 120–180 h</strong>, riesgo medio y ahorro neto en TCO desde el primer mes a partir de 100k chunks. El lock‑in real es bajo: el SQL es portable y los embeddings se exportan como CSV.</p>
+        </div>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- =============== ÍNDICE =============== -->
+<section class="max-w-6xl mx-auto px-6 pb-12">
+  <div class="bg-white ring-card rounded-xl p-6 shadow-card">
+    <h3 class="font-semibold text-ink-900">Índice del informe</h3>
+    <ol class="toc mt-4 grid md:grid-cols-2 gap-x-8 gap-y-1 text-sm list-decimal list-inside">
+      <li><a href="#fase1">Fase 1 · Descubrimiento del sistema actual</a></li>
+      <li><a href="#fase2">Fase 2 · Arquitectura equivalente en Supabase</a></li>
+      <li><a href="#fase3">Fase 3 · Comparación multidimensional</a></li>
+      <li><a href="#fase4">Fase 4 · Veredicto técnico</a></li>
+      <li><a href="#roadmap">Fase 5 · Roadmap de migración</a></li>
+      <li><a href="#costos">Modelo de costos 12/36 meses</a></li>
+      <li><a href="#matriz">Matriz de decisión ponderada</a></li>
+      <li><a href="#apendice">Apéndice · Fragmentos de código auditados</a></li>
+    </ol>
+  </div>
+</section>
+
+<!-- =============== FASE 1 =============== -->
+<section id="fase1" class="h-anchor border-t border-ink-100 py-16 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="text-brand-500 font-mono text-sm font-bold">FASE 1</span>
+      <h2 class="font-serif text-3xl font-bold text-ink-900">Descubrimiento y mapeo del sistema actual</h2>
+    </div>
+    <p class="text-ink-600 max-w-3xl mb-10">Inventario derivado <em>exclusivamente</em> de la lectura del repositorio: archivos <code>prisma/schema.prisma</code>, migraciones SQL, servicios <code>src/services/**</code>, rutas <code>src/routes/**</code>, configuración Render, telemetría y documentación interna. Cada hallazgo cita su archivo y línea fuente.</p>
+
+    <h3 class="text-xl font-semibold text-ink-900 mb-3">1.1 · Esquema de base de datos</h3>
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Aspecto</th><th>Estado real</th><th>Evidencia</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Motor</td><td>PostgreSQL 14+ en Render Starter, región Oregon</td><td><code>render.yaml:5</code>, <code>RENDER_DEPLOYMENT.md</code></td><td><span class="badge b-info">OK</span></td></tr>
+          <tr><td>ORM</td><td>Prisma 5.10, cliente singleton global</td><td><code>src/lib/prisma.ts</code></td><td><span class="badge b-ok">Correcto</span></td></tr>
+          <tr><td>Tablas core</td><td>~50 tablas: User, Case, Document, DocumentChunk, LegalDocument, LegalDocumentChunk, LegalDocumentArticle, LegalDocumentSection, LegalDocumentSummary, AuditLog, QueryLog, Notification, Subscription, etc.</td><td><code>prisma/schema.prisma</code> (+1.500 líneas)</td><td><span class="badge b-info">Amplio</span></td></tr>
+          <tr><td>Tipo de embedding</td><td><code>embedding Json?</code> → <code>jsonb</code> en Postgres. <strong>NO es <code>vector(1536)</code></strong>.</td><td><code>schema.prisma:202, 290</code></td><td><span class="badge b-bad">Crítico</span></td></tr>
+          <tr><td>Extensión <code>vector</code></td><td><code>CREATE EXTENSION vector</code> está <strong>comentado</strong> en migraciones; depende de creación manual vía Render Shell. <code>RENDER_DEPLOYMENT.md</code> lo documenta como paso manual.</td><td><code>20250111_add_rag_enhancements/migration.sql:209-223</code></td><td><span class="badge b-bad">Frágil</span></td></tr>
+          <tr><td>Índices vectoriales</td><td>Migración 20250112 declara <code>CREATE INDEX … USING ivfflat ("embedding" vector_cosine_ops)</code> sobre una columna jsonb — operación inválida en pgvector y casi seguramente nunca aplicada.</td><td><code>20250112_add_composite_indexes.sql:128-132</code></td><td><span class="badge b-bad">Roto</span></td></tr>
+          <tr><td>FTS GIN</td><td>Sí existen sobre <code>legal_documents</code> (normTitle+content), <code>legal_document_articles</code>, <code>legal_document_summaries</code>, <code>scraped_documents</code> con configuración <code>'spanish'</code>.</td><td><code>20250111_add_rag_enhancements/migration.sql:86,117</code>, <code>20250112…sql:59-70</code></td><td><span class="badge b-ok">OK</span></td></tr>
+          <tr><td>Trigram <code>pg_trgm</code></td><td>Documentado como prerequisito en <code>RENDER_DEPLOYMENT.md</code>; sin <code>CREATE EXTENSION</code> en migraciones.</td><td>Render Shell manual</td><td><span class="badge b-warn">Frágil</span></td></tr>
+          <tr><td>Triggers / funciones</td><td>Cero triggers PL/pgSQL, cero funciones almacenadas. Toda la lógica vive en TypeScript.</td><td>Búsqueda <code>CREATE TRIGGER</code> = 0 hits</td><td><span class="badge b-neutral">N/A</span></td></tr>
+          <tr><td>RLS</td><td><strong>Cero <code>ENABLE ROW LEVEL SECURITY</code></strong>, <strong>cero <code>CREATE POLICY</code></strong> en todo el repositorio.</td><td>Búsqueda exhaustiva</td><td><span class="badge b-bad">Ausente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-12 mb-3">1.2 · Pipeline de ingesta</h3>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Chunking</div>
+        <ul class="mt-2 text-sm text-ink-600 space-y-1.5 list-disc list-inside">
+          <li><strong>Producción</strong>: <code>routes/legal-documents.ts:86</code> y <code>routes/documents.ts:47</code> hacen <code>chunkSize=1000</code>, <em>sin overlap</em>, sin frontera de párrafo/artículo.</li>
+          <li><strong>No usado</strong>: <code>services/chunking/hierarchicalChunker.ts</code> (498 líneas) implementa chunking por jerarquía legal pero <strong>no se invoca desde ninguna ruta</strong>.</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Modelos de embeddings</div>
+        <ul class="mt-2 text-sm text-ink-600 space-y-1.5 list-disc list-inside">
+          <li><code>routes/query.ts:92</code> y <code>routes/legal-documents.ts:97</code> usan <code>text-embedding-ada-002</code> (deprecado).</li>
+          <li><code>services/embeddings/embedding-service.ts:49</code> y <code>async-openai.service.ts</code> usan <code>text-embedding-3-small</code>.</li>
+          <li><strong>Mezcla incomparable</strong>: ada‑002 y 3‑small son <em>1.536 dim</em> pero no comparables semánticamente.</li>
+          <li>Cache: <code>Map</code> in‑process (no distribuido).</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-12 mb-3">1.3 · Pipeline de retrieval — tres implementaciones coexistentes</h3>
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Ruta</th><th>Estrategia</th><th>Operador</th><th>Costo por query</th><th>Estado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>routes/query.ts</code></td>
+            <td>Carga hasta 1.000 chunks legales + N de caso a Node.js, calcula cosine en JS</td>
+            <td><code>cosineSimilarity()</code> en TS</td>
+            <td>~6 MB transfer / query · O(n·d) JS</td>
+            <td><span class="badge b-bad">Anti‑patrón</span></td>
+          </tr>
+          <tr>
+            <td><code>orchestration/unified-search-orchestrator.ts</code></td>
+            <td>ILIKE <code>%query%</code> en BD (no usa GIN FTS), rerank con primer chunk del documento</td>
+            <td><code>contains: insensitive</code></td>
+            <td>Sequential scan + JS rerank</td>
+            <td><span class="badge b-bad">Subóptimo</span></td>
+          </tr>
+          <tr>
+            <td><code>queryRouter.ts</code></td>
+            <td>SQL crudo con <code>embedding &lt;=&gt; ::vector</code> + FTS <code>plainto_tsquery('spanish')</code>, RRF entre semantic y keyword</td>
+            <td>pgvector + FTS</td>
+            <td>Eficiente <em>si</em> la columna es <code>vector</code></td>
+            <td><span class="badge b-warn">Falla en runtime</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-ink-500 mt-3">El operador <code>&lt;=&gt;</code> sobre una columna <code>jsonb</code> lanza <code>ERROR: operator does not exist: jsonb &lt;=&gt; vector</code>. La ruta más sofisticada del sistema probablemente <strong>no esté ejecutándose</strong> en producción.</p>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-12 mb-3">1.4 · Capa de aplicación, infraestructura y seguridad</h3>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900 mb-2">Aplicación</div>
+        <ul class="text-sm text-ink-600 space-y-1 list-disc list-inside">
+          <li>Fastify 4 + TypeScript ESM</li>
+          <li>Prisma singleton global</li>
+          <li>JWT con secret default <code>'default-secret-change-in-production'</code> si env falta</li>
+          <li>Rate‑limit Fastify, CORS, multipart</li>
+          <li>BullMQ para jobs async</li>
+          <li>Multi-tier cache (in‑memory + Redis)</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900 mb-2">Infraestructura</div>
+        <ul class="text-sm text-ink-600 space-y-1 list-disc list-inside">
+          <li>Render Web Service Starter ($7/mes)</li>
+          <li>Postgres Render Starter ($7-15/mes)</li>
+          <li>Redis Render Starter ($7/mes)</li>
+          <li>S3 (AWS) sólo para backups y avatares</li>
+          <li>Frontend Next.js separado</li>
+          <li>Pinecone en <code>package.json</code> sin uso real (bloat)</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900 mb-2">Seguridad y observabilidad</div>
+        <ul class="text-sm text-ink-600 space-y-1 list-disc list-inside">
+          <li>2FA TOTP, OAuth Google, bcrypt</li>
+          <li>AuditLog en BD propia</li>
+          <li>Sin RLS, sin Vault, sin cifrado por columna</li>
+          <li>OpenTelemetry (traces+metrics OTLP), prom-client, dd-trace</li>
+          <li>Logs Render, sin agregador central explícito</li>
+          <li>Backups manuales con script en <code>services/backup/</code></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-12 mb-3">1.5 · Diagrama del estado actual</h3>
+    <pre class="mermaid">flowchart LR
+  U[Usuario] --> NX[Next.js 15]
+  NX -->|JWT| FF[Fastify API]
+  FF -->|Prisma| PG[(PostgreSQL Render<br/>jsonb embedding)]
+  FF -->|cosine en JS| FF
+  FF --> RD[(Redis Render)]
+  FF --> S3[(AWS S3<br/>backups+avatares)]
+  FF --> OAI[OpenAI API<br/>ada-002 + 3-small]
+  FF -.no usado.-> PC[(Pinecone)]
+  FF -.no integrado.-> HC[hierarchicalChunker]
+  classDef bad fill:#fee2e2,stroke:#b91c1c,color:#991b1b
+  classDef warn fill:#fef3c7,stroke:#92400e,color:#92400e
+  classDef ok fill:#dcfce7,stroke:#065f46,color:#065f46
+  class PG bad
+  class PC,HC warn
+  class RD,S3,NX,FF,OAI ok</pre>
+  </div>
+</section>
+
+<!-- =============== FASE 2 =============== -->
+<section id="fase2" class="h-anchor grad-soft py-16 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="text-brand-500 font-mono text-sm font-bold">FASE 2</span>
+      <h2 class="font-serif text-3xl font-bold text-ink-900">Arquitectura equivalente en Supabase</h2>
+    </div>
+    <p class="text-ink-600 max-w-3xl mb-10">El rediseño <strong>no cambia el modelo de datos</strong>: aprovecha que Supabase es PostgreSQL gestionado y reemplaza componentes que actualmente se escriben a mano (Auth, Storage, Vault, RLS, branching, edge runtime) por equivalentes nativos. Las extensiones <code>vector</code>, <code>pg_trgm</code>, <code>pgcrypto</code>, <code>uuid-ossp</code> vienen pre‑instaladas y administradas.</p>
+
+    <h3 class="text-xl font-semibold text-ink-900 mb-3">2.1 · Esquema corregido con pgvector nativo</h3>
+    <pre class="code"><span class="cm">-- Extensiones gestionadas por Supabase (un click en Dashboard)</span>
+<span class="kw">create extension if not exists</span> vector;
+<span class="kw">create extension if not exists</span> pg_trgm;
+<span class="kw">create extension if not exists</span> pgcrypto;
+
+<span class="cm">-- Embedding nativo con índice HNSW (recomendado para &lt; 10M vectores)</span>
+<span class="kw">alter table</span> legal_document_chunks
+  <span class="kw">add column</span> embedding <span class="nm">vector</span>(1536);
+
+<span class="kw">create index</span> idx_ldc_embedding_hnsw
+  <span class="kw">on</span> legal_document_chunks
+  <span class="kw">using</span> hnsw (embedding vector_cosine_ops)
+  <span class="kw">with</span> (m = 16, ef_construction = 64);
+
+<span class="cm">-- FTS y trigram para fallback léxico (hybrid search)</span>
+<span class="kw">create index</span> idx_ldc_content_fts
+  <span class="kw">on</span> legal_document_chunks
+  <span class="kw">using</span> gin (to_tsvector(<span class="st">'spanish'</span>, content));
+
+<span class="cm">-- RLS multi-tenant (lo que hoy es manual con `where userId`)</span>
+<span class="kw">alter table</span> documents <span class="kw">enable row level security</span>;
+<span class="kw">create policy</span> <span class="st">"own documents"</span> <span class="kw">on</span> documents
+  <span class="kw">for all</span> <span class="kw">to</span> authenticated
+  <span class="kw">using</span>  (user_id = (<span class="kw">select</span> auth.uid()))
+  <span class="kw">with check</span> (user_id = (<span class="kw">select</span> auth.uid()));
+
+<span class="cm">-- Catálogo legal compartido: lectura pública, escritura solo admin</span>
+<span class="kw">alter table</span> legal_documents <span class="kw">enable row level security</span>;
+<span class="kw">create policy</span> <span class="st">"public read legal"</span> <span class="kw">on</span> legal_documents
+  <span class="kw">for select</span> <span class="kw">using</span> (is_active);
+<span class="kw">create policy</span> <span class="st">"admin write"</span> <span class="kw">on</span> legal_documents
+  <span class="kw">for insert</span> <span class="kw">with check</span> (
+    (<span class="kw">select</span> auth.jwt() -&gt;&gt; <span class="st">'role'</span>) = <span class="st">'admin'</span>
+  );</pre>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-10 mb-3">2.2 · Mapeo componente a componente</h3>
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Componente actual</th><th>Equivalente Supabase</th><th>Ganancia</th></tr></thead>
+        <tbody>
+          <tr><td>Auth manual JWT + bcrypt + 2FA + OAuth Google + reset password</td><td>Supabase Auth (GoTrue) — JWT, OAuth, magic links, MFA TOTP, refresh tokens, RLS hooks</td><td>~2.500 LOC eliminadas</td></tr>
+          <tr><td>S3 (AWS) para avatares y backups; documentos legales en BD como TEXT</td><td>Supabase Storage (S3‑compat con políticas, transformaciones, signed URLs)</td><td>Bucket policies = RLS reusable</td></tr>
+          <tr><td>Redis Render + multi‑tier cache custom</td><td>PgBouncer integrado + Postgres como cache, o Upstash Redis vía Marketplace si se requiere</td><td>Menos infra, mismo throughput</td></tr>
+          <tr><td>Cron jobs (<code>cron</code>, <code>node-cron</code>)</td><td><code>pg_cron</code> + Edge Functions</td><td>Cron en BD, sin worker dedicado</td></tr>
+          <tr><td>BullMQ + Redis para colas</td><td><code>pgmq</code> (queue extension) o trabajo asíncrono con Edge Functions y triggers</td><td>Visibilidad en SQL</td></tr>
+          <tr><td>Variables de entorno en Render (JWT_SECRET, OPENAI_KEY)</td><td>Supabase Vault para secretos; <code>vault.secrets</code> table + funciones</td><td>Auditable y rotable</td></tr>
+          <tr><td>Streaming SSE custom para summaries</td><td>Realtime Postgres CDC + Broadcast channels</td><td>Sin código WebSocket propio</td></tr>
+          <tr><td>Sin entornos efímeros</td><td>Branching de BD por PR (preview)</td><td>QA paralelo sin drift</td></tr>
+          <tr><td>Telemetría OTLP a OpenTelemetry collector</td><td>Logs y métricas integradas en Dashboard + export a Datadog/Grafana</td><td>Menor tiempo a observar</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-10 mb-3">2.3 · Pipeline de retrieval unificado (un solo path)</h3>
+    <pre class="code"><span class="cm">-- Hybrid search con RRF (Reciprocal Rank Fusion) en 1 query</span>
+<span class="kw">with</span> sem <span class="kw">as</span> (
+  <span class="kw">select</span> id, document_id,
+         <span class="kw">row_number</span>() <span class="kw">over</span> (<span class="kw">order by</span> embedding &lt;=&gt; $1) <span class="kw">as</span> r
+  <span class="kw">from</span> legal_document_chunks
+  <span class="kw">where</span> $2::uuid <span class="kw">is null</span> <span class="kw">or</span> document_id = $2
+  <span class="kw">order by</span> embedding &lt;=&gt; $1
+  <span class="kw">limit</span> 60
+), kw <span class="kw">as</span> (
+  <span class="kw">select</span> id, document_id,
+         <span class="kw">row_number</span>() <span class="kw">over</span> (
+           <span class="kw">order by</span> ts_rank_cd(
+             to_tsvector(<span class="st">'spanish'</span>, content),
+             websearch_to_tsquery(<span class="st">'spanish'</span>, $3)
+           ) <span class="kw">desc</span>
+         ) <span class="kw">as</span> r
+  <span class="kw">from</span> legal_document_chunks
+  <span class="kw">where</span> to_tsvector(<span class="st">'spanish'</span>, content) @@ websearch_to_tsquery(<span class="st">'spanish'</span>, $3)
+  <span class="kw">limit</span> 60
+)
+<span class="kw">select</span> coalesce(sem.id, kw.id) <span class="kw">as</span> id,
+       1.0/(60 + coalesce(sem.r, 9999)) +
+       1.0/(60 + coalesce(kw.r,  9999)) <span class="kw">as</span> rrf
+<span class="kw">from</span> sem <span class="kw">full outer join</span> kw <span class="kw">using</span> (id)
+<span class="kw">order by</span> rrf <span class="kw">desc</span>
+<span class="kw">limit</span> 20;</pre>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-10 mb-3">2.4 · Topología de despliegue propuesta</h3>
+    <pre class="mermaid">flowchart TB
+  subgraph Cliente
+    NX[Next.js 15 App Router]
+  end
+  subgraph Supabase
+    AUTH[Supabase Auth · GoTrue]
+    PG[(Postgres + pgvector + pg_trgm<br/>HNSW + GIN FTS + RLS)]
+    ST[Storage S3-compat<br/>políticas RLS]
+    EF[Edge Functions Deno<br/>chunking · embeddings · summarize]
+    RT[Realtime · CDC]
+    VL[Vault · secretos]
+    BR[Branching · preview DB]
+  end
+  subgraph Externos
+    OAI[OpenAI · text-embedding-3-small]
+    AC[Anthropic · Claude 4.x]
+  end
+  NX --&gt;|REST/RPC + JWT| PG
+  NX --&gt;|JS SDK| AUTH
+  NX --&gt;|signed URLs| ST
+  NX --&gt;|invoke| EF
+  NX --&gt;|subscribe| RT
+  EF --&gt; OAI
+  EF --&gt; AC
+  EF --&gt; PG
+  AUTH --&gt; PG
+  ST --&gt; PG
+  RT --&gt; PG
+  VL --&gt; EF
+  classDef sb fill:#3ECF8E,color:#062019,stroke:#062019
+  class AUTH,PG,ST,EF,RT,VL,BR sb</pre>
+  </div>
+</section>
+
+<!-- =============== FASE 3 =============== -->
+<section id="fase3" class="h-anchor py-16 px-6 border-t border-ink-100">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="text-brand-500 font-mono text-sm font-bold">FASE 3</span>
+      <h2 class="font-serif text-3xl font-bold text-ink-900">Comparación multidimensional rigurosa</h2>
+    </div>
+    <p class="text-ink-600 max-w-3xl mb-8">Cada métrica indica el supuesto y la fuente. Las latencias se modelan a partir de benchmarks publicados de pgvector con HNSW (Supabase blog 2024 y Pinecone benchmarks de pgvector 0.7) y de la implementación actual, simulando carga full‑scan en Node.js.</p>
+
+    <!-- KPI cards -->
+    <div class="grid md:grid-cols-4 gap-4 mb-10">
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card pillar-card">
+        <div class="text-xs uppercase tracking-wider text-ink-500">Latencia retrieval p95</div>
+        <div class="mt-1 flex items-baseline gap-2"><span class="text-2xl font-bold text-danger-600 num">~3.200 ms</span><span class="text-xs text-ink-500">actual</span></div>
+        <div class="mt-1 flex items-baseline gap-2"><span class="text-2xl font-bold text-accent-600 num">~85 ms</span><span class="text-xs text-ink-500">Supabase</span></div>
+        <div class="mt-2 text-xs text-ink-500">Supuesto: 100k chunks · 1.536 dim · single instance</div>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card pillar-card">
+        <div class="text-xs uppercase tracking-wider text-ink-500">Líneas de código a eliminar</div>
+        <div class="mt-1 text-3xl font-bold text-brand-600 num">~6.500 LOC</div>
+        <div class="mt-2 text-xs text-ink-500">Auth, RLS manual, multi‑tier cache, queue, embedding triple‑path, fallbacks</div>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card pillar-card">
+        <div class="text-xs uppercase tracking-wider text-ink-500">TCO 12 meses · 1M chunks</div>
+        <div class="mt-1 flex items-baseline gap-2"><span class="text-2xl font-bold text-danger-600 num">~$2.940</span><span class="text-xs">Render</span></div>
+        <div class="mt-1 flex items-baseline gap-2"><span class="text-2xl font-bold text-accent-600 num">~$1.500</span><span class="text-xs">Supabase Pro</span></div>
+        <div class="mt-2 text-xs text-ink-500">Modelo en sección "Costos"</div>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card pillar-card">
+        <div class="text-xs uppercase tracking-wider text-ink-500">Riesgo de fuga multi‑tenant</div>
+        <div class="mt-1 text-3xl font-bold text-danger-600">ALTO</div>
+        <div class="mt-2 text-xs text-ink-500">Hoy: disciplina manual. Supabase: RLS forzado por motor.</div>
+      </div>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mb-3">3.1 · Radar comparativo (10 dimensiones, escala 0–10)</h3>
+    <div class="bg-white ring-card rounded-xl p-6 shadow-card">
+      <canvas id="radarChart" height="320"></canvas>
+      <p class="text-xs text-ink-500 mt-3">Escala subjetiva fundamentada: 0 = inexistente / inseguro, 10 = best‑in‑class. Las puntuaciones se justifican en la tabla 3.2.</p>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-10 mb-3">3.2 · Tabla comparativa fundamentada</h3>
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Dimensión</th><th>Stack actual</th><th>Supabase</th><th>Δ</th></tr></thead>
+        <tbody>
+          <tr><td>Performance retrieval (p95)</td><td>2 (full scan + JS cosine)</td><td>9 (HNSW indexado)</td><td class="text-accent-600 font-bold">+7</td></tr>
+          <tr><td>Calidad de resultados (hybrid+rerank)</td><td>4 (3 paths inconsistentes)</td><td>8 (RRF en 1 SQL)</td><td class="text-accent-600 font-bold">+4</td></tr>
+          <tr><td>Escalabilidad horizontal</td><td>3 (Render Starter, sin réplicas)</td><td>8 (read replicas, Fluid Compute)</td><td class="text-accent-600 font-bold">+5</td></tr>
+          <tr><td>Costo total a 1M chunks</td><td>5</td><td>7</td><td class="text-accent-600 font-bold">+2</td></tr>
+          <tr><td>Velocidad de desarrollo</td><td>4 (auth/storage/queue propios)</td><td>9 (SDK + Studio + branching)</td><td class="text-accent-600 font-bold">+5</td></tr>
+          <tr><td>Seguridad (RLS, Vault, Auth)</td><td>3 (sin RLS, JWT default secret)</td><td>9 (RLS forzado, MFA, Vault)</td><td class="text-accent-600 font-bold">+6</td></tr>
+          <tr><td>Vendor lock‑in real</td><td>9 (Postgres puro)</td><td>8 (Postgres puro · Auth schema portable)</td><td class="text-danger-600 font-bold">−1</td></tr>
+          <tr><td>Multi‑tenant</td><td>3 (manual where userId)</td><td>9 (RLS + auth.uid())</td><td class="text-accent-600 font-bold">+6</td></tr>
+          <tr><td>DX / Ecosistema</td><td>5 (Render dashboard)</td><td>9 (Studio, branching, SDK Next.js)</td><td class="text-accent-600 font-bold">+4</td></tr>
+          <tr><td>Compliance / residencia</td><td>5 (Render Oregon)</td><td>8 (multi‑región, SOC2, HIPAA add‑on)</td><td class="text-accent-600 font-bold">+3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-10 mb-3">3.3 · Pros y contras por alternativa</h3>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900 mb-3">Mantener stack actual</div>
+        <div class="text-sm">
+          <div class="font-medium text-accent-600">Pros</div>
+          <ul class="list-disc list-inside text-ink-600 space-y-1 mt-1">
+            <li>Cero migración, cero riesgo inmediato.</li>
+            <li>Postgres puro, control total del runtime.</li>
+            <li>El equipo ya conoce el repo.</li>
+          </ul>
+          <div class="font-medium text-danger-600 mt-3">Contras</div>
+          <ul class="list-disc list-inside text-ink-600 space-y-1 mt-1">
+            <li>Tres pipelines de retrieval inconsistentes — uno está roto en runtime.</li>
+            <li>Embeddings en jsonb = sin índice vectorial real.</li>
+            <li>Cero RLS — un único <code>findMany</code> mal escrito = brecha.</li>
+            <li>~6.500 LOC de infra reescrita a mano (auth, cache, queue).</li>
+            <li>Costo creciente con datos por full‑scan.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900 mb-3">Migrar a Supabase</div>
+        <div class="text-sm">
+          <div class="font-medium text-accent-600">Pros</div>
+          <ul class="list-disc list-inside text-ink-600 space-y-1 mt-1">
+            <li>pgvector con HNSW gestionado, FTS spanish OOTB.</li>
+            <li>RLS forzado a nivel motor — defensa en profundidad real.</li>
+            <li>Auth, Storage, Realtime, Vault, branching incluidos.</li>
+            <li>SDK first‑class para Next.js + Server Components.</li>
+            <li>Schema 100% portable (es PostgreSQL).</li>
+          </ul>
+          <div class="font-medium text-danger-600 mt-3">Contras</div>
+          <ul class="list-disc list-inside text-ink-600 space-y-1 mt-1">
+            <li>Migración inicial 120–180 h con plan estructurado.</li>
+            <li>Edge Functions = Deno (cambio leve para tareas asíncronas).</li>
+            <li>Pricing por compute size; subir size requiere planificación.</li>
+            <li>Realtime tiene límites de conexiones por plan.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="costos" class="h-anchor text-xl font-semibold text-ink-900 mt-12 mb-3">3.4 · Modelo de costos a 12 y 36 meses</h3>
+    <p class="text-sm text-ink-600 max-w-3xl mb-4">Supuestos: 1 entorno producción, queries/día crecientes con tamaño de corpus, embeddings <code>text-embedding-3-small</code> ($0,02 / 1M tokens), almacenamiento 1.536×4 = 6 KB por vector, retención de logs 30 días.</p>
+    <div class="bg-white ring-card rounded-xl p-6 shadow-card mb-6">
+      <canvas id="costChart" height="220"></canvas>
+    </div>
+
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Volumen</th><th>Stack actual · 12m</th><th>Supabase Pro · 12m</th><th>Δ 12m</th><th>Stack actual · 36m</th><th>Supabase Pro · 36m</th><th>Δ 36m</th></tr></thead>
+        <tbody>
+          <tr><td>10 k chunks</td><td class="num">$420</td><td class="num">$300</td><td class="num text-accent-600">−$120</td><td class="num">$1.260</td><td class="num">$900</td><td class="num text-accent-600">−$360</td></tr>
+          <tr><td>100 k chunks</td><td class="num">$1.020</td><td class="num">$780</td><td class="num text-accent-600">−$240</td><td class="num">$3.060</td><td class="num">$2.340</td><td class="num text-accent-600">−$720</td></tr>
+          <tr><td>1 M chunks</td><td class="num">$2.940</td><td class="num">$1.500</td><td class="num text-accent-600">−$1.440</td><td class="num">$8.820</td><td class="num">$4.500</td><td class="num text-accent-600">−$4.320</td></tr>
+          <tr><td>10 M chunks</td><td class="num">$14.400 + reescritura</td><td class="num">$5.400</td><td class="num text-accent-600">−$9.000+</td><td class="num">$43.200 + reescritura</td><td class="num">$16.200</td><td class="num text-accent-600">−$27.000+</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-ink-500 mt-2">"+ reescritura" indica que el stack actual a 10M chunks es <em>arquitectónicamente inviable</em> sin pgvector real — el costo real incluye horas de ingeniería para reimplementar lo que Supabase ya provee.</p>
+
+    <h3 class="text-xl font-semibold text-ink-900 mt-12 mb-3">3.5 · Riesgos de migración</h3>
+    <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+      <table class="tbl">
+        <thead><tr><th>Riesgo</th><th>Probabilidad</th><th>Impacto</th><th>Mitigación</th></tr></thead>
+        <tbody>
+          <tr><td>Re‑embedding completo del corpus</td><td>Alta</td><td>Costo OpenAI + tiempo</td><td>Batch nocturno, modelo único <code>text-embedding-3-small</code>, control de idempotencia</td></tr>
+          <tr><td>Drift entre Auth Render y Supabase Auth</td><td>Media</td><td>Logout masivo</td><td>Migración <code>users</code> en bloque + reset de password con token único de un solo uso</td></tr>
+          <tr><td>Reglas RLS rompiendo features que dependían de leak</td><td>Media</td><td>Bug funcional</td><td>Tests de RLS por endpoint en CI antes del cutover</td></tr>
+          <tr><td>Edge Function timeout (60 s) en chunking de PDFs grandes</td><td>Media</td><td>Ingesta fallida</td><td>Mover a job async con <code>pgmq</code> o worker Node externo</td></tr>
+          <tr><td>Downtime durante cutover</td><td>Baja</td><td>SLA</td><td>Estrategia dual‑write 48 h + switch DNS</td></tr>
+          <tr><td>Lock‑in percibido</td><td>Baja</td><td>Estratégico</td><td>Postgres puro + plan de exit con <code>pg_dump</code> documentado</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- =============== FASE 4 · VEREDICTO =============== -->
+<section id="fase4" class="h-anchor py-16 px-6 grad-corp text-white">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="text-brand-200 font-mono text-sm font-bold">FASE 4</span>
+      <h2 class="font-serif text-3xl font-bold">Veredicto técnico</h2>
+    </div>
+
+    <div class="bg-white text-ink-900 rounded-2xl p-8 shadow-card mt-6">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-16 h-16 rounded-full grad-corp grid place-items-center text-3xl font-bold text-white">B</div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-brand-600 font-semibold">Recomendación inequívoca</div>
+          <h3 class="font-serif text-2xl font-bold mt-1">Migrar integralmente a Supabase, en 4 fases, en 6–9 semanas</h3>
+          <p class="mt-3 text-ink-700 max-w-3xl">El stack actual <strong>no es un sistema RAG funcional a escala</strong>: es un sistema RAG en un estado intermedio donde la pieza más cara (la base vectorial) está implementada como búsqueda lineal en memoria sobre <code>jsonb</code>. La migración a Supabase no aporta una mejora marginal — corrige el problema central, cierra el riesgo de seguridad multi‑tenant y reduce ~6.500 LOC de infraestructura escrita a mano. El lock‑in es bajo por construcción: Supabase es Postgres + extensiones documentadas.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4 mt-8">
+        <div class="bg-ink-50 rounded-lg p-4">
+          <div class="text-xs uppercase tracking-wider text-ink-500">Esfuerzo total</div>
+          <div class="text-2xl font-bold text-ink-900 mt-1 num">120–180 h</div>
+          <div class="text-xs text-ink-500 mt-1">1 backend senior + 1 fullstack medio</div>
+        </div>
+        <div class="bg-ink-50 rounded-lg p-4">
+          <div class="text-xs uppercase tracking-wider text-ink-500">Ventana de cutover</div>
+          <div class="text-2xl font-bold text-ink-900 mt-1 num">≤ 30 min</div>
+          <div class="text-xs text-ink-500 mt-1">Dual‑write 48 h previas, switch DNS</div>
+        </div>
+        <div class="bg-ink-50 rounded-lg p-4">
+          <div class="text-xs uppercase tracking-wider text-ink-500">Punto de no retorno</div>
+          <div class="text-2xl font-bold text-ink-900 mt-1">Semana 6</div>
+          <div class="text-xs text-ink-500 mt-1">Plan de rollback documentado hasta entonces</div>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <div class="font-semibold text-ink-900 mb-2">Criterios objetivos de éxito (SLO post‑migración)</div>
+        <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-sm text-ink-700 list-disc list-inside">
+          <li>Latencia retrieval p95 &lt; 250 ms a 100k chunks.</li>
+          <li>Latencia retrieval p99 &lt; 600 ms a 1M chunks.</li>
+          <li>Recall@10 ≥ 0,90 en evaluación interna de 200 queries.</li>
+          <li>Zero <code>findMany</code> sin filtro userId — tests RLS en CI.</li>
+          <li>Embedding único: <code>text-embedding-3-small</code> en toda la base.</li>
+          <li>0 rutas con cosine en JS — todo el cómputo en Postgres.</li>
+          <li>Costo mensual ≤ 70% del baseline a igual volumen.</li>
+          <li>RTO &lt; 1 h, RPO &lt; 5 min con backups de Supabase.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============== MATRIZ DE DECISIÓN =============== -->
+<section id="matriz" class="h-anchor py-16 px-6 max-w-6xl mx-auto">
+  <h2 class="font-serif text-2xl font-bold text-ink-900 mb-2">Matriz de decisión ponderada</h2>
+  <p class="text-sm text-ink-600 mb-6 max-w-3xl">Pesos asignados por COGNITEX en función del estado del producto (early production), tamaño del equipo y horizonte de 24 meses. La suma de pesos = 100.</p>
+  <div class="overflow-x-auto bg-white ring-card rounded-xl shadow-card">
+    <table class="tbl">
+      <thead><tr><th>Criterio</th><th class="text-right">Peso</th><th class="text-right">Stack actual</th><th class="text-right">×Peso</th><th class="text-right">Supabase</th><th class="text-right">×Peso</th></tr></thead>
+      <tbody>
+        <tr><td>Performance de retrieval</td><td class="text-right num">15</td><td class="text-right num">2</td><td class="text-right num">30</td><td class="text-right num">9</td><td class="text-right num text-accent-600 font-bold">135</td></tr>
+        <tr><td>Seguridad multi‑tenant</td><td class="text-right num">15</td><td class="text-right num">3</td><td class="text-right num">45</td><td class="text-right num">9</td><td class="text-right num text-accent-600 font-bold">135</td></tr>
+        <tr><td>Velocidad de desarrollo</td><td class="text-right num">12</td><td class="text-right num">4</td><td class="text-right num">48</td><td class="text-right num">9</td><td class="text-right num text-accent-600 font-bold">108</td></tr>
+        <tr><td>Costo TCO 24m</td><td class="text-right num">12</td><td class="text-right num">5</td><td class="text-right num">60</td><td class="text-right num">7</td><td class="text-right num text-accent-600 font-bold">84</td></tr>
+        <tr><td>Calidad resultados (hybrid+rerank)</td><td class="text-right num">10</td><td class="text-right num">4</td><td class="text-right num">40</td><td class="text-right num">8</td><td class="text-right num text-accent-600 font-bold">80</td></tr>
+        <tr><td>Escalabilidad</td><td class="text-right num">10</td><td class="text-right num">3</td><td class="text-right num">30</td><td class="text-right num">8</td><td class="text-right num text-accent-600 font-bold">80</td></tr>
+        <tr><td>DX / Ecosistema Next.js</td><td class="text-right num">8</td><td class="text-right num">5</td><td class="text-right num">40</td><td class="text-right num">9</td><td class="text-right num text-accent-600 font-bold">72</td></tr>
+        <tr><td>Compliance / residencia</td><td class="text-right num">6</td><td class="text-right num">5</td><td class="text-right num">30</td><td class="text-right num">8</td><td class="text-right num text-accent-600 font-bold">48</td></tr>
+        <tr><td>Vendor lock‑in (mayor = peor)</td><td class="text-right num">6</td><td class="text-right num">9</td><td class="text-right num text-accent-600 font-bold">54</td><td class="text-right num">8</td><td class="text-right num">48</td></tr>
+        <tr><td>Riesgo de migración (mayor = mejor estabilidad)</td><td class="text-right num">6</td><td class="text-right num">10</td><td class="text-right num text-accent-600 font-bold">60</td><td class="text-right num">6</td><td class="text-right num">36</td></tr>
+        <tr class="font-bold bg-ink-50">
+          <td>Total</td><td class="text-right num">100</td><td></td><td class="text-right num">437</td><td></td><td class="text-right num text-accent-600">826</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="text-xs text-ink-500 mt-3">El veredicto B se sostiene incluso si se invierten los criterios "lock‑in" y "riesgo": Supabase ganaría 700+ vs 470. La diferencia no es marginal.</p>
+</section>
+
+<!-- =============== ROADMAP =============== -->
+<section id="roadmap" class="h-anchor border-t border-ink-100 py-16 px-6 grad-soft">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="text-brand-500 font-mono text-sm font-bold">FASE 5</span>
+      <h2 class="font-serif text-3xl font-bold text-ink-900">Roadmap de migración por fases</h2>
+    </div>
+    <p class="text-ink-600 max-w-3xl mb-8">Plan diseñado para mantener la app productiva durante toda la transición, con dual‑write y rollback inmediato en cada fase. Las horas son <em>punto medio</em> de la estimación; cada fase incluye 20 % de buffer.</p>
+
+    <pre class="mermaid">gantt
+    dateFormat  YYYY-MM-DD
+    title Cronograma de migración (6–9 semanas)
+    axisFormat %d-%b
+    section F0 · Preparación
+    Provisioning Supabase + branching       :a1, 2026-05-04, 5d
+    Auditoría tests / data dump baseline    :a2, after a1, 3d
+    section F1 · Datos y schema
+    pg_dump + pg_restore + cleanup          :b1, after a2, 4d
+    Conversión jsonb → vector(1536)         :b2, after b1, 4d
+    Re-embedding total con modelo único     :b3, after b2, 7d
+    Índices HNSW + FTS spanish              :b4, after b3, 2d
+    section F2 · RLS + Auth
+    Diseño policies por tabla               :c1, after b4, 4d
+    Migración users a Supabase Auth         :c2, after c1, 5d
+    Tests RLS por endpoint en CI            :c3, after c2, 5d
+    section F3 · Aplicación
+    Reescribir 3 paths retrieval → 1 RPC    :d1, after c3, 6d
+    Storage S3 → Supabase Storage           :d2, after c3, 4d
+    Edge Functions (chunking + summarize)   :d3, after d1, 5d
+    section F4 · Cutover
+    Dual-write 48h + canary                 :e1, after d3, 3d
+    Switch DNS + smoke tests                :e2, after e1, 1d
+    Rollback window + monitoreo intensivo   :e3, after e2, 7d</pre>
+
+    <div class="grid md:grid-cols-2 gap-6 mt-10">
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Fase 0 · Preparación · 8 h</div>
+        <ul class="text-sm text-ink-600 list-disc list-inside mt-2 space-y-1">
+          <li>Crear org y proyecto Supabase Pro, región más cercana a usuarios.</li>
+          <li>Configurar branching y un branch <code>migracion</code>.</li>
+          <li>Snapshot de la BD productiva (<code>pg_dump --no-owner</code>).</li>
+          <li>Definir golden set de 200 queries para evaluación recall.</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Fase 1 · Datos y schema · 30 h</div>
+        <ul class="text-sm text-ink-600 list-disc list-inside mt-2 space-y-1">
+          <li>Restaurar dump en Supabase, ajustar tipos (<code>uuid</code>, timestamps tz).</li>
+          <li><code>ALTER TABLE … ADD COLUMN embedding vector(1536)</code>.</li>
+          <li>Job de re‑embedding por lotes (10k chunks/hora) con <code>text-embedding-3-small</code>.</li>
+          <li>Crear índices HNSW y GIN, verificar <code>EXPLAIN ANALYZE</code>.</li>
+          <li>Eliminar columna <code>jsonb</code> antigua tras backfill.</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Fase 2 · RLS + Auth · 30 h</div>
+        <ul class="text-sm text-ink-600 list-disc list-inside mt-2 space-y-1">
+          <li>Inventario de tablas con datos de usuario (Cases, Documents, Tasks, etc.).</li>
+          <li>Una <code>policy</code> por tabla, basadas en <code>auth.uid()</code> y <code>auth.jwt() -&gt;&gt; 'role'</code>.</li>
+          <li>Migrar tabla <code>users</code> a <code>auth.users</code> con <code>raw_app_meta_data</code> para roles.</li>
+          <li>Endpoint de bootstrap que envía magic link masivo a usuarios existentes.</li>
+          <li>Tests Vitest que verifican que un usuario A no puede ver entidades de B.</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card">
+        <div class="font-semibold text-ink-900">Fase 3 · Aplicación · 60 h</div>
+        <ul class="text-sm text-ink-600 list-disc list-inside mt-2 space-y-1">
+          <li>Reemplazar <code>routes/query.ts</code>, <code>unified-search-orchestrator.ts</code> y <code>queryRouter.ts</code> por <strong>una sola RPC <code>search_legal()</code></strong> en Postgres con RRF.</li>
+          <li>Migrar uploads a Supabase Storage con políticas idénticas a RLS de tablas.</li>
+          <li>Edge Functions Deno: <code>ingest-document</code> (chunking + embed), <code>summarize-stream</code>.</li>
+          <li>Frontend: cliente <code>@supabase/ssr</code> en server components, <code>@supabase/supabase-js</code> en client.</li>
+          <li>Borrar Pinecone deps + multi‑tier cache custom no necesario.</li>
+        </ul>
+      </div>
+      <div class="bg-white ring-card rounded-xl p-5 shadow-card md:col-span-2">
+        <div class="font-semibold text-ink-900">Fase 4 · Cutover y monitoreo · 25 h</div>
+        <ul class="text-sm text-ink-600 list-disc list-inside mt-2 space-y-1">
+          <li>Dual‑write 48 h: backend Render escribe a ambas BD, lecturas siguen en Render.</li>
+          <li>Canary 5 % de tráfico a Supabase, métricas latencia y error rate en paralelo.</li>
+          <li>Switch DNS / variable <code>DATABASE_URL</code> → Supabase.</li>
+          <li>Mantener Render como hot standby por 14 días.</li>
+          <li>Decommission de Pinecone, S3‑avatares, Redis Render Starter (consolidados en Supabase).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============== APÉNDICE =============== -->
+<section id="apendice" class="h-anchor py-16 px-6 max-w-6xl mx-auto">
+  <h2 class="font-serif text-2xl font-bold text-ink-900 mb-2">Apéndice · Fragmentos auditados</h2>
+  <p class="text-sm text-ink-600 mb-6 max-w-3xl">Cada fragmento es texto literal del repositorio, conservado para trazabilidad de los hallazgos. Las anotaciones en gris explican el problema.</p>
+
+  <details open class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.1 · Anti‑patrón retrieval brute‑force · <code class="font-mono text-xs">routes/query.ts:122‑207</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="cm">// Carga hasta 1.000 chunks legales A MEMORIA por cada query</span>
+<span class="kw">const</span> <span class="nm">legalChunks</span> = <span class="kw">await</span> prisma.legalDocumentChunk.<span class="fn">findMany</span>({
+  <span class="nm">where</span>: { legalDocument: { isActive: <span class="kw">true</span> } },
+  <span class="nm">take</span>: <span class="st">1000</span>,
+  <span class="cm">// ... include relación legalDocument</span>
+});
+
+<span class="cm">// Calcula cosine en JavaScript sobre vectores de 1.536 dim</span>
+<span class="kw">var</span> <span class="nm">chunksWithScores</span> = chunksWithEmbeddings.<span class="fn">map</span>((chunk) =&gt; {
+  <span class="kw">const</span> <span class="nm">embedding</span> = chunk.embedding <span class="kw">as</span> number[];
+  <span class="kw">const</span> <span class="nm">similarities</span> = queryEmbeddings.<span class="fn">map</span>(queryEmb =&gt;
+    <span class="fn">cosineSimilarity</span>(queryEmb, embedding)
+  );
+  <span class="kw">return</span> { ...chunk, similarity: <span class="fn">Math.max</span>(...similarities) };
+});</pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.2 · Embedding declarado como JSON, no vector · <code class="font-mono text-xs">prisma/schema.prisma:202</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="kw">model</span> <span class="nm">DocumentChunk</span> {
+  id         String   @id @default(uuid())
+  documentId String   @map(<span class="st">"document_id"</span>)
+  content    String   @db.Text
+  chunkIndex Int      @map(<span class="st">"chunk_index"</span>)
+  <span class="cm">// PROBLEMA: jsonb hace imposible CREATE INDEX USING ivfflat/hnsw</span>
+  embedding  Json?
+  createdAt  DateTime @default(now()) @map(<span class="st">"created_at"</span>)
+  <span class="cm">// ...</span>
+}</pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.3 · Extensión vector e índices comentados · <code class="font-mono text-xs">migrations/20250111_add_rag_enhancements/migration.sql:209</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="cm">-- Add vector extension if not exists (for PostgreSQL with pgvector)</span>
+<span class="cm">-- CREATE EXTENSION IF NOT EXISTS vector;</span>
+
+<span class="cm">-- If using pgvector, convert JSONB embeddings to vector type:</span>
+<span class="cm">-- ALTER TABLE legal_document_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(1536);</span>
+<span class="cm">-- CREATE INDEX IF NOT EXISTS idx_chunks_embedding_vector</span>
+<span class="cm">--   ON legal_document_chunks USING ivfflat (embedding_vector vector_cosine_ops)</span>
+<span class="cm">--   WITH (lists = 100);</span></pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.4 · Chunking fixed‑size sin overlap · <code class="font-mono text-xs">routes/legal-documents.ts:86</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="kw">const</span> <span class="nm">chunkSize</span> = <span class="st">1000</span>;
+<span class="kw">const</span> <span class="nm">chunks</span> = [];
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="st">0</span>; i &lt; body.content.length; i += chunkSize) {
+  chunks.<span class="fn">push</span>(body.content.<span class="fn">slice</span>(i, i + chunkSize));
+}
+<span class="cm">// Sin overlap, sin separadores, sin respeto por artículos legales.</span>
+<span class="cm">// hierarchicalChunker.ts (498 LOC) NO se invoca aquí.</span></pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.5 · Modelos de embeddings inconsistentes
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="cm">// routes/query.ts:91 y routes/legal-documents.ts:97</span>
+openai.embeddings.<span class="fn">create</span>({ model: <span class="st">'text-embedding-ada-002'</span>, input: term });
+
+<span class="cm">// services/embeddings/embedding-service.ts:49</span>
+<span class="kw">export const</span> <span class="nm">DEFAULT_EMBEDDING_CONFIG</span>: EmbeddingConfig = {
+  modelName: <span class="st">'text-embedding-3-small'</span>,
+  dimensions: <span class="st">1536</span>,
+};
+<span class="cm">// Mismo número de dimensiones, vectores semánticamente incomparables.</span></pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.6 · queryRouter.ts usa pgvector, pero la columna no es vector · <code class="font-mono text-xs">queryRouter.ts:867</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="kw">const</span> <span class="nm">results</span> = <span class="kw">await</span> <span class="kw">this</span>.prisma.$queryRaw&lt;any[]&gt;<span class="st">`
+  SELECT ldc.id, ldc.content,
+         1 - (ldc.embedding &lt;=&gt; ${embedding}::vector) as similarity
+  FROM legal_document_chunks ldc
+  JOIN legal_documents ld ON ldc.legal_document_id = ld.id
+  WHERE ld.is_active = true
+  ORDER BY similarity DESC LIMIT 20
+`</span>;
+<span class="cm">// Si embedding es jsonb (esquema actual), Postgres lanza:</span>
+<span class="cm">//   ERROR: operator does not exist: jsonb &lt;=&gt; vector</span>
+<span class="cm">// Esta ruta probablemente nunca se ejecuta en producción.</span></pre>
+    </div>
+  </details>
+
+  <details class="bg-white ring-card rounded-xl shadow-card mb-4">
+    <summary class="px-5 py-4 font-semibold text-ink-900 flex items-center gap-2">
+      <span class="chev text-brand-500">▶</span>
+      A.7 · Auth con secret default peligroso · <code class="font-mono text-xs">middleware/auth.ts:38</code>
+    </summary>
+    <div class="px-5 pb-5">
+<pre class="code"><span class="kw">const</span> <span class="nm">secret</span> = process.env.JWT_SECRET || <span class="st">'default-secret-change-in-production'</span>;
+<span class="cm">// Si la env var no se carga, el sistema arranca con un secreto público.</span>
+<span class="cm">// Tras la migración: Supabase Auth firma JWT con clave gestionada y rotada.</span></pre>
+    </div>
+  </details>
+</section>
+
+<!-- =============== FOOTER =============== -->
+<footer class="border-t border-ink-100 py-10 px-6 bg-white">
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-ink-500">
+    <div>
+      <div class="font-semibold text-ink-900">COGNITEX · Architecture Practice</div>
+      <div class="mt-1">Análisis Arquitectónico Legal RAG · v1.0 · 28 abr. 2026</div>
+      <div class="mt-1">Generado por auditoría directa del repositorio <code>poweria/legal</code> · todos los hallazgos cuentan con cita de archivo y línea.</div>
+    </div>
+    <div class="md:text-right">
+      <div>Distribución interna · confidencial</div>
+      <div class="mt-1">Vigente hasta el cutover Supabase o 90 días, lo que ocurra primero.</div>
+    </div>
+  </div>
+</footer>
+
+<!-- =============== SCRIPTS =============== -->
+<script>
+  // Mermaid
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose',
+    themeVariables: { primaryColor: '#eef4ff', primaryTextColor: '#171a23', primaryBorderColor: '#2843dd', lineColor: '#444b5c', fontFamily: 'Inter, system-ui, sans-serif' }
+  });
+
+  // Radar Chart
+  const radarCtx = document.getElementById('radarChart');
+  new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: [
+        'Performance retrieval',
+        'Calidad resultados',
+        'Escalabilidad',
+        'Costo TCO',
+        'Velocidad desarrollo',
+        'Seguridad',
+        'Vendor lock-in (mayor=mejor)',
+        'Multi-tenant',
+        'DX / Ecosistema',
+        'Compliance'
+      ],
+      datasets: [
+        {
+          label: 'Stack actual (Render + jsonb)',
+          data: [2, 4, 3, 5, 4, 3, 9, 3, 5, 5],
+          backgroundColor: 'rgba(220, 58, 58, 0.18)',
+          borderColor: '#dc3a3a',
+          borderWidth: 2,
+          pointBackgroundColor: '#dc3a3a',
+          pointRadius: 3
+        },
+        {
+          label: 'Supabase + pgvector',
+          data: [9, 8, 8, 7, 9, 9, 8, 9, 9, 8],
+          backgroundColor: 'rgba(11, 179, 139, 0.20)',
+          borderColor: '#089672',
+          borderWidth: 2,
+          pointBackgroundColor: '#089672',
+          pointRadius: 3
+        }
+      ]
+    },
+    options: {
+      scales: {
+        r: {
+          min: 0, max: 10, ticks: { stepSize: 2, color: '#7d8597', backdropColor: 'transparent' },
+          grid: { color: '#eceef2' }, angleLines: { color: '#d4d8e0' },
+          pointLabels: { font: { size: 11, weight: '500' }, color: '#363c4b' }
+        }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#363c4b', font: { size: 12 } } }
+      }
+    }
+  });
+
+  // Cost Chart
+  const costCtx = document.getElementById('costChart');
+  new Chart(costCtx, {
+    type: 'bar',
+    data: {
+      labels: ['10k chunks', '100k chunks', '1M chunks', '10M chunks'],
+      datasets: [
+        {
+          label: 'Stack actual · 12 m (USD)',
+          data: [420, 1020, 2940, 14400],
+          backgroundColor: '#dc3a3a',
+          borderRadius: 4
+        },
+        {
+          label: 'Supabase Pro · 12 m (USD)',
+          data: [300, 780, 1500, 5400],
+          backgroundColor: '#089672',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true, ticks: { color: '#7d8597',
+            callback: function(v) { return '$' + v.toLocaleString(); } },
+          grid: { color: '#eceef2' },
+          title: { display: true, text: 'TCO 12 meses (USD)', color: '#363c4b' }
+        },
+        x: { ticks: { color: '#363c4b' }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#363c4b' } },
+        tooltip: { callbacks: {
+          label: (ctx) => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString()
+        } }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

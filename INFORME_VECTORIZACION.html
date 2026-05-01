@@ -1,0 +1,2625 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Informe de vectorización · Corpus jurídico Ecuador</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0d12; --bg2: #11141b; --panel: #161a23; --panel2: #1c2130;
+    --border: #2a3142; --text: #e7ebf3; --dim: #aab2c5; --muted: #7a8299;
+    --accent: #6ea8ff; --good: #2dd17e; --warn: #f6b948; --bad: #ff6b7a;
+    --code-bg: #0a0c12;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 24px rgba(0,0,0,.25);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb; --bg2: #eef0f7; --panel: #fff; --panel2: #f9fafd;
+      --border: #e3e6ef; --text: #1a1d27; --dim: #4d556b; --muted: #7a8299;
+      --accent: #2d62d4; --good: #14a86b; --warn: #c98a17; --bad: #d63848;
+      --code-bg: #f0f2f8;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 18px rgba(20,30,80,.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, var(--bg), var(--bg2));
+    color: var(--text);
+    font: 15px/1.55 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1300px; margin: 0 auto; padding: 48px 28px 96px; }
+
+  header.cover {
+    background: radial-gradient(900px 360px at 0% 0%, rgba(110,168,255,.18), transparent 60%),
+                radial-gradient(800px 320px at 100% 0%, rgba(220,38,38,.16), transparent 60%),
+                var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 40px 36px;
+    box-shadow: var(--shadow);
+  }
+  .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 32px; margin: 6px 0 8px; letter-spacing: -.01em; }
+  h1 .pill {
+    font-size: 13px; background: rgba(45,209,126,.14); color: var(--good);
+    padding: 4px 12px; border-radius: 999px;
+    border: 1px solid rgba(45,209,126,.35);
+    margin-left: 10px; vertical-align: middle; font-weight: 600;
+  }
+
+  .kpis {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px; margin-top: 24px;
+  }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .kpi .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .kpi .value { font-size: 24px; font-weight: 700; margin-top: 4px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .kpi .value.good { color: var(--good); }
+  .kpi .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  section { margin-top: 40px; }
+  h2 {
+    font-size: 22px; margin: 0 0 16px;
+    display: flex; align-items: center; gap: 10px; letter-spacing: -.005em;
+  }
+  h2 .num {
+    width: 28px; height: 28px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--accent); font-weight: 700;
+  }
+  h3 { font-size: 16px; margin: 22px 0 10px; font-weight: 600; }
+
+  /* Pirámide de Kelsen */
+  .pyramid {
+    margin: 24px auto;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .layer {
+    width: 100%;
+    border-radius: 8px;
+    padding: 14px 20px;
+    color: white;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: transform .2s;
+  }
+  .layer:hover { transform: translateX(4px); }
+  .layer-l1 { width: 60%; }
+  .layer-l2 { width: 72%; }
+  .layer-l3 { width: 82%; }
+  .layer-l4 { width: 90%; }
+  .layer-l5 { width: 95%; }
+  .layer-l6 { width: 100%; }
+
+  .layer .meta-text { font-size: 13px; opacity: .9; }
+  .layer .label { font-weight: 700; font-size: 14px; }
+  .layer .count {
+    background: rgba(255,255,255,.25);
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+  }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 24px; box-shadow: var(--shadow);
+    margin: 14px 0;
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: 13.5px;
+  }
+  th { text-align: left; padding: 10px 14px; font-size: 11.5px; text-transform: uppercase;
+       letter-spacing: .08em; color: var(--muted); font-weight: 600; background: var(--panel2);
+       border-bottom: 1px solid var(--border); }
+  td { padding: 8px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel2);
+    color: var(--dim);
+    white-space: nowrap;
+  }
+  .badge.good { color: var(--good); border-color: rgba(45,209,126,.4); background: rgba(45,209,126,.09); }
+  .badge.warn { color: var(--warn); border-color: rgba(246,185,72,.4); background: rgba(246,185,72,.10); }
+  .badge.const { background: #dc2626; color: white; border-color: #dc2626; }
+  .badge.org { background: #ea580c; color: white; border-color: #ea580c; }
+  .badge.ord { background: #ca8a04; color: white; border-color: #ca8a04; }
+  .badge.reg { background: #16a34a; color: white; border-color: #16a34a; }
+  .badge.res { background: #0891b2; color: white; border-color: #0891b2; }
+
+  pre, code {
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  code { background: var(--code-bg); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; font-size: 12.5px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 10px 0; overflow-x: auto; font-size: 13px; line-height: 1.55; }
+  pre code { background: transparent; border: 0; padding: 0; }
+
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+  .cat-cell {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cat-cell .name { font-size: 13px; color: var(--text); }
+  .cat-cell .n { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+  .banner {
+    border-radius: 12px; padding: 14px 18px; margin: 12px 0;
+    border: 1px solid var(--border); background: var(--panel);
+  }
+  .banner.good { background: rgba(45,209,126,.08); border-color: rgba(45,209,126,.3); }
+  .banner.info { background: rgba(76,200,255,.08); border-color: rgba(76,200,255,.3); }
+
+  footer {
+    margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+
+  /* Detalles colapsables */
+  details { margin: 8px 0; }
+  summary { cursor: pointer; font-weight: 600; color: var(--accent); font-size: 14px; padding: 6px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="eyebrow">Vectorización RAG · Corpus jurídico Ecuador</div>
+  <h1>Informe de vectorización <span class="pill">127 documentos</span></h1>
+  <p style="color: var(--dim); max-width: 820px; margin: 6px 0 0;">
+    Corpus completo del ordenamiento jurídico ecuatoriano vectorizado en Supabase
+    (<code>legal_documents</code> + <code>legal_document_chunks</code> con
+    <code>vector(1536)</code> + HNSW). Cada chunk indexado con
+    <code>text-embedding-3-small</code> de OpenAI. Búsqueda híbrida via RPC
+    <code>search_legal_chunks</code> con RRF (Reciprocal Rank Fusion) sobre
+    embeddings semánticos + full-text search en español.
+  </p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">Documentos</div><div class="value good">127</div><div class="sub">leyes y normas</div></div>
+    <div class="kpi"><div class="label">Chunks vectorizados</div><div class="value">32.476</div><div class="sub">embeddings 1536d</div></div>
+    <div class="kpi"><div class="label">Artículos detectados</div><div class="value">27.742</div><div class="sub">Art. NN.- patrón</div></div>
+    <div class="kpi"><div class="label">Palabras totales</div><div class="value">4.0M</div><div class="sub">27.637.652 chars</div></div>
+    <div class="kpi"><div class="label">Tamaño del corpus</div><div class="value">76.2 MB</div><div class="sub">PDFs originales</div></div>
+    <div class="kpi"><div class="label">Costo OpenAI</div><div class="value">$0.138</div><div class="sub">~6.91M tokens</div></div>
+  </div>
+</header>
+
+<!-- 1. Pirámide de Kelsen -->
+<section>
+  <h2><span class="num">1</span>Pirámide de Kelsen aplicada al ordenamiento ecuatoriano</h2>
+  <p style="color: var(--dim); max-width: 820px;">
+    Visualización jerárquica del corpus. La <strong>supremacía constitucional</strong>
+    establece que las normas inferiores no pueden contradecir a las superiores.
+    En Ecuador la pirámide está formalmente recogida en el <strong>Art. 425 de la
+    Constitución</strong>, que define el orden jerárquico de aplicación.
+  </p>
+
+  <div class="pyramid">
+    <div class="layer layer-l1" style="background:#dc2626;">
+        <div>
+          <div class="label">Nivel 1</div>
+          <div class="meta-text">Constitución <span class="count">3</span></div>
+        </div>
+        <span class="count" style="font-size:14px; padding:5px 14px;">3 docs</span>
+      </div><div class="layer layer-l2" style="background:#ea580c;">
+        <div>
+          <div class="label">Nivel 2</div>
+          <div class="meta-text">Códigos Orgánicos <span class="count">11</span>  &nbsp;·&nbsp;  Leyes Orgánicas <span class="count">53</span></div>
+        </div>
+        <span class="count" style="font-size:14px; padding:5px 14px;">64 docs</span>
+      </div><div class="layer layer-l3" style="background:#ca8a04;">
+        <div>
+          <div class="label">Nivel 3</div>
+          <div class="meta-text">Códigos Ordinarios <span class="count">7</span>  &nbsp;·&nbsp;  Leyes Ordinarias <span class="count">33</span></div>
+        </div>
+        <span class="count" style="font-size:14px; padding:5px 14px;">40 docs</span>
+      </div><div class="layer layer-l4" style="background:#16a34a;">
+        <div>
+          <div class="label">Nivel 4</div>
+          <div class="meta-text">Reglamentos <span class="count">11</span></div>
+        </div>
+        <span class="count" style="font-size:14px; padding:5px 14px;">11 docs</span>
+      </div><div class="layer layer-l5" style="background:#0891b2;">
+        <div>
+          <div class="label">Nivel 5</div>
+          <div class="meta-text">Resoluciones / Normas Técnicas <span class="count">9</span></div>
+        </div>
+        <span class="count" style="font-size:14px; padding:5px 14px;">9 docs</span>
+      </div>
+  </div>
+
+  <div class="banner info">
+    <div>
+      <strong>Art. 425 CRE.-</strong> El orden jerárquico de aplicación de las normas será el siguiente:
+      <ol style="margin: 8px 0 0; color: var(--dim);">
+        <li>La Constitución</li>
+        <li>Los tratados y convenios internacionales</li>
+        <li>Las leyes orgánicas</li>
+        <li>Las leyes ordinarias</li>
+        <li>Las normas regionales y las ordenanzas distritales</li>
+        <li>Los decretos y reglamentos</li>
+        <li>Las ordenanzas</li>
+        <li>Los acuerdos y resoluciones</li>
+        <li>Y los demás actos y decisiones de los poderes públicos</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Distribución por jerarquía -->
+<section>
+  <h2><span class="num">2</span>Distribución por jerarquía</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Jerarquía</th>
+        <th style="text-align:right;">Documentos</th>
+        <th style="text-align:right;">Artículos</th>
+        <th style="text-align:right;">Palabras</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+          <td>
+            <span class="badge" style="background:#dc2626;color:white;border-color:#dc2626;">Constitución</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 1</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">3</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">1.154</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">196.408</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#ea580c;color:white;border-color:#ea580c;">Códigos Orgánicos</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 2</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">6.270</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">877.975</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#ea580c;color:white;border-color:#ea580c;">Leyes Orgánicas</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 2</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">53</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">4.793</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">1.040.727</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#ca8a04;color:white;border-color:#ca8a04;">Códigos Ordinarios</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 3</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">7</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">5.389</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">375.814</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#ca8a04;color:white;border-color:#ca8a04;">Leyes Ordinarias</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 3</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">33</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">7.054</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">889.175</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#16a34a;color:white;border-color:#16a34a;">Reglamentos</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 4</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">1.362</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">308.689</td>
+        </tr><tr>
+          <td>
+            <span class="badge" style="background:#0891b2;color:white;border-color:#0891b2;">Resoluciones / Normas Técnicas</span>
+            <span style="color:var(--muted); font-size:12px; margin-left:6px;">Nivel 5</span>
+          </td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">9</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">1.720</td>
+          <td style="text-align:right; font-variant-numeric: tabular-nums;">279.916</td>
+        </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 3. Distribución por categoría -->
+<section>
+  <h2><span class="num">3</span>Áreas del derecho cubiertas</h2>
+  <p style="color: var(--dim);">Categorización temática automática (54 categorías detectadas).</p>
+  <div class="cat-grid">
+    <div class="cat-cell"><span class="name">Otros</span><span class="n">19</span></div><div class="cat-cell"><span class="name">Seguridad</span><span class="n">7</span></div><div class="cat-cell"><span class="name">Normas Técnicas</span><span class="n">6</span></div><div class="cat-cell"><span class="name">Salud</span><span class="n">6</span></div><div class="cat-cell"><span class="name">Administrativo</span><span class="n">5</span></div><div class="cat-cell"><span class="name">Constitucional</span><span class="n">4</span></div><div class="cat-cell"><span class="name">Control</span><span class="n">4</span></div><div class="cat-cell"><span class="name">Educación</span><span class="n">4</span></div><div class="cat-cell"><span class="name">Servicio Público</span><span class="n">4</span></div><div class="cat-cell"><span class="name">Pesca</span><span class="n">3</span></div><div class="cat-cell"><span class="name">Seguridad Social</span><span class="n">3</span></div><div class="cat-cell"><span class="name">Transparencia</span><span class="n">3</span></div><div class="cat-cell"><span class="name">Tributario</span><span class="n">3</span></div><div class="cat-cell"><span class="name">Alimentaria</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Civil</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Competencia</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Comunicaciones</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Contratación</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Derechos</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Economía</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Emprendimiento</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Energía</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Hidrocarburos</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Laboral</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Penal</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Procesal</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Territorial</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Tránsito</span><span class="n">2</span></div><div class="cat-cell"><span class="name">Aeronáutico</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Agua</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Ambiental</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Conocimientos</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Datos</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Defensa Pública</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Digital</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Diplomático</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Disciplina</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Drogas</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Económico</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Electoral</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Empresas</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Estado</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Internacional Privado</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Judicial</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Jurisprudencia</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Lavado</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Militar</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Niñez</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Notarial</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Participación</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Trata</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Turismo</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Violencia</span><span class="n">1</span></div><div class="cat-cell"><span class="name">Vivienda</span><span class="n">1</span></div>
+  </div>
+</section>
+
+<!-- 4. Tabla de documentos -->
+<section>
+  <h2><span class="num">4</span>Catálogo completo (127 documentos)</h2>
+  <p style="color: var(--dim); margin-bottom:14px;">
+    Ordenado por jerarquía. Click en cada fila para ver metadata extraída del PDF.
+  </p>
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Título</th>
+          <th>Jerarquía</th>
+          <th>Categoría</th>
+          <th style="text-align:right;">Pág.</th>
+          <th style="text-align:right;">Art.</th>
+          <th style="text-align:right;">Palabras</th>
+          <th style="text-align:right;">Chunks</th>
+          <th>RO</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+            <td style="color:var(--muted); font-size:12px;">1</td>
+            <td style="max-width: 380px;">
+              <strong>Constitución de la República del Ecuador</strong>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">de la República del Ecuador</div>
+            </td>
+            <td><span class="badge const">Constitución</span></td>
+            <td><span class="badge">Constitucional</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">222</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">470</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">57.997</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">482</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #653
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">2</td>
+            <td style="max-width: 380px;">
+              <strong>Constitución de la República del Ecuador</strong>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">https://edicioneslegales.com.ec/Pág. 1 de 83</div>
+            </td>
+            <td><span class="badge const">Constitución</span></td>
+            <td><span class="badge">Constitucional</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">83</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">214</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">32.544</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">266</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #554
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">3</td>
+            <td style="max-width: 380px;">
+              <strong>Constitución de la República del Ecuador</strong>
+              <div style="font-size:12px; color:var(--muted); margin-top:2px;">CONSTITUCIÓN DE LA REPÚBLICA DEL ECUADOR</div>
+            </td>
+            <td><span class="badge const">Constitución</span></td>
+            <td><span class="badge">Constitucional</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">219</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">470</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">105.867</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">871</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #449
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">4</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO ORGANICO DE ENTIDADES DE SEGURIDAD</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">98</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">307</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">48.707</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">407</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #8
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">5</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO ORGANICO DE LA ECONOMIA SOCIAL DE LOS</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Conocimientos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">187</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">638</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">94.542</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">789</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #64
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">6</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO ORGANICO DE LA PRODUCCION, COMERCIO E</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Económico</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">88</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">285</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">49.052</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">406</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #338
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">7</td>
+            <td style="max-width: 380px;">
+              <strong>CÓDIGO ORGÁNICO DE ORGANIZACIÓN</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Territorial</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">87</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">685</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">90.052</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">763</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #180
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">8</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO ORGANICO DEL AMBIENTE</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Ambiental</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">92</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">330</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">48.781</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">417</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #0
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">9</td>
+            <td style="max-width: 380px;">
+              <strong>CÓDIGO ORGÁNICO INTEGRAL PENAL, COIP</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Penal</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">351</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">972</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">173.020</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.399</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #3
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">10</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 102</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Administrativo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">102</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">351</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">38.249</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">317</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #68
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">11</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 102</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Administrativo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">102</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">351</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">37.990</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">315</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #525
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">12</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 167</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Procesal</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">167</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">593</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">68.936</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">540</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #23
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">13</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 386</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Penal</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">386</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1235</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">159.000</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.281</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #15
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">14</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: Edición Constitucional del Registro Oficial 12, 10-III-2022</strong>
+              
+            </td>
+            <td><span class="badge org">Códigos Orgánicos</span></td>
+            <td><span class="badge">Judicial</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">137</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">523</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">69.646</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">551</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #12
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">15</td>
+            <td style="max-width: 380px;">
+              <strong>331010D.G. 1D.G. 1D.T. 1-_</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Estado</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4.500</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">37</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #449
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">16</td>
+            <td style="max-width: 380px;">
+              <strong>Cuarto Suplemento Nº 57 - Registro Oficial</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">40</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">0</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11.065</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">95</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #2
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">17</td>
+            <td style="max-width: 380px;">
+              <strong>Documento con posibles errores, digitalizado de la publicación original. Favor verificar con imagen.</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Derechos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">28</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19.885</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">165</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #796
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">18</td>
+            <td style="max-width: 380px;">
+              <strong>FUENTE: Segundo Suplemento del Registro Oficial No. 252</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Trata</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">0</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.728</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">72</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #252
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">19</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 13</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Transparencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">13</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">26</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5.599</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">46</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #484
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">20</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 16</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Defensa Pública</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">16</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">29</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7.101</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">59</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #131
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">21</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 17</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">64</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.526</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">57</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #222
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">22</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 27</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Control</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">27</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">88</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">12.176</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">100</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #324
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">23</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 35</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">35</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">66</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14.220</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">116</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #323
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">24</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 53</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Economía</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">53</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">199</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">21.627</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">182</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #311
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">25</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 70</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">70</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">254</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30.071</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">249</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #279
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">26</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 93</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Servicio Público</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">93</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">250</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">39.054</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">320</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #588
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">27</td>
+            <td style="max-width: 380px;">
+              <strong>https://www.fielweb.com.Pág. 1 de 48</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Control</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">48</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">133</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19.224</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">160</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #245
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">28</td>
+            <td style="max-width: 380px;">
+              <strong>https://www.fielweb.comPág. 1 de 98</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">98</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">264</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">41.168</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">331</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #236
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">29</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE ADUANAS, CODIFICACION.</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">13</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">97</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.991</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">58</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #1
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">30</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE CARRERA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">29</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">0</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">473</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #2
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">31</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE COMUNICACION</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">54</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">148</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24.734</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">202</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #0
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">32</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE DEFENSA DEL CONSUMIDOR</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">29</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">104</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11.852</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">97</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #2000
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">33</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE DONACION Y TRASPLANTE DE</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">84</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10.750</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">89</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #398
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">34</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE EDUCACIÓN INTERCULTURAL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Educación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">85</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">148</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">33.845</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">285</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #417
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">35</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE EMPRENDIMIENTO E</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Emprendimiento</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">31</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24.589</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">205</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">36</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE EMPRESAS PUBLICAS, LOEP</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Empresas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">46</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">107</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24.436</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">200</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #23
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">37</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE LA DEFENSA NACIONAL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">66</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7.509</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">61</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #4
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">38</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE LA DEFENSORIA DEL PUEBLO</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">15</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">39</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7.307</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">61</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #002
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">39</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE PREVENCIÓN INTEGRAL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Drogas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">37</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">48</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14.165</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">135</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #81
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">40</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE RECURSOS HIDRICOS USOS Y</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Agua</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">43</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">163</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22.560</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">185</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">41</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE RÉGIMEN</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Territorial</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22.883</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">187</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">42</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE REGULACION Y CONTROL DEL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Competencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">44</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">97</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24.408</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">200</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">43</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE SALUD</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">46</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">261</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22.269</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">188</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">44</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE SERVICIO PUBLICO, LOSEP</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Servicio Público</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">56</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">137</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">28.918</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">239</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #61
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">45</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE TRANSPARENCIA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Transparencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">33</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11.001</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">89</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #2
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">46</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DE TRANSPARENCIA Y ACCESO A LA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Transparencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">13</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">23</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.068</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">50</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">47</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE TRANSPORTE TERRESTRE</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Tránsito</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">66</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">180</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">31.900</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">261</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #0
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">48</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DE VIVIENDA DE INTERÉS SOCIAL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Vivienda</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">20</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">70</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">12.903</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">107</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">49</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL CONSEJO DE PARTICIPACIÓN</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Participación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">26</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">82</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">13.165</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">108</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #23
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">50</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL RÉGIMEN DE LA SOBERANÍA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Alimentaria</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.960</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">60</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">51</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL RÉGIMEN DE LA SOBERANÍA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Alimentaria</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.960</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">60</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">52</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL SISTEMA NACIONAL DE</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Contratación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">49</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">27</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">31.740</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">263</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #0
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">53</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL SISTEMA NACIONAL DE</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Contratación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">62</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">129</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30.948</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">259</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #0
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">54</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA DEL SISTEMA NACIONAL DE REGISTRO</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">15</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">39</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7.140</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">58</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #1616
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">55</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA PARA EL DESARROLLO DE LA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Pesca</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">44</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">51</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">32.927</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">275</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">56</td>
+            <td style="max-width: 380px;">
+              <strong>LEY PREVENCIÓN DE LAVADO DE ACTIVOS Y</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Lavado</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">26</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5.452</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">45</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">57</td>
+            <td style="max-width: 380px;">
+              <strong>Quinto Suplemento del Registro Oficial No.459 , 26 de Mayo 2021</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Datos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">40</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">81</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">20.732</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">172</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #459
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">58</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO A LA LEY ORGANICA DE SALUD</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.396</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">20</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #457
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">59</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO A LEY ORGÁNICA PARA</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Pesca</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">57</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">35</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">45.472</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">377</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #362
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">60</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO GENERAL A LA LEY ORGÁNICA DE</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Educación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">69</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">50</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">52.985</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">453</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #675
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">61</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO GENERAL A LA LEY ORGANICA DEL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Servicio Público</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">85</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">292</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">49.500</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">402</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #294
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">62</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO GENERAL A LA LEY ORGÁNICA DEL</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Servicio Público</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">86</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">293</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">50.000</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">406</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #294
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">63</td>
+            <td style="max-width: 380px;">
+              <strong>T E R C E R   S U P L E M E N T O</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Comunicaciones</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">40</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">0</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">29.334</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">246</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #439
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">64</td>
+            <td style="max-width: 380px;">
+              <strong>Tercer Suplemento del Registro Oficial No.131 , 22 de Agosto 2022</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">49</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">91</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">26.240</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">211</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #131
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">65</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: No reformado</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Laboral</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.697</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">21</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #116
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">66</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: Suplemento del Registro Oficial 260, 04-VIII-2020</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Economía</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">41</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">202</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">18.393</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">153</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #260
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">67</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: Suplemento del Registro Oficial 481, 6-V-2019</strong>
+              
+            </td>
+            <td><span class="badge org">Leyes Orgánicas</span></td>
+            <td><span class="badge">Derechos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">35</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">125</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17.181</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">143</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #481
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">68</td>
+            <td style="max-width: 380px;">
+              <strong>(Codificación No. 2005­010)</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Civil</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">157</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2652</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">146.634</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.099</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #268
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">69</td>
+            <td style="max-width: 380px;">
+              <strong>CODIFICACION DEL CODIGO AERONAUTICO ...............................................................................................................................7</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Aeronáutico</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">43</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">558</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">16.969</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">218</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">70</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO DE DERECHO INTERNACIONAL</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Internacional Privado</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">72</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">437</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19.046</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">144</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">71</td>
+            <td style="max-width: 380px;">
+              <strong>Dirección Nacional Jurídica</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Tributario</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">99</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">503</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">40.341</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">321</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #587
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">72</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 137</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Niñez</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">137</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">423</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">55.475</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">453</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #279
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">73</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA ELECTORAL, CÓDIGO DE LA</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Electoral</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">168</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">416</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">60.476</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">491</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #23
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">74</td>
+            <td style="max-width: 380px;">
+              <strong>Ultima modificación: 21-ago.-2018</strong>
+              
+            </td>
+            <td><span class="badge ord">Códigos Ordinarios</span></td>
+            <td><span class="badge">Tributario</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">87</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">400</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">36.873</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">298</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #500
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">75</td>
+            <td style="max-width: 380px;">
+              <strong>(Decreto Supremo No. 1404)</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Notarial</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">104</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.725</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">68</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #506
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">76</td>
+            <td style="max-width: 380px;">
+              <strong>CÓDIGO DE LA NIÑEZ Y ADOLESCENCIA</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">117</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">452</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">54.314</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">438</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #737
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">77</td>
+            <td style="max-width: 380px;">
+              <strong>CODIGO ORGANICO GENERAL DE PROCESOS, COGEP</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">122</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">492</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">59.863</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">464</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">78</td>
+            <td style="max-width: 380px;">
+              <strong>CÓDIGO ORGÁNICO INTEGRAL PENAL, COIP</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">716</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">927</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">162.771</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.300</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #3
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">79</td>
+            <td style="max-width: 380px;">
+              <strong>Estado:Reformado Tipo norma:Ley</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Turismo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">9</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">64</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.107</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">49</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #118
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">80</td>
+            <td style="max-width: 380px;">
+              <strong>FALLOS DE TRIPLE REITERACIÓN:</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Jurisprudencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.899</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">15</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #650
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">81</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 51</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Energía</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">51</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">243</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">21.424</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">178</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">EDICION_CONSTITUCIONAL</span> 
+              #160
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">82</td>
+            <td style="max-width: 380px;">
+              <strong>https://www.fielweb.com.Pág. 1 de 77</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Constitucional</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">77</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">206</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">28.699</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">234</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #245
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">83</td>
+            <td style="max-width: 380px;">
+              <strong>LA COMISIÓN DE LEGISLACIÓN Y CODIFICACIÓN</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Civil</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">82</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5.173</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">41</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">84</td>
+            <td style="max-width: 380px;">
+              <strong>LEGISLACIÓN CODIFICADA</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">182</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1105</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">79.170</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">640</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #449
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">85</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE AMPARO LABORAL DE LA MUJER</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Laboral</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">504</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #162
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">86</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE ARBITRAJE Y MEDIACION</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Procesal</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">24</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">82</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.875</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">70</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #417
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">87</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE COMERCIO ELECTRONICO, FIRMAS Y</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Digital</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">64</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.607</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">71</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">88</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE MEDICAMENTOS GENERICOS DE USO HUMANO</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.431</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #162
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">89</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE SEGURIDAD PUBLICA Y DEL ESTADO</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">16</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">46</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.237</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">67</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #8
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">90</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE SEGURIDAD SOCIAL DE LA POLICIA</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad Social</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">28</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">128</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10.062</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">80</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #707
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">91</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE SEGURIDAD SOCIAL DE LAS FUERZAS</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad Social</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">32</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">114</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14.485</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">112</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #660
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">92</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE SERVICIO MILITAR OBLIGATORIO EN FUERZAS</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Militar</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">109</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7.925</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">65</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #527
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">93</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE UNIVERSIDADES Y ESCUELAS POLITECNICAS</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Educación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">12</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">57</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5.639</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">47</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #243
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">94</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA DEL SERVICIO PUBLICO DE ENERGIA</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">35</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">87</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">18.685</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">158</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #9
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">95</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGÁNICA PARA IMPULSAR LA ECONOMÍA</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Violencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">15</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.755</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">71</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #2
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">96</td>
+            <td style="max-width: 380px;">
+              <strong>LEY ORGANICA PARA LA REGULACION Y CONTROL</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">41</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5.263</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">43</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #497
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">97</td>
+            <td style="max-width: 380px;">
+              <strong>LEY PARA LA OPTIMIZACION Y EFICIENCIA DE</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Administrativo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">34</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">113</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">18.710</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">152</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">98</td>
+            <td style="max-width: 380px;">
+              <strong>LEY PRESENTACION Y CONTROL DE DECLARACIONES</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Control</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4.051</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">33</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #506
+            </td>
+            <td><span class="badge warn">REFORMADO</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">99</td>
+            <td style="max-width: 380px;">
+              <strong>LEY SOBRE ARMAS, MUNICIONES,</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">39</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">3.397</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">28</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #311
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">100</td>
+            <td style="max-width: 380px;">
+              <strong>LEY SOBRE INMUNIDADES, PRIVILEGIOS Y FRANQUICIAS DIPLOMATICAS</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Diplomático</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">21</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">104</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">9.685</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">79</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #334
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">101</td>
+            <td style="max-width: 380px;">
+              <strong>Procedimientos, análisis, técnicas de la</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">224</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">5</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">58.568</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">495</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">102</td>
+            <td style="max-width: 380px;">
+              <strong>Texto extraído de la página web: www.lexis.com.ec</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">64</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">191</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">27.247</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">231</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">103</td>
+            <td style="max-width: 380px;">
+              <strong>Ultima modificación: 07-jul.-2014</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Educación</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">7</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">35</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.952</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">23</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #439
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">104</td>
+            <td style="max-width: 380px;">
+              <strong>Ultima modificación: 21-may.-2018</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Energía</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">60</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">163</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">29.002</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">238</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #23
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">105</td>
+            <td style="max-width: 380px;">
+              <strong>Ultima modificación: 22-jun.-2020</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">157</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">666</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">75.280</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">613</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #4
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">106</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: Segundo Suplemento del Registro Oficial 36, 5-IV-2022</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Seguridad Social</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">104</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">396</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">51.330</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">413</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #36
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">107</td>
+            <td style="max-width: 380px;">
+              <strong>Última Reforma: Tercer Suplemento del Registro Oficial 347, 10-XII-2020</strong>
+              
+            </td>
+            <td><span class="badge ord">Leyes Ordinarias</span></td>
+            <td><span class="badge">Otros</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">159</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">850</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">81.340</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">644</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #347
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">108</td>
+            <td style="max-width: 380px;">
+              <strong>ESTATUTO REGIMEN JURIDICO ADMINISTRATIVO</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Administrativo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">78</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">256</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">36.684</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">302</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #536
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">109</td>
+            <td style="max-width: 380px;">
+              <strong>https://edicioneslegales.com.ec/Pág. 1 de 38</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Hidrocarburos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">38</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">114</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">16.622</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">138</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #446
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">110</td>
+            <td style="max-width: 380px;">
+              <strong>NORMA COMPLEMENTARIA AL REGLAMENTO A LA</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Pesca</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.418</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">73</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">111</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO A LEY DE TRANSPORTE TERRESTRE</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Tránsito</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">91</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">402</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">46.614</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">375</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #398
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">112</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO A LEY ORGANICA DE REGULACION Y</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Competencia</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">31</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">121</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17.712</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">142</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #697
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">113</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO DE OPERACIONES</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Hidrocarburos</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">58</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">197</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">30.358</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">260</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #389
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">114</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO GENERAL A LA LEY ORGANICA DE</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Comunicaciones</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">21</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">127</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">11.937</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">98</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #214
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">115</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO INCUBACIÓN Y ACELERACIÓN DE</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Emprendimiento</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6.765</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">56</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #01
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">116</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO ORGANIZACION, OPERACION DE</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Administrativo</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">6</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.908</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">25</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #759
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">117</td>
+            <td style="max-width: 380px;">
+              <strong>REGLAMENTO PARA APLICACIÓN LEY DE RÉGIMEN</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Tributario</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">165</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">63</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">121.754</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">985</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #448
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">118</td>
+            <td style="max-width: 380px;">
+              <strong>Segundo Suplemento del Registro Oficial No.441 , 28 de Abril 2021</strong>
+              
+            </td>
+            <td><span class="badge reg">Reglamentos</span></td>
+            <td><span class="badge">Disciplina</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">18</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">56</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">8.917</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">72</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #441
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">119</td>
+            <td style="max-width: 380px;">
+              <strong>https://www.fielweb.com.Pág. 1 de 431</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">431</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1452</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">174.673</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.428</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SEGUNDO_SUPLEMENTO</span> 
+              #215
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">120</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE DERECHOS Y AMPARO DEL PACIENTE</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.287</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #67
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">121</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE FOMENTO, APOYO Y PROTECCION A LA</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">3</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">12</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.144</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">10</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #814
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">122</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE MATERNIDAD GRATUITA Y ATENCION A LA</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">14</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">1.870</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">15</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #523
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">123</td>
+            <td style="max-width: 380px;">
+              <strong>LEY DE PREVENCION, PROTECCION Y ATENCION DE LA</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Salud</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">4</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">19</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">2.048</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">17</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              #290
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">124</td>
+            <td style="max-width: 380px;">
+              <strong>LEY PARA PREVENIR Y ERRADICAR LA VIOLENCIA</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">38</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">71</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">23.136</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">190</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">125</td>
+            <td style="max-width: 380px;">
+              <strong>LEY QUE REGULA COMPAÑIAS DE SALUD PREPAGADA</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">22</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">63</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">12.506</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">104</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">126</td>
+            <td style="max-width: 380px;">
+              <strong>Normas de Control Interno                                                                                                                                                                Pag. 1</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Control</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">98</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">0</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">40.187</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">352</td>
+            <td style="font-size:12px; color:var(--dim);">
+              
+              —
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr><tr>
+            <td style="color:var(--muted); font-size:12px;">127</td>
+            <td style="max-width: 380px;">
+              <strong>ÚLTIMA REFORMA: CUARTO SUPLEMENTO DEL REGISTRO OFICIAL 526, 30-VIII-</strong>
+              
+            </td>
+            <td><span class="badge res">Resoluciones / Normas Técnicas</span></td>
+            <td><span class="badge">Normas Técnicas</span></td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">55</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">72</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">23.065</td>
+            <td style="text-align:right; font-variant-numeric: tabular-nums;">189</td>
+            <td style="font-size:12px; color:var(--dim);">
+              <span class="badge warn">SUPLEMENTO</span> 
+              #526
+            </td>
+            <td><span class="badge good">ORIGINAL</span></td>
+          </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 5. Pipeline técnico -->
+<section>
+  <h2><span class="num">5</span>Pipeline técnico de vectorización</h2>
+  <div class="card">
+    <h3>Stack</h3>
+    <ul style="color: var(--dim); margin: 0;">
+      <li><strong>Extracción:</strong> <code>pdf-parse</code> nativo. Fallback a Claude Vision (Anthropic) si <code>&lt; 500 chars</code> (PDFs escaneados).</li>
+      <li><strong>Clasificación:</strong> heurística por nombre de archivo + análisis del contenido.</li>
+      <li><strong>Chunking:</strong> 1.000 caracteres con overlap de 200 (≈ 250 tokens/chunk).</li>
+      <li><strong>Embeddings:</strong> OpenAI <code>text-embedding-3-small</code>, dimensión 1536, batches de 50.</li>
+      <li><strong>Persistencia:</strong> Supabase Postgres con <code>pgvector</code>. Index HNSW (m=16, ef_construction=64).</li>
+      <li><strong>Búsqueda:</strong> RPC <code>search_legal_chunks</code> con RRF (Reciprocal Rank Fusion) entre semantic search y keyword search en español (<code>websearch_to_tsquery</code> + <code>ts_rank_cd</code>).</li>
+    </ul>
+
+    <h3>Metadata persistida por documento</h3>
+    <ul style="color: var(--dim);">
+      <li><strong>Estructurada</strong> (campos típados): <code>norm_type</code>, <code>legal_hierarchy</code>, <code>publication_type</code>, <code>publication_number</code>, <code>publication_date</code>, <code>last_reform_date</code>, <code>document_state</code>, <code>jurisdiction</code>, <code>category</code></li>
+      <li><strong>JSONB <code>metadata</code></strong>: file (sha256, tamaño), extraction (pages, words, method), pdf_native (Title/Author/Subject/Creator/Producer del PDF), pdf_xmp (metadata XMP), classification, detected (estructura: artículos/libros/títulos/capítulos, keywords, sample articles, references_to)</li>
+      <li><strong>Chunks</strong>: <code>id</code>, <code>legal_document_id</code>, <code>content</code>, <code>chunk_index</code>, <code>embedding_v vector(1536)</code></li>
+    </ul>
+
+    <h3>Ejemplo de query RAG</h3>
+<pre><code>POST /api/v1/search/legal
+Authorization: Bearer &lt;jwt&gt;
+{
+  "query": "derecho a la educación",
+  "matchCount": 5
+}
+
+→ 200 OK
+{
+  "query": "derecho a la educación",
+  "engine": "rpc-rrf-hnsw",
+  "model": "text-embedding-3-small",
+  "results": [
+    { "rrf_score": 0.030, "norm_title": "Constitución…",
+      "content": "La educación pública será universal y laica…" },
+    …
+  ]
+}</code></pre>
+  </div>
+</section>
+
+<!-- 6. Conclusiones -->
+<section>
+  <h2><span class="num">6</span>Conclusiones</h2>
+  <div class="banner good">
+    <div>
+      <strong>127 documentos vectorizados con éxito.</strong>
+      32.476 chunks indexados con embeddings de 1536 dimensiones.
+      27.742 artículos detectados automáticamente.
+      Costo total estimado: <strong>$0.138 USD</strong>
+      (6.91M tokens).
+    </div>
+  </div>
+
+  <h3>Lo que se hizo</h3>
+  <ul style="color: var(--dim);">
+    <li>Cada PDF clasificado en su nivel jerárquico según el Art. 425 CRE</li>
+    <li>Metadata nativa del PDF preservada (Title, Author, Producer, fechas, etc.)</li>
+    <li>Detección heurística de número de Registro Oficial, fecha de publicación y última reforma</li>
+    <li>Conteo automático de artículos, libros, títulos, capítulos y secciones</li>
+    <li>Lista de keywords jurídicas y referencias cruzadas a otras normas</li>
+    <li>Hash SHA-256 del archivo original para auditoría</li>
+    <li>Idempotente: re-runs detectan documentos ya vectorizados y los saltan</li>
+  </ul>
+
+  <h3>Próximos pasos sugeridos</h3>
+  <ul style="color: var(--dim);">
+    <li>Extender clasificador con regex sobre el contenido (no solo nombre de archivo)</li>
+    <li>Resolver referencias cruzadas: vincular automáticamente "Art. 76 CRE" entre documentos</li>
+    <li>Agregar embeddings de citas judiciales para precedentes</li>
+    <li>Búsqueda federada: query única que combine corpus jurídico + casos del usuario</li>
+    <li>Re-indexación incremental cuando se publique reforma en RO</li>
+  </ul>
+</section>
+
+<footer>
+  <div>Poweria Legal · Vectorización RAG · 2026-04-30</div>
+  <div>127 docs · 32.476 chunks · 0.138 USD</div>
+</footer>
+
+</div>
+</body>
+</html>

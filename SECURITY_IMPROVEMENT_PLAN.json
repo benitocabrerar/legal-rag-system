@@ -1,0 +1,738 @@
+{
+  "metadata": {
+    "report_title": "Legal RAG System Security Improvement Plan",
+    "report_date": "2025-12-11",
+    "current_security_score": 72,
+    "target_security_score": 100,
+    "current_soc2_readiness": 55,
+    "current_gdpr_compliance": 45,
+    "auditor": "Security Audit System",
+    "classification": "CONFIDENTIAL"
+  },
+  "executive_summary": {
+    "total_vulnerabilities": 5,
+    "critical_high": 2,
+    "medium": 2,
+    "low": 1,
+    "estimated_total_effort_hours": 168,
+    "recommended_priority": "Address HIGH severity items within 24-48 hours"
+  },
+  "vulnerability_analysis": [
+    {
+      "id": "SEC-001",
+      "severity": "HIGH",
+      "category": "Authentication",
+      "title": "Hardcoded JWT_SECRET Fallback",
+      "affected_files": [
+        "src/server.ts:72",
+        "src/middleware/auth.ts:39",
+        "src/middleware/auth.ts:145"
+      ],
+      "description": "The application falls back to hardcoded secrets ('supersecret' and 'default-secret-change-in-production') when JWT_SECRET environment variable is not set. This allows attackers to forge valid JWT tokens if deployed without proper configuration.",
+      "cvss_score": 9.1,
+      "cwe_id": "CWE-798",
+      "owasp_category": "A07:2021-Identification and Authentication Failures",
+      "current_code": {
+        "server_ts_line_72": "secret: process.env.JWT_SECRET || 'supersecret'",
+        "auth_ts_line_39": "const secret = process.env.JWT_SECRET || 'default-secret-change-in-production'"
+      },
+      "remediation": {
+        "description": "Remove all fallback secrets and fail fast if JWT_SECRET is not configured",
+        "code_changes": [
+          {
+            "file": "src/server.ts",
+            "line": 72,
+            "old_code": "secret: process.env.JWT_SECRET || 'supersecret'",
+            "new_code": "secret: (() => {\n    if (!process.env.JWT_SECRET) {\n      throw new Error('FATAL: JWT_SECRET environment variable is required');\n    }\n    if (process.env.JWT_SECRET.length < 32) {\n      throw new Error('FATAL: JWT_SECRET must be at least 32 characters');\n    }\n    return process.env.JWT_SECRET;\n  })()"
+          },
+          {
+            "file": "src/middleware/auth.ts",
+            "line": 39,
+            "old_code": "const secret = process.env.JWT_SECRET || 'default-secret-change-in-production';",
+            "new_code": "const secret = process.env.JWT_SECRET;\n    if (!secret) {\n      reply.code(500).send({ error: 'Server configuration error' });\n      return;\n    }"
+          }
+        ],
+        "new_service_required": {
+          "name": "SecretValidationService",
+          "file": "src/services/security/secret-validation.service.ts",
+          "code": "/**\n * Secret Validation Service\n * Validates all required secrets at startup\n */\n\nexport interface SecretValidationResult {\n  valid: boolean;\n  errors: string[];\n}\n\nexport function validateRequiredSecrets(): SecretValidationResult {\n  const errors: string[] = [];\n  \n  const requiredSecrets = [\n    { name: 'JWT_SECRET', minLength: 32 },\n    { name: 'DATABASE_URL', minLength: 10 },\n  ];\n  \n  const sensitiveSecrets = [\n    'OPENAI_API_KEY',\n    'SENDGRID_API_KEY',\n    'AWS_SECRET_ACCESS_KEY',\n    'BACKUP_ENCRYPTION_KEY',\n  ];\n  \n  for (const secret of requiredSecrets) {\n    const value = process.env[secret.name];\n    if (!value) {\n      errors.push(`Missing required secret: ${secret.name}`);\n    } else if (value.length < secret.minLength) {\n      errors.push(`${secret.name} must be at least ${secret.minLength} characters`);\n    }\n  }\n  \n  for (const name of sensitiveSecrets) {\n    if (process.env[name] && process.env.NODE_ENV === 'production') {\n      // Validate format patterns\n      if (name === 'OPENAI_API_KEY' && !process.env[name]?.startsWith('sk-')) {\n        errors.push(`Invalid ${name} format`);\n      }\n    }\n  }\n  \n  return { valid: errors.length === 0, errors };\n}\n\nexport function assertSecretsValid(): void {\n  const result = validateRequiredSecrets();\n  if (!result.valid) {\n    console.error('SECRET VALIDATION FAILED:');\n    result.errors.forEach(err => console.error(`  - ${err}`));\n    process.exit(1);\n  }\n}"
+        }
+      },
+      "effort_hours": 4,
+      "priority": 1
+    },
+    {
+      "id": "SEC-002",
+      "severity": "MEDIUM",
+      "category": "API Security",
+      "title": "CORS Wildcard Default",
+      "affected_files": [
+        "src/server.ts:67"
+      ],
+      "description": "CORS is configured to fall back to '*' (allow all origins) when CORS_ORIGIN is not set. This allows any website to make authenticated requests to the API, enabling CSRF attacks and data theft.",
+      "cvss_score": 6.5,
+      "cwe_id": "CWE-942",
+      "owasp_category": "A05:2021-Security Misconfiguration",
+      "current_code": {
+        "server_ts_line_67": "origin: process.env.CORS_ORIGIN || '*'"
+      },
+      "remediation": {
+        "description": "Implement strict CORS configuration with whitelist validation",
+        "code_changes": [
+          {
+            "file": "src/server.ts",
+            "action": "Replace CORS configuration",
+            "old_code": "await app.register(cors, {\n  origin: process.env.CORS_ORIGIN || '*',\n  credentials: true,\n});",
+            "new_code": "import { getCorsConfig } from './config/cors.config.js';\n\nawait app.register(cors, getCorsConfig());"
+          }
+        ],
+        "new_config_file": {
+          "file": "src/config/cors.config.ts",
+          "code": "/**\n * CORS Configuration\n * Implements strict origin validation\n */\n\nexport interface CorsConfig {\n  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;\n  credentials: boolean;\n  methods: string[];\n  allowedHeaders: string[];\n  exposedHeaders: string[];\n  maxAge: number;\n}\n\nexport function getCorsConfig(): CorsConfig {\n  const allowedOriginsEnv = process.env.CORS_ALLOWED_ORIGINS || '';\n  \n  const allowedOrigins = [\n    ...allowedOriginsEnv.split(',').map(o => o.trim()).filter(Boolean),\n    ...(process.env.NODE_ENV === 'development' ? [\n      'http://localhost:3000',\n      'http://localhost:8000',\n      'http://127.0.0.1:3000',\n    ] : []),\n  ];\n  \n  if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {\n    throw new Error('CORS_ALLOWED_ORIGINS must be configured in production');\n  }\n  \n  return {\n    origin: (origin, callback) => {\n      // Allow requests with no origin (mobile apps, curl, etc.)\n      if (!origin) {\n        callback(null, true);\n        return;\n      }\n      \n      if (allowedOrigins.includes(origin)) {\n        callback(null, true);\n      } else {\n        console.warn(`CORS blocked origin: ${origin}`);\n        callback(new Error('Not allowed by CORS'), false);\n      }\n    },\n    credentials: true,\n    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],\n    allowedHeaders: [\n      'Content-Type',\n      'Authorization',\n      'X-Requested-With',\n      'X-CSRF-Token',\n      'X-Request-ID',\n    ],\n    exposedHeaders: [\n      'X-Total-Count',\n      'X-Page-Count',\n      'X-RateLimit-Limit',\n      'X-RateLimit-Remaining',\n      'X-RateLimit-Reset',\n    ],\n    maxAge: 86400, // 24 hours\n  };\n}"
+        }
+      },
+      "effort_hours": 3,
+      "priority": 2
+    },
+    {
+      "id": "SEC-003",
+      "severity": "MEDIUM",
+      "category": "Transport Security",
+      "title": "Missing HTTPS Enforcement and HSTS Headers",
+      "affected_files": [
+        "src/server.ts"
+      ],
+      "description": "The application does not enforce HTTPS or set HTTP Strict Transport Security (HSTS) headers. This exposes users to man-in-the-middle attacks, session hijacking, and cookie theft.",
+      "cvss_score": 7.4,
+      "cwe_id": "CWE-319",
+      "owasp_category": "A02:2021-Cryptographic Failures",
+      "current_state": "No security headers middleware detected",
+      "remediation": {
+        "description": "Implement comprehensive security headers middleware",
+        "new_middleware": {
+          "file": "src/middleware/security-headers.middleware.ts",
+          "code": "/**\n * Security Headers Middleware\n * Implements OWASP recommended security headers\n */\n\nimport { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';\n\nexport interface SecurityHeadersConfig {\n  enableHSTS: boolean;\n  hstsMaxAge: number;\n  enableCSP: boolean;\n  cspDirectives: Record<string, string[]>;\n  enableFrameOptions: boolean;\n  enableXSSFilter: boolean;\n  enableNoSniff: boolean;\n  enableReferrerPolicy: boolean;\n}\n\nconst defaultConfig: SecurityHeadersConfig = {\n  enableHSTS: true,\n  hstsMaxAge: 31536000, // 1 year\n  enableCSP: true,\n  cspDirectives: {\n    'default-src': [\"'self'\"],\n    'script-src': [\"'self'\"],\n    'style-src': [\"'self'\", \"'unsafe-inline'\"],\n    'img-src': [\"'self'\", 'data:', 'https:'],\n    'font-src': [\"'self'\"],\n    'connect-src': [\"'self'\"],\n    'frame-ancestors': [\"'none'\"],\n    'base-uri': [\"'self'\"],\n    'form-action': [\"'self'\"],\n  },\n  enableFrameOptions: true,\n  enableXSSFilter: true,\n  enableNoSniff: true,\n  enableReferrerPolicy: true,\n};\n\nexport function createSecurityHeadersMiddleware(config: Partial<SecurityHeadersConfig> = {}) {\n  const finalConfig = { ...defaultConfig, ...config };\n  \n  return async function securityHeadersMiddleware(\n    request: FastifyRequest,\n    reply: FastifyReply,\n    done: HookHandlerDoneFunction\n  ): Promise<void> {\n    // HSTS - HTTP Strict Transport Security\n    if (finalConfig.enableHSTS && process.env.NODE_ENV === 'production') {\n      reply.header(\n        'Strict-Transport-Security',\n        `max-age=${finalConfig.hstsMaxAge}; includeSubDomains; preload`\n      );\n    }\n    \n    // Content Security Policy\n    if (finalConfig.enableCSP) {\n      const cspValue = Object.entries(finalConfig.cspDirectives)\n        .map(([directive, values]) => `${directive} ${values.join(' ')}`)\n        .join('; ');\n      reply.header('Content-Security-Policy', cspValue);\n    }\n    \n    // X-Frame-Options (clickjacking protection)\n    if (finalConfig.enableFrameOptions) {\n      reply.header('X-Frame-Options', 'DENY');\n    }\n    \n    // X-XSS-Protection\n    if (finalConfig.enableXSSFilter) {\n      reply.header('X-XSS-Protection', '1; mode=block');\n    }\n    \n    // X-Content-Type-Options\n    if (finalConfig.enableNoSniff) {\n      reply.header('X-Content-Type-Options', 'nosniff');\n    }\n    \n    // Referrer-Policy\n    if (finalConfig.enableReferrerPolicy) {\n      reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');\n    }\n    \n    // Additional security headers\n    reply.header('X-DNS-Prefetch-Control', 'off');\n    reply.header('X-Download-Options', 'noopen');\n    reply.header('X-Permitted-Cross-Domain-Policies', 'none');\n    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');\n    \n    // Remove server identification headers\n    reply.removeHeader('X-Powered-By');\n    \n    done();\n  };\n}\n\nexport const securityHeadersMiddleware = createSecurityHeadersMiddleware();"
+        },
+        "server_integration": {
+          "add_import": "import { securityHeadersMiddleware } from './middleware/security-headers.middleware.js';",
+          "add_hook": "// Add security headers middleware\napp.addHook('onRequest', securityHeadersMiddleware);"
+        },
+        "https_redirect_middleware": {
+          "file": "src/middleware/https-redirect.middleware.ts",
+          "code": "/**\n * HTTPS Redirect Middleware\n * Forces HTTPS in production environments\n */\n\nimport { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';\n\nexport async function httpsRedirectMiddleware(\n  request: FastifyRequest,\n  reply: FastifyReply,\n  done: HookHandlerDoneFunction\n): Promise<void> {\n  if (process.env.NODE_ENV !== 'production') {\n    done();\n    return;\n  }\n  \n  // Check for X-Forwarded-Proto header (common in reverse proxy setups)\n  const protocol = request.headers['x-forwarded-proto'];\n  const host = request.headers.host;\n  \n  if (protocol === 'http' && host) {\n    const httpsUrl = `https://${host}${request.url}`;\n    reply.code(301).redirect(httpsUrl);\n    return;\n  }\n  \n  done();\n}"
+        }
+      },
+      "effort_hours": 6,
+      "priority": 2
+    },
+    {
+      "id": "SEC-004",
+      "severity": "LOW",
+      "category": "Information Disclosure",
+      "title": "Verbose Error Messages May Leak Stack Traces",
+      "affected_files": [
+        "src/routes/auth.ts:67-73",
+        "src/utils/logger.ts:97-110",
+        "Multiple route files"
+      ],
+      "description": "Error responses include detailed error messages and potentially stack traces that could reveal internal implementation details, file paths, and system configuration to attackers.",
+      "cvss_score": 4.3,
+      "cwe_id": "CWE-209",
+      "owasp_category": "A09:2021-Security Logging and Monitoring Failures",
+      "current_code": {
+        "auth_ts_lines_69_72": "return reply.code(500).send({\n  error: 'Internal server error',\n  details: error instanceof Error ? error.message : 'Unknown error'\n});"
+      },
+      "remediation": {
+        "description": "Implement centralized error handling that sanitizes error responses",
+        "new_middleware": {
+          "file": "src/middleware/error-handler.middleware.ts",
+          "code": "/**\n * Global Error Handler Middleware\n * Sanitizes error responses to prevent information disclosure\n */\n\nimport { FastifyError, FastifyRequest, FastifyReply } from 'fastify';\nimport { randomUUID } from 'crypto';\nimport { logger } from '../utils/logger.js';\n\nexport interface SanitizedError {\n  error: string;\n  message: string;\n  errorId: string;\n  statusCode: number;\n}\n\nconst GENERIC_MESSAGES: Record<number, string> = {\n  400: 'Invalid request',\n  401: 'Authentication required',\n  403: 'Access denied',\n  404: 'Resource not found',\n  409: 'Conflict with current state',\n  422: 'Validation failed',\n  429: 'Too many requests',\n  500: 'Internal server error',\n  502: 'Service unavailable',\n  503: 'Service temporarily unavailable',\n};\n\n// Error types that are safe to expose details for\nconst SAFE_ERROR_TYPES = [\n  'ValidationError',\n  'ZodError',\n  'NotFoundError',\n  'ConflictError',\n];\n\nexport function globalErrorHandler(\n  error: FastifyError,\n  request: FastifyRequest,\n  reply: FastifyReply\n): void {\n  const errorId = randomUUID();\n  const statusCode = error.statusCode || 500;\n  const isProduction = process.env.NODE_ENV === 'production';\n  \n  // Log full error details internally\n  logger.error('Request error', {\n    errorId,\n    statusCode,\n    method: request.method,\n    url: request.url,\n    userId: (request as any).user?.id,\n    error: {\n      name: error.name,\n      message: error.message,\n      stack: error.stack,\n      code: error.code,\n    },\n  });\n  \n  // Determine safe message for response\n  let userMessage: string;\n  \n  if (!isProduction) {\n    // In development, show more details\n    userMessage = error.message;\n  } else if (SAFE_ERROR_TYPES.includes(error.name)) {\n    // Safe errors can show their message\n    userMessage = error.message;\n  } else if (statusCode < 500) {\n    // Client errors can use error message\n    userMessage = error.message || GENERIC_MESSAGES[statusCode] || 'Request failed';\n  } else {\n    // Server errors get generic message\n    userMessage = GENERIC_MESSAGES[statusCode] || 'An unexpected error occurred';\n  }\n  \n  const response: SanitizedError = {\n    error: error.name || 'Error',\n    message: userMessage,\n    errorId,\n    statusCode,\n  };\n  \n  reply.code(statusCode).send(response);\n}\n\n// Custom error classes for safe exposure\nexport class ValidationError extends Error {\n  statusCode = 400;\n  constructor(message: string) {\n    super(message);\n    this.name = 'ValidationError';\n  }\n}\n\nexport class NotFoundError extends Error {\n  statusCode = 404;\n  constructor(message: string) {\n    super(message);\n    this.name = 'NotFoundError';\n  }\n}\n\nexport class ConflictError extends Error {\n  statusCode = 409;\n  constructor(message: string) {\n    super(message);\n    this.name = 'ConflictError';\n  }\n}"
+        },
+        "server_integration": {
+          "add_import": "import { globalErrorHandler } from './middleware/error-handler.middleware.js';",
+          "add_handler": "// Set global error handler\napp.setErrorHandler(globalErrorHandler);"
+        }
+      },
+      "effort_hours": 8,
+      "priority": 3
+    },
+    {
+      "id": "SEC-005",
+      "severity": "HIGH",
+      "category": "Data Protection",
+      "title": "Missing Data Encryption at Rest for PII",
+      "affected_files": [
+        "prisma/schema.prisma"
+      ],
+      "description": "Personal Identifiable Information (PII) such as email, name, phone number, address, bar number, and payment details are stored in plaintext. This violates GDPR Article 32 and SOC2 requirements for data protection.",
+      "cvss_score": 8.1,
+      "cwe_id": "CWE-311",
+      "owasp_category": "A02:2021-Cryptographic Failures",
+      "pii_fields_identified": [
+        "User.email",
+        "User.name",
+        "User.phoneNumber",
+        "User.address",
+        "User.city",
+        "User.country",
+        "User.barNumber",
+        "User.lawFirm",
+        "User.bio",
+        "User.twoFactorSecret",
+        "PaymentMethod.cardLast4",
+        "PaymentProof.accountNumber",
+        "Case.clientName"
+      ],
+      "remediation": {
+        "description": "Implement application-level encryption for PII fields using AES-256-GCM",
+        "new_service": {
+          "file": "src/services/security/field-encryption.service.ts",
+          "code": "/**\n * Field Encryption Service\n * Provides application-level encryption for PII fields\n * Uses AES-256-GCM with envelope encryption\n */\n\nimport { createCipheriv, createDecipheriv, randomBytes, createHash, scryptSync } from 'crypto';\n\nconst ALGORITHM = 'aes-256-gcm';\nconst IV_LENGTH = 16;\nconst AUTH_TAG_LENGTH = 16;\nconst ENCRYPTED_PREFIX = 'enc:';\n\nexport class FieldEncryptionService {\n  private readonly masterKey: Buffer;\n  \n  constructor() {\n    const encryptionKey = process.env.PII_ENCRYPTION_KEY;\n    if (!encryptionKey) {\n      throw new Error('PII_ENCRYPTION_KEY environment variable is required');\n    }\n    \n    // Derive a 32-byte key using scrypt\n    this.masterKey = scryptSync(encryptionKey, 'legal-rag-salt', 32);\n  }\n  \n  /**\n   * Encrypt a field value\n   */\n  encrypt(plaintext: string): string {\n    if (!plaintext) return plaintext;\n    \n    const iv = randomBytes(IV_LENGTH);\n    const cipher = createCipheriv(ALGORITHM, this.masterKey, iv);\n    \n    let encrypted = cipher.update(plaintext, 'utf8', 'hex');\n    encrypted += cipher.final('hex');\n    \n    const authTag = cipher.getAuthTag();\n    \n    // Format: enc:iv:authTag:ciphertext\n    return `${ENCRYPTED_PREFIX}${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;\n  }\n  \n  /**\n   * Decrypt a field value\n   */\n  decrypt(encrypted: string): string {\n    if (!encrypted || !encrypted.startsWith(ENCRYPTED_PREFIX)) {\n      return encrypted;\n    }\n    \n    const parts = encrypted.slice(ENCRYPTED_PREFIX.length).split(':');\n    if (parts.length !== 3) {\n      throw new Error('Invalid encrypted format');\n    }\n    \n    const [ivHex, authTagHex, ciphertext] = parts;\n    const iv = Buffer.from(ivHex, 'hex');\n    const authTag = Buffer.from(authTagHex, 'hex');\n    \n    const decipher = createDecipheriv(ALGORITHM, this.masterKey, iv);\n    decipher.setAuthTag(authTag);\n    \n    let decrypted = decipher.update(ciphertext, 'hex', 'utf8');\n    decrypted += decipher.final('utf8');\n    \n    return decrypted;\n  }\n  \n  /**\n   * Check if a value is encrypted\n   */\n  isEncrypted(value: string): boolean {\n    return value?.startsWith(ENCRYPTED_PREFIX) ?? false;\n  }\n  \n  /**\n   * Create a deterministic hash for searchable encrypted fields\n   * WARNING: This reduces security but enables searching\n   */\n  createSearchHash(plaintext: string): string {\n    if (!plaintext) return '';\n    const hash = createHash('sha256');\n    hash.update(this.masterKey);\n    hash.update(plaintext.toLowerCase().trim());\n    return hash.digest('hex');\n  }\n}\n\n// Singleton instance\nlet instance: FieldEncryptionService | null = null;\n\nexport function getFieldEncryptionService(): FieldEncryptionService {\n  if (!instance) {\n    instance = new FieldEncryptionService();\n  }\n  return instance;\n}\n\n// Prisma middleware for automatic encryption/decryption\nexport function createPrismaEncryptionMiddleware() {\n  const encryptedFields: Record<string, string[]> = {\n    User: ['phoneNumber', 'address', 'barNumber', 'lawFirm', 'bio', 'twoFactorSecret'],\n    Case: ['clientName'],\n    PaymentMethod: ['cardLast4'],\n    PaymentProof: ['accountNumber'],\n  };\n  \n  const service = getFieldEncryptionService();\n  \n  return async (params: any, next: any) => {\n    const { model, action, args } = params;\n    const fieldsToEncrypt = encryptedFields[model];\n    \n    if (!fieldsToEncrypt) {\n      return next(params);\n    }\n    \n    // Encrypt on create/update\n    if (['create', 'update', 'upsert'].includes(action) && args.data) {\n      for (const field of fieldsToEncrypt) {\n        if (args.data[field] && !service.isEncrypted(args.data[field])) {\n          args.data[field] = service.encrypt(args.data[field]);\n        }\n      }\n    }\n    \n    const result = await next(params);\n    \n    // Decrypt on read\n    if (result && ['findUnique', 'findFirst', 'findMany'].includes(action)) {\n      const decryptRecord = (record: any) => {\n        if (!record) return record;\n        for (const field of fieldsToEncrypt) {\n          if (record[field]) {\n            record[field] = service.decrypt(record[field]);\n          }\n        }\n        return record;\n      };\n      \n      if (Array.isArray(result)) {\n        return result.map(decryptRecord);\n      }\n      return decryptRecord(result);\n    }\n    \n    return result;\n  };\n}"
+        },
+        "schema_changes": {
+          "description": "Add hash columns for searchable encrypted fields",
+          "migrations": [
+            "ALTER TABLE users ADD COLUMN email_hash VARCHAR(64);",
+            "ALTER TABLE users ADD COLUMN name_hash VARCHAR(64);",
+            "CREATE INDEX idx_users_email_hash ON users(email_hash);",
+            "CREATE INDEX idx_users_name_hash ON users(name_hash);"
+          ]
+        }
+      },
+      "effort_hours": 24,
+      "priority": 1
+    }
+  ],
+  "gdpr_compliance_implementation": {
+    "current_compliance": 45,
+    "target_compliance": 100,
+    "articles_addressed": [
+      "Article 17 - Right to Erasure",
+      "Article 20 - Right to Data Portability",
+      "Article 7 - Consent Management",
+      "Article 30 - Records of Processing Activities",
+      "Article 32 - Security of Processing",
+      "Article 33 - Breach Notification"
+    ],
+    "implementation_tasks": [
+      {
+        "id": "GDPR-001",
+        "title": "Implement Right to Erasure (Data Deletion)",
+        "article": "Article 17",
+        "description": "Create comprehensive data deletion service that removes all user PII across all tables",
+        "new_service": {
+          "file": "src/services/gdpr/data-deletion.service.ts",
+          "code": "/**\n * GDPR Data Deletion Service\n * Implements Article 17 - Right to Erasure\n */\n\nimport { PrismaClient } from '@prisma/client';\nimport { logger } from '../../utils/logger.js';\n\nexport interface DeletionResult {\n  success: boolean;\n  deletedEntities: Record<string, number>;\n  errors: string[];\n  timestamp: Date;\n  requestId: string;\n}\n\nexport class DataDeletionService {\n  private prisma: PrismaClient;\n  \n  constructor(prisma: PrismaClient) {\n    this.prisma = prisma;\n  }\n  \n  /**\n   * Permanently delete all user data (hard delete)\n   */\n  async deleteAllUserData(userId: string, requestId: string): Promise<DeletionResult> {\n    const deletedEntities: Record<string, number> = {};\n    const errors: string[] = [];\n    \n    logger.info('Starting GDPR data deletion', { userId, requestId });\n    \n    try {\n      await this.prisma.$transaction(async (tx) => {\n        // Delete in order of dependencies (children first)\n        \n        // 1. Delete document chunks\n        const docChunks = await tx.documentChunk.deleteMany({\n          where: { document: { userId } }\n        });\n        deletedEntities['documentChunks'] = docChunks.count;\n        \n        // 2. Delete documents\n        const docs = await tx.document.deleteMany({ where: { userId } });\n        deletedEntities['documents'] = docs.count;\n        \n        // 3. Delete legal document chunks and legal documents\n        const legalDocChunks = await tx.legalDocumentChunk.deleteMany({\n          where: { legalDocument: { uploadedBy: userId } }\n        });\n        deletedEntities['legalDocumentChunks'] = legalDocChunks.count;\n        \n        const legalDocs = await tx.legalDocument.deleteMany({ where: { uploadedBy: userId } });\n        deletedEntities['legalDocuments'] = legalDocs.count;\n        \n        // 4. Delete cases and related data\n        const cases = await tx.case.deleteMany({ where: { userId } });\n        deletedEntities['cases'] = cases.count;\n        \n        // 5. Delete query logs (anonymize instead of delete for analytics)\n        const queryLogs = await tx.queryLog.updateMany({\n          where: { userId },\n          data: { userId: null, ipAddress: null, query: '[DELETED]' }\n        });\n        deletedEntities['queryLogs'] = queryLogs.count;\n        \n        // 6. Delete audit logs user reference (keep for compliance)\n        const auditLogs = await tx.auditLog.updateMany({\n          where: { userId },\n          data: { userId: null, ipAddress: null }\n        });\n        deletedEntities['auditLogs'] = auditLogs.count;\n        \n        // 7. Delete notifications\n        const notifications = await tx.notification.deleteMany({ where: { userId } });\n        deletedEntities['notifications'] = notifications.count;\n        \n        // 8. Delete subscriptions and payments\n        const payments = await tx.payment.deleteMany({ where: { userId } });\n        deletedEntities['payments'] = payments.count;\n        \n        const subscriptions = await tx.subscription.deleteMany({ where: { userId } });\n        deletedEntities['subscriptions'] = subscriptions.count;\n        \n        // 9. Delete API keys\n        const apiKeys = await tx.apiKey.deleteMany({ where: { userId } });\n        deletedEntities['apiKeys'] = apiKeys.count;\n        \n        // 10. Delete user quotas and settings\n        const quotas = await tx.userQuota.deleteMany({ where: { userId } });\n        deletedEntities['userQuotas'] = quotas.count;\n        \n        const settings = await tx.userSettings.deleteMany({ where: { userId } });\n        deletedEntities['userSettings'] = settings.count;\n        \n        // 11. Finally delete the user\n        await tx.user.delete({ where: { id: userId } });\n        deletedEntities['users'] = 1;\n        \n        // 12. Create deletion record for audit\n        await tx.auditLog.create({\n          data: {\n            action: 'GDPR_DATA_DELETION',\n            entity: 'User',\n            entityId: requestId,\n            changes: {\n              deletedEntities,\n              originalUserId: '[REDACTED]',\n              requestType: 'right_to_erasure'\n            },\n            success: true\n          }\n        });\n      });\n      \n      logger.info('GDPR data deletion completed', { requestId, deletedEntities });\n      \n      return {\n        success: true,\n        deletedEntities,\n        errors,\n        timestamp: new Date(),\n        requestId\n      };\n    } catch (error) {\n      logger.error('GDPR data deletion failed', { requestId, error });\n      errors.push((error as Error).message);\n      \n      return {\n        success: false,\n        deletedEntities,\n        errors,\n        timestamp: new Date(),\n        requestId\n      };\n    }\n  }\n  \n  /**\n   * Anonymize user data (soft delete alternative)\n   */\n  async anonymizeUserData(userId: string): Promise<DeletionResult> {\n    const requestId = `anon-${Date.now()}`;\n    const deletedEntities: Record<string, number> = {};\n    \n    try {\n      await this.prisma.$transaction(async (tx) => {\n        // Anonymize user record\n        await tx.user.update({\n          where: { id: userId },\n          data: {\n            email: `deleted-${userId}@anonymized.local`,\n            name: '[DELETED]',\n            passwordHash: null,\n            phoneNumber: null,\n            address: null,\n            city: null,\n            country: null,\n            barNumber: null,\n            lawFirm: null,\n            bio: null,\n            avatarUrl: null,\n            isActive: false,\n            twoFactorSecret: null,\n            twoFactorBackupCodes: [],\n          }\n        });\n        deletedEntities['users'] = 1;\n      });\n      \n      return {\n        success: true,\n        deletedEntities,\n        errors: [],\n        timestamp: new Date(),\n        requestId\n      };\n    } catch (error) {\n      return {\n        success: false,\n        deletedEntities,\n        errors: [(error as Error).message],\n        timestamp: new Date(),\n        requestId\n      };\n    }\n  }\n}"
+        },
+        "api_endpoint": {
+          "file": "src/routes/gdpr.ts",
+          "method": "DELETE",
+          "path": "/api/v1/gdpr/delete-my-data",
+          "requires_auth": true,
+          "requires_confirmation": true
+        },
+        "effort_hours": 16,
+        "priority": 1
+      },
+      {
+        "id": "GDPR-002",
+        "title": "Implement Data Export (Portability)",
+        "article": "Article 20",
+        "description": "Create service to export all user data in machine-readable format",
+        "new_service": {
+          "file": "src/services/gdpr/data-export.service.ts",
+          "code": "/**\n * GDPR Data Export Service\n * Implements Article 20 - Right to Data Portability\n */\n\nimport { PrismaClient } from '@prisma/client';\nimport { createGzip } from 'zlib';\nimport { pipeline } from 'stream/promises';\nimport { createWriteStream } from 'fs';\nimport { mkdir, unlink } from 'fs/promises';\nimport { join } from 'path';\nimport { logger } from '../../utils/logger.js';\n\nexport interface ExportResult {\n  success: boolean;\n  filePath?: string;\n  fileSize?: number;\n  format: string;\n  timestamp: Date;\n  expiresAt: Date;\n}\n\nexport class DataExportService {\n  private prisma: PrismaClient;\n  private exportDir: string;\n  \n  constructor(prisma: PrismaClient) {\n    this.prisma = prisma;\n    this.exportDir = process.env.DATA_EXPORT_DIR || './exports';\n  }\n  \n  /**\n   * Export all user data in JSON format\n   */\n  async exportUserData(userId: string): Promise<ExportResult> {\n    const timestamp = new Date();\n    \n    try {\n      // Gather all user data\n      const userData = await this.gatherUserData(userId);\n      \n      // Create export file\n      const exportId = `export-${userId}-${timestamp.getTime()}`;\n      await mkdir(this.exportDir, { recursive: true });\n      const filePath = join(this.exportDir, `${exportId}.json.gz`);\n      \n      // Write compressed JSON\n      const jsonData = JSON.stringify(userData, null, 2);\n      const gzip = createGzip();\n      const destination = createWriteStream(filePath);\n      \n      await new Promise<void>((resolve, reject) => {\n        gzip.on('error', reject);\n        destination.on('error', reject);\n        destination.on('finish', resolve);\n        \n        gzip.write(jsonData);\n        gzip.pipe(destination);\n        gzip.end();\n      });\n      \n      // Log export request\n      await this.prisma.auditLog.create({\n        data: {\n          userId,\n          action: 'GDPR_DATA_EXPORT',\n          entity: 'User',\n          entityId: userId,\n          changes: { exportId, format: 'json.gz' },\n          success: true\n        }\n      });\n      \n      logger.info('Data export completed', { userId, exportId });\n      \n      return {\n        success: true,\n        filePath,\n        format: 'application/gzip',\n        timestamp,\n        expiresAt: new Date(timestamp.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days\n      };\n    } catch (error) {\n      logger.error('Data export failed', { userId, error });\n      throw error;\n    }\n  }\n  \n  private async gatherUserData(userId: string): Promise<Record<string, any>> {\n    const user = await this.prisma.user.findUnique({\n      where: { id: userId },\n      include: {\n        cases: { include: { documents: true } },\n        legalDocuments: true,\n        quota: true,\n        notifications: true,\n        queryLogs: true,\n        subscriptions: true,\n        payments: true,\n        settings: true,\n        usageHistory: true,\n        apiKeys: { select: { name: true, lastUsed: true, createdAt: true } },\n      }\n    });\n    \n    if (!user) {\n      throw new Error('User not found');\n    }\n    \n    // Remove sensitive fields\n    const { passwordHash, twoFactorSecret, twoFactorBackupCodes, ...safeUser } = user;\n    \n    return {\n      exportMetadata: {\n        exportDate: new Date().toISOString(),\n        format: 'JSON',\n        version: '1.0',\n        dataController: 'Poweria Legal',\n        dataSubject: user.email,\n      },\n      personalData: safeUser,\n    };\n  }\n}"
+        },
+        "effort_hours": 12,
+        "priority": 2
+      },
+      {
+        "id": "GDPR-003",
+        "title": "Implement Consent Management",
+        "article": "Article 7",
+        "description": "Track and manage user consent for data processing activities",
+        "schema_additions": {
+          "model": "UserConsent",
+          "prisma_code": "model UserConsent {\n  id          String   @id @default(uuid())\n  userId      String   @map(\"user_id\")\n  consentType String   @map(\"consent_type\") // marketing, analytics, third_party, data_processing\n  granted     Boolean\n  ipAddress   String?  @map(\"ip_address\")\n  userAgent   String?  @map(\"user_agent\")\n  version     String   // Consent policy version\n  grantedAt   DateTime @default(now()) @map(\"granted_at\")\n  revokedAt   DateTime? @map(\"revoked_at\")\n  \n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n  \n  @@index([userId])\n  @@index([consentType])\n  @@map(\"user_consents\")\n}"
+        },
+        "effort_hours": 8,
+        "priority": 2
+      },
+      {
+        "id": "GDPR-004",
+        "title": "Implement Processing Activity Records",
+        "article": "Article 30",
+        "description": "Maintain records of all data processing activities",
+        "new_service": {
+          "file": "src/services/gdpr/processing-records.service.ts",
+          "description": "Service to log and query data processing activities"
+        },
+        "effort_hours": 8,
+        "priority": 3
+      },
+      {
+        "id": "GDPR-005",
+        "title": "Implement Breach Notification System",
+        "article": "Article 33",
+        "description": "System to detect and notify relevant parties of data breaches within 72 hours",
+        "new_service": {
+          "file": "src/services/gdpr/breach-notification.service.ts",
+          "description": "Automated breach detection and notification workflow"
+        },
+        "effort_hours": 16,
+        "priority": 2
+      }
+    ],
+    "total_effort_hours": 60
+  },
+  "soc2_requirements_checklist": {
+    "current_readiness": 55,
+    "target_readiness": 100,
+    "trust_principles": {
+      "security": {
+        "status": "partial",
+        "controls": [
+          {
+            "id": "CC6.1",
+            "name": "Logical and Physical Access Controls",
+            "status": "implemented",
+            "evidence": [
+              "JWT authentication",
+              "Role-based access control",
+              "Rate limiting"
+            ],
+            "gaps": [
+              "Missing MFA enforcement for admin users",
+              "No session timeout configuration"
+            ],
+            "remediation": {
+              "task": "Implement mandatory MFA for admin roles",
+              "effort_hours": 8
+            }
+          },
+          {
+            "id": "CC6.2",
+            "name": "System Boundaries",
+            "status": "partial",
+            "evidence": [
+              "CORS configuration (needs improvement)"
+            ],
+            "gaps": [
+              "CORS wildcard default",
+              "Missing API gateway"
+            ],
+            "remediation": {
+              "task": "Implement strict CORS and API gateway",
+              "effort_hours": 8
+            }
+          },
+          {
+            "id": "CC6.6",
+            "name": "System Changes",
+            "status": "implemented",
+            "evidence": [
+              "Audit logging present",
+              "Git version control"
+            ],
+            "gaps": []
+          },
+          {
+            "id": "CC6.7",
+            "name": "Transmission Confidentiality",
+            "status": "not_implemented",
+            "gaps": [
+              "No HSTS enforcement",
+              "No certificate pinning"
+            ],
+            "remediation": {
+              "task": "Implement security headers and HTTPS enforcement",
+              "effort_hours": 6
+            }
+          },
+          {
+            "id": "CC6.8",
+            "name": "Software Development Lifecycle",
+            "status": "partial",
+            "gaps": [
+              "No automated security scanning in CI/CD",
+              "No dependency vulnerability scanning"
+            ],
+            "remediation": {
+              "task": "Add SAST/DAST to CI/CD pipeline",
+              "effort_hours": 12
+            }
+          }
+        ]
+      },
+      "availability": {
+        "status": "partial",
+        "controls": [
+          {
+            "id": "A1.2",
+            "name": "Recovery Plans",
+            "status": "implemented",
+            "evidence": [
+              "Backup encryption service exists",
+              "Backup scheduling configured"
+            ],
+            "gaps": [
+              "No documented disaster recovery plan",
+              "Missing RTO/RPO definitions"
+            ]
+          }
+        ]
+      },
+      "confidentiality": {
+        "status": "not_implemented",
+        "controls": [
+          {
+            "id": "C1.1",
+            "name": "Data Classification",
+            "status": "not_implemented",
+            "gaps": [
+              "No data classification scheme",
+              "No PII field tagging"
+            ],
+            "remediation": {
+              "task": "Implement data classification and PII inventory",
+              "effort_hours": 8
+            }
+          },
+          {
+            "id": "C1.2",
+            "name": "Data Encryption",
+            "status": "partial",
+            "evidence": [
+              "Backup encryption exists"
+            ],
+            "gaps": [
+              "No encryption at rest for PII",
+              "No key rotation policy"
+            ],
+            "remediation": {
+              "task": "Implement field-level encryption for PII",
+              "effort_hours": 24
+            }
+          }
+        ]
+      },
+      "privacy": {
+        "status": "not_implemented",
+        "controls": [
+          {
+            "id": "P1.1",
+            "name": "Privacy Notice",
+            "status": "not_implemented",
+            "gaps": [
+              "No privacy policy endpoint",
+              "No consent collection"
+            ]
+          },
+          {
+            "id": "P4.1",
+            "name": "Data Subject Rights",
+            "status": "not_implemented",
+            "gaps": [
+              "No data deletion endpoint",
+              "No data export endpoint"
+            ],
+            "remediation": {
+              "task": "Implement GDPR endpoints",
+              "effort_hours": 28
+            }
+          }
+        ]
+      },
+      "processing_integrity": {
+        "status": "implemented",
+        "controls": [
+          {
+            "id": "PI1.1",
+            "name": "Input Validation",
+            "status": "implemented",
+            "evidence": [
+              "Zod schema validation",
+              "Type checking"
+            ]
+          }
+        ]
+      }
+    },
+    "total_remediation_effort_hours": 94
+  },
+  "new_middleware_and_services": [
+    {
+      "file": "src/services/security/secret-validation.service.ts",
+      "purpose": "Validate required secrets at startup",
+      "priority": 1
+    },
+    {
+      "file": "src/config/cors.config.ts",
+      "purpose": "Strict CORS configuration",
+      "priority": 2
+    },
+    {
+      "file": "src/middleware/security-headers.middleware.ts",
+      "purpose": "Implement OWASP security headers",
+      "priority": 2
+    },
+    {
+      "file": "src/middleware/https-redirect.middleware.ts",
+      "purpose": "Force HTTPS in production",
+      "priority": 2
+    },
+    {
+      "file": "src/middleware/error-handler.middleware.ts",
+      "purpose": "Sanitize error responses",
+      "priority": 3
+    },
+    {
+      "file": "src/services/security/field-encryption.service.ts",
+      "purpose": "Encrypt PII at application level",
+      "priority": 1
+    },
+    {
+      "file": "src/services/gdpr/data-deletion.service.ts",
+      "purpose": "GDPR Article 17 compliance",
+      "priority": 1
+    },
+    {
+      "file": "src/services/gdpr/data-export.service.ts",
+      "purpose": "GDPR Article 20 compliance",
+      "priority": 2
+    },
+    {
+      "file": "src/services/gdpr/consent-management.service.ts",
+      "purpose": "GDPR Article 7 compliance",
+      "priority": 2
+    },
+    {
+      "file": "src/routes/gdpr.ts",
+      "purpose": "GDPR API endpoints",
+      "priority": 1
+    }
+  ],
+  "configuration_changes": {
+    "environment_variables": [
+      {
+        "name": "JWT_SECRET",
+        "required": true,
+        "min_length": 32,
+        "description": "Strong secret for JWT signing (required, no fallback)"
+      },
+      {
+        "name": "CORS_ALLOWED_ORIGINS",
+        "required": true,
+        "example": "https://app.poweria-legal.com,https://admin.poweria-legal.com",
+        "description": "Comma-separated list of allowed origins"
+      },
+      {
+        "name": "PII_ENCRYPTION_KEY",
+        "required": true,
+        "min_length": 32,
+        "description": "Master key for PII field encryption"
+      },
+      {
+        "name": "DATA_EXPORT_DIR",
+        "required": false,
+        "default": "./exports",
+        "description": "Directory for GDPR data exports"
+      },
+      {
+        "name": "ENABLE_HSTS",
+        "required": false,
+        "default": "true",
+        "description": "Enable HTTP Strict Transport Security"
+      },
+      {
+        "name": "SESSION_TIMEOUT_MINUTES",
+        "required": false,
+        "default": "60",
+        "description": "User session timeout in minutes"
+      }
+    ],
+    "required_npm_packages": [
+      {
+        "name": "helmet",
+        "version": "^7.1.0",
+        "purpose": "Security headers (alternative to custom middleware)"
+      },
+      {
+        "name": "rate-limiter-flexible",
+        "version": "^5.0.0",
+        "purpose": "Advanced rate limiting with Redis support"
+      },
+      {
+        "name": "express-validator",
+        "version": "^7.0.0",
+        "purpose": "Additional input validation"
+      }
+    ]
+  },
+  "implementation_roadmap": {
+    "phase_1_critical": {
+      "duration": "Week 1",
+      "focus": "Address HIGH severity vulnerabilities",
+      "tasks": [
+        {
+          "id": "SEC-001",
+          "title": "Remove hardcoded JWT secrets",
+          "effort_hours": 4,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "SEC-005",
+          "title": "Implement PII encryption",
+          "effort_hours": 24,
+          "assignee": "Security Engineer"
+        },
+        {
+          "id": "GDPR-001",
+          "title": "Implement data deletion endpoint",
+          "effort_hours": 16,
+          "assignee": "Backend Lead"
+        }
+      ],
+      "total_hours": 44
+    },
+    "phase_2_important": {
+      "duration": "Week 2",
+      "focus": "Address MEDIUM severity and GDPR core requirements",
+      "tasks": [
+        {
+          "id": "SEC-002",
+          "title": "Implement strict CORS",
+          "effort_hours": 3,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "SEC-003",
+          "title": "Implement security headers and HTTPS",
+          "effort_hours": 6,
+          "assignee": "DevOps"
+        },
+        {
+          "id": "GDPR-002",
+          "title": "Implement data export",
+          "effort_hours": 12,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "GDPR-003",
+          "title": "Implement consent management",
+          "effort_hours": 8,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "GDPR-005",
+          "title": "Implement breach notification",
+          "effort_hours": 16,
+          "assignee": "Security Engineer"
+        }
+      ],
+      "total_hours": 45
+    },
+    "phase_3_hardening": {
+      "duration": "Week 3",
+      "focus": "Error handling, SOC2 controls, documentation",
+      "tasks": [
+        {
+          "id": "SEC-004",
+          "title": "Implement error sanitization",
+          "effort_hours": 8,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "GDPR-004",
+          "title": "Processing activity records",
+          "effort_hours": 8,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "SOC2-CICD",
+          "title": "Add security scanning to CI/CD",
+          "effort_hours": 12,
+          "assignee": "DevOps"
+        },
+        {
+          "id": "SOC2-MFA",
+          "title": "Enforce MFA for admins",
+          "effort_hours": 8,
+          "assignee": "Backend Lead"
+        },
+        {
+          "id": "DOC-001",
+          "title": "Security documentation",
+          "effort_hours": 8,
+          "assignee": "Security Engineer"
+        }
+      ],
+      "total_hours": 44
+    }
+  },
+  "testing_requirements": {
+    "security_tests": [
+      {
+        "type": "SAST",
+        "tool": "Semgrep",
+        "coverage": "All TypeScript files",
+        "frequency": "Every PR"
+      },
+      {
+        "type": "Dependency Scan",
+        "tool": "npm audit / Snyk",
+        "coverage": "All dependencies",
+        "frequency": "Daily"
+      },
+      {
+        "type": "DAST",
+        "tool": "OWASP ZAP",
+        "coverage": "All API endpoints",
+        "frequency": "Weekly"
+      },
+      {
+        "type": "Penetration Test",
+        "tool": "Manual + Burp Suite",
+        "coverage": "Full application",
+        "frequency": "Quarterly"
+      }
+    ],
+    "compliance_tests": [
+      {
+        "name": "GDPR Data Deletion Test",
+        "description": "Verify all user data is deleted on request",
+        "assertions": [
+          "No user record exists after deletion",
+          "No PII remains in any table",
+          "Audit log records deletion event"
+        ]
+      },
+      {
+        "name": "GDPR Data Export Test",
+        "description": "Verify complete data export",
+        "assertions": [
+          "Export contains all user data",
+          "Export is in machine-readable format",
+          "Sensitive fields are properly handled"
+        ]
+      },
+      {
+        "name": "Encryption Test",
+        "description": "Verify PII encryption",
+        "assertions": [
+          "PII fields are encrypted in database",
+          "Data is decrypted on read",
+          "Encryption keys are rotated"
+        ]
+      }
+    ]
+  },
+  "estimated_completion": {
+    "total_effort_hours": 168,
+    "calendar_weeks": 3,
+    "team_size_recommended": 3,
+    "projected_security_score": 100,
+    "projected_soc2_readiness": 95,
+    "projected_gdpr_compliance": 100
+  }
+}

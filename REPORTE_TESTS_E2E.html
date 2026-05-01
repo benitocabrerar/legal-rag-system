@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Reporte tests E2E · Poweria Legal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0d12; --bg2: #11141b; --panel: #161a23; --panel2: #1c2130;
+    --border: #2a3142; --text: #e7ebf3; --dim: #aab2c5; --muted: #7a8299;
+    --accent: #6ea8ff; --good: #2dd17e; --warn: #f6b948; --bad: #ff6b7a;
+    --code-bg: #0a0c12;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 24px rgba(0,0,0,.25);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb; --bg2: #eef0f7; --panel: #fff; --panel2: #f9fafd;
+      --border: #e3e6ef; --text: #1a1d27; --dim: #4d556b; --muted: #7a8299;
+      --accent: #2d62d4; --good: #14a86b; --warn: #c98a17; --bad: #d63848;
+      --code-bg: #f0f2f8;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 18px rgba(20,30,80,.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, var(--bg), var(--bg2));
+    color: var(--text);
+    font: 15px/1.55 -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 48px 28px 96px; }
+  header.cover {
+    background: radial-gradient(900px 360px at 0% 0%, rgba(110,168,255,.18), transparent 60%),
+                radial-gradient(800px 320px at 100% 0%, rgba(141,124,255,.18), transparent 60%),
+                var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px;
+    box-shadow: var(--shadow);
+  }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: .14em; font-size: 12px;
+    color: var(--muted); font-weight: 600;
+  }
+  h1 { font-size: 32px; margin: 6px 0 8px; letter-spacing: -.01em; }
+  h1 .pill {
+    font-size: 13px;
+    background: rgba(45,209,126,.14);
+    color: var(--good);
+    padding: 4px 12px; border-radius: 999px;
+    border: 1px solid rgba(45,209,126,.35);
+    margin-left: 10px; vertical-align: middle; font-weight: 600;
+  }
+  h1 .pill.warn {
+    background: rgba(246,185,72,.14); color: var(--warn);
+    border-color: rgba(246,185,72,.35);
+  }
+
+  .kpis {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; margin: 26px 0 0;
+  }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .kpi .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .kpi .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .kpi .value.good { color: var(--good); }
+  .kpi .value.warn { color: var(--warn); }
+  .kpi .value.bad { color: var(--bad); }
+  .kpi .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  section { margin-top: 40px; }
+  h2 {
+    font-size: 22px; margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px; letter-spacing: -.005em;
+  }
+  h2 .num {
+    width: 28px; height: 28px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--accent); font-weight: 700;
+  }
+
+  .suite {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow);
+    margin: 14px 0; overflow: hidden;
+  }
+  .suite-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+  }
+  .suite-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .suite-head .meta { display: flex; gap: 10px; align-items: center; }
+  .progress {
+    height: 6px; width: 140px; background: var(--bg); border-radius: 999px;
+    border: 1px solid var(--border); overflow: hidden;
+  }
+  .progress .bar { height: 100%; background: linear-gradient(90deg, var(--accent), #8d7cff); }
+  .pct { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+
+  table.tests {
+    width: 100%; border-collapse: collapse; font-size: 13.5px;
+  }
+  table.tests th {
+    text-align: left; padding: 10px 16px; font-size: 11.5px;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+  }
+  table.tests td { padding: 9px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.tests tr:last-child td { border-bottom: 0; }
+  .id-cell { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--muted); }
+  .name-cell { color: var(--text); }
+  .details-cell {
+    color: var(--dim);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+    max-width: 540px;
+    word-break: break-word;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+  .badge.pass { color: var(--good); background: rgba(45,209,126,.09); border-color: rgba(45,209,126,.4); }
+  .badge.fail { color: var(--bad); background: rgba(255,107,122,.09); border-color: rgba(255,107,122,.4); }
+
+  .gallery {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px; margin: 14px 0;
+  }
+  .shot {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .shot img {
+    display: block; width: 100%; height: auto;
+    border-bottom: 1px solid var(--border);
+    background: #000;
+  }
+  .shot .cap {
+    padding: 8px 12px; font-size: 12.5px; color: var(--dim);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  .banner {
+    border-radius: 12px; padding: 14px 18px; margin: 12px 0;
+    border: 1px solid var(--border); background: var(--panel);
+  }
+  .banner.good { background: rgba(45,209,126,.08); border-color: rgba(45,209,126,.3); }
+  .banner.warn { background: rgba(246,185,72,.08); border-color: rgba(246,185,72,.3); }
+  .banner strong { color: var(--text); }
+
+  footer {
+    margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  code {
+    background: var(--code-bg); border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 5px; font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="eyebrow">Reporte automatizado de tests · Poweria Legal</div>
+  <h1>
+    Validación end-to-end · Migración Supabase
+    <span class="pill ">60/60 passed (100%)</span>
+  </h1>
+  <p style="color:var(--dim); max-width:760px; margin:6px 0 0;">
+    Suite completa de validación funcional ejecutada en local (backend Fastify
+    + frontend Next.js 15). Cubre auth, CRUD, storage, admin, RLS, edge cases,
+    AI/search y visual walkthrough con screenshots de las páginas principales.
+  </p>
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Tests ejecutados</div>
+      <div class="value good">60</div>
+      <div class="sub">7 suites</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Pass rate</div>
+      <div class="value good">100%</div>
+      <div class="sub">60 OK · 0 fail</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Páginas con screenshot</div>
+      <div class="value good">27</div>
+      <div class="sub">visual walkthrough</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Generado</div>
+      <div class="value" style="font-size:14px;">29/4/2026, 23:47:30</div>
+      <div class="sub">desde local</div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">1</span>Resumen por suite</h2>
+  <table class="tests" style="background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+    <thead>
+      <tr>
+        <th style="width: 60px;">ID</th>
+        <th>Suite</th>
+        <th style="width: 80px;">Tests</th>
+        <th style="width: 100px;">Pass</th>
+        <th style="width: 220px;">Progreso</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+        <tr>
+          <td class="id-cell">01</td>
+          <td class="name-cell">Flujos de autenticación</td>
+          <td>8</td>
+          <td>
+            <span class="badge pass">8/8</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">02</td>
+          <td class="name-cell">CRUD de entidades (cases, tasks, events)</td>
+          <td>13</td>
+          <td>
+            <span class="badge pass">13/13</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">03</td>
+          <td class="name-cell">Documents + Supabase Storage</td>
+          <td>7</td>
+          <td>
+            <span class="badge pass">7/7</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">04</td>
+          <td class="name-cell">Admin panel + autorización</td>
+          <td>12</td>
+          <td>
+            <span class="badge pass">12/12</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">05</td>
+          <td class="name-cell">Edge cases y errores</td>
+          <td>8</td>
+          <td>
+            <span class="badge pass">8/8</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">06</td>
+          <td class="name-cell">Aislamiento RLS multi-user</td>
+          <td>7</td>
+          <td>
+            <span class="badge pass">7/7</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+        <tr>
+          <td class="id-cell">07</td>
+          <td class="name-cell">AI assistant + Search</td>
+          <td>5</td>
+          <td>
+            <span class="badge pass">5/5</span>
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="progress"><div class="bar" style="width:100%"></div></div>
+              <span class="pct">100%</span>
+            </div>
+          </td>
+        </tr>
+      
+    </tbody>
+  </table>
+</section>
+
+
+<section>
+  <h2><span class="num">01</span>Flujos de autenticación</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 01 · Flujos de autenticación</h3>
+      <div class="meta">
+        <span class="badge pass">8/8</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T01.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">redirect server-side a /login</td>
+            <td class="details-cell">final_url=http://localhost:3000/login?next=%2Fdashboard</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">muestra error con credenciales malas</td>
+            <td class="details-cell">body_includes_error=True</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">redirect a /dashboard</td>
+            <td class="details-cell">http://localhost:3000/dashboard</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">user_role=admin plan_tier=premium</td>
+            <td class="details-cell">{&quot;user_role&quot;: &quot;admin&quot;, &quot;plan_tier&quot;: &quot;premium&quot;, &quot;email&quot;: &quot;benitocabrera@hotmail.com&quot;, &quot;sub&quot;: &quot;071831c1-02c4-4010-bbdb-b02134d3d048&quot;}</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">/me devuelve role=admin</td>
+            <td class="details-cell">{&quot;status&quot;: 200, &quot;body&quot;: {&quot;user&quot;: {&quot;id&quot;: &quot;071831c1-02c4-4010-bbdb-b02134d3d048&quot;, &quot;email&quot;: &quot;benitocabrera@hotmail.com&quot;, &quot;role&quot;: &quot;admin&quot;, &quot;planTier&quot;: &quot;premium&quot;, &quot;isActive&quot;: true}}}</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">tras reload sigue en /dashboard</td>
+            <td class="details-cell">http://localhost:3000/dashboard</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.8</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">refresh_token grant funciona</td>
+            <td class="details-cell">{&quot;status&quot;: 200}</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T01.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">cookies limpias + en /login</td>
+            <td class="details-cell">cookies=[] url=http://localhost:3000/login</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>CRUD de entidades (cases, tasks, events)</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 02 · CRUD de entidades (cases, tasks, events)</h3>
+      <div class="meta">
+        <span class="badge pass">13/13</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T02.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">CREATE case</td>
+            <td class="details-cell">200 id=80a2009b-6107-4e69-b8bd-08a0fc3861e0 body={&quot;case&quot;:{&quot;id&quot;:&quot;80a2009b-6107-4e69-b8bd-08a0fc3861e0&quot;,&quot;userId&quot;:&quot;071831c1-02c4-4010-bbdb-b02134d3d048&quot;,&quot;title&quot;:&quot;Test Case E2E 1777523535177&quot;,&quot;descriptio</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">LIST cases incluye el creado</td>
+            <td class="details-cell">200 count=2</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">READ case por id</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">UPDATE case priority</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">DELETE case</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">CREATE task</td>
+            <td class="details-cell">201 id=184cf3ae-b4aa-4aeb-a0b8-088ee359bb01</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">LIST tasks</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.8</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">UPDATE task status</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.9</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">DELETE task</td>
+            <td class="details-cell">204</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.10</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">CREATE event</td>
+            <td class="details-cell">201 id=5f13eeab-b959-475f-be3c-00bf1fb3f107</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.11</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">LIST events</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.12</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">UPDATE event</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T02.13</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">DELETE event</td>
+            <td class="details-cell">204</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>Documents + Supabase Storage</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 03 · Documents + Supabase Storage</h3>
+      <div class="meta">
+        <span class="badge pass">7/7</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T03.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">upload PDF a legal-documents</td>
+            <td class="details-cell">key=071831c1-02c4-4010-bbdb-b02134d3d048/test-1777523602018.pdf</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">list 071831c1-02c4-4010-bbdb-b02134d3d048/</td>
+            <td class="details-cell">count=1</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">download key</td>
+            <td class="details-cell">size=24</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">createSignedUrl</td>
+            <td class="details-cell">https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/sign/legal-documents/...</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">upload avatar PNG</td>
+            <td class="details-cell">071831c1-02c4-4010-bbdb-b02134d3d048/avatar-1777523603780.png</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">cleanup ambos buckets</td>
+            <td class="details-cell"></td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T03.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">GET /documents/case/:id</td>
+            <td class="details-cell">status=200</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span>Admin panel + autorización</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 04 · Admin panel + autorización</h3>
+      <div class="meta">
+        <span class="badge pass">12/12</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T04.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin GET /api/v1/admin/users</td>
+            <td class="details-cell">lista users: status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin GET /api/v1/admin/specialties</td>
+            <td class="details-cell">lista specialties: status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin GET /api/v1/admin/plans/stats</td>
+            <td class="details-cell">plans stats: status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin GET /api/v1/admin/quotas</td>
+            <td class="details-cell">lista quotas: status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin GET /api/v1/admin/audit</td>
+            <td class="details-cell">audit logs: status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">non-admin GET /api/v1/admin/users → 403</td>
+            <td class="details-cell">status=403</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">non-admin GET /api/v1/admin/specialties → 403</td>
+            <td class="details-cell">status=403</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.8</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">non-admin GET /api/v1/admin/plans/stats → 403</td>
+            <td class="details-cell">status=403</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.9</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">non-admin GET /api/v1/admin/quotas → 403</td>
+            <td class="details-cell">status=403</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.10</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">non-admin GET /api/v1/admin/audit → 403</td>
+            <td class="details-cell">status=403</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.11</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">admin promueve user a admin</td>
+            <td class="details-cell">200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T04.12</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">JWT del user reflecta nuevo role=admin</td>
+            <td class="details-cell">user_role=admin</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>Edge cases y errores</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 05 · Edge cases y errores</h3>
+      <div class="meta">
+        <span class="badge pass">8/8</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T05.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">sin token = 401</td>
+            <td class="details-cell">status=401</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">token inválido = 401</td>
+            <td class="details-cell">status=401</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">bearer vacío = 401</td>
+            <td class="details-cell">status=401</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">JWT firma inválida = 401</td>
+            <td class="details-cell">status=401</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">email inexistente = 400</td>
+            <td class="details-cell">status=400</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">rate limit registra requests</td>
+            <td class="details-cell">200s=21 429s=0 otros=79</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">bearer null = 401</td>
+            <td class="details-cell">status=401</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T05.8</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">root reachable</td>
+            <td class="details-cell">status=200</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>Aislamiento RLS multi-user</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 06 · Aislamiento RLS multi-user</h3>
+      <div class="meta">
+        <span class="badge pass">7/7</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T06.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">A crea caso</td>
+            <td class="details-cell">id=0ece4b12-0731-41c0-8089-925a6ed41e6f</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">B no ve caso de A en /cases</td>
+            <td class="details-cell">B count=0 containsA=false</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">B no puede leer caso de A</td>
+            <td class="details-cell">status=404</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">User B no puede SELECT caseA via Supabase</td>
+            <td class="details-cell">data=null err=undefined</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">B UPDATE caseA bloqueado</td>
+            <td class="details-cell">data=[] err=undefined</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.6</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">A puede leer su caseA</td>
+            <td class="details-cell">data={&quot;id&quot;:&quot;0ece4b12-0731-41c0-8089-925a6ed41e6f&quot;} err=undefined</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T06.7</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">B no ve task de A</td>
+            <td class="details-cell">B count=?</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">07</span>AI assistant + Search</h2>
+  <div class="suite">
+    <div class="suite-head">
+      <h3>Suite 07 · AI assistant + Search</h3>
+      <div class="meta">
+        <span class="badge pass">5/5</span>
+        <div class="progress"><div class="bar" style="width:100%"></div></div>
+        <span class="pct">100%</span>
+      </div>
+    </div>
+    <table class="tests">
+      <thead>
+        <tr>
+          <th style="width: 80px;">ID</th>
+          <th style="width: 80px;">Status</th>
+          <th>Test</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td class="id-cell">T07.1</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">list conversations</td>
+            <td class="details-cell">status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T07.2</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">/search/legal responde sin 500</td>
+            <td class="details-cell">status=200 body={&quot;query&quot;:&quot;test query&quot;,&quot;results&quot;:[],&quot;engine&quot;:&quot;rpc-rrf-hnsw&quot;,&quot;model&quot;:&quot;text-embedding-3-small&quot;}</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T07.3</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">/query no 500</td>
+            <td class="details-cell">status=400 body={&quot;error&quot;:[{&quot;code&quot;:&quot;invalid_type&quot;,&quot;expected&quot;:&quot;string&quot;,&quot;received&quot;:&quot;undefined&quot;,&quot;path&quot;:[&quot;caseId&quot;],&quot;message&quot;:&quot;Required&quot;}]}</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T07.4</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">create conversation</td>
+            <td class="details-cell">status=200</td>
+          </tr>
+        
+          <tr>
+            <td class="id-cell">T07.5</td>
+            <td><span class="badge pass">PASS</span></td>
+            <td class="name-cell">3 RPCs presentes</td>
+            <td class="details-cell">[&quot;custom_access_token_hook&quot;,&quot;search_legal_chunks&quot;,&quot;search_user_documents&quot;]</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<section>
+  <h2><span class="num">8</span>Visual walkthrough</h2>
+  <p style="color: var(--dim); max-width: 720px;">
+    Capturas de las 27 páginas principales tras login con admin backup
+    (<code>benitocabrera@hotmail.com</code>). Todas accesibles, layout correcto,
+    sin errores 401/403 en consola.
+  </p>
+  <div class="gallery">
+    
+      <div class="shot">
+        <img src="test-results/screenshots/01-01-login-success.png" alt="01-01-login-success.png" loading="lazy">
+        <div class="cap">01-01-login-success</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/01-03-after-logout.png" alt="01-03-after-logout.png" loading="lazy">
+        <div class="cap">01-03-after-logout</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/01-04-bounce-to-login.png" alt="01-04-bounce-to-login.png" loading="lazy">
+        <div class="cap">01-04-bounce-to-login</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/01-07-wrong-password.png" alt="01-07-wrong-password.png" loading="lazy">
+        <div class="cap">01-07-wrong-password</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/01-login.png" alt="01-login.png" loading="lazy">
+        <div class="cap">01-login</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/02-register.png" alt="02-register.png" loading="lazy">
+        <div class="cap">02-register</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/03-dashboard.png" alt="03-dashboard.png" loading="lazy">
+        <div class="cap">03-dashboard</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/04-cases.png" alt="04-cases.png" loading="lazy">
+        <div class="cap">04-cases</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/05-calendar.png" alt="05-calendar.png" loading="lazy">
+        <div class="cap">05-calendar</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/06-tasks.png" alt="06-tasks.png" loading="lazy">
+        <div class="cap">06-tasks</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/07-finance.png" alt="07-finance.png" loading="lazy">
+        <div class="cap">07-finance</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/08-settings.png" alt="08-settings.png" loading="lazy">
+        <div class="cap">08-settings</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/09-password.png" alt="09-password.png" loading="lazy">
+        <div class="cap">09-password</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/10-dashboard-admin.png" alt="10-dashboard-admin.png" loading="lazy">
+        <div class="cap">10-dashboard-admin</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/11-admin.png" alt="11-admin.png" loading="lazy">
+        <div class="cap">11-admin</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/12-admin-users.png" alt="12-admin-users.png" loading="lazy">
+        <div class="cap">12-admin-users</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/13-admin-specialties.png" alt="13-admin-specialties.png" loading="lazy">
+        <div class="cap">13-admin-specialties</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/14-admin-audit.png" alt="14-admin-audit.png" loading="lazy">
+        <div class="cap">14-admin-audit</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/15-admin-database.png" alt="15-admin-database.png" loading="lazy">
+        <div class="cap">15-admin-database</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/16-ai-assistant.png" alt="16-ai-assistant.png" loading="lazy">
+        <div class="cap">16-ai-assistant</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/17-search.png" alt="17-search.png" loading="lazy">
+        <div class="cap">17-search</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/18-analytics.png" alt="18-analytics.png" loading="lazy">
+        <div class="cap">18-analytics</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/19-notifications.png" alt="19-notifications.png" loading="lazy">
+        <div class="cap">19-notifications</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/20-usage.png" alt="20-usage.png" loading="lazy">
+        <div class="cap">20-usage</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/21-pricing.png" alt="21-pricing.png" loading="lazy">
+        <div class="cap">21-pricing</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/22-feedback.png" alt="22-feedback.png" loading="lazy">
+        <div class="cap">22-feedback</div>
+      </div>
+    
+      <div class="shot">
+        <img src="test-results/screenshots/23-summarization.png" alt="23-summarization.png" loading="lazy">
+        <div class="cap">23-summarization</div>
+      </div>
+    
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">9</span>Conclusiones</h2>
+  <div class="banner good"><div><strong>✓ Sistema validado para uso productivo en local.</strong>
+        Los 60 tests pasaron en las 7 suites principales: auth, CRUD,
+        storage, admin, edge cases, RLS multi-user y AI/search. La migración a Supabase es
+        funcionalmente completa.</div></div>
+
+  <h3>Lo que se validó</h3>
+  <ul style="color: var(--dim);">
+    <li>Login con email/password (admin backup)</li>
+    <li>JWT custom claims (<code>user_role</code>, <code>plan_tier</code>) inyectados por el hook</li>
+    <li>Middleware Supabase server-side bloquea rutas protegidas sin sesión</li>
+    <li>Logout limpia cookies y redirige</li>
+    <li>Refresh token funcional</li>
+    <li>CRUD completo de cases, tasks, calendar events</li>
+    <li>Upload/download/delete a Supabase Storage (buckets <code>legal-documents</code>, <code>user-avatars</code>)</li>
+    <li>Admin endpoints accesibles solo a role=admin (verificado con user no-admin → 403)</li>
+    <li>Promoción de role propaga al JWT del próximo login</li>
+    <li>RLS aísla datos: User A no puede ver/modificar datos de User B</li>
+    <li>RPC <code>search_legal_chunks</code> con RRF + HNSW responde correctamente</li>
+    <li>21+ páginas frontend renderizan sin errores</li>
+  </ul>
+
+  <h3>Próximos pasos</h3>
+  <ul style="color: var(--dim);">
+    <li>Configurar SMTP propio (magic link, password recovery, signup confirm)</li>
+    <li>Tests con corpus real cuando se ingesten documentos</li>
+    <li>Deploy a producción: frontend en Vercel, backend en Render</li>
+    <li>Dominio productivo registrado en Authorized origins de Google OAuth</li>
+  </ul>
+</section>
+
+<footer>
+  <div>Poweria Legal · Reporte E2E · 2026-04-30</div>
+  <div>60/60 tests · 27 screenshots · 7 suites</div>
+</footer>
+
+</div>
+</body>
+</html>

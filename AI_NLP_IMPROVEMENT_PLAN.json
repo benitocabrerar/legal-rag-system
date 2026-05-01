@@ -1,0 +1,1022 @@
+{
+  "documentInfo": {
+    "title": "Legal RAG System AI/NLP Gap Analysis and Improvement Plan",
+    "version": "1.0.0",
+    "createdAt": "2025-12-11",
+    "author": "AI Engineer Analysis",
+    "currentScore": "68%",
+    "targetScore": "100%"
+  },
+  "executiveSummary": {
+    "currentState": {
+      "nlpQueryProcessing": { "score": 85, "status": "GOOD" },
+      "aiLegalAssistant": { "score": 80, "status": "GOOD" },
+      "advancedAnalytics": { "score": 75, "status": "ACCEPTABLE" },
+      "predictiveIntelligence": { "score": 40, "status": "CRITICAL" },
+      "documentSummarization": { "score": 60, "status": "ACCEPTABLE" }
+    },
+    "criticalGaps": [
+      "ML-based Outcome Prediction (40% complete)",
+      "Trend Analysis over Historical Data",
+      "Document Comparison Engine",
+      "Automated Legal Pattern Detection",
+      "Cross-reference Graph Visualization"
+    ],
+    "totalEstimatedEffort": "12-16 weeks",
+    "priority": "HIGH"
+  },
+  "existingInfrastructure": {
+    "database": {
+      "provider": "PostgreSQL via Prisma",
+      "aiModels": [
+        "AIConversation",
+        "AIMessage",
+        "AICitation",
+        "MLModel",
+        "Prediction",
+        "LegalPattern",
+        "TrendForecast",
+        "DocumentSummary",
+        "DocumentComparison",
+        "ArticleAnalysis",
+        "DocumentAnalytics",
+        "SearchAnalytics"
+      ],
+      "supportingModels": [
+        "QueryHistory",
+        "QueryCache",
+        "DocumentCitation",
+        "DocumentRelationship",
+        "DocumentAuthorityScore"
+      ]
+    },
+    "services": {
+      "implemented": [
+        "QueryTransformationService",
+        "LegalAssistant",
+        "UnifiedSearchOrchestrator",
+        "AnalyticsService",
+        "OpenAIService"
+      ],
+      "partiallyImplemented": [
+        "MLModel management (schema only)",
+        "Prediction storage (schema only)",
+        "TrendForecast (schema only)"
+      ],
+      "missing": [
+        "PredictiveIntelligenceService",
+        "TrendAnalysisService",
+        "DocumentComparisonEngine",
+        "LegalPatternDetector",
+        "GraphVisualizationService"
+      ]
+    }
+  },
+  "improvementModules": [
+    {
+      "id": "MODULE_1",
+      "name": "Predictive Intelligence Engine",
+      "currentScore": 40,
+      "targetScore": 100,
+      "priority": "CRITICAL",
+      "estimatedWeeks": 4,
+      "description": "Implement ML-based outcome prediction for legal cases using historical data and pattern recognition",
+      "tasks": [
+        {
+          "id": "T1.1",
+          "name": "Training Data Pipeline",
+          "description": "Build ETL pipeline to extract training data from historical legal documents, case outcomes, and citations",
+          "estimatedDays": 5,
+          "dependencies": [],
+          "files": [
+            "src/services/ml/training-data-pipeline.ts",
+            "src/services/ml/data-preprocessor.ts"
+          ]
+        },
+        {
+          "id": "T1.2",
+          "name": "Feature Engineering Service",
+          "description": "Extract features from legal documents: topic vectors, citation density, complexity scores, jurisdiction patterns",
+          "estimatedDays": 7,
+          "dependencies": ["T1.1"],
+          "files": [
+            "src/services/ml/feature-engineering.ts",
+            "src/services/ml/feature-extractors/index.ts"
+          ]
+        },
+        {
+          "id": "T1.3",
+          "name": "Model Training Infrastructure",
+          "description": "Implement model training, validation, and versioning using OpenAI fine-tuning or local transformer models",
+          "estimatedDays": 10,
+          "dependencies": ["T1.2"],
+          "files": [
+            "src/services/ml/model-trainer.ts",
+            "src/services/ml/model-evaluator.ts",
+            "src/services/ml/model-registry.ts"
+          ]
+        },
+        {
+          "id": "T1.4",
+          "name": "Inference Service",
+          "description": "Real-time prediction API for case outcome estimation with confidence scores",
+          "estimatedDays": 5,
+          "dependencies": ["T1.3"],
+          "files": [
+            "src/services/ml/inference-service.ts",
+            "src/routes/predictions.ts"
+          ]
+        },
+        {
+          "id": "T1.5",
+          "name": "Prediction Types and Models",
+          "description": "Define prediction categories: case success probability, appeal likelihood, settlement estimation, timeline prediction",
+          "estimatedDays": 3,
+          "dependencies": [],
+          "files": [
+            "src/types/prediction.types.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "MLModel": {
+          "additions": [
+            { "field": "hyperparameters", "type": "Json", "description": "Model hyperparameters for reproducibility" },
+            { "field": "f1Score", "type": "Float?", "description": "F1 score metric" },
+            { "field": "auc", "type": "Float?", "description": "Area under curve metric" },
+            { "field": "featureImportance", "type": "Json?", "description": "Feature importance rankings" },
+            { "field": "trainingSize", "type": "Int", "description": "Number of training samples" },
+            { "field": "validationSize", "type": "Int", "description": "Number of validation samples" },
+            { "field": "modelPath", "type": "String?", "description": "S3 path to saved model weights" }
+          ]
+        },
+        "Prediction": {
+          "additions": [
+            { "field": "userId", "type": "String?", "description": "User who requested prediction" },
+            { "field": "documentId", "type": "String?", "description": "Related document if applicable" },
+            { "field": "caseId", "type": "String?", "description": "Related case if applicable" },
+            { "field": "explanations", "type": "Json?", "description": "SHAP/LIME explanations for prediction" },
+            { "field": "actualOutcome", "type": "Json?", "description": "Actual outcome for feedback loop" },
+            { "field": "feedbackReceived", "type": "Boolean", "description": "Whether feedback was provided" }
+          ]
+        },
+        "newModels": [
+          {
+            "name": "PredictionFeedback",
+            "fields": [
+              { "field": "id", "type": "String @id @default(uuid())" },
+              { "field": "predictionId", "type": "String" },
+              { "field": "actualOutcome", "type": "Json" },
+              { "field": "wasAccurate", "type": "Boolean?" },
+              { "field": "feedback", "type": "String?" },
+              { "field": "userId", "type": "String?" },
+              { "field": "createdAt", "type": "DateTime @default(now())" }
+            ],
+            "purpose": "Track prediction accuracy for model improvement"
+          }
+        ]
+      },
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/predictions/case-outcome",
+          "description": "Predict case outcome probability",
+          "requestBody": {
+            "caseType": "string",
+            "jurisdiction": "string",
+            "documentIds": "string[]",
+            "caseMetadata": "object"
+          },
+          "response": {
+            "prediction": "object",
+            "confidence": "number",
+            "explanations": "object[]",
+            "similarCases": "object[]"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/predictions/appeal-likelihood",
+          "description": "Estimate likelihood of appeal based on ruling analysis"
+        },
+        {
+          "method": "POST",
+          "path": "/api/predictions/settlement-estimate",
+          "description": "Estimate settlement range based on case characteristics"
+        },
+        {
+          "method": "GET",
+          "path": "/api/predictions/model-performance",
+          "description": "Get model performance metrics and accuracy stats"
+        },
+        {
+          "method": "POST",
+          "path": "/api/predictions/:id/feedback",
+          "description": "Submit feedback on prediction accuracy"
+        }
+      ],
+      "codeArchitecture": {
+        "files": {
+          "src/services/ml/predictive-intelligence.service.ts": {
+            "class": "PredictiveIntelligenceService",
+            "methods": [
+              "predictCaseOutcome(caseData: CasePredictionInput): Promise<CaseOutcomePrediction>",
+              "predictAppealLikelihood(rulingId: string): Promise<AppealPrediction>",
+              "estimateSettlement(caseData: SettlementInput): Promise<SettlementEstimate>",
+              "getModelPerformance(modelId: string): Promise<ModelMetrics>",
+              "trainModel(modelType: string, config: TrainingConfig): Promise<MLModel>",
+              "generateExplanations(predictionId: string): Promise<Explanation[]>"
+            ],
+            "dependencies": [
+              "OpenAIService",
+              "PrismaClient",
+              "FeatureEngineeringService",
+              "ModelRegistry"
+            ]
+          },
+          "src/services/ml/feature-engineering.service.ts": {
+            "class": "FeatureEngineeringService",
+            "methods": [
+              "extractDocumentFeatures(documentId: string): Promise<DocumentFeatures>",
+              "extractCaseFeatures(caseId: string): Promise<CaseFeatures>",
+              "calculateComplexityScore(content: string): number",
+              "extractCitationDensity(documentId: string): Promise<CitationMetrics>",
+              "generateEmbeddingFeatures(text: string): Promise<number[]>",
+              "normalizeFeaturesForModel(features: RawFeatures): NormalizedFeatures"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "MODULE_2",
+      "name": "Trend Analysis Service",
+      "currentScore": 0,
+      "targetScore": 100,
+      "priority": "HIGH",
+      "estimatedWeeks": 3,
+      "description": "Analyze historical legal data to identify trends, patterns, and forecast future legal developments",
+      "tasks": [
+        {
+          "id": "T2.1",
+          "name": "Historical Data Aggregation",
+          "description": "Build aggregation pipelines for legal document trends by category, jurisdiction, time period",
+          "estimatedDays": 4,
+          "dependencies": [],
+          "files": [
+            "src/services/analytics/trend-aggregator.ts"
+          ]
+        },
+        {
+          "id": "T2.2",
+          "name": "Time Series Analysis",
+          "description": "Implement time series analysis for document publication frequency, topic popularity, citation patterns",
+          "estimatedDays": 6,
+          "dependencies": ["T2.1"],
+          "files": [
+            "src/services/analytics/time-series-analyzer.ts"
+          ]
+        },
+        {
+          "id": "T2.3",
+          "name": "Trend Forecasting Model",
+          "description": "Build forecasting models using ARIMA/Prophet-like approaches for legal trend prediction",
+          "estimatedDays": 7,
+          "dependencies": ["T2.2"],
+          "files": [
+            "src/services/analytics/trend-forecaster.ts"
+          ]
+        },
+        {
+          "id": "T2.4",
+          "name": "Trend Visualization API",
+          "description": "Create API endpoints for trend data visualization with D3.js/Chart.js compatible output",
+          "estimatedDays": 4,
+          "dependencies": ["T2.3"],
+          "files": [
+            "src/routes/trends.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "TrendForecast": {
+          "additions": [
+            { "field": "methodology", "type": "String", "description": "Forecasting method used (ARIMA, Prophet, Linear)" },
+            { "field": "historicalDataPoints", "type": "Int", "description": "Number of historical data points used" },
+            { "field": "seasonalityFactors", "type": "Json?", "description": "Detected seasonality patterns" },
+            { "field": "upperBound", "type": "Float?", "description": "95% confidence upper bound" },
+            { "field": "lowerBound", "type": "Float?", "description": "95% confidence lower bound" }
+          ]
+        },
+        "newModels": [
+          {
+            "name": "TrendDataPoint",
+            "fields": [
+              { "field": "id", "type": "String @id @default(uuid())" },
+              { "field": "metricType", "type": "String" },
+              { "field": "dimension", "type": "String" },
+              { "field": "dimensionValue", "type": "String" },
+              { "field": "value", "type": "Float" },
+              { "field": "periodStart", "type": "DateTime" },
+              { "field": "periodEnd", "type": "DateTime" },
+              { "field": "metadata", "type": "Json?" }
+            ],
+            "purpose": "Store aggregated trend data points for efficient querying"
+          },
+          {
+            "name": "TrendAlert",
+            "fields": [
+              { "field": "id", "type": "String @id @default(uuid())" },
+              { "field": "alertType", "type": "String" },
+              { "field": "metric", "type": "String" },
+              { "field": "threshold", "type": "Float" },
+              { "field": "currentValue", "type": "Float" },
+              { "field": "percentageChange", "type": "Float" },
+              { "field": "severity", "type": "String" },
+              { "field": "description", "type": "String" },
+              { "field": "detectedAt", "type": "DateTime @default(now())" },
+              { "field": "acknowledged", "type": "Boolean @default(false)" }
+            ],
+            "purpose": "Alert when significant trend changes are detected"
+          }
+        ]
+      },
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/trends/documents",
+          "description": "Get document publication trends by category/jurisdiction",
+          "queryParams": ["startDate", "endDate", "category", "jurisdiction", "granularity"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/trends/topics",
+          "description": "Get trending legal topics over time"
+        },
+        {
+          "method": "GET",
+          "path": "/api/trends/citations",
+          "description": "Get citation pattern trends"
+        },
+        {
+          "method": "POST",
+          "path": "/api/trends/forecast",
+          "description": "Generate trend forecast for specific metric"
+        },
+        {
+          "method": "GET",
+          "path": "/api/trends/alerts",
+          "description": "Get trend alerts and anomalies"
+        }
+      ],
+      "codeArchitecture": {
+        "files": {
+          "src/services/analytics/trend-analysis.service.ts": {
+            "class": "TrendAnalysisService",
+            "methods": [
+              "getDocumentTrends(params: TrendQueryParams): Promise<TrendSeries>",
+              "getTopicTrends(startDate: Date, endDate: Date): Promise<TopicTrend[]>",
+              "getCitationTrends(documentId?: string): Promise<CitationTrend>",
+              "generateForecast(metric: string, horizon: number): Promise<TrendForecast>",
+              "detectAnomalies(metric: string, sensitivity: number): Promise<TrendAnomaly[]>",
+              "calculateGrowthRate(series: DataPoint[]): GrowthMetrics",
+              "aggregateByPeriod(data: RawData[], period: 'day'|'week'|'month'|'year'): AggregatedData[]"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "MODULE_3",
+      "name": "Document Comparison Engine",
+      "currentScore": 0,
+      "targetScore": 100,
+      "priority": "HIGH",
+      "estimatedWeeks": 3,
+      "description": "Compare legal documents to identify differences, similarities, and track changes across versions",
+      "tasks": [
+        {
+          "id": "T3.1",
+          "name": "Text Diff Algorithm",
+          "description": "Implement advanced text diff algorithm optimized for legal document structure (articles, sections, clauses)",
+          "estimatedDays": 5,
+          "dependencies": [],
+          "files": [
+            "src/services/comparison/text-diff.ts"
+          ]
+        },
+        {
+          "id": "T3.2",
+          "name": "Semantic Similarity Engine",
+          "description": "Use embeddings to find semantically similar sections between documents",
+          "estimatedDays": 5,
+          "dependencies": [],
+          "files": [
+            "src/services/comparison/semantic-similarity.ts"
+          ]
+        },
+        {
+          "id": "T3.3",
+          "name": "Structure Comparison",
+          "description": "Compare document structures (article numbering, section hierarchy, reference patterns)",
+          "estimatedDays": 4,
+          "dependencies": ["T3.1"],
+          "files": [
+            "src/services/comparison/structure-analyzer.ts"
+          ]
+        },
+        {
+          "id": "T3.4",
+          "name": "Change Impact Analysis",
+          "description": "Analyze the impact of changes between document versions (additions, deletions, modifications)",
+          "estimatedDays": 4,
+          "dependencies": ["T3.1", "T3.3"],
+          "files": [
+            "src/services/comparison/change-impact-analyzer.ts"
+          ]
+        },
+        {
+          "id": "T3.5",
+          "name": "Comparison API & Storage",
+          "description": "Build API endpoints and utilize existing DocumentComparison model",
+          "estimatedDays": 3,
+          "dependencies": ["T3.4"],
+          "files": [
+            "src/routes/comparison.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "DocumentComparison": {
+          "additions": [
+            { "field": "comparisonType", "type": "String", "description": "Type: version_diff, cross_document, batch" },
+            { "field": "additionsCount", "type": "Int", "description": "Number of additions detected" },
+            { "field": "deletionsCount", "type": "Int", "description": "Number of deletions detected" },
+            { "field": "modificationsCount", "type": "Int", "description": "Number of modifications detected" },
+            { "field": "structuralChanges", "type": "Json?", "description": "Structural changes (sections added/removed)" },
+            { "field": "semanticChanges", "type": "Json?", "description": "Semantically significant changes" },
+            { "field": "impactAssessment", "type": "Json?", "description": "Impact assessment of changes" },
+            { "field": "highlightedDiff", "type": "Json?", "description": "HTML-ready diff for visualization" }
+          ]
+        },
+        "newModels": [
+          {
+            "name": "ComparisonChange",
+            "fields": [
+              { "field": "id", "type": "String @id @default(uuid())" },
+              { "field": "comparisonId", "type": "String" },
+              { "field": "changeType", "type": "String" },
+              { "field": "location", "type": "String" },
+              { "field": "originalText", "type": "String?" },
+              { "field": "newText", "type": "String?" },
+              { "field": "semanticImpact", "type": "String" },
+              { "field": "impactScore", "type": "Float?" }
+            ],
+            "purpose": "Store individual changes from document comparisons"
+          }
+        ]
+      },
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/comparison/documents",
+          "description": "Compare two legal documents",
+          "requestBody": {
+            "document1Id": "string",
+            "document2Id": "string",
+            "comparisonType": "string",
+            "options": { "includeSemanticAnalysis": "boolean", "articleLevel": "boolean" }
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/api/comparison/:id",
+          "description": "Get comparison results"
+        },
+        {
+          "method": "POST",
+          "path": "/api/comparison/versions",
+          "description": "Compare document versions over time"
+        },
+        {
+          "method": "GET",
+          "path": "/api/comparison/similar/:documentId",
+          "description": "Find semantically similar documents"
+        }
+      ],
+      "codeArchitecture": {
+        "files": {
+          "src/services/comparison/document-comparison.service.ts": {
+            "class": "DocumentComparisonService",
+            "methods": [
+              "compareDocuments(doc1Id: string, doc2Id: string, options: ComparisonOptions): Promise<DocumentComparison>",
+              "compareVersions(documentId: string): Promise<VersionComparison[]>",
+              "findSimilarDocuments(documentId: string, threshold: number): Promise<SimilarDocument[]>",
+              "generateDiffHtml(comparisonId: string): Promise<string>",
+              "analyzeChangeImpact(comparisonId: string): Promise<ImpactAssessment>",
+              "batchCompare(documentIds: string[]): Promise<BatchComparisonResult>"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "MODULE_4",
+      "name": "Legal Pattern Detection",
+      "currentScore": 0,
+      "targetScore": 100,
+      "priority": "HIGH",
+      "estimatedWeeks": 3,
+      "description": "Automatically detect legal patterns, precedent relationships, and regulatory correlations using ML",
+      "tasks": [
+        {
+          "id": "T4.1",
+          "name": "Pattern Definition Framework",
+          "description": "Define pattern types: amendment chains, precedent clusters, regulatory correlations, topic migrations",
+          "estimatedDays": 3,
+          "dependencies": [],
+          "files": [
+            "src/types/pattern.types.ts"
+          ]
+        },
+        {
+          "id": "T4.2",
+          "name": "Citation Pattern Detector",
+          "description": "Detect patterns in document citations (influential documents, citation clusters)",
+          "estimatedDays": 5,
+          "dependencies": ["T4.1"],
+          "files": [
+            "src/services/patterns/citation-pattern-detector.ts"
+          ]
+        },
+        {
+          "id": "T4.3",
+          "name": "Topic Evolution Tracker",
+          "description": "Track how legal topics evolve across documents and time",
+          "estimatedDays": 5,
+          "dependencies": ["T4.1"],
+          "files": [
+            "src/services/patterns/topic-evolution-tracker.ts"
+          ]
+        },
+        {
+          "id": "T4.4",
+          "name": "Amendment Chain Analyzer",
+          "description": "Identify and visualize amendment chains across related legal documents",
+          "estimatedDays": 4,
+          "dependencies": ["T4.2"],
+          "files": [
+            "src/services/patterns/amendment-chain-analyzer.ts"
+          ]
+        },
+        {
+          "id": "T4.5",
+          "name": "Pattern Verification & Alerts",
+          "description": "Implement pattern verification workflow and alert system for new pattern discoveries",
+          "estimatedDays": 4,
+          "dependencies": ["T4.2", "T4.3", "T4.4"],
+          "files": [
+            "src/services/patterns/pattern-verifier.ts",
+            "src/routes/patterns.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "LegalPattern": {
+          "additions": [
+            { "field": "category", "type": "String", "description": "Pattern category (citation, topic, amendment, correlation)" },
+            { "field": "documentIds", "type": "String[]", "description": "Documents involved in pattern" },
+            { "field": "startDate", "type": "DateTime?", "description": "Pattern start date" },
+            { "field": "endDate", "type": "DateTime?", "description": "Pattern end date" },
+            { "field": "affectedJurisdictions", "type": "String[]", "description": "Jurisdictions affected" },
+            { "field": "visualizationData", "type": "Json?", "description": "Data for pattern visualization" },
+            { "field": "relatedPatterns", "type": "String[]", "description": "IDs of related patterns" }
+          ]
+        },
+        "newModels": [
+          {
+            "name": "PatternDocument",
+            "fields": [
+              { "field": "patternId", "type": "String" },
+              { "field": "documentId", "type": "String" },
+              { "field": "role", "type": "String" },
+              { "field": "position", "type": "Int?" },
+              { "field": "contribution", "type": "Float?" }
+            ],
+            "purpose": "Many-to-many relation between patterns and documents"
+          }
+        ]
+      },
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/patterns",
+          "description": "List detected legal patterns with filtering"
+        },
+        {
+          "method": "GET",
+          "path": "/api/patterns/:id",
+          "description": "Get pattern details"
+        },
+        {
+          "method": "POST",
+          "path": "/api/patterns/detect",
+          "description": "Trigger pattern detection for specific documents or categories"
+        },
+        {
+          "method": "POST",
+          "path": "/api/patterns/:id/verify",
+          "description": "Verify or reject detected pattern"
+        },
+        {
+          "method": "GET",
+          "path": "/api/patterns/document/:documentId",
+          "description": "Get patterns related to specific document"
+        }
+      ],
+      "codeArchitecture": {
+        "files": {
+          "src/services/patterns/legal-pattern-detector.service.ts": {
+            "class": "LegalPatternDetectorService",
+            "methods": [
+              "detectPatterns(documentIds?: string[]): Promise<LegalPattern[]>",
+              "detectCitationPatterns(): Promise<CitationPattern[]>",
+              "detectAmendmentChains(jurisdiction: string): Promise<AmendmentChain[]>",
+              "trackTopicEvolution(topic: string, startDate: Date, endDate: Date): Promise<TopicEvolution>",
+              "findCorrelations(documentType1: string, documentType2: string): Promise<Correlation[]>",
+              "verifyPattern(patternId: string, userId: string, isValid: boolean): Promise<LegalPattern>",
+              "getPatternVisualization(patternId: string): Promise<VisualizationData>"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "MODULE_5",
+      "name": "Cross-Reference Graph Visualization",
+      "currentScore": 0,
+      "targetScore": 100,
+      "priority": "MEDIUM",
+      "estimatedWeeks": 2,
+      "description": "Visualize document relationships, citations, and legal hierarchies as interactive graphs",
+      "tasks": [
+        {
+          "id": "T5.1",
+          "name": "Graph Data Structure",
+          "description": "Build efficient graph data structures from existing DocumentCitation and DocumentRelationship models",
+          "estimatedDays": 4,
+          "dependencies": [],
+          "files": [
+            "src/services/graph/graph-builder.ts"
+          ]
+        },
+        {
+          "id": "T5.2",
+          "name": "Visualization API",
+          "description": "Create API that returns D3.js/Cytoscape.js compatible graph data",
+          "estimatedDays": 4,
+          "dependencies": ["T5.1"],
+          "files": [
+            "src/routes/graph.ts"
+          ]
+        },
+        {
+          "id": "T5.3",
+          "name": "Subgraph Extraction",
+          "description": "Extract relevant subgraphs for specific documents, topics, or query results",
+          "estimatedDays": 3,
+          "dependencies": ["T5.1"],
+          "files": [
+            "src/services/graph/subgraph-extractor.ts"
+          ]
+        },
+        {
+          "id": "T5.4",
+          "name": "Graph Analytics",
+          "description": "Calculate graph metrics: centrality, clustering coefficient, community detection",
+          "estimatedDays": 3,
+          "dependencies": ["T5.1"],
+          "files": [
+            "src/services/graph/graph-analytics.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "newModels": [
+          {
+            "name": "GraphSnapshot",
+            "fields": [
+              { "field": "id", "type": "String @id @default(uuid())" },
+              { "field": "name", "type": "String" },
+              { "field": "description", "type": "String?" },
+              { "field": "graphType", "type": "String" },
+              { "field": "nodeCount", "type": "Int" },
+              { "field": "edgeCount", "type": "Int" },
+              { "field": "graphData", "type": "Json" },
+              { "field": "metrics", "type": "Json?" },
+              { "field": "createdAt", "type": "DateTime @default(now())" },
+              { "field": "expiresAt", "type": "DateTime?" }
+            ],
+            "purpose": "Cache computed graph snapshots for faster visualization"
+          }
+        ]
+      },
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/graph/citations/:documentId",
+          "description": "Get citation graph for a document"
+        },
+        {
+          "method": "GET",
+          "path": "/api/graph/relationships",
+          "description": "Get document relationship graph"
+        },
+        {
+          "method": "POST",
+          "path": "/api/graph/subgraph",
+          "description": "Extract subgraph for specific documents/filters"
+        },
+        {
+          "method": "GET",
+          "path": "/api/graph/analytics/:documentId",
+          "description": "Get graph analytics for document"
+        },
+        {
+          "method": "GET",
+          "path": "/api/graph/hierarchy/:jurisdiction",
+          "description": "Get legal hierarchy graph for jurisdiction"
+        }
+      ],
+      "codeArchitecture": {
+        "files": {
+          "src/services/graph/graph-visualization.service.ts": {
+            "class": "GraphVisualizationService",
+            "methods": [
+              "buildCitationGraph(documentIds: string[]): Promise<GraphData>",
+              "buildRelationshipGraph(filters: GraphFilters): Promise<GraphData>",
+              "extractSubgraph(rootNodeId: string, depth: number): Promise<GraphData>",
+              "calculateCentrality(graphId: string): Promise<CentralityMetrics>",
+              "detectCommunities(graphId: string): Promise<Community[]>",
+              "getGraphForVisualization(graphId: string, format: 'd3'|'cytoscape'): Promise<FormattedGraph>",
+              "cacheGraphSnapshot(graphData: GraphData, ttl: number): Promise<string>"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "MODULE_6",
+      "name": "Document Summarization Enhancement",
+      "currentScore": 60,
+      "targetScore": 100,
+      "priority": "MEDIUM",
+      "estimatedWeeks": 2,
+      "description": "Enhance document summarization with multi-level summaries, key point extraction, and executive briefs",
+      "tasks": [
+        {
+          "id": "T6.1",
+          "name": "Multi-Level Summarization",
+          "description": "Implement hierarchical summarization (document, chapter, section, article levels)",
+          "estimatedDays": 5,
+          "dependencies": [],
+          "files": [
+            "src/services/summarization/multi-level-summarizer.ts"
+          ]
+        },
+        {
+          "id": "T6.2",
+          "name": "Key Point Extraction",
+          "description": "Extract and rank key points from legal documents using NLP",
+          "estimatedDays": 4,
+          "dependencies": [],
+          "files": [
+            "src/services/summarization/key-point-extractor.ts"
+          ]
+        },
+        {
+          "id": "T6.3",
+          "name": "Executive Brief Generator",
+          "description": "Generate executive-level briefs suitable for non-legal stakeholders",
+          "estimatedDays": 4,
+          "dependencies": ["T6.1", "T6.2"],
+          "files": [
+            "src/services/summarization/executive-brief-generator.ts"
+          ]
+        },
+        {
+          "id": "T6.4",
+          "name": "Summary Quality Scoring",
+          "description": "Implement quality metrics for generated summaries (coherence, coverage, faithfulness)",
+          "estimatedDays": 2,
+          "dependencies": ["T6.1"],
+          "files": [
+            "src/services/summarization/quality-scorer.ts"
+          ]
+        }
+      ],
+      "schemaAdditions": {
+        "DocumentSummary": {
+          "additions": [
+            { "field": "qualityScore", "type": "Float?", "description": "Quality score (0-1)" },
+            { "field": "coherenceScore", "type": "Float?", "description": "Summary coherence score" },
+            { "field": "coverageScore", "type": "Float?", "description": "Topic coverage score" },
+            { "field": "faithfulnessScore", "type": "Float?", "description": "Faithfulness to source score" },
+            { "field": "wordCount", "type": "Int", "description": "Summary word count" },
+            { "field": "compressionRatio", "type": "Float?", "description": "Compression ratio vs original" },
+            { "field": "targetAudience", "type": "String?", "description": "Target audience (legal_professional, executive, general)" }
+          ]
+        }
+      },
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/summarization/generate",
+          "description": "Generate document summary",
+          "requestBody": {
+            "documentId": "string",
+            "level": "string",
+            "targetAudience": "string",
+            "maxLength": "number"
+          }
+        },
+        {
+          "method": "POST",
+          "path": "/api/summarization/key-points",
+          "description": "Extract key points from document"
+        },
+        {
+          "method": "POST",
+          "path": "/api/summarization/executive-brief",
+          "description": "Generate executive brief"
+        },
+        {
+          "method": "GET",
+          "path": "/api/summarization/:documentId",
+          "description": "Get all summaries for document"
+        }
+      ]
+    }
+  ],
+  "implementationPhases": [
+    {
+      "phase": 1,
+      "name": "Critical Foundation",
+      "duration": "Weeks 1-4",
+      "modules": ["MODULE_1"],
+      "description": "Implement Predictive Intelligence Engine as highest priority",
+      "deliverables": [
+        "Training data pipeline",
+        "Feature engineering service",
+        "Model training infrastructure",
+        "Prediction API endpoints",
+        "Basic prediction UI integration"
+      ],
+      "scoreImpact": "+20% (40% -> 60% predictive intelligence)"
+    },
+    {
+      "phase": 2,
+      "name": "Analytics Enhancement",
+      "duration": "Weeks 5-7",
+      "modules": ["MODULE_2", "MODULE_4"],
+      "description": "Implement Trend Analysis and Pattern Detection",
+      "deliverables": [
+        "Trend aggregation service",
+        "Time series forecasting",
+        "Pattern detection algorithms",
+        "Trend and pattern APIs",
+        "Alert system for anomalies"
+      ],
+      "scoreImpact": "+15% (75% -> 90% advanced analytics)"
+    },
+    {
+      "phase": 3,
+      "name": "Document Intelligence",
+      "duration": "Weeks 8-10",
+      "modules": ["MODULE_3", "MODULE_6"],
+      "description": "Implement Document Comparison and Enhanced Summarization",
+      "deliverables": [
+        "Text diff algorithm",
+        "Semantic similarity engine",
+        "Multi-level summarization",
+        "Executive brief generator",
+        "Comparison visualization"
+      ],
+      "scoreImpact": "+15% (60% -> 90% document summarization)"
+    },
+    {
+      "phase": 4,
+      "name": "Visualization & Integration",
+      "duration": "Weeks 11-12",
+      "modules": ["MODULE_5"],
+      "description": "Implement Cross-Reference Graph Visualization",
+      "deliverables": [
+        "Graph data structures",
+        "Visualization APIs",
+        "Graph analytics",
+        "Frontend integration"
+      ],
+      "scoreImpact": "Complete visualization capabilities"
+    }
+  ],
+  "technicalRequirements": {
+    "infrastructure": {
+      "compute": [
+        "GPU instances for model training (optional, can use OpenAI fine-tuning)",
+        "Increased memory for graph operations (recommend 8GB+ for production)"
+      ],
+      "storage": [
+        "S3 bucket for model artifacts",
+        "Extended database storage for predictions and patterns"
+      ],
+      "services": [
+        "OpenAI API for embeddings and GPT-4 inference",
+        "Optional: Hugging Face for local transformer models",
+        "Redis for caching graph snapshots"
+      ]
+    },
+    "dependencies": {
+      "npm": [
+        { "package": "@tensorflow/tfjs", "version": "^4.x", "purpose": "Local ML inference" },
+        { "package": "ml-regression", "version": "^5.x", "purpose": "Time series forecasting" },
+        { "package": "diff", "version": "^5.x", "purpose": "Text diff algorithm" },
+        { "package": "graphlib", "version": "^2.x", "purpose": "Graph data structures" },
+        { "package": "compromise", "version": "^14.x", "purpose": "NLP pattern extraction" }
+      ]
+    },
+    "environmentVariables": [
+      "ML_MODEL_STORAGE_PATH",
+      "PREDICTION_CONFIDENCE_THRESHOLD",
+      "TREND_ANALYSIS_LOOKBACK_DAYS",
+      "PATTERN_DETECTION_MIN_CONFIDENCE",
+      "GRAPH_CACHE_TTL_SECONDS"
+    ]
+  },
+  "successMetrics": {
+    "predictiveIntelligence": {
+      "targetAccuracy": "75%+ on case outcome predictions",
+      "targetLatency": "<2 seconds for prediction API",
+      "feedbackLoopMetric": ">50% of predictions receive feedback within 30 days"
+    },
+    "trendAnalysis": {
+      "forecastAccuracy": "MAPE < 15% on 30-day forecasts",
+      "anomalyDetection": ">90% precision on trend anomalies"
+    },
+    "documentComparison": {
+      "diffAccuracy": ">95% accuracy on change detection",
+      "semanticSimilarity": ">0.85 correlation with human judgment"
+    },
+    "patternDetection": {
+      "patternPrecision": ">80% precision on verified patterns",
+      "patternRecall": ">70% recall on known patterns"
+    },
+    "overall": {
+      "targetScore": "100% AI/NLP compliance",
+      "userSatisfaction": ">4.0/5.0 rating on AI features"
+    }
+  },
+  "riskAssessment": [
+    {
+      "risk": "Model accuracy below target",
+      "probability": "MEDIUM",
+      "impact": "HIGH",
+      "mitigation": "Implement confidence thresholds and human-in-the-loop verification"
+    },
+    {
+      "risk": "OpenAI API cost overruns",
+      "probability": "MEDIUM",
+      "impact": "MEDIUM",
+      "mitigation": "Implement aggressive caching, batch processing, and token optimization"
+    },
+    {
+      "risk": "Training data quality issues",
+      "probability": "HIGH",
+      "impact": "HIGH",
+      "mitigation": "Implement data validation pipeline and manual review for training samples"
+    },
+    {
+      "risk": "Performance degradation with large graphs",
+      "probability": "MEDIUM",
+      "impact": "MEDIUM",
+      "mitigation": "Implement graph pagination and lazy loading for large datasets"
+    }
+  ],
+  "nextSteps": {
+    "immediate": [
+      "1. Create feature branch: feature/ai-nlp-improvements",
+      "2. Add schema migrations for MODULE_1 additions",
+      "3. Implement training data pipeline (T1.1)",
+      "4. Set up ML model storage infrastructure"
+    ],
+    "shortTerm": [
+      "Implement feature engineering service",
+      "Build basic prediction API",
+      "Create feedback collection mechanism"
+    ],
+    "longTerm": [
+      "Train specialized models per prediction type",
+      "Implement A/B testing for model improvements",
+      "Build automated retraining pipeline"
+    ]
+  }
+}

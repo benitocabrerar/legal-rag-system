@@ -1,0 +1,847 @@
+{
+  "metadata": {
+    "title": "Legal RAG System - Frontend Improvement Plan to 100% Compliance",
+    "currentScore": "76.9%",
+    "targetScore": "100%",
+    "timestamp": "2025-12-11",
+    "criticalIssue": "Missing shadcn/ui components causing build failures"
+  },
+  "currentState": {
+    "technologyStack": {
+      "score": "67%",
+      "installed": [
+        "@tanstack/react-query (v5.24.1)",
+        "@radix-ui/react-dialog (v1.0.5)",
+        "@radix-ui/react-toast (v1.1.5)",
+        "next (15.0.0)",
+        "react (18.3.1)",
+        "tailwindcss (3.4.1)",
+        "zustand (4.5.0)",
+        "lucide-react (0.330.0)",
+        "class-variance-authority (0.7.0)",
+        "tailwind-merge (2.2.1)",
+        "clsx (2.1.0)"
+      ],
+      "missing": [
+        "react-hook-form",
+        "framer-motion",
+        "@hookform/resolvers",
+        "zod",
+        "shadcn/ui components (25+ components)",
+        "tailwindcss-animate"
+      ]
+    },
+    "pages": {
+      "score": "85%",
+      "implemented": 31,
+      "missing": [
+        "/dashboard/analytics",
+        "/dashboard/ai-assistant",
+        "/dashboard/diagnostics",
+        "/dashboard/feedback",
+        "/dashboard/notifications",
+        "/dashboard/unified-search",
+        "/dashboard/usage"
+      ]
+    },
+    "components": {
+      "score": "75%",
+      "total": 28,
+      "uiComponents": 2,
+      "missingUiComponents": [
+        "button",
+        "card",
+        "badge",
+        "tabs",
+        "table",
+        "dialog",
+        "form",
+        "input",
+        "select",
+        "checkbox",
+        "textarea",
+        "alert",
+        "progress",
+        "dropdown-menu",
+        "toast",
+        "popover",
+        "accordion",
+        "avatar",
+        "calendar",
+        "command",
+        "context-menu",
+        "hover-card",
+        "label",
+        "radio-group",
+        "scroll-area",
+        "separator",
+        "skeleton",
+        "slider",
+        "switch",
+        "tooltip"
+      ]
+    },
+    "apiIntegration": {
+      "score": "95%",
+      "reactQuerySetup": true,
+      "backendRoutes": 29,
+      "frontendIntegration": 16,
+      "gaps": [
+        "Advanced search API hooks",
+        "AI assistant API hooks",
+        "Analytics API hooks",
+        "Feedback API hooks",
+        "Unified search API hooks"
+      ]
+    },
+    "stateManagement": {
+      "score": "70%",
+      "zustandStores": "Minimal",
+      "reactQueryUsage": "Partial",
+      "gaps": [
+        "Global state for user preferences",
+        "Global state for UI theme",
+        "Optimistic updates in mutations",
+        "Cache invalidation strategies",
+        "Persistent state management"
+      ]
+    }
+  },
+  "improvementPlan": {
+    "phase1_critical": {
+      "title": "CRITICAL: Install shadcn/ui and Fix Build Failures",
+      "priority": "CRITICAL",
+      "estimatedTime": "4-6 hours",
+      "impact": "HIGH",
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "Initialize shadcn/ui",
+          "description": "Set up shadcn/ui configuration and install core components",
+          "steps": [
+            {
+              "step": 1,
+              "action": "Install shadcn/ui CLI dependencies",
+              "commands": [
+                "cd C:/Users/benito/poweria/legal/frontend",
+                "npm install -D tailwindcss-animate"
+              ]
+            },
+            {
+              "step": 2,
+              "action": "Create components.json configuration",
+              "file": "C:/Users/benito/poweria/legal/frontend/components.json",
+              "content": {
+                "$schema": "https://ui.shadcn.com/schema.json",
+                "style": "default",
+                "rsc": true,
+                "tsx": true,
+                "tailwind": {
+                  "config": "tailwind.config.ts",
+                  "css": "src/app/globals.css",
+                  "baseColor": "slate",
+                  "cssVariables": true
+                },
+                "aliases": {
+                  "components": "@/components",
+                  "utils": "@/lib/utils"
+                }
+              }
+            },
+            {
+              "step": 3,
+              "action": "Update tailwind.config.ts",
+              "file": "C:/Users/benito/poweria/legal/frontend/tailwind.config.ts",
+              "changes": [
+                "Add tailwindcss-animate plugin",
+                "Extend theme with all shadcn colors",
+                "Add destructive, muted, accent, popover, card colors",
+                "Add animation keyframes"
+              ],
+              "code": "import type { Config } from \"tailwindcss\";\n\nconst config: Config = {\n  darkMode: [\"class\"],\n  content: [\n    \"./src/pages/**/*.{js,ts,jsx,tsx,mdx}\",\n    \"./src/components/**/*.{js,ts,jsx,tsx,mdx}\",\n    \"./src/app/**/*.{js,ts,jsx,tsx,mdx}\",\n  ],\n  theme: {\n    extend: {\n      colors: {\n        border: \"hsl(var(--border))\",\n        input: \"hsl(var(--input))\",\n        ring: \"hsl(var(--ring))\",\n        background: \"hsl(var(--background))\",\n        foreground: \"hsl(var(--foreground))\",\n        primary: {\n          DEFAULT: \"hsl(var(--primary))\",\n          foreground: \"hsl(var(--primary-foreground))\",\n        },\n        secondary: {\n          DEFAULT: \"hsl(var(--secondary))\",\n          foreground: \"hsl(var(--secondary-foreground))\",\n        },\n        destructive: {\n          DEFAULT: \"hsl(var(--destructive))\",\n          foreground: \"hsl(var(--destructive-foreground))\",\n        },\n        muted: {\n          DEFAULT: \"hsl(var(--muted))\",\n          foreground: \"hsl(var(--muted-foreground))\",\n        },\n        accent: {\n          DEFAULT: \"hsl(var(--accent))\",\n          foreground: \"hsl(var(--accent-foreground))\",\n        },\n        popover: {\n          DEFAULT: \"hsl(var(--popover))\",\n          foreground: \"hsl(var(--popover-foreground))\",\n        },\n        card: {\n          DEFAULT: \"hsl(var(--card))\",\n          foreground: \"hsl(var(--card-foreground))\",\n        },\n      },\n      borderRadius: {\n        lg: \"var(--radius)\",\n        md: \"calc(var(--radius) - 2px)\",\n        sm: \"calc(var(--radius) - 4px)\",\n      },\n      keyframes: {\n        \"accordion-down\": {\n          from: { height: \"0\" },\n          to: { height: \"var(--radix-accordion-content-height)\" },\n        },\n        \"accordion-up\": {\n          from: { height: \"var(--radix-accordion-content-height)\" },\n          to: { height: \"0\" },\n        },\n      },\n      animation: {\n        \"accordion-down\": \"accordion-down 0.2s ease-out\",\n        \"accordion-up\": \"accordion-up 0.2s ease-out\",\n      },\n    },\n  },\n  plugins: [require(\"tailwindcss-animate\")],\n};\n\nexport default config;"
+            },
+            {
+              "step": 4,
+              "action": "Update globals.css with complete CSS variables",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/app/globals.css",
+              "append": "\n  .dark {\n    --background: 222.2 84% 4.9%;\n    --foreground: 210 40% 98%;\n    --card: 222.2 84% 4.9%;\n    --card-foreground: 210 40% 98%;\n    --popover: 222.2 84% 4.9%;\n    --popover-foreground: 210 40% 98%;\n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    --secondary: 217.2 32.6% 17.5%;\n    --secondary-foreground: 210 40% 98%;\n    --muted: 217.2 32.6% 17.5%;\n    --muted-foreground: 215 20.2% 65.1%;\n    --accent: 217.2 32.6% 17.5%;\n    --accent-foreground: 210 40% 98%;\n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 210 40% 98%;\n    --border: 217.2 32.6% 17.5%;\n    --input: 217.2 32.6% 17.5%;\n    --ring: 224.3 76.3% 48%;\n  }\n\n  * {\n    @apply border-border;\n  }\n\n  body {\n    @apply bg-background text-foreground;\n  }"
+            }
+          ]
+        },
+        {
+          "id": "1.2",
+          "title": "Install Required shadcn/ui Components",
+          "description": "Install all components being imported in the codebase",
+          "commands": [
+            "npx shadcn-ui@latest add button",
+            "npx shadcn-ui@latest add card",
+            "npx shadcn-ui@latest add badge",
+            "npx shadcn-ui@latest add dialog",
+            "npx shadcn-ui@latest add form",
+            "npx shadcn-ui@latest add input",
+            "npx shadcn-ui@latest add select",
+            "npx shadcn-ui@latest add checkbox",
+            "npx shadcn-ui@latest add textarea",
+            "npx shadcn-ui@latest add alert",
+            "npx shadcn-ui@latest add progress",
+            "npx shadcn-ui@latest add tabs",
+            "npx shadcn-ui@latest add table"
+          ],
+          "estimatedTime": "1 hour"
+        },
+        {
+          "id": "1.3",
+          "title": "Install Additional Form Dependencies",
+          "description": "Install react-hook-form and zod for form validation",
+          "commands": [
+            "npm install react-hook-form @hookform/resolvers zod"
+          ],
+          "estimatedTime": "15 minutes"
+        },
+        {
+          "id": "1.4",
+          "title": "Test Build",
+          "description": "Verify build passes after component installation",
+          "commands": [
+            "npm run build"
+          ],
+          "successCriteria": "Build completes without module errors",
+          "estimatedTime": "30 minutes"
+        }
+      ]
+    },
+    "phase2_components": {
+      "title": "Complete Component Library",
+      "priority": "HIGH",
+      "estimatedTime": "6-8 hours",
+      "impact": "HIGH",
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "Install Extended UI Components",
+          "description": "Add remaining shadcn/ui components for full functionality",
+          "commands": [
+            "npx shadcn-ui@latest add dropdown-menu",
+            "npx shadcn-ui@latest add toast",
+            "npx shadcn-ui@latest add popover",
+            "npx shadcn-ui@latest add accordion",
+            "npx shadcn-ui@latest add avatar",
+            "npx shadcn-ui@latest add calendar",
+            "npx shadcn-ui@latest add command",
+            "npx shadcn-ui@latest add context-menu",
+            "npx shadcn-ui@latest add hover-card",
+            "npx shadcn-ui@latest add label",
+            "npx shadcn-ui@latest add radio-group",
+            "npx shadcn-ui@latest add scroll-area",
+            "npx shadcn-ui@latest add separator",
+            "npx shadcn-ui@latest add skeleton",
+            "npx shadcn-ui@latest add slider",
+            "npx shadcn-ui@latest add switch",
+            "npx shadcn-ui@latest add tooltip"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "2.2",
+          "title": "Create Advanced Composite Components",
+          "description": "Build reusable composite components using shadcn primitives",
+          "components": [
+            {
+              "name": "DataTable",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/data-table.tsx",
+              "description": "Reusable data table with sorting, filtering, pagination",
+              "dependencies": ["table", "button", "input", "dropdown-menu"]
+            },
+            {
+              "name": "SearchCombobox",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/search-combobox.tsx",
+              "description": "Advanced search with autocomplete",
+              "dependencies": ["command", "popover", "input"]
+            },
+            {
+              "name": "DateRangePicker",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/date-range-picker.tsx",
+              "description": "Date range selector for filters",
+              "dependencies": ["calendar", "popover", "button"]
+            },
+            {
+              "name": "MultiSelect",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/multi-select.tsx",
+              "description": "Multi-selection dropdown",
+              "dependencies": ["popover", "command", "badge"]
+            },
+            {
+              "name": "LoadingButton",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/loading-button.tsx",
+              "description": "Button with loading state",
+              "dependencies": ["button"],
+              "code": "import * as React from 'react'\nimport { Loader2 } from 'lucide-react'\nimport { Button, ButtonProps } from '@/components/ui/button'\nimport { cn } from '@/lib/utils'\n\nexport interface LoadingButtonProps extends ButtonProps {\n  loading?: boolean\n}\n\nconst LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(\n  ({ className, children, loading, disabled, ...props }, ref) => {\n    return (\n      <Button\n        ref={ref}\n        disabled={disabled || loading}\n        className={cn(className)}\n        {...props}\n      >\n        {loading && <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />}\n        {children}\n      </Button>\n    )\n  }\n)\nLoadingButton.displayName = 'LoadingButton'\n\nexport { LoadingButton }"
+            },
+            {
+              "name": "EmptyState",
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/empty-state.tsx",
+              "description": "Empty state placeholder component",
+              "code": "import React from 'react'\nimport { cn } from '@/lib/utils'\n\ninterface EmptyStateProps {\n  icon?: React.ReactNode\n  title: string\n  description?: string\n  action?: React.ReactNode\n  className?: string\n}\n\nexport function EmptyState({\n  icon,\n  title,\n  description,\n  action,\n  className,\n}: EmptyStateProps) {\n  return (\n    <div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>\n      {icon && <div className=\"mb-4 text-5xl opacity-50\">{icon}</div>}\n      <h3 className=\"text-lg font-semibold text-gray-900 mb-2\">{title}</h3>\n      {description && <p className=\"text-sm text-gray-500 mb-6 max-w-md\">{description}</p>}\n      {action && <div>{action}</div>}\n    </div>\n  )\n}"
+            }
+          ],
+          "estimatedTime": "4 hours"
+        },
+        {
+          "id": "2.3",
+          "title": "Create Toast Notification System",
+          "description": "Set up global toast notifications using shadcn/ui toast",
+          "files": [
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/components/ui/toaster.tsx",
+              "description": "Toast container component"
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/use-toast.ts",
+              "description": "Toast hook for triggering notifications"
+            }
+          ],
+          "integration": "Add <Toaster /> to root layout",
+          "estimatedTime": "1 hour"
+        }
+      ]
+    },
+    "phase3_animations": {
+      "title": "Add Framer Motion Animations",
+      "priority": "MEDIUM",
+      "estimatedTime": "4-6 hours",
+      "impact": "MEDIUM",
+      "tasks": [
+        {
+          "id": "3.1",
+          "title": "Install Framer Motion",
+          "commands": [
+            "npm install framer-motion"
+          ],
+          "estimatedTime": "15 minutes"
+        },
+        {
+          "id": "3.2",
+          "title": "Create Animation Utilities",
+          "description": "Build reusable animation variants and hooks",
+          "files": [
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/lib/animations.ts",
+              "description": "Animation variant presets",
+              "code": "import { Variants } from 'framer-motion'\n\nexport const fadeIn: Variants = {\n  hidden: { opacity: 0 },\n  visible: { opacity: 1, transition: { duration: 0.3 } },\n}\n\nexport const slideUp: Variants = {\n  hidden: { opacity: 0, y: 20 },\n  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },\n}\n\nexport const staggerContainer: Variants = {\n  hidden: { opacity: 0 },\n  visible: {\n    opacity: 1,\n    transition: {\n      staggerChildren: 0.1,\n    },\n  },\n}\n\nexport const scaleIn: Variants = {\n  hidden: { opacity: 0, scale: 0.9 },\n  visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },\n}\n\nexport const slideInFromRight: Variants = {\n  hidden: { opacity: 0, x: 50 },\n  visible: { opacity: 1, x: 0, transition: { duration: 0.4 } },\n}"
+            }
+          ],
+          "estimatedTime": "1 hour"
+        },
+        {
+          "id": "3.3",
+          "title": "Apply Animations to Key Components",
+          "description": "Add motion to cards, lists, modals, and transitions",
+          "components": [
+            "EnhancedCaseCard - Add hover animations",
+            "CreateBackupDialog - Add modal animations",
+            "LegalTypeFilterTabs - Add tab transitions",
+            "Dashboard grid - Add stagger animations",
+            "Page transitions - Add route animations"
+          ],
+          "estimatedTime": "3 hours"
+        }
+      ]
+    },
+    "phase4_reactQuery": {
+      "title": "Complete React Query Integration",
+      "priority": "HIGH",
+      "estimatedTime": "8-10 hours",
+      "impact": "HIGH",
+      "tasks": [
+        {
+          "id": "4.1",
+          "title": "Create API Client Service",
+          "description": "Build typed API client with error handling",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/lib/api-client.ts",
+          "code": "import axios, { AxiosError } from 'axios'\n\nconst apiClient = axios.create({\n  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',\n  headers: {\n    'Content-Type': 'application/json',\n  },\n  withCredentials: true,\n})\n\n// Request interceptor for auth token\napiClient.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('token')\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`\n    }\n    return config\n  },\n  (error) => Promise.reject(error)\n)\n\n// Response interceptor for error handling\napiClient.interceptors.response.use(\n  (response) => response,\n  (error: AxiosError) => {\n    if (error.response?.status === 401) {\n      localStorage.removeItem('token')\n      window.location.href = '/login'\n    }\n    return Promise.reject(error)\n  }\n)\n\nexport default apiClient",
+          "estimatedTime": "1 hour"
+        },
+        {
+          "id": "4.2",
+          "title": "Create React Query Hooks for All Backend Routes",
+          "description": "Build custom hooks for each API endpoint",
+          "hooks": [
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-legal-documents.ts",
+              "endpoints": ["GET /legal-documents", "POST /legal-documents", "GET /legal-documents/:id", "DELETE /legal-documents/:id"],
+              "hooks": ["useDocuments", "useDocument", "useCreateDocument", "useDeleteDocument"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-cases.ts",
+              "endpoints": ["GET /cases", "POST /cases", "GET /cases/:id", "PATCH /cases/:id"],
+              "hooks": ["useCases", "useCase", "useCreateCase", "useUpdateCase"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-analytics.ts",
+              "endpoints": ["GET /analytics/usage", "GET /analytics/queries", "GET /analytics/documents"],
+              "hooks": ["useUsageAnalytics", "useQueryAnalytics", "useDocumentAnalytics"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-advanced-search.ts",
+              "endpoints": ["POST /advanced-search", "GET /advanced-search/filters"],
+              "hooks": ["useAdvancedSearch", "useSearchFilters"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-ai-assistant.ts",
+              "endpoints": ["POST /ai-assistant/chat", "GET /ai-assistant/history"],
+              "hooks": ["useChatMutation", "useChatHistory"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-feedback.ts",
+              "endpoints": ["POST /feedback", "GET /feedback", "PATCH /feedback/:id"],
+              "hooks": ["useFeedback", "useCreateFeedback", "useUpdateFeedback"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-calendar.ts",
+              "endpoints": ["GET /calendar/events", "POST /calendar/events", "PATCH /calendar/events/:id"],
+              "hooks": ["useCalendarEvents", "useCreateEvent", "useUpdateEvent"]
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/hooks/api/use-tasks.ts",
+              "endpoints": ["GET /tasks", "POST /tasks", "PATCH /tasks/:id"],
+              "hooks": ["useTasks", "useCreateTask", "useUpdateTask"]
+            }
+          ],
+          "exampleHook": "// Example: use-cases.ts\nimport { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'\nimport apiClient from '@/lib/api-client'\n\ninterface Case {\n  id: string\n  title: string\n  legalType: string\n  status: string\n  // ... other fields\n}\n\nexport function useCases(filters?: any) {\n  return useQuery({\n    queryKey: ['cases', filters],\n    queryFn: async () => {\n      const { data } = await apiClient.get<Case[]>('/api/v1/cases', { params: filters })\n      return data\n    },\n    staleTime: 30000, // 30 seconds\n  })\n}\n\nexport function useCase(id: string) {\n  return useQuery({\n    queryKey: ['cases', id],\n    queryFn: async () => {\n      const { data } = await apiClient.get<Case>(`/api/v1/cases/${id}`)\n      return data\n    },\n    enabled: !!id,\n  })\n}\n\nexport function useCreateCase() {\n  const queryClient = useQueryClient()\n  return useMutation({\n    mutationFn: async (newCase: Partial<Case>) => {\n      const { data } = await apiClient.post<Case>('/api/v1/cases', newCase)\n      return data\n    },\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: ['cases'] })\n    },\n  })\n}\n\nexport function useUpdateCase() {\n  const queryClient = useQueryClient()\n  return useMutation({\n    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Case> }) => {\n      const { data } = await apiClient.patch<Case>(`/api/v1/cases/${id}`, updates)\n      return data\n    },\n    onSuccess: (data) => {\n      queryClient.invalidateQueries({ queryKey: ['cases'] })\n      queryClient.invalidateQueries({ queryKey: ['cases', data.id] })\n    },\n  })\n}",
+          "estimatedTime": "4 hours"
+        },
+        {
+          "id": "4.3",
+          "title": "Add React Query DevTools",
+          "description": "Install and configure React Query DevTools for debugging",
+          "commands": [
+            "npm install @tanstack/react-query-devtools"
+          ],
+          "integration": "Add to providers.tsx",
+          "code": "import { ReactQueryDevtools } from '@tanstack/react-query-devtools'\n\nexport function Providers({ children }: { children: React.ReactNode }) {\n  // ... existing code\n  return (\n    <QueryClientProvider client={queryClient}>\n      <AuthProvider>{children}</AuthProvider>\n      <ReactQueryDevtools initialIsOpen={false} />\n    </QueryClientProvider>\n  )\n}",
+          "estimatedTime": "30 minutes"
+        },
+        {
+          "id": "4.4",
+          "title": "Implement Optimistic Updates",
+          "description": "Add optimistic updates for better UX on mutations",
+          "examples": [
+            "Case updates show immediately before server confirms",
+            "Document uploads show progress optimistically",
+            "Task completion toggles instantly"
+          ],
+          "estimatedTime": "2 hours"
+        }
+      ]
+    },
+    "phase5_missingPages": {
+      "title": "Implement Missing Pages",
+      "priority": "HIGH",
+      "estimatedTime": "12-16 hours",
+      "impact": "HIGH",
+      "tasks": [
+        {
+          "id": "5.1",
+          "title": "Create Analytics Dashboard",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/analytics/page.tsx",
+          "description": "Comprehensive analytics with charts and metrics",
+          "features": [
+            "Usage statistics over time",
+            "Query performance metrics",
+            "Document analysis trends",
+            "User activity heatmap",
+            "Export to PDF/CSV"
+          ],
+          "dependencies": ["recharts or chart.js", "date-fns"],
+          "estimatedTime": "4 hours"
+        },
+        {
+          "id": "5.2",
+          "title": "Create AI Assistant Chat Page",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/ai-assistant/page.tsx",
+          "description": "Interactive AI chat interface with legal context",
+          "features": [
+            "Real-time chat with streaming responses",
+            "Legal document context sidebar",
+            "Prompt templates for common queries",
+            "Chat history and export",
+            "Code syntax highlighting for legal citations"
+          ],
+          "dependencies": ["react-markdown", "syntax-highlighter"],
+          "estimatedTime": "4 hours"
+        },
+        {
+          "id": "5.3",
+          "title": "Create Advanced Search Page",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/unified-search/page.tsx",
+          "description": "Multi-faceted search with filters and AI ranking",
+          "features": [
+            "Natural language search input",
+            "Advanced filters (date, type, jurisdiction)",
+            "Search result ranking and relevance scores",
+            "Saved searches",
+            "Search history"
+          ],
+          "estimatedTime": "3 hours"
+        },
+        {
+          "id": "5.4",
+          "title": "Create Feedback Management Page",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/feedback/page.tsx",
+          "description": "User feedback and rating system",
+          "features": [
+            "Feedback submission form",
+            "Rating system for AI responses",
+            "Feedback history",
+            "Admin feedback review (if admin)"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "5.5",
+          "title": "Create Notifications Center",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/notifications/page.tsx",
+          "description": "Centralized notification management",
+          "features": [
+            "All notifications list",
+            "Filter by type and status",
+            "Mark as read/unread",
+            "Notification preferences",
+            "Real-time updates via SSE or WebSocket"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "5.6",
+          "title": "Create Usage Tracking Page",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/usage/page.tsx",
+          "description": "Personal usage statistics and quotas",
+          "features": [
+            "API usage metrics",
+            "Quota consumption charts",
+            "Usage by feature",
+            "Billing period summary",
+            "Upgrade prompts if near limits"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "5.7",
+          "title": "Create Diagnostics Page",
+          "file": "C:/Users/benito/poweria/legal/frontend/src/app/dashboard/diagnostics/page.tsx",
+          "description": "System health and diagnostics (admin only)",
+          "features": [
+            "API health checks",
+            "Database connection status",
+            "Cache hit rates",
+            "Error logs",
+            "Performance metrics"
+          ],
+          "estimatedTime": "2 hours"
+        }
+      ]
+    },
+    "phase6_stateManagement": {
+      "title": "Enhanced State Management",
+      "priority": "MEDIUM",
+      "estimatedTime": "6-8 hours",
+      "impact": "MEDIUM",
+      "tasks": [
+        {
+          "id": "6.1",
+          "title": "Create Zustand Stores",
+          "description": "Implement global state stores for UI and preferences",
+          "stores": [
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/stores/useUIStore.ts",
+              "description": "UI state (sidebar, theme, modals)",
+              "code": "import { create } from 'zustand'\nimport { persist } from 'zustand/middleware'\n\ninterface UIState {\n  sidebarOpen: boolean\n  theme: 'light' | 'dark' | 'system'\n  modalStack: string[]\n  toggleSidebar: () => void\n  setTheme: (theme: 'light' | 'dark' | 'system') => void\n  openModal: (modalId: string) => void\n  closeModal: (modalId: string) => void\n}\n\nexport const useUIStore = create<UIState>()(persist(\n  (set) => ({\n    sidebarOpen: true,\n    theme: 'system',\n    modalStack: [],\n    toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),\n    setTheme: (theme) => set({ theme }),\n    openModal: (modalId) => set((state) => ({ modalStack: [...state.modalStack, modalId] })),\n    closeModal: (modalId) => set((state) => ({ modalStack: state.modalStack.filter(id => id !== modalId) })),\n  }),\n  { name: 'ui-storage' }\n))"
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/stores/useSearchStore.ts",
+              "description": "Search state and history"
+            },
+            {
+              "file": "C:/Users/benito/poweria/legal/frontend/src/stores/useFilterStore.ts",
+              "description": "Filter preferences across pages"
+            }
+          ],
+          "estimatedTime": "3 hours"
+        },
+        {
+          "id": "6.2",
+          "title": "Implement Persistent Preferences",
+          "description": "Save user preferences to localStorage",
+          "preferences": [
+            "Table column visibility",
+            "Default filters",
+            "Sort preferences",
+            "View mode (grid/list)",
+            "Items per page"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "6.3",
+          "title": "Add Cache Invalidation Strategies",
+          "description": "Implement smart cache invalidation for React Query",
+          "strategies": [
+            "Invalidate on mutations",
+            "Background refetch on window focus",
+            "Stale-while-revalidate pattern",
+            "Cache time optimization per endpoint"
+          ],
+          "estimatedTime": "2 hours"
+        }
+      ]
+    },
+    "phase7_testing": {
+      "title": "Testing and Quality Assurance",
+      "priority": "MEDIUM",
+      "estimatedTime": "8-10 hours",
+      "impact": "HIGH",
+      "tasks": [
+        {
+          "id": "7.1",
+          "title": "Set Up Testing Framework",
+          "description": "Configure Jest and React Testing Library",
+          "commands": [
+            "npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom"
+          ],
+          "files": [
+            "jest.config.js",
+            "jest.setup.js"
+          ],
+          "estimatedTime": "1 hour"
+        },
+        {
+          "id": "7.2",
+          "title": "Write Component Tests",
+          "description": "Unit tests for key components",
+          "testFiles": [
+            "EnhancedCaseCard.test.tsx",
+            "CreateBackupDialog.test.tsx",
+            "LegalTypeBadge.test.tsx",
+            "DataTable.test.tsx"
+          ],
+          "coverage": "Aim for 70%+ coverage",
+          "estimatedTime": "4 hours"
+        },
+        {
+          "id": "7.3",
+          "title": "Write Integration Tests",
+          "description": "Test API integration and user flows",
+          "scenarios": [
+            "User login flow",
+            "Document upload flow",
+            "Search and filter flow",
+            "Case creation and update flow"
+          ],
+          "estimatedTime": "3 hours"
+        }
+      ]
+    },
+    "phase8_optimization": {
+      "title": "Performance Optimization",
+      "priority": "LOW",
+      "estimatedTime": "6-8 hours",
+      "impact": "MEDIUM",
+      "tasks": [
+        {
+          "id": "8.1",
+          "title": "Implement Code Splitting",
+          "description": "Lazy load routes and heavy components",
+          "commands": [
+            "Use React.lazy() for page components",
+            "Use dynamic imports for heavy libraries"
+          ],
+          "targets": [
+            "Admin pages",
+            "Analytics page (charts)",
+            "PDF viewer",
+            "Rich text editor"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "8.2",
+          "title": "Add Loading Skeletons",
+          "description": "Replace spinners with skeleton screens",
+          "components": [
+            "Case card skeleton",
+            "Table skeleton",
+            "Dashboard skeleton",
+            "Form skeleton"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "8.3",
+          "title": "Optimize Bundle Size",
+          "description": "Analyze and reduce bundle size",
+          "commands": [
+            "npm install -D @next/bundle-analyzer",
+            "Analyze bundle with ANALYZE=true npm run build"
+          ],
+          "actions": [
+            "Remove unused dependencies",
+            "Replace heavy libraries with lighter alternatives",
+            "Tree-shake lodash imports"
+          ],
+          "estimatedTime": "2 hours"
+        }
+      ]
+    },
+    "phase9_accessibility": {
+      "title": "Accessibility Improvements",
+      "priority": "MEDIUM",
+      "estimatedTime": "4-6 hours",
+      "impact": "MEDIUM",
+      "tasks": [
+        {
+          "id": "9.1",
+          "title": "Add ARIA Labels",
+          "description": "Add proper ARIA attributes to all interactive elements",
+          "checklist": [
+            "All buttons have aria-label",
+            "Form inputs have aria-describedby",
+            "Modals have aria-modal and role",
+            "Lists have proper list roles",
+            "Navigation has aria-current"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "9.2",
+          "title": "Keyboard Navigation",
+          "description": "Ensure all features work with keyboard only",
+          "features": [
+            "Tab navigation through forms",
+            "Escape to close modals",
+            "Arrow keys in lists",
+            "Enter to submit forms",
+            "Focus indicators visible"
+          ],
+          "estimatedTime": "2 hours"
+        },
+        {
+          "id": "9.3",
+          "title": "Screen Reader Testing",
+          "description": "Test with NVDA/JAWS screen readers",
+          "tools": [
+            "NVDA (Windows)",
+            "axe DevTools",
+            "Lighthouse accessibility audit"
+          ],
+          "estimatedTime": "2 hours"
+        }
+      ]
+    }
+  },
+  "completionCriteria": {
+    "technologyStack": {
+      "target": "100%",
+      "requirements": [
+        "All shadcn/ui components installed",
+        "react-hook-form integrated",
+        "framer-motion added",
+        "React Query fully configured",
+        "TailwindCSS complete with theme"
+      ]
+    },
+    "pageImplementation": {
+      "target": "100%",
+      "requirements": [
+        "All 7 missing pages created",
+        "Each page has proper layout",
+        "Pages integrated with API hooks",
+        "Navigation updated"
+      ]
+    },
+    "componentCoverage": {
+      "target": "100%",
+      "requirements": [
+        "30+ shadcn/ui components installed",
+        "6+ composite components created",
+        "All imports resolve correctly",
+        "No build errors"
+      ]
+    },
+    "apiIntegration": {
+      "target": "100%",
+      "requirements": [
+        "Custom hooks for all 29 backend routes",
+        "Error handling implemented",
+        "Loading states managed",
+        "Optimistic updates where applicable"
+      ]
+    },
+    "stateManagement": {
+      "target": "100%",
+      "requirements": [
+        "3+ Zustand stores created",
+        "Preferences persisted",
+        "Cache invalidation strategies",
+        "Global state documented"
+      ]
+    }
+  },
+  "estimatedTimeline": {
+    "phase1": "4-6 hours (Day 1)",
+    "phase2": "6-8 hours (Day 1-2)",
+    "phase3": "4-6 hours (Day 2)",
+    "phase4": "8-10 hours (Day 2-3)",
+    "phase5": "12-16 hours (Day 3-4)",
+    "phase6": "6-8 hours (Day 5)",
+    "phase7": "8-10 hours (Day 5-6)",
+    "phase8": "6-8 hours (Day 6)",
+    "phase9": "4-6 hours (Day 7)",
+    "total": "58-78 hours (7-10 working days)"
+  },
+  "priorityOrder": [
+    "Phase 1 (CRITICAL) - Fix build failures",
+    "Phase 4 (HIGH) - Complete React Query",
+    "Phase 5 (HIGH) - Missing pages",
+    "Phase 2 (HIGH) - Component library",
+    "Phase 6 (MEDIUM) - State management",
+    "Phase 3 (MEDIUM) - Animations",
+    "Phase 9 (MEDIUM) - Accessibility",
+    "Phase 7 (MEDIUM) - Testing",
+    "Phase 8 (LOW) - Optimization"
+  ],
+  "quickStartCommands": {
+    "phase1_setup": [
+      "cd C:/Users/benito/poweria/legal/frontend",
+      "npm install -D tailwindcss-animate",
+      "npm install react-hook-form @hookform/resolvers zod",
+      "npx shadcn-ui@latest init",
+      "npx shadcn-ui@latest add button card badge dialog form input select checkbox textarea alert progress tabs table"
+    ],
+    "phase2_extended": [
+      "npx shadcn-ui@latest add dropdown-menu toast popover accordion avatar calendar command context-menu hover-card label radio-group scroll-area separator skeleton slider switch tooltip"
+    ],
+    "phase3_motion": [
+      "npm install framer-motion"
+    ],
+    "phase4_devtools": [
+      "npm install @tanstack/react-query-devtools"
+    ],
+    "phase5_charts": [
+      "npm install recharts date-fns react-markdown"
+    ],
+    "phase7_testing": [
+      "npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom"
+    ]
+  },
+  "scoreProjection": {
+    "afterPhase1": "82% (Build working, critical components added)",
+    "afterPhase2": "88% (Complete component library)",
+    "afterPhase3": "90% (Animations added)",
+    "afterPhase4": "95% (Full API integration)",
+    "afterPhase5": "100% (All pages implemented)",
+    "afterPhase6": "100%+ (Enhanced state management)",
+    "afterPhase7": "100%+ (Tested and reliable)",
+    "afterPhase8": "100%+ (Optimized performance)",
+    "afterPhase9": "100%+ (Accessible to all users)"
+  }
+}

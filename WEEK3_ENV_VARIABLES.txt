@@ -1,0 +1,32 @@
+# ============================================================================
+# Phase 10 - Week 3: Required Environment Variables
+# ============================================================================
+# Add these variables to your .env file
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_MAX_RETRIES=3
+REDIS_CONNECT_TIMEOUT=10000
+
+# Cache Configuration
+CACHE_L1_TTL_MS=300000          # 5 minutes (in-memory cache)
+CACHE_L2_TTL_MS=3600000         # 1 hour (Redis hot cache)
+CACHE_L3_TTL_MS=86400000        # 24 hours (Redis warm cache)
+CACHE_L1_MAX_SIZE_MB=100
+CACHE_L2_MAX_SIZE_MB=1000
+CACHE_L3_MAX_SIZE_MB=2000
+
+# Performance Configuration
+MAX_CONCURRENT_REQUESTS=500
+REQUEST_TIMEOUT_MS=30000
+DATABASE_POOL_SIZE=50
+QUERY_TIMEOUT_MS=10000
+
+# OpenAI Configuration (add if not present)
+OPENAI_MAX_CONCURRENT=5
+OPENAI_RATE_LIMIT=100
+OPENAI_TIMEOUT=30000
+OPENAI_RETRY_ATTEMPTS=3

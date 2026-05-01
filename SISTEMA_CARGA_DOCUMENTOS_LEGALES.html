@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Carga de Documentos Legales - Poweria Legal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --code-bg: #f1f5f9;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg-light);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .header .meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .header .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .toc {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        .toc h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            margin: 0.5rem 0;
+        }
+
+        .toc a {
+            color: var(--text);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .toc a:hover {
+            color: var(--primary);
+        }
+
+        .section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .section h2 {
+            color: var(--primary);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section h3 {
+            color: var(--text);
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .section h4 {
+            color: var(--secondary);
+            font-size: 1.25rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-primary {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--primary-dark);
+        }
+
+        .diagram {
+            background: var(--code-bg);
+            border: 2px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .diagram pre {
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .api-endpoint {
+            background: var(--bg-light);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0.5rem;
+        }
+
+        .api-endpoint h4 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .method {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+
+        .method-post {
+            background: var(--success);
+            color: white;
+        }
+
+        .method-get {
+            background: var(--primary);
+            color: white;
+        }
+
+        .method-delete {
+            background: var(--danger);
+            color: white;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .feature-icon {
+            color: var(--success);
+            font-size: 1.25rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-color: var(--warning);
+            color: #92400e;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-color: var(--primary);
+            color: #1e40af;
+        }
+
+        .footer {
+            background: var(--bg-dark);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .header .meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .section {
+                padding: 1rem;
+            }
+        }
+
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary);
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .scroll-to-top.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="emoji">📤</div>
+        <h1>Sistema Completo de Carga y Procesamiento de Documentos Legales</h1>
+        <div class="subtitle">Poweria Legal - Documentación Técnica de Upload & Vectorización</div>
+        <div class="meta">
+            <div class="meta-item">
+                <span>📅</span>
+                <span>11 de Noviembre de 2025</span>
+            </div>
+            <div class="meta-item">
+                <span>🔖</span>
+                <span>Versión 2.0.0</span>
+            </div>
+            <div class="meta-item">
+                <span>✅</span>
+                <span>Producción Activa</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h2>📋 Tabla de Contenidos</h2>
+            <ul>
+                <li><a href="#resumen">1. Resumen Ejecutivo</a></li>
+                <li><a href="#arquitectura">2. Arquitectura del Sistema</a></li>
+                <li><a href="#flujo">3. Flujo Completo de Carga</a></li>
+                <li><a href="#backend">4. Backend - APIs de Carga</a></li>
+                <li><a href="#procesamiento">5. Procesamiento Asíncrono</a></li>
+                <li><a href="#analisis">6. Análisis con IA</a></li>
+                <li><a href="#vectorizacion">7. Vectorización y Embeddings</a></li>
+                <li><a href="#basedatos">8. Base de Datos</a></li>
+                <li><a href="#redis">9. Redis y Colas</a></li>
+                <li><a href="#eventos">10. Sistema de Eventos</a></li>
+                <li><a href="#frontend">11. Frontend (Implementación)</a></li>
+                <li><a href="#seguridad">12. Seguridad y Permisos</a></li>
+                <li><a href="#monitoreo">13. Monitoreo y Logs</a></li>
+                <li><a href="#ejemplos">14. Ejemplos de Uso</a></li>
+                <li><a href="#troubleshooting">15. Troubleshooting</a></li>
+                <li><a href="#roadmap">16. Roadmap</a></li>
+            </ul>
+        </div>
+
+        <!-- Resumen Ejecutivo -->
+        <div class="section" id="resumen">
+            <h2>🎯 Resumen Ejecutivo</h2>
+            <p>El sistema de carga de documentos legales es una solución integral que permite a los administradores subir, procesar y vectorizar documentos legales de forma automática. El sistema está diseñado con arquitectura event-driven y procesamiento asíncrono mediante colas Redis/BullMQ.</p>
+
+            <h3>Características Principales</h3>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Carga de Documentos Legales Globales</strong>
+                        <p>Sistema exclusivo para administradores</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Procesamiento Automático con IA</strong>
+                        <p>Análisis completo usando GPT-4 y OpenAI</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Vectorización con OpenAI</strong>
+                        <p>Embeddings de 1536 dimensiones usando text-embedding-ada-002</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Extracción Inteligente</strong>
+                        <p>Artículos, secciones, capítulos, títulos automáticos</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Generación de Resúmenes</strong>
+                        <p>Múltiples niveles (ejecutivo, capítulos, secciones)</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Sistema de Colas Redis</strong>
+                        <p>Procesamiento asíncrono con BullMQ</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Event-Driven Architecture</strong>
+                        <p>Event Bus para desacoplamiento de servicios</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✅</span>
+                    <div>
+                        <strong>Búsqueda Semántica</strong>
+                        <p>pgvector para similaridad coseno</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Stack Tecnológico</h3>
+
+            <h4>Backend</h4>
+            <div class="tech-stack">
+                <span class="badge badge-primary">Node.js 20.x</span>
+                <span class="badge badge-primary">TypeScript 5.3.3</span>
+                <span class="badge badge-primary">Fastify 4.26.0</span>
+                <span class="badge badge-primary">Prisma 5.10.0</span>
+                <span class="badge badge-primary">BullMQ 5.63.0</span>
+                <span class="badge badge-primary">OpenAI SDK 4.28.0</span>
+            </div>
+
+            <h4>Base de Datos</h4>
+            <div class="tech-stack">
+                <span class="badge badge-success">PostgreSQL 16</span>
+                <span class="badge badge-success">pgvector 0.5.1</span>
+                <span class="badge badge-success">Redis Cloud (Upstash)</span>
+            </div>
+
+            <h4>IA y ML</h4>
+            <div class="tech-stack">
+                <span class="badge badge-warning">OpenAI GPT-4</span>
+                <span class="badge badge-warning">text-embedding-ada-002</span>
+                <span class="badge badge-warning">Cosine Similarity</span>
+            </div>
+
+            <h4>Hosting</h4>
+            <div class="tech-stack">
+                <span class="badge badge-primary">Render.com</span>
+                <span class="badge badge-primary">Redis Cloud (Upstash)</span>
+            </div>
+        </div>
+
+        <!-- Arquitectura -->
+        <div class="section" id="arquitectura">
+            <h2>🏗️ Arquitectura del Sistema</h2>
+
+            <h3>Arquitectura Multi-Capa</h3>
+            <div class="diagram">
+                <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                      FRONTEND (Next.js)                      │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │   Admin Panel - Upload Legal Documents Interface       │  │
+│  │   (A implementar - Ver sección Frontend)               │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP/HTTPS
+                           │ POST /api/legal-documents/upload
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    BACKEND API (Fastify)                     │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Authentication Middleware (JWT + Role Check)          │  │
+│  │  ├─ Verify JWT Token                                   │  │
+│  │  ├─ Check user.role === 'admin'                        │  │
+│  │  └─ Return 403 if not admin                            │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Legal Document Routes                                 │  │
+│  │  ├─ /api/legal-documents/upload (POST)                 │  │
+│  │  ├─ /api/legal-documents/:id/processing-status (GET)   │  │
+│  │  ├─ /api/legal-documents/:id/reprocess (POST)          │  │
+│  │  ├─ /api/legal-documents (GET)                         │  │
+│  │  └─ /api/legal-documents/:id (GET/DELETE)              │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│                   EVENT BUS (EventEmitter)                   │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Document Events                                       │  │
+│  │  ├─ LEGAL_DOCUMENT_UPLOADED                            │  │
+│  │  ├─ ANALYSIS_STARTED                                   │  │
+│  │  ├─ ANALYSIS_PROGRESS                                  │  │
+│  │  ├─ ANALYSIS_COMPLETED                                 │  │
+│  │  └─ ANALYSIS_FAILED                                    │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│              REDIS QUEUE (BullMQ + Redis Cloud)              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Queue: document-processing                            │  │
+│  │  ├─ Job Type: ANALYZE_DOCUMENT                         │  │
+│  │  ├─ Priority: 0-5                                      │  │
+│  │  ├─ Retry: 3 attempts with exponential backoff         │  │
+│  │  └─ Concurrency: 3 workers                             │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│            DOCUMENT PROCESSOR WORKER (BullMQ)                │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Document Analyzer Service                             │  │
+│  │  ├─ Extract Structure (titles, chapters, sections)     │  │
+│  │  ├─ Extract Articles (with references)                 │  │
+│  │  ├─ Generate Table of Contents                         │  │
+│  │  ├─ Generate Summaries (GPT-4)                         │  │
+│  │  ├─ Extract Entities & Cross-References                │  │
+│  │  ├─ Calculate Statistics                               │  │
+│  │  └─ Generate Embeddings (OpenAI)                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│                OPENAI API (GPT-4 + Embeddings)               │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  GPT-4 Chat Completions                                │  │
+│  │  ├─ Executive Summaries (max 500 tokens)               │  │
+│  │  ├─ Chapter Summaries (max 150 tokens each)            │  │
+│  │  └─ Section Summaries                                  │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  text-embedding-ada-002                                │  │
+│  │  ├─ Input: texto (max 8000 chars)                      │  │
+│  │  ├─ Output: vector[1536] (float32)                     │  │
+│  │  └─ Used for: chunks, articles, sections, summaries    │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│          POSTGRESQL 16 + PGVECTOR (Render Database)          │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Tables:                                               │  │
+│  │  ├─ legal_documents (main document data)               │  │
+│  │  ├─ legal_document_chunks (text chunks + embeddings)   │  │
+│  │  ├─ legal_document_articles (extracted articles)       │  │
+│  │  ├─ legal_document_sections (chapters, sections)       │  │
+│  │  ├─ legal_document_summaries (AI summaries)            │  │
+│  │  ├─ document_registry (hierarchical index)             │  │
+│  │  └─ audit_logs (operation tracking)                    │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  pgvector Extension                                    │  │
+│  │  ├─ Cosine Similarity (&lt;=&gt;)                            │  │
+│  │  ├─ L2 Distance (&lt;-&gt;)                                  │  │
+│  │  └─ Inner Product (&lt;#&gt;)                                │  │
+│  └────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                </pre>
+            </div>
+        </div>
+
+        <!-- Backend APIs -->
+        <div class="section" id="backend">
+            <h2>🔌 Backend - APIs de Carga</h2>
+
+            <div class="api-endpoint">
+                <h4><span class="method method-post">POST</span> /api/legal-documents/upload</h4>
+                <p><strong>Descripción:</strong> Carga un nuevo documento legal global. Solo administradores.</p>
+
+                <p><strong>Headers:</strong></p>
+                <pre><code>Authorization: Bearer &lt;JWT_TOKEN&gt;
+Content-Type: application/json</code></pre>
+
+                <p><strong>Request Body:</strong></p>
+                <pre><code>{
+  "normTitle": "Constitución de la República del Ecuador",
+  "normType": "CONSTITUTIONAL_NORM",
+  "legalHierarchy": "CONSTITUCION",
+  "content": "&lt;contenido completo del documento&gt;",
+  "publicationType": "EDICION_CONSTITUCIONAL",
+  "publicationNumber": "RO-449",
+  "publicationDate": "2008-10-20",
+  "jurisdiction": "NACIONAL",
+  "metadata": {
+    "year": 2008,
+    "tags": ["constitución", "derechos", "estado"]
+  }
+}</code></pre>
+
+                <p><strong>Response (200 OK):</strong></p>
+                <pre><code>{
+  "document": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "normTitle": "Constitución de la República del Ecuador",
+    "normType": "CONSTITUTIONAL_NORM",
+    "createdAt": "2025-11-11T10:30:00.000Z",
+    "processingStatus": "queued"
+  },
+  "jobId": "document-processing:123456",
+  "message": "Document uploaded successfully and queued for processing"
+}</code></pre>
+
+                <p><strong>Error Responses:</strong></p>
+                <ul>
+                    <li><code>400</code> - Validation error (campos requeridos faltantes)</li>
+                    <li><code>403</code> - Forbidden (usuario no es administrador)</li>
+                    <li><code>500</code> - Internal server error</li>
+                </ul>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method method-get">GET</span> /api/legal-documents/:id/processing-status</h4>
+                <p><strong>Descripción:</strong> Obtiene el estado de procesamiento de un documento.</p>
+
+                <p><strong>Response (200 OK):</strong></p>
+                <pre><code>{
+  "documentId": "uuid",
+  "status": "completed",
+  "progress": 100,
+  "results": {
+    "articlesExtracted": 444,
+    "sectionsExtracted": 45,
+    "chaptersExtracted": 12,
+    "summariesGenerated": 13,
+    "wordCount": 125000,
+    "estimatedPages": 500
+  },
+  "error": null
+}</code></pre>
+            </div>
+
+            <div class="api-endpoint">
+                <h4><span class="method method-get">GET</span> /api/legal-documents</h4>
+                <p><strong>Descripción:</strong> Lista todos los documentos legales.</p>
+
+                <p><strong>Query Parameters:</strong></p>
+                <ul>
+                    <li><code>category</code> - Filtrar por categoría (opcional)</li>
+                </ul>
+
+                <p><strong>Response (200 OK):</strong></p>
+                <pre><code>{
+  "documents": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "category": "string",
+      "metadata": {},
+      "createdAt": "ISO date",
+      "updatedAt": "ISO date"
+    }
+  ]
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Vectorización -->
+        <div class="section" id="vectorizacion">
+            <h2>🧮 Vectorización y Embeddings</h2>
+
+            <h3>OpenAI Embeddings API</h3>
+            <table>
+                <tr>
+                    <th>Modelo</th>
+                    <td>text-embedding-ada-002</td>
+                </tr>
+                <tr>
+                    <th>Dimensiones</th>
+                    <td>1536</td>
+                </tr>
+                <tr>
+                    <th>Costo</th>
+                    <td>$0.0001 por 1K tokens</td>
+                </tr>
+                <tr>
+                    <th>Max Input</th>
+                    <td>~8000 tokens (~32,000 caracteres)</td>
+                </tr>
+            </table>
+
+            <h3>Generación de Embeddings</h3>
+            <pre><code>async generateEmbedding(text: string): Promise&lt;number[]&gt; {
+  try {
+    const response = await this.openai.embeddings.create({
+      model: 'text-embedding-ada-002',
+      input: text.substring(0, 8000)
+    });
+
+    return response.data[0].embedding; // Returns: float32[1536]
+  } catch (error) {
+    console.error('Error generating embedding:', error);
+    return [];
+  }
+}</code></pre>
+
+            <h3>Chunking Strategy</h3>
+            <p><strong>Estrategia de División:</strong></p>
+            <ol>
+                <li><strong>Documento completo:</strong> Chunks de 1000 caracteres con overlap de 200</li>
+                <li><strong>Artículos individuales:</strong> Cada artículo completo se vectoriza como una unidad</li>
+                <li><strong>Secciones/Capítulos:</strong> Cada sección/capítulo independiente</li>
+                <li><strong>Resúmenes:</strong> Los resúmenes generados también se vectorizan</li>
+            </ol>
+
+            <pre><code>// Split content into chunks
+const chunkSize = 1000;
+const overlap = 200;
+const chunks = [];
+
+for (let i = 0; i < content.length; i += (chunkSize - overlap)) {
+  chunks.push(content.slice(i, i + chunkSize));
+}
+
+// Generate embeddings for each chunk
+for (let i = 0; i < chunks.length; i++) {
+  const embedding = await generateEmbedding(chunks[i]);
+
+  await prisma.legalDocumentChunk.create({
+    data: {
+      legalDocumentId: documentId,
+      content: chunks[i],
+      chunkIndex: i,
+      embedding: embedding
+    }
+  });
+}</code></pre>
+
+            <h3>Búsqueda Semántica con pgvector</h3>
+            <p><strong>Operadores de Similaridad:</strong></p>
+            <ul>
+                <li><code>&lt;=&gt;</code> : Cosine distance (0 = identical, 2 = opposite)</li>
+                <li><code>&lt;-&gt;</code> : L2 distance (Euclidean)</li>
+                <li><code>&lt;#&gt;</code> : Inner product (dot product)</li>
+            </ul>
+
+            <pre><code>-- Find similar articles using cosine similarity
+SELECT
+  article_number,
+  article_content,
+  1 - (embedding &lt;=&gt; $1::vector) AS similarity
+FROM legal_document_articles
+WHERE legal_document_id = $2
+ORDER BY embedding &lt;=&gt; $1::vector
+LIMIT 10;</code></pre>
+        </div>
+
+        <!-- Frontend -->
+        <div class="section" id="frontend">
+            <h2>🖥️ Frontend (Implementación)</h2>
+
+            <div class="alert alert-warning">
+                <strong>⚠️ IMPORTANTE:</strong> El frontend para carga de documentos legales <strong>NO está implementado aún</strong>. Esta sección describe la arquitectura recomendada.
+            </div>
+
+            <h3>Arquitectura Propuesta</h3>
+            <pre><code>frontend/
+├── src/
+│   ├── app/
+│   │   └── admin/
+│   │       └── legal-documents/
+│   │           ├── page.tsx              # Admin panel main
+│   │           ├── upload/
+│   │           │   └── page.tsx          # Upload form
+│   │           └── [id]/
+│   │               └── page.tsx          # Document detail
+│   ├── components/
+│   │   └── admin/
+│   │       ├── DocumentUploadForm.tsx    # Main upload component
+│   │       ├── DocumentList.tsx          # List all documents
+│   │       ├── ProcessingStatus.tsx      # Real-time status
+│   │       └── DocumentAnalytics.tsx     # Analytics dashboard
+│   └── lib/
+│       └── api/
+│           └── legalDocumentsAPI.ts      # API client</code></pre>
+
+            <h3>Componentes Principales</h3>
+            <ul>
+                <li><strong>DocumentUploadForm.tsx</strong> - Formulario de carga con validación</li>
+                <li><strong>DocumentList.tsx</strong> - Lista paginada de documentos</li>
+                <li><strong>ProcessingStatus.tsx</strong> - Estado en tiempo real del procesamiento</li>
+                <li><strong>DocumentDetail.tsx</strong> - Vista detallada del documento</li>
+                <li><strong>DocumentAnalytics.tsx</strong> - Dashboard de estadísticas</li>
+            </ul>
+        </div>
+
+        <!-- Seguridad -->
+        <div class="section" id="seguridad">
+            <h2>🔒 Seguridad y Permisos</h2>
+
+            <h3>1. Autenticación JWT</h3>
+            <pre><code>// JWT Middleware
+fastify.decorate('authenticate', async (request, reply) => {
+  try {
+    const token = request.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return reply.code(401).send({ error: 'No token provided' });
+    }
+
+    const decoded = await fastify.jwt.verify(token);
+    request.user = decoded;
+  } catch (error) {
+    return reply.code(401).send({ error: 'Invalid token' });
+  }
+});</code></pre>
+
+            <h3>2. Role-Based Access Control (RBAC)</h3>
+            <pre><code>// Admin-only routes
+fastify.post('/api/legal-documents/upload', {
+  onRequest: [fastify.authenticate],
+}, async (request, reply) => {
+  const user = request.user as any;
+
+  if (user.role !== 'admin') {
+    return reply.code(403).send({
+      error: 'Only administrators can upload legal documents'
+    });
+  }
+
+  // Continue with upload logic...
+});</code></pre>
+
+            <h3>3. Input Validation con Zod</h3>
+            <pre><code>const uploadLegalDocumentSchema = z.object({
+  normTitle: z.string().min(1, 'Title is required'),
+  normType: z.enum(['CONSTITUTIONAL_NORM', 'ORGANIC_LAW', ...]),
+  legalHierarchy: z.enum(['CONSTITUCION', 'LEYES_ORGANICAS', ...]),
+  content: z.string().min(1, 'Content is required'),
+  publicationType: z.enum(['ORDINARIO', 'SUPLEMENTO', ...]).optional(),
+  metadata: z.object({}).optional()
+});
+
+// Usage
+const body = uploadLegalDocumentSchema.parse(request.body);</code></pre>
+
+            <h3>4. Audit Logging</h3>
+            <p>Todas las operaciones de carga, modificación y eliminación de documentos se registran en la tabla <code>audit_logs</code> con:</p>
+            <ul>
+                <li>Usuario que realizó la acción</li>
+                <li>Tipo de acción (UPLOAD, DELETE, UPDATE)</li>
+                <li>Timestamp exacto</li>
+                <li>IP address y User-Agent</li>
+                <li>Cambios realizados (diff)</li>
+            </ul>
+        </div>
+
+        <!-- Roadmap -->
+        <div class="section" id="roadmap">
+            <h2>🗺️ Roadmap</h2>
+
+            <h3>✅ Completado (v2.0.0)</h3>
+            <ul>
+                <li>✅ Sistema de carga de documentos legales globales</li>
+                <li>✅ Análisis automático con IA (GPT-4)</li>
+                <li>✅ Extracción de artículos, secciones y capítulos</li>
+                <li>✅ Generación de resúmenes multinivel</li>
+                <li>✅ Vectorización con OpenAI embeddings (1536D)</li>
+                <li>✅ Sistema de colas con BullMQ y Redis</li>
+                <li>✅ Event-driven architecture</li>
+                <li>✅ Búsqueda semántica con pgvector</li>
+                <li>✅ Audit logging completo</li>
+                <li>✅ APIs REST documentadas</li>
+            </ul>
+
+            <h3>🚧 En Desarrollo (Q1 2026)</h3>
+            <ul>
+                <li>⏳ Frontend de administración para carga de documentos</li>
+                <li>⏳ Dashboard de analytics y métricas</li>
+                <li>⏳ Sistema de notificaciones en tiempo real</li>
+                <li>⏳ Exportación de documentos procesados (PDF, DOCX)</li>
+                <li>⏳ API de búsqueda semántica pública</li>
+            </ul>
+
+            <h3>📋 Planificado (Q2 2026)</h3>
+            <ul>
+                <li>📌 OCR para documentos escaneados</li>
+                <li>📌 Soporte para múltiples idiomas</li>
+                <li>📌 Integración con fuentes externas (APIs gubernamentales)</li>
+                <li>📌 Sistema de versionado de documentos</li>
+                <li>📌 Comparación de documentos (diff view)</li>
+                <li>📌 API GraphQL</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p><strong>Poweria Legal</strong> - Sistema de Carga de Documentos Legales</p>
+        <p>Versión 2.0.0 | 11 de Noviembre de 2025</p>
+        <p>Documentación Técnica Completa</p>
+    </div>
+
+    <!-- Scroll to top button -->
+    <div class="scroll-to-top" id="scrollTop">
+        ↑
+    </div>
+
+    <script>
+        // Scroll to top functionality
+        const scrollTop = document.getElementById('scrollTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollTop.classList.add('visible');
+            } else {
+                scrollTop.classList.remove('visible');
+            }
+        });
+
+        scrollTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
