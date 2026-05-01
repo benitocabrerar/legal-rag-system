@@ -3,9 +3,9 @@
  * Implements offline support and caching strategies
  */
 
-const CACHE_NAME = 'legal-rag-v1';
-const STATIC_CACHE = 'legal-rag-static-v1';
-const DYNAMIC_CACHE = 'legal-rag-dynamic-v1';
+const CACHE_NAME = 'legal-rag-v2';
+const STATIC_CACHE = 'legal-rag-static-v2';
+const DYNAMIC_CACHE = 'legal-rag-dynamic-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -92,29 +92,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets
+  // Cache-first only for truly immutable assets (images, fonts).
+  // Scripts and styles are NOT cache-first: Next.js chunks have content hashes,
+  // but a stale chunk served from cache after a deploy locks users into old code.
   if (
     request.destination === 'image' ||
-    request.destination === 'font' ||
-    request.destination === 'style' ||
-    request.destination === 'script'
+    request.destination === 'font'
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        if (cached) {
-          return cached;
-        }
-
+        if (cached) return cached;
         return fetch(request).then((response) => {
           const responseClone = response.clone();
-
           caches.open(STATIC_CACHE).then((cache) => {
             cache.put(request, responseClone);
           });
-
           return response;
-        });
+        }).catch(() => caches.match(request));
       })
+    );
+    return;
+  }
+
+  // Network-first for scripts and styles (so deploys take effect immediately).
+  // Fall back to cache only when offline.
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      fetch(request).then((response) => {
+        const responseClone = response.clone();
+        caches.open(STATIC_CACHE).then((cache) => {
+          cache.put(request, responseClone);
+        });
+        return response;
+      }).catch(() => caches.match(request))
     );
     return;
   }
@@ -130,7 +140,7 @@ self.addEventListener('fetch', (event) => {
         });
 
         return response;
-      });
+      }).catch(() => cached || Promise.reject(new Error('offline')));
 
       // Return cached version immediately, update cache in background
       return cached || fetchPromise;
