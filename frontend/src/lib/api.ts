@@ -615,6 +615,45 @@ export const financeAPI = {
   },
 };
 
+export interface ProvidenciaExtraction {
+  ok: boolean;
+  method: string;
+  filename: string;
+  mimeType: string;
+  bytes: number;
+  detectedUrls: string[];
+  detectedPasscode: string | null;
+  excerpt: string;
+  event: {
+    title: string;
+    type: string;
+    startTime: string | null;
+    endTime: string | null;
+    location: string | null;
+    meetingLink: string | null;
+    meetingProvider: string | null;
+    meetingPasscode: string | null;
+    source: string;
+    description: string | null;
+    caseHints: string[];
+    confidence: number;
+    warnings: string[];
+  };
+}
+
+export const eventsExtractAPI = {
+  /** Upload a providencia file (PDF/image/docx) and let the AI fill the form. */
+  fromProvidencia: async (file: File): Promise<ProvidenciaExtraction> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await api.post('/events/extract-from-providencia', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120_000,
+    });
+    return r.data;
+  },
+};
+
 export const litigationAPI = {
   brief: async (caseId: string): Promise<LitigationBrief> => {
     const r = await api.get(`/cases/${caseId}/litigation-brief`);

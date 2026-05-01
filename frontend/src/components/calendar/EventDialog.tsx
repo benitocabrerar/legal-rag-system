@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Event, EventType, CreateEventData } from '@/types/calendar';
-import { X, FileText, KeyRound, Video } from 'lucide-react';
+import { X, FileText, KeyRound, Video, UploadCloud, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { eventsExtractAPI } from '@/lib/api';
 
 /** Lightweight in-frontend version of src/lib/convocatoria.ts (the protocol). */
 const TAG_PATTERNS: Array<[RegExp, 'source' | 'passcode' | 'provider']> = [
@@ -85,6 +86,62 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
   const [convocatoria, setConvocatoria] = useState({
     source: '', passcode: '', provider: '', free: '',
   });
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
+  const [extractStatus, setExtractStatus] = useState<{ filename: string; confidence: number; warnings: string[] } | null>(null);
+  const [extractedFields, setExtractedFields] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const applyExtraction = async (file: File) => {
+    setExtractError('');
+    setExtracting(true);
+    setExtractStatus(null);
+    try {
+      const result = await eventsExtractAPI.fromProvidencia(file);
+      const ev = result.event;
+      const filled = new Set<string>();
+      const next = { ...formData };
+      if (ev.title) { next.title = ev.title; filled.add('title'); }
+      if (ev.type)  { next.type = ev.type as EventType; filled.add('type'); }
+      if (ev.startTime) { next.startTime = ev.startTime.slice(0, 16); filled.add('startTime'); }
+      if (ev.endTime)   { next.endTime   = ev.endTime.slice(0, 16);   filled.add('endTime'); }
+      if (ev.location)    { next.location = ev.location; filled.add('location'); }
+      if (ev.meetingLink) { next.meetingLink = ev.meetingLink; filled.add('meetingLink'); }
+      if (ev.description) { next.description = ev.description; filled.add('description'); }
+      setFormData(next);
+
+      const conv = { ...convocatoria };
+      if (ev.source)   { conv.source = ev.source; filled.add('source'); }
+      if (ev.meetingPasscode) { conv.passcode = ev.meetingPasscode; filled.add('passcode'); }
+      if (ev.meetingProvider) { conv.provider = ev.meetingProvider; filled.add('provider'); }
+      setConvocatoria(conv);
+
+      setExtractStatus({ filename: result.filename, confidence: ev.confidence, warnings: ev.warnings ?? [] });
+      setExtractedFields(filled);
+    } catch (err: any) {
+      setExtractError(err?.response?.data?.message ?? 'No pude procesar el documento.');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) applyExtraction(f);
+    e.target.value = '';
+  };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) applyExtraction(f);
+  };
+
+  const filledChip = (key: string) =>
+    extractedFields.has(key)
+      ? <span className="ml-1.5 inline-flex items-center gap-1 text-[9px] font-bold text-violet-700 bg-violet-100 border border-violet-200 rounded-full px-1.5 py-0.5"><Sparkles className="w-2.5 h-2.5" />IA</span>
+      : null;
 
   useEffect(() => {
     if (event) {
@@ -177,9 +234,74 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
                 </div>
               )}
 
+              {/* AI Providencia drop-zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                className={cn(
+                  'rounded-xl border-2 border-dashed p-3 transition-colors cursor-pointer',
+                  extracting
+                    ? 'border-indigo-400 bg-indigo-50/40'
+                    : dragOver
+                    ? 'border-violet-500 bg-violet-50'
+                    : 'border-violet-300 bg-gradient-to-r from-violet-50 to-indigo-50 hover:border-violet-400',
+                )}
+                onClick={() => !extracting && fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp,.tif,.tiff,.heic"
+                  className="hidden"
+                  onChange={onPickFile}
+                />
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow shadow-violet-500/30 shrink-0">
+                    {extracting
+                      ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+                      : <UploadCloud className="w-4 h-4 text-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-bold text-violet-900 inline-flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-violet-500" />
+                      Autocompletar desde una providencia
+                    </div>
+                    {extracting ? (
+                      <p className="text-[11px] text-indigo-700 mt-0.5">
+                        Leyendo el documento con IA…
+                      </p>
+                    ) : extractStatus ? (
+                      <p className="text-[11px] text-violet-700 mt-0.5 truncate">
+                        ✓ {extractStatus.filename} · confianza {Math.round(extractStatus.confidence * 100)}%
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-violet-700 mt-0.5">
+                        Arrastra un PDF / imagen / DOCX o haz click. La IA llenará los campos.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {extractError && (
+                  <div className="mt-2 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+                    {extractError}
+                  </div>
+                )}
+                {extractStatus?.warnings && extractStatus.warnings.length > 0 && (
+                  <div className="mt-2 space-y-0.5">
+                    {extractStatus.warnings.map((w, i) => (
+                      <div key={i} className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {w}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Título <span className="text-red-500">*</span>
+                  Título <span className="text-red-500">*</span>{filledChip('title')}
                 </label>
                 <input
                   type="text"
@@ -276,7 +398,7 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Enlace de reunión
+                    Enlace de reunión{filledChip('meetingLink')}
                   </label>
                   <input
                     type="url"
@@ -297,7 +419,7 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
 
                 <div>
                   <label className="block text-[11px] font-semibold text-violet-900 mb-1">
-                    Fuente <span className="text-violet-500 font-normal">(providencia, oficio, correo del juez/fiscal…)</span>
+                    Fuente <span className="text-violet-500 font-normal">(providencia, oficio, correo del juez/fiscal…)</span>{filledChip('source')}
                   </label>
                   <textarea
                     rows={2}
@@ -311,7 +433,7 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[11px] font-semibold text-violet-900 mb-1 flex items-center gap-1">
-                      <Video className="w-3 h-3" /> Proveedor
+                      <Video className="w-3 h-3" /> Proveedor{filledChip('provider')}
                     </label>
                     <select
                       value={convocatoria.provider}
@@ -333,7 +455,7 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
 
                   <div>
                     <label className="text-[11px] font-semibold text-violet-900 mb-1 flex items-center gap-1">
-                      <KeyRound className="w-3 h-3" /> Código / Contraseña
+                      <KeyRound className="w-3 h-3" /> Código / Contraseña{filledChip('passcode')}
                     </label>
                     <input
                       type="text"
