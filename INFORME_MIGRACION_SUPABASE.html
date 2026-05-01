@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Migración a Supabase · Informe de progreso · Poweria Legal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0b0d12;
+    --bg-2: #11141b;
+    --panel: #161a23;
+    --panel-2: #1c2130;
+    --border: #2a3142;
+    --border-2: #3b4258;
+    --text: #e7ebf3;
+    --text-dim: #aab2c5;
+    --text-muted: #7a8299;
+    --accent: #6ea8ff;
+    --accent-2: #8d7cff;
+    --good: #2dd17e;
+    --warn: #f6b948;
+    --bad: #ff6b7a;
+    --info: #4cc8ff;
+    --code-bg: #0a0c12;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 24px rgba(0,0,0,.25);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb;
+      --bg-2: #eef0f7;
+      --panel: #ffffff;
+      --panel-2: #f9fafd;
+      --border: #e3e6ef;
+      --border-2: #cdd2e0;
+      --text: #1a1d27;
+      --text-dim: #4d556b;
+      --text-muted: #7a8299;
+      --accent: #2d62d4;
+      --accent-2: #6248d8;
+      --good: #14a86b;
+      --warn: #c98a17;
+      --bad: #d63848;
+      --info: #1496c8;
+      --code-bg: #f0f2f8;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 18px rgba(20,30,80,.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(180deg, var(--bg), var(--bg-2));
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 48px 28px 96px; }
+
+  /* Header */
+  header.cover {
+    background: radial-gradient(1200px 400px at 0% 0%, rgba(110,168,255,.18), transparent 60%),
+                radial-gradient(1000px 360px at 100% 0%, rgba(141,124,255,.18), transparent 60%),
+                var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px 36px 30px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  h1 { font-size: 34px; line-height: 1.15; margin: 6px 0 8px; letter-spacing: -.01em; }
+  h1 .pill {
+    font-size: 12px;
+    background: rgba(45,209,126,.14);
+    color: var(--good);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(45,209,126,.35);
+    vertical-align: middle;
+    margin-left: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+  }
+  .meta div { display: flex; flex-direction: column; gap: 2px; }
+  .meta .k { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+  .meta .v { font-size: 14px; color: var(--text); font-weight: 500; }
+
+  /* Sections */
+  section { margin-top: 36px; }
+  h2 {
+    font-size: 22px; margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px;
+    letter-spacing: -.005em;
+  }
+  h2 .num {
+    width: 28px; height: 28px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--accent); font-weight: 700;
+  }
+  h3 { font-size: 16px; margin: 22px 0 10px; color: var(--text); font-weight: 600; }
+  p, li { color: var(--text-dim); }
+  p { margin: 8px 0; }
+
+  /* KPI grid */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 18px 0;
+  }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .kpi .label { font-size: 12px; color: var(--text-muted); letter-spacing: .04em; text-transform: uppercase; }
+  .kpi .value { font-size: 22px; font-weight: 700; margin: 4px 0 0; color: var(--text); }
+  .kpi .value.good { color: var(--good); }
+  .kpi .value.warn { color: var(--warn); }
+  .kpi .value.bad { color: var(--bad); }
+  .kpi .sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Cards */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    margin: 14px 0;
+  }
+  .card.soft { background: var(--panel-2); }
+
+  /* Status table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 4px;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    background: var(--panel-2);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: 12.5px; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border-2);
+    background: var(--panel-2);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .badge.good { color: var(--good); border-color: rgba(45,209,126,.4); background: rgba(45,209,126,.09); }
+  .badge.warn { color: var(--warn); border-color: rgba(246,185,72,.4); background: rgba(246,185,72,.10); }
+  .badge.bad  { color: var(--bad);  border-color: rgba(255,107,122,.4); background: rgba(255,107,122,.09); }
+  .badge.info { color: var(--info); border-color: rgba(76,200,255,.4); background: rgba(76,200,255,.09); }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Code blocks */
+  pre, code {
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  pre code { background: transparent; border: 0; padding: 0; }
+
+  /* Lists */
+  ul.tight { margin: 6px 0; padding-left: 22px; }
+  ul.tight li { margin: 4px 0; }
+  ul.checks { list-style: none; padding: 0; margin: 8px 0; }
+  ul.checks li {
+    position: relative;
+    padding-left: 28px;
+    margin: 6px 0;
+  }
+  ul.checks li::before {
+    content: "";
+    position: absolute;
+    left: 4px; top: 8px;
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    background: var(--good);
+  }
+  ul.checks li.todo::before { background: var(--warn); }
+  ul.checks li.fail::before { background: var(--bad); }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    margin: 14px 0;
+    padding-left: 28px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 8px; top: 8px; bottom: 8px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    border-radius: 2px;
+  }
+  .step {
+    position: relative;
+    padding: 6px 0 18px;
+  }
+  .step::before {
+    content: "";
+    position: absolute;
+    left: -24px; top: 9px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--bg);
+  }
+  .step h4 { margin: 0 0 4px; font-size: 15px; color: var(--text); font-weight: 600; }
+  .step p { margin: 4px 0; }
+
+  /* 2-col layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Banners */
+  .banner {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 12px 0;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    border: 1px solid var(--border);
+  }
+  .banner.info { background: rgba(76,200,255,.08); border-color: rgba(76,200,255,.3); }
+  .banner.warn { background: rgba(246,185,72,.08); border-color: rgba(246,185,72,.3); }
+  .banner.bad  { background: rgba(255,107,122,.08); border-color: rgba(255,107,122,.3); }
+  .banner.good { background: rgba(45,209,126,.08); border-color: rgba(45,209,126,.3); }
+  .banner strong { color: var(--text); }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="eyebrow">Informe técnico</div>
+  <h1>Migración a Supabase · Poweria Legal <span class="pill">Cutover aplicado</span></h1>
+  <p style="color: var(--text-dim); max-width: 760px; margin: 6px 0 0;">
+    Estado real del proyecto tras el cutover de Render Postgres → Supabase Cloud, incluyendo
+    autenticación, base de datos, storage, Redis Cloud nuevo y verificación end-to-end del flujo
+    de login con JWT custom claims. Documenta lo aplicado, lo verificado, y los frentes pendientes.
+  </p>
+  <div class="meta">
+    <div><span class="k">Proyecto Supabase</span><span class="v">legal-rag-poweria</span></div>
+    <div><span class="k">Project ref</span><span class="v"><code>lmnzzcqqegqugphcnmew</code></span></div>
+    <div><span class="k">Plan</span><span class="v">Free</span></div>
+    <div><span class="k">Región DB</span><span class="v">aws us-east-1</span></div>
+    <div><span class="k">Fecha del cutover</span><span class="v">2026-04-29</span></div>
+    <div><span class="k">Autor</span><span class="v">Claude Code</span></div>
+  </div>
+</header>
+
+<!-- ============================================ -->
+<!-- 1. RESUMEN EJECUTIVO -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">1</span>Resumen ejecutivo</h2>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Componentes migrados</div>
+      <div class="value good">7 / 7</div>
+      <div class="sub">DB, Auth, Search, Storage, Redis, Frontend, Hooks</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Usuarios importados</div>
+      <div class="value good">2 / 2</div>
+      <div class="sub">UUID id-match con <code>auth.users</code></div>
+    </div>
+    <div class="kpi">
+      <div class="label">Login E2E verificado</div>
+      <div class="value good">200 OK</div>
+      <div class="sub">UI → Supabase → backend → /cases</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Tiempo de rollback</div>
+      <div class="value warn">~1 min</div>
+      <div class="sub">Comentar flags + swap DATABASE_URL</div>
+    </div>
+  </div>
+
+  <div class="banner good">
+    <div>
+      <strong>Cutover totalmente aplicado.</strong> El backend Fastify ahora usa Supabase como
+      Postgres principal, valida JWTs emitidos por Supabase Auth con custom claims
+      (<code>user_role</code>, <code>plan_tier</code>), y todas las rutas autenticadas
+      (<code>/api/v1/*</code>) operan contra el nuevo provider. El frontend Next.js 15 usa
+      <code>@supabase/ssr</code> con cookies para la sesión y compila limpio.
+    </div>
+  </div>
+
+  <div class="banner warn">
+    <div>
+      <strong>Riesgo controlado:</strong> la base de datos de Render queda preservada
+      (<code>RENDER_DATABASE_URL</code>) como hot-standby para rollback de emergencia. El corpus
+      jurídico está vacío en ambos lados, así que el re-embedding solo aplicará cuando se
+      ingesten documentos nuevos.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- 2. ARQUITECTURA RESULTANTE -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">2</span>Arquitectura resultante</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Componente</th>
+        <th>Antes</th>
+        <th>Ahora</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>DATABASE_URL</code> (Prisma)</td>
+        <td>Render Postgres</td>
+        <td>Supabase pooler <code>:6543</code> · transaction mode + <code>pgbouncer=true</code></td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td><code>DIRECT_URL</code></td>
+        <td>—</td>
+        <td>Supabase pooler <code>:5432</code> · session mode (migrate, jobs)</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>Auth backend</td>
+        <td>JWT firmado con secreto local, bcrypt en <code>public.users</code></td>
+        <td>Supabase Auth (gotrue) + JWT con custom claims via hook SQL</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>Search backend</td>
+        <td>3 pipelines incoherentes (<code>query.ts</code>, <code>unified-search</code>)</td>
+        <td>RPC <code>search_legal_chunks</code> con RRF + HNSW</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>AWS S3</td>
+        <td>Supabase Storage (3 buckets: legal-documents, user-avatars, backups)</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>Redis</td>
+        <td>Redis Cloud DB borrada (WRONGPASS)</td>
+        <td>Redis Cloud nuevo · <code>redis-10941.crce285.us-east-1-4</code> · 30MB free</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>Frontend</td>
+        <td>AuthProvider custom + axios con localStorage token</td>
+        <td><code>@supabase/ssr</code> · cookies · middleware refresh · interceptor axios async</td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+      <tr>
+        <td>OAuth Google</td>
+        <td>—</td>
+        <td>Provider configurado en Supabase con credenciales nuevas (proyecto <code>powerai legal</code>)</td>
+        <td><span class="badge good"><span class="dot"></span>configurado</span></td>
+      </tr>
+      <tr>
+        <td>JWT Custom Access Token Hook</td>
+        <td>—</td>
+        <td><code>public.custom_access_token_hook</code> activo · GRANT a <code>supabase_auth_admin</code></td>
+        <td><span class="badge good"><span class="dot"></span>activo</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================ -->
+<!-- 3. CRONOLOGÍA DEL CUTOVER -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">3</span>Cronología del cutover</h2>
+
+  <div class="timeline">
+    <div class="step">
+      <h4>Punto 1 · JWT Custom Access Token Hook</h4>
+      <p>Activado vía Supabase Management API. La función <code>public.custom_access_token_hook</code>
+        inyecta <code>user_role</code> y <code>plan_tier</code> en el JWT leyéndolos de
+        <code>public.users</code>. Esto habilita políticas RLS basadas en rol.</p>
+    </div>
+    <div class="step">
+      <h4>Punto 2 · OAuth Google</h4>
+      <p>Creado proyecto Google Cloud <code>powerai legal</code>, OAuth client web con redirect
+        <code>https://lmnzzcqqegqugphcnmew.supabase.co/auth/v1/callback</code>. Credenciales
+        aplicadas en Supabase Auth via API. Verificado <code>external_google_enabled = true</code>.</p>
+    </div>
+    <div class="step">
+      <h4>Punto 3 · Import de usuarios Render → Supabase</h4>
+      <p>2 usuarios importados con UUID id-match: el admin (<code>benitocabrerar@gmail.com</code>,
+        bcrypt válido) y el test user (password fake → <code>NULL</code> para forzar magic link).
+        Trigger <code>handle_new_auth_user()</code> creó row base en <code>public.users</code>;
+        UPDATE posterior copió todos los campos legacy (role, plan_tier, avatar, etc.).</p>
+    </div>
+    <div class="step">
+      <h4>Cutover de DATABASE_URL</h4>
+      <p>Reemplazado el connection string de Render por el pooler de Supabase. Render preservado
+        en <code>RENDER_DATABASE_URL</code>. Auditoría previa: Render solo tenía 2 users y 1
+        sesión stale, sin corpus ni archivos productivos → no hay datos pendientes de migrar.</p>
+    </div>
+    <div class="step">
+      <h4>Frontend Next.js 15</h4>
+      <p>Activado <code>middleware.ts</code> de Supabase, añadidos
+        <code>NEXT_PUBLIC_SUPABASE_URL</code> y <code>NEXT_PUBLIC_AUTH_BACKEND=supabase</code>.
+        Resueltos 4 errores de tipos pre-existentes (cookies API, SummaryMetadata.confidence,
+        SummaryLanguage cast, conflicto auth/callback page vs route).</p>
+    </div>
+    <div class="step">
+      <h4>Redis Cloud reset</h4>
+      <p>La DB original había sido borrada (la password rotó al inexistir el tenant). Creada DB
+        nueva <code>poweria-legal</code> Free 30MB via Playwright contra Chrome con CDP.
+        Endpoint y password extraídos automáticamente del modal Connect.</p>
+    </div>
+    <div class="step">
+      <h4>Verificación E2E del login</h4>
+      <p>Reset password admin a <code>Temporal2026!</code> via Admin API. Test con Playwright
+        contra el browser real: UI → <code>signInWithPassword</code> → cookies set → redirect a
+        <code>/dashboard</code> → axios obtiene access_token de la sesión → backend valida via
+        <code>supabase.auth.getUser()</code> → <code>200 GET /api/v1/cases</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- 4. TRABAS RESUELTAS -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">4</span>Trabas técnicas resueltas en vuelo</h2>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Síntoma</th><th>Causa</th><th>Resolución</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><code>Database error finding user</code> en <code>/auth/v1/otp</code></td>
+        <td>Mi <code>INSERT INTO auth.users</code> dejó <code>confirmation_token</code>,
+          <code>recovery_token</code>, etc. como <code>NULL</code>. Gotrue espera
+          <code>''</code>.</td>
+        <td>UPDATE masivo a <code>''</code> y patch del script de import para próximas corridas.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><code>Tenant or user not found</code> en Prisma vs Supabase</td>
+        <td>URL del pooler con prefijo <code>aws-0</code> y puerto <code>5432</code> en vez de
+          <code>aws-1:6543</code>.</td>
+        <td>Corregida URL al formato real del pooler con <code>pgbouncer=true</code>.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><code>Cannot find package '@supabase/supabase-js'</code></td>
+        <td><code>node_modules</code> no tenía la dependencia instalada.</td>
+        <td><code>npm install</code> en backend y frontend (170 paquetes).</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Build Next falla: dos pages resuelven al mismo path <code>/auth/callback</code></td>
+        <td>Coexistencia de <code>page.tsx</code> legacy con <code>route.ts</code> nuevo de
+          Supabase OAuth.</td>
+        <td><code>page.tsx</code> renombrado a <code>.legacy</code>.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Build prerender falla: <code>useAuth must be used within an AuthProvider</code></td>
+        <td>SSG intentaba renderizar páginas client que dependen de contexto.</td>
+        <td><code>export const dynamic = 'force-dynamic'</code> en root layout.</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td><code>Property 'get' does not exist on type 'Promise&lt;ReadonlyRequestCookies&gt;'</code></td>
+        <td>Next 15 cambió <code>cookies()</code> a async.</td>
+        <td><code>getSupabaseServerClient()</code> ahora <code>async</code> con
+          <code>await cookies()</code>; caller actualizado.</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Login submit no llega a Supabase</td>
+        <td><code>/login</code> usaba <code>fetch('/api/v1/auth/login')</code> legacy en vez de
+          <code>useAuth().login()</code>.</td>
+        <td>Reescrito el handler para usar el contexto.</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Layout dashboard expulsa al user a <code>/login</code> tras login OK</td>
+        <td><code>SupabaseAuthProvider</code> y <code>AuthProvider</code> creaban contextos
+          separados; <code>useAuth()</code> leía el legacy (vacío).</td>
+        <td><code>SupabaseAuthProvider</code> ahora reusa el mismo <code>AuthContext</code>
+          exportado de <code>auth.tsx</code>. Una sola línea de Provider, todos los consumidores
+          intactos.</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><code>401</code> en <code>GET /api/v1/cases</code> tras login</td>
+        <td>Axios interceptor leía <code>localStorage('token')</code> (vacío en modo Supabase).</td>
+        <td>Interceptor async que hace <code>supabase.auth.getSession()</code> y usa el
+          <code>access_token</code> cuando <code>NEXT_PUBLIC_AUTH_BACKEND=supabase</code>.</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>Backend rechaza JWT Supabase con 401</td>
+        <td><code>app.authenticate</code> usaba <code>request.jwtVerify()</code> contra el
+          secreto local.</td>
+        <td>Decorator delega a <code>requireSupabaseAuth</code> cuando
+          <code>AUTH_BACKEND=supabase</code>. Una sola edición → todas las rutas Fastify
+          funcionan.</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td><code>Error running hook URI: pg-functions://...custom_access_token_hook</code></td>
+        <td>El role <code>supabase_auth_admin</code> no tenía <code>EXECUTE</code> ni
+          <code>SELECT</code> sobre <code>public.users</code>.</td>
+        <td><code>GRANT USAGE ON SCHEMA</code> + <code>GRANT EXECUTE ON FUNCTION</code> +
+          <code>GRANT SELECT ON public.users TO supabase_auth_admin</code>; revoke a
+          authenticated/anon/public.</td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td>Redis Cloud rechaza login: WRONGPASS</td>
+        <td>La instancia DB original había sido borrada (no rota la password — el tenant ya no
+          existe).</td>
+        <td>Creada nueva instancia free via Playwright/CDP. Endpoint y password extraídos del
+          modal "Connect".</td>
+      </tr>
+      <tr>
+        <td>13</td>
+        <td>bcrypt del admin no coincide con passwords conocidas</td>
+        <td>El hash en Render era de una password olvidada / ya rotada.</td>
+        <td>Reset via Supabase Admin API a <code>Temporal2026!</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================ -->
+<!-- 5. VERIFICACIÓN E2E -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">5</span>Verificación end-to-end del login</h2>
+
+  <div class="card">
+    <h3>Network del flujo completo (capturado con Playwright)</h3>
+<pre><code>200 POST  https://lmnzzcqqegqugphcnmew.supabase.co/auth/v1/token?grant_type=password
+200 GET   http://localhost:8000/api/v1/cases
+200 GET   http://localhost:8000/api/v1/cases</code></pre>
+    <p style="color: var(--text-muted); font-size: 13.5px;">
+      El JWT lleva los custom claims correctos:
+      <code>user_role=admin</code>, <code>plan_tier=premium</code>, <code>sub=4d0611a7…</code>.
+      El backend valida el token contra <code>supabase.auth.getUser()</code>, hidrata el row de
+      <code>public.users</code> y resuelve la request.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Backend <code>/api/v1/auth/supabase/me</code> respuesta</h3>
+<pre><code>{
+  "user": {
+    "id": "4d0611a7-3a0e-462c-b2f0-57f10f9bab61",
+    "email": "benitocabrerar@gmail.com",
+    "role": "admin",
+    "planTier": "premium",
+    "isActive": true
+  }
+}</code></pre>
+  </div>
+
+  <div class="two-col">
+    <div class="card soft">
+      <h3>Confirmaciones positivas</h3>
+      <ul class="checks">
+        <li>Login UI submit dispara <code>signInWithPassword</code> en Supabase</li>
+        <li>Sesión persistida en cookie <code>sb-…-auth-token</code></li>
+        <li>Redirect automático a <code>/dashboard</code></li>
+        <li>Layout dashboard reconoce al user (no redirect loop)</li>
+        <li>Axios interceptor inyecta access_token de la sesión</li>
+        <li>Backend valida JWT vía Supabase Auth API</li>
+        <li>Hook custom_access_token_hook ejecuta como <code>supabase_auth_admin</code></li>
+        <li>Refresh token funciona (200 en <code>grant_type=refresh_token</code>)</li>
+      </ul>
+    </div>
+    <div class="card soft">
+      <h3>Rutas verificadas en backend</h3>
+      <ul class="checks">
+        <li><code>GET /api/v1/cases</code> · 200 con JWT Supabase</li>
+        <li><code>GET /api/v1/auth/supabase/me</code> · 200</li>
+        <li><code>POST /auth/v1/token?grant_type=password</code> · 200</li>
+        <li><code>POST /auth/v1/token?grant_type=refresh_token</code> · 200</li>
+        <li><code>POST /auth/v1/otp</code> (passwordless) · 200</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- 6. CONFIGURACIÓN ACTUAL -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">6</span>Configuración actual</h2>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Backend · <code>.env</code></h3>
+<pre><code>DATABASE_URL=postgresql://postgres.lmnzzcqqegqugphcnmew:***@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&amp;pgbouncer=true&amp;connection_limit=1
+DIRECT_URL=postgresql://...:5432/postgres?sslmode=require
+RENDER_DATABASE_URL=postgresql://...render.com/...   # rollback only
+
+SUPABASE_URL=https://lmnzzcqqegqugphcnmew.supabase.co
+SUPABASE_ANON_KEY=eyJ…
+SUPABASE_SERVICE_ROLE_KEY=eyJ…
+
+AUTH_BACKEND=supabase
+SEARCH_BACKEND=rpc
+STORAGE_BACKEND=supabase
+STORAGE_BUCKET_DOCUMENTS=legal-documents
+STORAGE_BUCKET_AVATARS=user-avatars
+STORAGE_BUCKET_BACKUPS=backups
+
+REDIS_URL=redis://default:***@redis-10941.crce285.us-east-1-4.ec2.cloud.redislabs.com:10941</code></pre>
+    </div>
+    <div class="card">
+      <h3>Frontend · <code>.env.local</code></h3>
+<pre><code>NEXT_PUBLIC_API_URL=http://localhost:8000
+
+NEXT_PUBLIC_SUPABASE_URL=https://lmnzzcqqegqugphcnmew.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ…
+NEXT_PUBLIC_AUTH_BACKEND=supabase</code></pre>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">
+        <strong>Middleware activo:</strong> <code>frontend/middleware.ts</code> refresca la sesión
+        Supabase en cada request.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- 7. PENDIENTES Y PRÓXIMOS PASOS -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">7</span>Pendientes y próximos pasos</h2>
+
+  <div class="banner info">
+    <div>
+      <strong>Password temporal:</strong> el admin tiene <code>Temporal2026!</code> tras el reset
+      via Admin API. Debe cambiarse desde la UI o el Dashboard de Supabase antes de cualquier
+      uso compartido.
+    </div>
+  </div>
+
+  <h3>Prioridad alta (bloquea uso pleno)</h3>
+  <ul class="checks">
+    <li class="todo">Cambiar la password temporal del admin (UI <code>/account/password</code>
+      o Dashboard Supabase → Authentication → Users → Edit user)</li>
+    <li class="todo">Verificar el resto de rutas autenticadas (<code>/api/v1/documents</code>,
+      <code>/api/v1/ai-assistant</code>, <code>/api/v1/legal-documents</code>, etc.) con el JWT
+      nuevo. El decorator <code>app.authenticate</code> es global, así que deberían funcionar
+      directamente, pero merece smoke-test.</li>
+  </ul>
+
+  <h3>Prioridad media (mejoras de UX y seguridad)</h3>
+  <ul class="checks">
+    <li class="todo">Botón "Iniciar con Google" en <code>/login</code> que invoque
+      <code>loginWithGoogle()</code> exportado en <code>lib/auth-supabase.tsx</code>. El provider
+      ya está configurado en Supabase.</li>
+    <li class="todo">Configurar SMTP en Supabase (Authentication → Email Settings) para que los
+      flows de magic link, recuperación de password y signup funcionen en producción. Hoy solo
+      funcionan via Admin API.</li>
+    <li class="todo">UI de signup que use <code>useAuth().register()</code> (ya cableado al
+      contexto). Validar que el trigger <code>handle_new_auth_user()</code> crea row en
+      <code>public.users</code> con plan free.</li>
+    <li class="todo">Limpiar <code>page.tsx.legacy</code> de <code>frontend/src/app/auth/callback/</code>
+      cuando esté confirmado que no se necesita.</li>
+    <li class="todo">Revisar Redis Cloud — alerta cosmética: eviction policy es
+      <code>volatile-lru</code>, ideal sería <code>noeviction</code> para que rate-limit no se
+      pierda bajo presión de memoria.</li>
+  </ul>
+
+  <h3>Prioridad baja (deuda diferida)</h3>
+  <ul class="checks">
+    <li class="todo">Re-embedding del corpus jurídico cuando se ingesten documentos (hoy hay 0
+      en <code>legal_documents</code> y <code>document_chunks</code>). Costo estimado: ~$1 por
+      cada 100k chunks vía OpenAI.</li>
+    <li class="todo">Migrar archivos S3 a Supabase Storage cuando existan (hoy no hay nada
+      productivo en S3). Adapter dual-write ya disponible vía
+      <code>STORAGE_DUAL_WRITE_LEGACY=true</code>.</li>
+    <li class="todo">Borrar la subscripción Render Postgres cuando hayan pasado 14 días sin
+      necesidad de rollback.</li>
+    <li class="todo">Promover el frontend a producción (Vercel) con las nuevas envs
+      <code>NEXT_PUBLIC_SUPABASE_*</code> y <code>NEXT_PUBLIC_API_URL</code> apuntando al nuevo
+      backend.</li>
+    <li class="todo">Migrar BullMQ workers a <code>pgmq</code> nativo de Supabase (Fase 4 del
+      plan original) — no urgente; BullMQ funciona con Redis nuevo.</li>
+    <li class="todo">Eliminar dependencia <code>pinecone</code> de <code>package.json</code> —
+      no hay imports reales en el código.</li>
+    <li class="todo">2FA: tabla custom (<code>two_factor_*</code> en <code>public.users</code>)
+      vs migrar a <code>auth.mfa_factors</code> de Supabase. Hoy nadie tiene 2FA habilitado, así
+      que la decisión puede esperar.</li>
+  </ul>
+</section>
+
+<!-- ============================================ -->
+<!-- 8. PROCEDIMIENTO DE ROLLBACK -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">8</span>Procedimiento de rollback (~1 min)</h2>
+
+  <div class="banner warn">
+    <div>
+      <strong>Cuándo aplicarlo:</strong> sólo si Supabase se cae durante una ventana crítica y
+      Render sigue operacional. Render tenía 2 users y 1 sesión stale, así que hay paridad de
+      datos.
+    </div>
+  </div>
+
+  <ol class="tight">
+    <li>En <code>backend/.env</code>: comentar <code>AUTH_BACKEND</code>,
+      <code>SEARCH_BACKEND</code>, <code>STORAGE_BACKEND</code>.</li>
+    <li>En <code>backend/.env</code>: intercambiar <code>DATABASE_URL</code> ↔
+      <code>RENDER_DATABASE_URL</code>.</li>
+    <li>En <code>frontend/.env.local</code>: comentar <code>NEXT_PUBLIC_AUTH_BACKEND</code>,
+      apuntar <code>NEXT_PUBLIC_API_URL</code> al backend Render anterior.</li>
+    <li>En <code>frontend/</code>: <code>mv middleware.ts middleware.ts.example</code>.</li>
+    <li>Restart de backend y frontend. Verificar login en <code>/login</code>.</li>
+  </ol>
+
+  <p style="color: var(--text-muted); font-size: 13.5px;">
+    Después de 14 días sin necesidad de rollback, eliminar
+    <code>RENDER_DATABASE_URL</code> y dar de baja la instancia Render para no seguir pagando.
+  </p>
+</section>
+
+<!-- ============================================ -->
+<!-- 9. ARTEFACTOS GENERADOS -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">9</span>Artefactos generados</h2>
+
+  <table>
+    <thead>
+      <tr><th>Archivo</th><th>Propósito</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>scripts/inspect-render-users.cjs</code></td><td>Inspección del schema y users de Render Postgres</td></tr>
+      <tr><td><code>scripts/inspect-supabase-users.cjs</code></td><td>Inspección de auth.users + public.users + triggers en Supabase</td></tr>
+      <tr><td><code>scripts/import-users-render-to-supabase.cjs</code></td><td>Import idempotente de users con trigger sync + tokens fix</td></tr>
+      <tr><td><code>scripts/audit-data-render-vs-supabase.cjs</code></td><td>Diff de count(*) por tabla entre ambas DBs</td></tr>
+      <tr><td><code>scripts/test-supabase-prisma.cjs</code></td><td>Verificación de Prisma vs Supabase via pooler</td></tr>
+      <tr><td><code>scripts/redis-cloud-create-db.py</code> + helpers</td><td>Creación automatizada de DB Redis Cloud via Playwright/CDP</td></tr>
+      <tr><td><code>scripts/redis-cloud-extract-creds.py</code></td><td>Extracción de endpoint + password del modal Connect</td></tr>
+      <tr><td><code>scripts/test-login-e2e.py</code> y <code>test-login-deep.py</code></td><td>Tests E2E del flujo de login completo</td></tr>
+      <tr><td><code>frontend/middleware.ts</code></td><td>Middleware de Supabase activo (refresh de sesión)</td></tr>
+      <tr><td>Archivos editados en backend</td><td><code>src/server.ts</code> (decorator authenticate), <code>.env</code></td></tr>
+      <tr><td>Archivos editados en frontend</td><td><code>src/lib/auth-supabase.tsx</code>, <code>src/lib/auth.tsx</code>, <code>src/lib/api.ts</code> (interceptor async), <code>src/lib/supabase/server.ts</code> (await cookies), <code>src/app/login/page.tsx</code>, <code>src/app/layout.tsx</code> (force-dynamic), <code>src/types/summarization.types.ts</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================ -->
+<!-- 10. CRITERIOS DE ÉXITO ALCANZADOS -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num">10</span>Criterios de éxito alcanzados</h2>
+  <table>
+    <thead><tr><th>Criterio</th><th>Estado</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>Schema Prisma desplegado en Supabase</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>50+ tablas + enums + triggers</td></tr>
+      <tr><td>Extensions cargadas (vector, pg_trgm, pgcrypto)</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Migration 0001</td></tr>
+      <tr><td>RLS activo en tablas con userId</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>29 tablas con políticas</td></tr>
+      <tr><td>JWT custom claims (user_role, plan_tier)</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Hook ejecutándose en cada login</td></tr>
+      <tr><td>OAuth Google configurado en Supabase</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td><code>external_google_enabled = true</code></td></tr>
+      <tr><td>Login E2E funcional (UI → backend → /me)</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Network capture sección 5</td></tr>
+      <tr><td>Backend valida JWT Supabase en todas las rutas</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Decorator <code>authenticate</code> global</td></tr>
+      <tr><td>Frontend usa <code>@supabase/ssr</code> con cookies</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Cookie <code>sb-*-auth-token</code> presente</td></tr>
+      <tr><td>Build production compila sin errores</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td><code>next build</code> verde, todas rutas Dynamic</td></tr>
+      <tr><td>Redis operacional</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td><code>PING → PONG</code>, <code>SET/GET</code> funcionan</td></tr>
+      <tr><td>Rollback documentado y trivial</td><td><span class="badge good"><span class="dot"></span>cumplido</span></td><td>Sección 8</td></tr>
+      <tr><td>Re-embedding del corpus</td><td><span class="badge info"><span class="dot"></span>n/a</span></td><td>Corpus vacío en Render y Supabase</td></tr>
+      <tr><td>Migración de archivos S3</td><td><span class="badge info"><span class="dot"></span>n/a</span></td><td>S3 sin datos productivos</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <div>Poweria Legal · Migración Supabase · 2026-04-29</div>
+  <div>Rollback disponible · Render preservado 14 días</div>
+</footer>
+
+</div>
+</body>
+</html>

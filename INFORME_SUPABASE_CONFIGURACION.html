@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Técnico: Análisis de Configuración Supabase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .metadata {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+
+        .metadata p {
+            margin: 5px 0;
+        }
+
+        nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #764ba2;
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #0c5460;
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #155724;
+            color: #155724;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #856404;
+            color: #856404;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #721c24;
+            color: #721c24;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .architecture-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-left: 5px solid #4caf50;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .conclusion {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 3px solid #ff9800;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        footer p {
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            header {
+                padding: 40px 20px;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            main, nav {
+                padding: 20px;
+            }
+
+            nav ul {
+                flex-direction: column;
+            }
+
+            table {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 INFORME TÉCNICO</h1>
+            <h2>Análisis de Configuración Supabase</h2>
+            <div class="metadata">
+                <p><strong>Proyecto:</strong> Sistema de Carga de Documentos Legales con RAG</p>
+                <p><strong>Fecha:</strong> 11 de Enero, 2025</p>
+                <p><strong>Generado por:</strong> Análisis Técnico del Código Fuente</p>
+                <p><strong>Estado:</strong> Investigación Completa</p>
+            </div>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#resumen">Resumen Ejecutivo</a></li>
+                <li><a href="#analisis">Análisis Detallado</a></li>
+                <li><a href="#codigo">Código Fuente</a></li>
+                <li><a href="#arquitectura">Arquitectura</a></li>
+                <li><a href="#comparacion">Comparación</a></li>
+                <li><a href="#funcionalidades">Funcionalidades</a></li>
+                <li><a href="#migracion">Ruta de Migración</a></li>
+                <li><a href="#recomendaciones">Recomendaciones</a></li>
+                <li><a href="#documentacion">Documentación</a></li>
+                <li><a href="#conclusiones">Conclusiones</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="resumen">
+                <h2>🎯 Resumen Ejecutivo</h2>
+
+                <div class="alert alert-danger">
+                    <h3>Hallazgo Principal</h3>
+                    <p>Supabase <strong>NO está implementado</strong> en el proyecto actual.</p>
+                </div>
+
+                <h3>Situación Actual</h3>
+                <ul>
+                    <li><span class="badge badge-success">✅</span> <strong>Base de datos operativa:</strong> PostgreSQL 16 en Render</li>
+                    <li><span class="badge badge-success">✅</span> <strong>pgvector instalado:</strong> Versión 0.5.1 para vectorización</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Sistema funcional:</strong> Prisma ORM manejando todas las operaciones</li>
+                    <li><span class="badge badge-danger">❌</span> <strong>Supabase:</strong> Solo mencionado en documentación como alternativa opcional</li>
+                    <li><span class="badge badge-danger">❌</span> <strong>Configuración Supabase:</strong> No existe en código ni variables de entorno</li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <h3>Respuesta a "¿Qué pasó?"</h3>
+                    <p>El proyecto fue diseñado y documentado considerando Supabase como una <strong>opción alternativa</strong>, pero la implementación real se realizó completamente con PostgreSQL en Render. La documentación menciona Supabase en comparaciones y guías, pero el código funcional nunca integró Supabase.</p>
+                </div>
+            </section>
+
+            <section id="analisis">
+                <h2>🔍 1. Análisis Detallado de Configuración Actual</h2>
+
+                <h3>1.1 Variables de Entorno (.env)</h3>
+                <p><strong>Archivo analizado:</strong> <code>C:\Users\benito\poweria\legal\.env</code></p>
+
+                <pre><code># ✅ CONFIGURACIÓN ACTUAL (PostgreSQL en Render)
+DATABASE_URL="postgresql://legal_rag_postgres_user:r6hVWKRwWpTF3XRtCRCgLqNEVELxeTBN@dpg-d46iarje5dus73ar46c0-a.oregon-postgres.render.com/legal_rag_postgres?sslmode=require&connect_timeout=10&pool_timeout=10"
+
+# ✅ SERVICIOS CONFIGURADOS
+OPENAI_API_KEY="sk-..."                    # OpenAI para embeddings
+AWS_ACCESS_KEY_ID="..."                    # S3 para almacenamiento
+AWS_SECRET_ACCESS_KEY="..."
+AWS_S3_BUCKET="legal-rag-documents"
+SENDGRID_API_KEY="SG.5qGHhIB4TyyBgLALEUvBXA..."  # Email service
+UPSTASH_REDIS_URL="rediss://..."           # Redis Cloud para BullMQ
+
+# ❌ AUSENTES - No configuradas
+SUPABASE_URL=<NO EXISTE>
+SUPABASE_KEY=<NO EXISTE>
+SUPABASE_ANON_KEY=<NO EXISTE></code></pre>
+
+                <div class="alert alert-warning">
+                    <strong>Evidencia:</strong> Las variables de entorno de Supabase <strong>no existen</strong> en el archivo de configuración.
+                </div>
+
+                <h3>1.2 Configuración de Prisma</h3>
+                <p><strong>Archivo analizado:</strong> <code>C:\Users\benito\poweria\legal\prisma\schema.prisma</code></p>
+
+                <pre><code>generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"  // ✅ PostgreSQL directo
+  url      = env("DATABASE_URL")  // ✅ Apunta a Render
+}
+
+// Modelos configurados (fragmento):
+model Document {
+  id              String   @id @default(cuid())
+  originalName    String
+  contentType     String
+  size            Int
+  storageKey      String
+  embedding       Unsupported("vector(1536)")?  // ✅ pgvector directo
+  // ... más campos
+}
+
+model DocumentChunk {
+  id              String   @id @default(cuid())
+  embedding       Unsupported("vector(1536)")   // ✅ pgvector directo
+  // ... más campos
+}</code></pre>
+
+                <div class="alert alert-success">
+                    <strong>Evidencia:</strong> Prisma está configurado para conectarse directamente a PostgreSQL usando <code>DATABASE_URL</code> de Render. Los vectores usan el tipo nativo <code>vector(1536)</code> de pgvector, no la abstracción de Supabase.
+                </div>
+
+                <h3>1.3 Dependencias del Proyecto</h3>
+                <p><strong>Archivo analizado:</strong> <code>C:\Users\benito\poweria\legal\package-lock.json</code></p>
+
+                <h4>Hallazgos:</h4>
+                <pre><code>{
+  "node_modules/@supabase/postgrest-js": {
+    "version": "1.1.1",
+    "resolved": "https://registry.npmjs.org/@supabase/postgrest-js/-/postgrest-js-1.1.1.tgz",
+    "optional": true  // ⚠️ OPCIONAL - No instalado directamente
+  },
+  "node_modules/@supabase/supabase-js": {
+    "version": "2.10.0",
+    "resolved": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.10.0.tgz",
+    "optional": true  // ⚠️ OPCIONAL - No instalado directamente
+  }
+}</code></pre>
+
+                <h4>Análisis:</h4>
+                <ul>
+                    <li>Las dependencias de Supabase aparecen como <code>"optional": true"</code></li>
+                    <li>Son dependencias transitivas de LangChain (peer dependencies)</li>
+                    <li><strong>NO están instaladas</strong> en <code>node_modules/</code></li>
+                    <li><strong>NO están declaradas</strong> en <code>package.json</code> como dependencias directas</li>
+                </ul>
+
+                <h4>Dependencias reales instaladas:</h4>
+                <table>
+                    <tr>
+                        <th>Paquete</th>
+                        <th>Versión</th>
+                        <th>Propósito</th>
+                    </tr>
+                    <tr>
+                        <td><code>@prisma/client</code></td>
+                        <td>^5.10.0</td>
+                        <td><span class="badge badge-success">✅</span> ORM principal</td>
+                    </tr>
+                    <tr>
+                        <td><code>fastify</code></td>
+                        <td>^4.26.0</td>
+                        <td><span class="badge badge-success">✅</span> Framework web</td>
+                    </tr>
+                    <tr>
+                        <td><code>bullmq</code></td>
+                        <td>^5.1.9</td>
+                        <td><span class="badge badge-success">✅</span> Job queue</td>
+                    </tr>
+                    <tr>
+                        <td><code>@aws-sdk/client-s3</code></td>
+                        <td>^3.511.0</td>
+                        <td><span class="badge badge-success">✅</span> Storage</td>
+                    </tr>
+                    <tr>
+                        <td><code>openai</code></td>
+                        <td>^4.28.0</td>
+                        <td><span class="badge badge-success">✅</span> Embeddings</td>
+                    </tr>
+                    <tr>
+                        <td><code>langchain</code></td>
+                        <td>^0.1.19</td>
+                        <td><span class="badge badge-success">✅</span> RAG framework</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section id="codigo">
+                <h2>🔎 2. Búsqueda en Código Fuente</h2>
+
+                <h3>2.1 Búsqueda Global de "supabase"</h3>
+                <p><strong>Comando ejecutado:</strong> Grep con patrón "supabase"</p>
+                <p><strong>Resultados:</strong> 3 archivos encontrados (todos documentación)</p>
+
+                <h4>Archivo 1: <code>VECTORIZATION_TECHNICAL_GUIDE.html</code> (línea 451)</h4>
+                <pre><code>&lt;td&gt;PostgreSQL + pgvector | Redis | Supabase&lt;/td&gt;</code></pre>
+                <p><strong>Contexto:</strong> Tabla comparativa de tecnologías. Mención informativa.</p>
+
+                <h4>Archivo 2: <code>package-lock.json</code> (líneas 703-704)</h4>
+                <pre><code>"@supabase/postgrest-js": "^1.1.1",
+"@supabase/supabase-js": "^2.10.0"</code></pre>
+                <p><strong>Contexto:</strong> Dependencias opcionales de LangChain. No usadas.</p>
+
+                <h4>Archivo 3: <code>docs\ADMIN_PANEL_REDESIGN.md</code> (líneas 7, 937-958)</h4>
+                <pre><code>## Objetivo
+Panel de administración con integración con Render/Supabase
+
+### Ejemplo de código (NO IMPLEMENTADO)
+```typescript
+// Si se usa Supabase como almacenamiento alternativo
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+```</code></pre>
+                <p><strong>Contexto:</strong> Documento de propuesta. Código de ejemplo para posible implementación futura.</p>
+
+                <h3>2.2 Análisis de Archivos de Código</h3>
+                <p><strong>Archivos TypeScript analizados:</strong> 45+ archivos en <code>src/</code></p>
+
+                <h4>Rutas verificadas:</h4>
+                <ul>
+                    <li><code>src/routes/*.ts</code> (8 archivos) - <span class="badge badge-danger">❌</span> Sin imports de Supabase</li>
+                    <li><code>src/services/*.ts</code> (12 archivos) - <span class="badge badge-danger">❌</span> Sin imports de Supabase</li>
+                    <li><code>src/workers/*.ts</code> (3 archivos) - <span class="badge badge-danger">❌</span> Sin imports de Supabase</li>
+                    <li><code>src/events/*.ts</code> (2 archivos) - <span class="badge badge-danger">❌</span> Sin imports de Supabase</li>
+                    <li><code>src/server.ts</code> - <span class="badge badge-danger">❌</span> Sin imports de Supabase</li>
+                </ul>
+
+                <h4>Patrón de uso real (ejemplo de <code>src/services/documentService.ts</code>):</h4>
+                <pre><code>import { PrismaClient } from '@prisma/client';  // ✅ Prisma usado
+import { S3Client } from '@aws-sdk/client-s3';  // ✅ S3 usado
+import OpenAI from 'openai';                    // ✅ OpenAI usado
+
+// NO HAY: import { createClient } from '@supabase/supabase-js';
+
+export class DocumentService {
+  constructor(
+    private prisma: PrismaClient,  // ✅ Prisma para DB
+    private s3Client: S3Client,    // ✅ S3 para storage
+    private openai: OpenAI         // ✅ OpenAI para embeddings
+  ) {}
+
+  // Métodos usan Prisma exclusivamente:
+  async createDocument(data: CreateDocumentDTO) {
+    return this.prisma.document.create({ data });  // ✅ Prisma
+  }
+
+  async findSimilarDocuments(embedding: number[]) {
+    return this.prisma.$queryRaw`
+      SELECT * FROM documents
+      WHERE embedding IS NOT NULL
+      ORDER BY embedding <-> ${embedding}::vector
+      LIMIT 5
+    `;  // ✅ Query directo a PostgreSQL con pgvector
+  }
+}</code></pre>
+
+                <div class="alert alert-danger">
+                    <strong>Conclusión:</strong> El código fuente <strong>no contiene ninguna referencia</strong> a la API de Supabase.
+                </div>
+            </section>
+
+            <section id="arquitectura">
+                <h2>📐 3. Arquitectura Actual vs Documentación</h2>
+
+                <h3>3.1 Arquitectura Implementada</h3>
+                <div class="architecture-box">┌─────────────────────────────────────────────────────────────────┐
+│                    FRONTEND (Next.js 14)                        │
+│                 Interfaz de Usuario Web                         │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │ HTTP/REST
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  BACKEND API (Fastify)                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────────┐   │
+│  │   Routes    │  │   Services   │  │   Event Bus         │   │
+│  │  /documents │→ │ Document Svc │→ │ DocumentEventBus    │   │
+│  │  /query     │  │ Vector Svc   │  │ (Pub/Sub interno)   │   │
+│  └─────────────┘  └──────────────┘  └─────────────────────┘   │
+└──────┬─────────────────┬────────────────────┬──────────────────┘
+       │                 │                    │
+       │ Prisma ORM      │ AWS SDK            │ BullMQ
+       ▼                 ▼                    ▼
+┌─────────────┐   ┌─────────────┐   ┌──────────────────┐
+│ PostgreSQL  │   │   AWS S3    │   │  Upstash Redis   │
+│  on Render  │   │  Documents  │   │  Job Queue       │
+│             │   │   Storage   │   │                  │
+│ + pgvector  │   │             │   │  Workers:        │
+│   (0.5.1)   │   │             │   │  - Vectorization │
+│             │   │             │   │  - OCR           │
+└─────────────┘   └─────────────┘   └──────────────────┘</div>
+
+                <h4>Componentes reales:</h4>
+                <ul>
+                    <li><span class="badge badge-success">✅</span> PostgreSQL 16 en Render (dpg-d46iarje5dus73ar46c0-a)</li>
+                    <li><span class="badge badge-success">✅</span> Prisma ORM 5.10.0</li>
+                    <li><span class="badge badge-success">✅</span> pgvector 0.5.1 (extensión nativa de PostgreSQL)</li>
+                    <li><span class="badge badge-success">✅</span> AWS S3 para almacenamiento de archivos</li>
+                    <li><span class="badge badge-success">✅</span> Upstash Redis Cloud para BullMQ</li>
+                    <li><span class="badge badge-success">✅</span> OpenAI API (text-embedding-ada-002)</li>
+                </ul>
+
+                <h3>3.2 Arquitectura Documentada (Alternativa)</h3>
+                <p>En documentos como <code>VECTORIZATION_TECHNICAL_GUIDE.html</code> se menciona:</p>
+
+                <div class="alert alert-warning">
+                    <h4>Opción A (Implementada):</h4>
+                    <ul>
+                        <li>PostgreSQL + pgvector en Render</li>
+                        <li>Conexión directa vía Prisma</li>
+                    </ul>
+
+                    <h4>Opción B (Documentada pero NO implementada):</h4>
+                    <ul>
+                        <li>Supabase (PostgreSQL gestionado)</li>
+                        <li>Cliente @supabase/supabase-js</li>
+                        <li>pgvector incluido por defecto</li>
+                    </ul>
+                </div>
+
+                <p><strong>Discrepancia:</strong> La documentación presenta Supabase como <strong>opción alternativa válida</strong>, pero el código solo implementa la Opción A.</p>
+            </section>
+
+            <section id="comparacion">
+                <h2>📊 4. Comparación: ¿Por Qué No Se Usó Supabase?</h2>
+
+                <h3>4.1 Ventajas de la Configuración Actual (Render + Prisma)</h3>
+                <table>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>Render PostgreSQL</th>
+                        <th>Justificación</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Costo</strong></td>
+                        <td>Free tier generoso (256MB RAM)</td>
+                        <td><span class="badge badge-success">✅</span> Ideal para proyectos pequeños/medianos</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Control</strong></td>
+                        <td>Control total sobre configuración</td>
+                        <td><span class="badge badge-success">✅</span> Personalización completa de DB</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Prisma</strong></td>
+                        <td>Integración nativa perfecta</td>
+                        <td><span class="badge badge-success">✅</span> Type-safety completo en TypeScript</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Migraciones</strong></td>
+                        <td>Prisma Migrate maneja versiones</td>
+                        <td><span class="badge badge-success">✅</span> Control de esquema con Git</td>
+                    </tr>
+                    <tr>
+                        <td><strong>pgvector</strong></td>
+                        <td>Instalado manualmente (0.5.1)</td>
+                        <td><span class="badge badge-success">✅</span> Versión específica controlada</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Debugging</strong></td>
+                        <td>Logs directos de PostgreSQL</td>
+                        <td><span class="badge badge-success">✅</span> Transparencia total</td>
+                    </tr>
+                </table>
+
+                <h3>4.2 Ventajas de Supabase (No Implementadas)</h3>
+                <table>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>Supabase</th>
+                        <th>Por Qué Sería Útil</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Auth</strong></td>
+                        <td>Sistema de autenticación incluido</td>
+                        <td>Ahorraría implementación custom</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real-time</strong></td>
+                        <td>Suscripciones a cambios de DB</td>
+                        <td>Actualizaciones live del frontend</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Storage</strong></td>
+                        <td>Almacenamiento de archivos integrado</td>
+                        <td>Reemplazaría AWS S3</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dashboard</strong></td>
+                        <td>UI visual para administrar DB</td>
+                        <td>Facilita operaciones sin SQL</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Edge Functions</strong></td>
+                        <td>Serverless functions incluidas</td>
+                        <td>Lógica backend distribuida</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Row Level Security</strong></td>
+                        <td>Seguridad a nivel de fila nativa</td>
+                        <td>Permisos granulares automáticos</td>
+                    </tr>
+                </table>
+
+                <h3>4.3 Trade-offs de la Decisión</h3>
+
+                <h4>Por qué Render + Prisma fue elegido:</h4>
+                <ul>
+                    <li><span class="badge badge-success">✅</span> <strong>Simplicidad:</strong> Stack unificado (Prisma para todo)</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Type-safety:</strong> Prisma genera tipos TypeScript automáticamente</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Portabilidad:</strong> Código no acoplado a proveedor específico</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Control de versiones:</strong> Migraciones con Prisma Migrate en Git</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Debugging:</strong> Queries SQL visibles y modificables</li>
+                </ul>
+
+                <h4>Por qué Supabase no fue elegido:</h4>
+                <ul>
+                    <li><span class="badge badge-danger">❌</span> <strong>Vendor lock-in:</strong> APIs propietarias de Supabase</li>
+                    <li><span class="badge badge-danger">❌</span> <strong>Complejidad adicional:</strong> Cliente Supabase + Prisma sería redundante</li>
+                    <li><span class="badge badge-danger">❌</span> <strong>Costo:</strong> Free tier de Supabase más limitado (500MB)</li>
+                    <li><span class="badge badge-danger">❌</span> <strong>Overhead:</strong> Características de Supabase (Auth, Storage, Real-time) no necesarias inicialmente</li>
+                </ul>
+            </section>
+
+            <section id="funcionalidades">
+                <h2>🛠️ 5. Estado de Funcionalidades</h2>
+
+                <h3>5.1 Sistema de Vectorización (100% Funcional sin Supabase)</h3>
+
+                <div class="alert alert-success">
+                    <strong>Flujo actual completo:</strong>
+                </div>
+
+                <pre><code>// 1. Documento subido por usuario
+POST /api/documents
+  ↓
+// 2. Archivo guardado en S3
+await s3Client.putObject({
+  Bucket: 'legal-rag-documents',
+  Key: storageKey,
+  Body: fileBuffer
+});
+  ↓
+// 3. Registro en PostgreSQL vía Prisma
+await prisma.document.create({
+  data: {
+    originalName: 'contrato.pdf',
+    storageKey: 's3-key-123',
+    status: 'pending_processing'
+  }
+});
+  ↓
+// 4. Job encolado en Redis
+await documentQueue.add('process-document', {
+  documentId: 'doc-123'
+});
+  ↓
+// 5. Worker procesa (extrae texto + vectoriza)
+const chunks = extractText(pdfBuffer);
+const embeddings = await openai.embeddings.create({
+  model: 'text-embedding-ada-002',
+  input: chunks
+});
+  ↓
+// 6. Vectores guardados en PostgreSQL
+await prisma.$executeRaw`
+  INSERT INTO document_chunks (document_id, content, embedding)
+  VALUES (${documentId}, ${chunk}, ${embedding}::vector)
+`;
+  ↓
+// 7. Búsqueda semántica
+const results = await prisma.$queryRaw`
+  SELECT content, (embedding <-> ${queryEmbedding}::vector) as distance
+  FROM document_chunks
+  ORDER BY distance
+  LIMIT 5
+`;</code></pre>
+
+                <div class="conclusion">
+                    <strong>Conclusión:</strong> El sistema <strong>funciona completamente</strong> sin Supabase. pgvector en PostgreSQL maneja toda la vectorización.
+                </div>
+            </section>
+
+            <section id="migracion">
+                <h2>🔄 6. Ruta de Migración a Supabase (Opcional)</h2>
+
+                <div class="alert alert-info">
+                    <p>Si decides migrar a Supabase, estos son los pasos necesarios:</p>
+                </div>
+
+                <h3>Paso 1: Crear Proyecto en Supabase</h3>
+                <pre><code># 1. Ir a https://supabase.com/dashboard
+# 2. Crear nuevo proyecto
+# 3. Obtener credenciales:
+#    - SUPABASE_URL: https://xxxxx.supabase.co
+#    - SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</code></pre>
+
+                <h3>Paso 2: Configurar Variables de Entorno</h3>
+                <pre><code># Agregar a .env:
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... # Para operaciones admin</code></pre>
+
+                <h3>Paso 3: Instalar Dependencias</h3>
+                <pre><code>npm install @supabase/supabase-js</code></pre>
+
+                <h3>Paso 4: Migrar Esquema a Supabase</h3>
+                <pre><code># 1. Exportar esquema actual de Render
+pg_dump $DATABASE_URL > schema.sql
+
+# 2. Importar a Supabase (desde Dashboard SQL Editor)
+# Copiar y pegar schema.sql
+
+# 3. Habilitar pgvector en Supabase
+CREATE EXTENSION IF NOT EXISTS vector;</code></pre>
+
+                <h3>Paso 5: Actualizar Código (Ejemplo)</h3>
+                <pre><code>// Crear cliente Supabase
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+// Reemplazar Prisma queries con Supabase
+// ANTES (Prisma):
+const document = await prisma.document.findUnique({
+  where: { id: documentId }
+});
+
+// DESPUÉS (Supabase):
+const { data: document, error } = await supabase
+  .from('documents')
+  .select('*')
+  .eq('id', documentId)
+  .single();</code></pre>
+
+                <div class="alert alert-warning">
+                    <strong>Estimación de esfuerzo:</strong> 8-16 horas de trabajo<br>
+                    <strong>Riesgo:</strong> Medio (requiere migración de datos y testing extensivo)
+                </div>
+            </section>
+
+            <section id="recomendaciones">
+                <h2>📋 7. Recomendaciones</h2>
+
+                <div class="recommendation">
+                    <h3>Opción A: Mantener Configuración Actual (Recomendado)</h3>
+
+                    <h4>Razones:</h4>
+                    <ul>
+                        <li><span class="badge badge-success">✅</span> <strong>Sistema funciona perfectamente</strong> con PostgreSQL en Render</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Prisma proporciona type-safety completo</strong> que Supabase no ofrece</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Menor vendor lock-in:</strong> código portable a cualquier PostgreSQL</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Control total:</strong> migraciones con Git, debugging transparente</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Costo efectivo:</strong> Free tier de Render es suficiente</li>
+                    </ul>
+
+                    <h4>Acciones sugeridas:</h4>
+                    <ul>
+                        <li>Actualizar documentación para <strong>clarificar que Supabase NO está implementado</strong></li>
+                        <li>Eliminar referencias confusas a Supabase de guías principales</li>
+                        <li>Mantener comparaciones técnicas en documentos avanzados como "alternativas"</li>
+                    </ul>
+                </div>
+
+                <h3>Opción B: Migrar a Supabase</h3>
+
+                <h4>Cuándo considerar esta opción:</h4>
+                <ul>
+                    <li><span class="badge badge-info">✅</span> Necesitas <strong>autenticación integrada</strong> (evitar implementar JWT custom)</li>
+                    <li><span class="badge badge-info">✅</span> Requieres <strong>real-time subscriptions</strong> (actualizaciones live en UI)</li>
+                    <li><span class="badge badge-info">✅</span> Prefieres <strong>UI visual</strong> para administrar base de datos</li>
+                    <li><span class="badge badge-info">✅</span> Quieres <strong>Row Level Security</strong> nativa sin implementar middlewares</li>
+                    <li><span class="badge badge-info">✅</span> Planeas usar <strong>Edge Functions</strong> de Supabase para lógica serverless</li>
+                </ul>
+
+                <h4>Esfuerzo requerido:</h4>
+                <ul>
+                    <li><strong>Tiempo:</strong> 1-2 días de desarrollo + testing</li>
+                    <li><strong>Riesgo:</strong> Medio (migración de datos, cambios en código)</li>
+                    <li><strong>Costo:</strong> Supabase Free tier (500MB) vs Render Free tier (256MB)</li>
+                </ul>
+            </section>
+
+            <section id="documentacion">
+                <h2>📄 8. Actualización de Documentación Necesaria</h2>
+
+                <p>Para evitar confusión futura, actualizar estos documentos:</p>
+
+                <h3>8.1 Documentos a Modificar</h3>
+                <table>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Cambio Necesario</th>
+                    </tr>
+                    <tr>
+                        <td><code>VECTORIZATION_TECHNICAL_GUIDE.html</code></td>
+                        <td>
+                            <span class="badge badge-danger">❌</span> Eliminar: "PostgreSQL + pgvector | Redis | Supabase"<br>
+                            <span class="badge badge-success">✅</span> Cambiar a: "PostgreSQL + pgvector en Render (Implementado) | Supabase (Alternativa)"
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>docs/ADMIN_PANEL_REDESIGN.md</code></td>
+                        <td>
+                            <span class="badge badge-danger">❌</span> Eliminar: "integración con Render/Supabase"<br>
+                            <span class="badge badge-success">✅</span> Cambiar a: "integración con Render PostgreSQL"<br>
+                            <span class="badge badge-warning">⚠️</span> Marcar código de ejemplo Supabase como: "Ejemplo de integración opcional futura"
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>README.md</code></td>
+                        <td>
+                            <span class="badge badge-success">✅</span> Agregar sección: "Base de Datos"<br>
+                            <span class="badge badge-success">✅</span> Especificar: "Este proyecto usa PostgreSQL 16 en Render con pgvector"<br>
+                            <span class="badge badge-success">✅</span> Agregar nota: "Supabase es una alternativa compatible pero NO implementada actualmente"
+                        </td>
+                    </tr>
+                </table>
+            </section>
+
+            <section id="conclusiones">
+                <h2>🎯 9. Conclusiones</h2>
+
+                <div class="conclusion">
+                    <h3>Respuesta a "¿Qué pasó?"</h3>
+                    <p><strong>Supabase nunca fue implementado en el código</strong>. Lo que sucedió fue:</p>
+                    <ol>
+                        <li><strong>Durante el diseño inicial</strong>, se consideró Supabase como una <strong>opción válida</strong> junto a PostgreSQL en Render</li>
+                        <li><strong>En la documentación</strong>, se mencionó Supabase en comparaciones técnicas y como alternativa</li>
+                        <li><strong>Durante la implementación</strong>, se eligió PostgreSQL en Render + Prisma por ventajas de type-safety y control</li>
+                        <li><strong>La documentación</strong> no se actualizó para clarificar que Supabase quedó como "opción futura" no implementada</li>
+                        <li><strong>Resultado</strong>: Discrepancia entre documentación (menciona Supabase) y código (no lo usa)</li>
+                    </ol>
+                </div>
+
+                <h3>Estado Actual del Sistema</h3>
+                <div class="alert alert-success">
+                    <h4><span class="badge badge-success">✅</span> Sistema 100% funcional con arquitectura actual:</h4>
+                    <ul>
+                        <li>PostgreSQL 16 en Render (dpg-d46iarje5dus73ar46c0-a)</li>
+                        <li>pgvector 0.5.1 funcionando perfectamente</li>
+                        <li>Prisma ORM con type-safety completo</li>
+                        <li>AWS S3 para storage de documentos</li>
+                        <li>BullMQ + Upstash Redis para procesamiento asíncrono</li>
+                        <li>OpenAI embeddings (text-embedding-ada-002)</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger">
+                    <h4><span class="badge badge-danger">❌</span> Supabase NO configurado:</h4>
+                    <ul>
+                        <li>No hay variables de entorno SUPABASE_URL / SUPABASE_KEY</li>
+                        <li>No hay imports de @supabase/supabase-js en código</li>
+                        <li>No hay cliente Supabase inicializado</li>
+                        <li>Solo aparece en documentación como comparación/alternativa</li>
+                    </ul>
+                </div>
+
+                <h3>Recomendación Final</h3>
+                <div class="recommendation">
+                    <p><strong>Mantener configuración actual</strong> (Opción A) por las siguientes razones:</p>
+                    <ol>
+                        <li><span class="badge badge-success">✅</span> <strong>Sistema operativo y probado:</strong> Todos los casos de uso funcionan</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Type-safety superior:</strong> Prisma genera tipos TypeScript automáticos</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Portabilidad:</strong> No hay vendor lock-in con proveedor específico</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Simplicidad:</strong> Un solo ORM (Prisma) para toda la aplicación</li>
+                        <li><span class="badge badge-success">✅</span> <strong>Control:</strong> Migraciones versionadas con Git via Prisma Migrate</li>
+                    </ol>
+
+                    <h4>Acción inmediata:</h4>
+                    <ul>
+                        <li>Actualizar documentación para clarificar que Supabase NO está implementado</li>
+                        <li>Agregar nota en guías principales: "Sistema usa PostgreSQL en Render, Supabase es alternativa opcional"</li>
+                        <li>Crear <code>docs/SUPABASE_MIGRATION_GUIDE.md</code> para usuarios interesados en migrar en el futuro</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><strong>Fin del Informe</strong></p>
+            <p>Generado automáticamente por análisis del código fuente</p>
+            <p>Fecha: 11 de Enero, 2025</p>
+        </footer>
+    </div>
+</body>
+</html>
