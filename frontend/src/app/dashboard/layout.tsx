@@ -8,6 +8,8 @@ import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
 import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
+import { TourProvider } from '@/components/help/TourProvider';
+import { HelpFab } from '@/components/help/HelpFab';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -105,10 +107,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
+                  // Atributos data-tour para que el tour engine pueda anclar tooltips.
+                  const tourAttr = item.href === '/dashboard'          ? 'nav-cases'
+                                 : item.href === '/dashboard/calendar' ? 'nav-calendar'
+                                 : item.href === '/dashboard/tasks'    ? 'nav-tasks'
+                                 : item.href === '/dashboard/finance'  ? 'nav-finance'
+                                 : undefined;
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      data-tour={tourAttr}
                       className={cn(
                         'group/nav relative inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors',
                         active
@@ -166,6 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Cmd+K trigger */}
               <button
+                data-tour="cmdk-trigger"
                 onClick={() => {
                   const ev = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
                   window.dispatchEvent(ev);
@@ -182,7 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <CountrySelector variant="compact" />
 
               {/* User dropdown */}
-              <div className="relative" ref={menuRef}>
+              <div className="relative" ref={menuRef} data-tour="user-menu">
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
                   className={cn(
@@ -344,10 +354,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        {children}
-      </main>
+      {/* Main Content + tour engine + help FAB.
+          TourProvider envuelve para que cualquier descendiente pueda llamar useTour(). */}
+      <TourProvider>
+        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          {children}
+        </main>
+        <HelpFab />
+      </TourProvider>
 
       {/* Cmd+K command palette — global */}
       <CommandPaletteProvider />

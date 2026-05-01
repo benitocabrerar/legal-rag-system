@@ -409,6 +409,7 @@ export default function Home() {
             links={[
               ['#empresa', 'Sobre COGNITEX'],
               ['https://www.cognitex.app', 'cognitex.app'],
+              ['/help', 'Centro de ayuda'],
               ['#contacto', 'Contacto'],
             ]}
           />

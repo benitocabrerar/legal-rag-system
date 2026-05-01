@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
 import {
-  Search, Plus, Calendar, CheckSquare, Briefcase, Sparkles, AlertTriangle, Clock, Settings, DollarSign,
+  Search, Plus, Calendar, CheckSquare, Briefcase, Sparkles, AlertTriangle, Clock, Settings, DollarSign, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,19 @@ const COMMANDS: CommandItemDef[] = [
   { id: 'go-finance',   group: 'Navegar',  label: 'Finanzas',                          icon: DollarSign,  run: (r) => r.push('/dashboard/finance') },
   { id: 'go-settings',  group: 'Navegar',  label: 'Ajustes',                           icon: Settings,    run: (r) => r.push('/dashboard/settings') },
 
+  // Ayuda
+  { id: 'help-center',  group: 'Filtros rápidos', label: 'Centro de ayuda',                icon: BookOpen,      keywords: ['help','ayuda','docs','soporte'], run: (r) => r.push('/help') },
+  { id: 'tour-page',    group: 'Filtros rápidos', label: 'Iniciar tour de esta página',    icon: Sparkles,      keywords: ['tour','onboarding','guía'],      run: () => {
+    // Detecta tour por ruta y dispara el inicio.
+    if (typeof window === 'undefined') return;
+    const p = window.location.pathname;
+    const id = p.startsWith('/dashboard/calendar') ? 'calendar'
+             : p.startsWith('/dashboard/tasks') ? 'tasks'
+             : p.startsWith('/dashboard/finance') ? 'finance'
+             : p.includes('/litigation') ? 'litigation'
+             : 'dashboard';
+    window.dispatchEvent(new CustomEvent('poweria-start-tour', { detail: { id } }));
+  } },
   // Filtros rápidos
   { id: 'collection',   group: 'Filtros rápidos', label: 'Cobranza vencida',               icon: AlertTriangle, keywords: ['collection','cobranza','overdue'], run: (r) => r.push('/dashboard/finance?tab=collection') },
   { id: 'overdue',      group: 'Filtros rápidos', label: 'Tareas vencidas',                icon: AlertTriangle, keywords: ['overdue','vencidas'], run: (r) => r.push('/dashboard/tasks?filter=overdue') },
