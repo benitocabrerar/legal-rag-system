@@ -10,19 +10,23 @@ const DYNAMIC_CACHE = 'legal-rag-dynamic-v1';
 // Assets to cache on install
 const STATIC_ASSETS = [
   '/',
-  '/offline',
   '/manifest.json',
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets (best-effort: skip 404s instead of failing the whole install)
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing...');
 
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(STATIC_CACHE).then((cache) =>
+      Promise.all(
+        STATIC_ASSETS.map((url) =>
+          cache.add(url).catch((err) =>
+            console.warn('[Service Worker] Skipped (failed to cache):', url, err.message)
+          )
+        )
+      )
+    )
   );
 
   // Force the waiting service worker to become active
