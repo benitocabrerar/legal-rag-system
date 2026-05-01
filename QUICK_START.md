@@ -1,193 +1,251 @@
-# Quick Start Guide - Legal Document Upload Form
+# 🚀 Quick Start - PDF Viewer con S3
 
-## Installation Steps
+## Inicio Rápido (5 minutos)
 
-### 1. Verify Files Are in Place
-
-```bash
-# Check that all files exist
-ls frontend/src/components/admin/LegalDocumentUploadForm.tsx
-ls frontend/src/lib/api-v2-addon.ts
-ls frontend/src/app/admin/legal-library/page.tsx
-```
-
-### 2. Install Dependencies (if needed)
+### 1. Configurar AWS (una sola vez)
 
 ```bash
-cd frontend
-npm install lucide-react  # Icon library
+# Ver guía completa en: AWS_S3_SETUP_GUIDE.md
+# Resumen:
+# 1. Crear bucket S3: legal-rag-documents
+# 2. Configurar CORS
+# 3. Crear IAM user con permisos
+# 4. Copiar Access Key ID y Secret Key
 ```
 
-### 3. Environment Configuration
+### 2. Configurar Variables de Entorno
 
-Create or update `frontend/.env.local`:
+Editar `.env`:
 
 ```env
-NEXT_PUBLIC_API_URL=https://legal-rag-api-qnew.onrender.com
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="AKIA..."  # De Step 1
+AWS_SECRET_ACCESS_KEY="..."   # De Step 1
+AWS_S3_BUCKET="legal-rag-documents"
 ```
 
-### 4. Start Development Server
+### 3. Instalar Dependencias (si no están)
 
 ```bash
+# Backend
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+
+# Frontend
+cd frontend
+npm install react-pdf
+```
+
+### 4. Iniciar Aplicación
+
+```bash
+# Terminal 1 - Backend
+npm run dev
+
+# Terminal 2 - Frontend
 cd frontend
 npm run dev
 ```
 
-### 5. Access the Upload Form
-
-Navigate to: `http://localhost:3000/admin/legal-library`
-
-## Usage Instructions
-
-### Uploading a Legal Document
-
-1. Click "Subir Documento Legal" button
-2. Fill in required fields:
-   - **Tipo de Norma**: Select from 14 options
-   - **Título de la Norma**: Enter full title (min 5 characters)
-   - **Jerarquía Legal**: Select legal hierarchy level
-   - **Archivo PDF**: Click to select PDF file (max 50MB)
-
-3. Optional fields:
-   - Tipo de Publicación: Defaults to "Ordinario"
-   - Número de Publicación: Registry office number
-   - Fecha de Publicación: Publication date
-   - Estado: Original or Reformado
-
-4. If Estado = "Reformado", you must enter "Fecha de última reforma"
-
-5. Click "Subir Documento Legal"
-
-6. Wait for processing (you'll see a progress bar)
-
-7. Success! Document is now available in the RAG system
-
-## Troubleshooting
-
-### "Error de conexión con el servidor"
-**Fix:** Check internet connection and API URL in `.env.local`
-
-### "Only administrators can create legal documents"
-**Fix:** Log in with an admin account
-
-### "Debe seleccionar un archivo PDF"
-**Fix:** Make sure you've selected a file and it's a PDF
-
-### "El archivo no puede superar los 50MB"
-**Fix:** Compress the PDF or split it into smaller files
-
-### Upload gets stuck
-**Possible causes:**
-1. Large file taking time to process
-2. Network timeout
-3. Backend not responding
-
-**Fix:**
-- Refresh page and try again
-- Check browser console for errors
-- Verify backend is running
-
-## Backend Requirements
-
-The backend must have these endpoints deployed:
+### 5. Probar
 
 ```
-POST /api/v2/legal-documents       (Create)
-GET  /api/v2/legal-documents       (List)
-GET  /api/v2/legal-documents/:id   (Get)
-PUT  /api/v2/legal-documents/:id   (Update)
-DELETE /api/v2/legal-documents/:id (Delete)
-GET  /api/v2/legal-documents/enums (Get options)
-POST /api/v2/legal-documents/search (Search)
+1. Abrir: http://localhost:3000/admin/legal-library
+2. Click "Upload Document"
+3. Seleccionar PDF
+4. Llenar formulario
+5. Submit
+
+6. Click "Edit" en documento subido
+7. PDF se carga en visor izquierdo
+8. Usar controles para navegar
 ```
 
-## Testing the Form
+---
 
-### Test Case 1: Basic Upload
-1. Fill all required fields
-2. Upload a small PDF (< 1MB)
-3. Verify success message appears
-4. Check document appears in list
+## 🎯 Controles del Visor
 
-### Test Case 2: Validation
-1. Try to submit without filling fields
-2. Verify error messages appear in Spanish
-3. Fill fields one by one
-4. Verify errors clear as fields are filled
+| Acción | Control |
+|--------|---------|
+| **Página anterior** | Click ◀ o tecla ← |
+| **Página siguiente** | Click ▶ o tecla → |
+| **Ir a página** | Escribir número + Enter |
+| **Zoom in** | Click + o tecla + |
+| **Zoom out** | Click - o tecla - |
+| **Zoom custom** | Dropdown 50%-200% |
+| **Ajustar ancho** | Click "Ancho" |
+| **Ajustar página** | Click "Página" |
+| **Rotar** | Click 🔄 |
+| **Buscar** | Click 🔍 o Ctrl+F |
+| **Descargar** | Click ⬇ |
+| **Imprimir** | Click 🖨 |
 
-### Test Case 3: File Validation
-1. Try to upload a non-PDF file
-2. Verify rejection message
-3. Try to upload a file > 50MB
-4. Verify size limit message
+---
 
-### Test Case 4: Reformed Document
-1. Select Estado = "Reformado"
-2. Verify "Fecha de última reforma" field appears
-3. Try to submit without filling it
-4. Verify validation error
+## 🐛 Troubleshooting Rápido
 
-## Common Field Values
+### PDF no carga
+```bash
+# 1. Verificar logs backend
+grep "S3" logs/app.log
 
-### Tipo de Norma Examples:
-- ORDINARY_LAW (Ley Ordinaria)
-- ORGANIC_CODE (Código Orgánico)
-- REGULATION_EXECUTIVE (Decreto Ejecutivo)
+# 2. Verificar S3
+aws s3 ls s3://legal-rag-documents/legal-documents/
 
-### Jerarquía Legal Examples:
-- CONSTITUCION
-- LEYES_ORGANICAS
-- CODIGOS_ORGANICOS
+# 3. Verificar metadata
+psql> SELECT metadata FROM legal_documents WHERE id = '...';
+# Debe tener: s3Key, s3Bucket, fileSize
+```
 
-### Tipo de Publicación Examples:
-- ORDINARIO
-- SUPLEMENTO
-- SUPLEMENTO_ESPECIAL
+### Error de credentials
+```bash
+# Test credentials
+aws s3 ls s3://legal-rag-documents/ --region us-east-1
 
-## API Response Format
+# Si falla: revisar .env
+# AWS_ACCESS_KEY_ID
+# AWS_SECRET_ACCESS_KEY
+# AWS_REGION
+```
 
-### Success Response:
+### CORS error
+```
+# Ir a S3 Console
+# → Bucket → Permissions → CORS
+# Verificar AllowedOrigins incluye tu dominio
+```
+
+## 📋 Verificación Rápida
+
+### Backend Endpoints Requeridos
+```
+GET  /api/v2/legal-documents/:id/file  (Download PDF via presigned URL)
+POST /api/v2/legal-documents           (Upload with S3 integration)
+DELETE /api/v2/legal-documents/:id     (Delete from DB and S3)
+```
+
+### Dependencias Frontend
 ```json
 {
-  "success": true,
-  "document": {
-    "id": "uuid",
-    "normTitle": "Document Title",
-    "chunksCount": 45
+  "dependencies": {
+    "react-pdf": "^7.7.0",
+    "pdfjs-dist": "^3.11.174"
   }
 }
 ```
 
-### Error Response:
-```json
-{
-  "error": "Validation Error",
-  "details": [
-    {
-      "path": ["normTitle"],
-      "message": "Title is required"
-    }
-  ]
-}
+### Variables de Entorno Críticas
+```env
+AWS_REGION="us-east-1"              # Región S3
+AWS_ACCESS_KEY_ID="AKIA..."         # Credenciales IAM
+AWS_SECRET_ACCESS_KEY="..."         # Credenciales IAM
+AWS_S3_BUCKET="legal-rag-documents" # Nombre del bucket
 ```
-
-## Next Steps
-
-After successful upload:
-1. Document is automatically chunked
-2. Embeddings are generated
-3. Document becomes searchable in RAG system
-4. Available immediately for queries
-
-## Support
-
-If you encounter issues:
-1. Check browser console (F12)
-2. Check Network tab for API calls
-3. Review error messages carefully
-4. Check FRONTEND_IMPLEMENTATION.md for detailed troubleshooting
 
 ---
 
-**Last Updated:** 2025-11-09
-**Status:** Ready for Production ✅
+## 🧪 Testing del PDF Viewer
+
+### Test Case 1: Carga Básica
+1. Upload documento PDF
+2. Click "Edit" en la lista
+3. Verificar PDF carga en panel izquierdo
+4. Verificar controles funcionan
+5. Verificar navegación entre páginas
+
+### Test Case 2: Zoom y Rotación
+1. Click "+" para zoom in
+2. Click "-" para zoom out
+3. Usar dropdown para zoom custom (75%, 150%)
+4. Click "Ancho" para ajustar ancho
+5. Click "Página" para ajustar página completa
+6. Click 🔄 para rotar
+
+### Test Case 3: Búsqueda en PDF
+1. Click icono 🔍 o Ctrl+F
+2. Escribir término de búsqueda
+3. Verificar highlights en texto
+4. Navegar entre resultados
+5. Verificar contador "X de Y resultados"
+
+### Test Case 4: Descarga e Impresión
+1. Click ⬇ para descargar
+2. Verificar archivo descarga con nombre correcto
+3. Click 🖨 para imprimir
+4. Verificar diálogo de impresión del navegador
+
+### Test Case 5: Navegación por Teclado
+1. Presionar → para siguiente página
+2. Presionar ← para página anterior
+3. Presionar + para zoom in
+4. Presionar - para zoom out
+5. Verificar todas las teclas funcionan
+
+---
+
+## 📊 Estructura de Datos
+
+### Metadata en Base de Datos
+```json
+{
+  "s3Key": "legal-documents/abc-123/1699999999_documento.pdf",
+  "s3Bucket": "legal-rag-documents",
+  "fileSize": 1234567,
+  "originalFilename": "documento.pdf"
+}
+```
+
+### Presigned URL Flow
+```
+1. Frontend: GET /api/v2/legal-documents/:id/file
+2. Backend: Genera presigned URL (válida 1 hora)
+3. Backend: Redirect 302 a URL de S3
+4. Browser: Descarga directamente desde S3
+```
+
+---
+
+## 🔍 Logs a Monitorear
+
+### Upload Exitoso
+```
+PDF uploaded to S3: legal-documents/abc-123/1699999999_documento.pdf (1234567 bytes)
+```
+
+### Download Exitoso
+```
+S3 download url generated for: legal-documents/abc-123/1699999999_documento.pdf
+```
+
+### Delete Exitoso
+```
+Deleted file from S3: legal-documents/abc-123/1699999999_documento.pdf
+```
+
+### Errores Comunes
+```
+S3 upload failed: ...
+S3 download error: ...
+S3 delete error: ...
+```
+
+---
+
+## 📚 Documentación Relacionada
+
+- **S3_INTEGRATION_COMPLETE.md** - Detalles técnicos completos
+- **AWS_S3_SETUP_GUIDE.md** - Guía de configuración AWS (5 min)
+- **PROYECTO_VISOR_PDF_FINAL.md** - Resumen ejecutivo del proyecto
+- **FRONTEND_IMPLEMENTATION.md** - Implementación frontend detallada
+
+---
+
+## ✅ Estado Final
+
+**Implementación:** 100% Completa
+**S3 Integration:** ✅ Funcionando
+**PDF Viewer:** ✅ Funcionando
+**Controles:** ✅ Todos operativos
+**Documentación:** ✅ Completa
+
+**Last Updated:** 2025-01-11
+**Status:** Production Ready ✅
