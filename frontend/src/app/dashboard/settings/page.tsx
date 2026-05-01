@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getAuthToken } from '@/lib/get-auth-token';
+import { useTranslation } from '@/lib/i18n';
+import CountrySelector from '@/components/CountrySelector';
 
 interface TwoFactorStatus {
   enabled: boolean;
@@ -14,6 +17,7 @@ interface TwoFactorSetup {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [setupMode, setSetupMode] = useState(false);
@@ -32,7 +36,7 @@ export default function SettingsPage() {
 
   const loadTwoFactorStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = await getAuthToken();
       const response = await fetch('/api/v1/auth/2fa/status', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -55,7 +59,7 @@ export default function SettingsPage() {
     setProcessingAction(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = await getAuthToken();
       const response = await fetch('/api/v1/auth/2fa/setup', {
         method: 'POST',
         headers: {
@@ -87,7 +91,7 @@ export default function SettingsPage() {
     setProcessingAction(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = await getAuthToken();
       const response = await fetch('/api/v1/auth/2fa/verify', {
         method: 'POST',
         headers: {
@@ -123,7 +127,7 @@ export default function SettingsPage() {
     setProcessingAction(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = await getAuthToken();
       const response = await fetch('/api/v1/auth/2fa/disable', {
         method: 'POST',
         headers: {
@@ -184,7 +188,44 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Configuración de Seguridad</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('settings.title')}</h1>
+
+      {/* Country / Jurisdiction selector */}
+      <div className="mb-6">
+        <CountrySelector variant="card" />
+      </div>
+
+      {/* Lawyer Profile Section */}
+      <div className="mb-6 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg shadow-sm flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">⚖️ {t('settings.lawyer')}</h2>
+          <p className="text-sm text-gray-700 mt-1">
+            {t('settings.lawyer')}
+          </p>
+        </div>
+        <a
+          href="/dashboard/settings/lawyer"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap"
+        >
+          {t('common.edit')}
+        </a>
+      </div>
+
+      {/* Password Section */}
+      <div className="mb-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">{t('auth.password')}</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {t('settings.changePassword')}
+          </p>
+        </div>
+        <a
+          href="/dashboard/settings/password"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors"
+        >
+          {t('settings.changePassword')}
+        </a>
+      </div>
 
       {/* Success Message */}
       {success && (

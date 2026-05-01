@@ -6,6 +6,10 @@ import { casesAPI, documentsAPI, queryAPI } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { LegalType, Priority } from '@/lib/design-tokens';
 import { EnhancedCaseHeader } from '@/components/case-detail/EnhancedCaseHeader';
+import { PartiesPanel } from '@/components/case-detail/PartiesPanel';
+import { CaseMetadataPanel } from '@/components/case-detail/CaseMetadataPanel';
+import { CoherenceCheck } from '@/components/case-detail/CoherenceCheck';
+import { FinancePanel } from '@/components/case-detail/FinancePanel';
 import { ProcessPipeline } from '@/components/case-detail/ProcessPipeline';
 import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts';
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
@@ -24,9 +28,14 @@ import {
 
 interface Document {
   id: string;
-  filename: string;
-  mimeType: string;
-  size: number;
+  filename?: string;
+  title?: string;
+  mimeType?: string;
+  size?: number;
+  hasPdf?: boolean;
+  hasBinary?: boolean;
+  isImage?: boolean;
+  isOffice?: boolean;
   createdAt: string;
 }
 
@@ -35,6 +44,43 @@ interface Message {
   content: string;
   timestamp: string;
   citations?: string[];
+}
+
+// Loader del texto extraído de DOCX/XLSX para mostrar dentro del modal
+function OfficeContentViewer({ docId }: { docId: string }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    documentsAPI
+      .get(docId)
+      .then((d: any) => {
+        if (cancel) return;
+        setContent(d.document?.content || d.content || '(sin texto extraído)');
+      })
+      .catch(() => !cancel && setContent('(no se pudo cargar el texto extraído)'))
+      .finally(() => !cancel && setLoading(false));
+    return () => {
+      cancel = true;
+    };
+  }, [docId]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+        Cargando contenido extraído...
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-auto flex-1 p-6">
+      <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed">
+        {content}
+      </pre>
+    </div>
+  );
 }
 
 export default function CaseDetailPage() {
@@ -53,6 +99,120 @@ export default function CaseDetailPage() {
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [coherenceKey, setCoherenceKey] = useState(0);
+  const bumpCoherence = () => setCoherenceKey((k) => k + 1);
+  const [viewingDoc, setViewingDoc] = useState<{
+    id: string;
+    title: string;
+    content?: string;
+    blobUrl?: string;
+    mimeType?: string;
+    isPdf?: boolean;
+    isImage?: boolean;
+    isOffice?: boolean;
+    size?: number;
+    createdAt: string;
+  } | null>(null);
+  const [loadingDoc, setLoadingDoc] = useState(false);
+
+  const handleViewDocument = async (doc: Document) => {
+    setLoadingDoc(true);
+    try {
+      const mime = doc.mimeType || '';
+      const isPdf = !!doc.hasPdf || /pdf/i.test(mime);
+      const isImage = !!doc.isImage || /^image\//i.test(mime);
+      const isOffice = !!doc.isOffice || /(officedocument|ms-excel|msword|spreadsheet|wordprocessing)/i.test(mime);
+      const isBinary = !!doc.hasBinary || isPdf || isImage || isOffice;
+
+      if (isBinary) {
+        const res = await documentsAPI.fileBlob(doc.id, { download: false });
+        const mimeType = res.headers['content-type'] || mime || 'application/octet-stream';
+        const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: mimeType });
+        const blobUrl = window.URL.createObjectURL(blob);
+        setViewingDoc({
+          id: doc.id,
+          title: doc.filename || doc.title || 'Documento',
+          blobUrl,
+          mimeType,
+          isPdf: /pdf/i.test(mimeType),
+          isImage: /^image\//i.test(mimeType),
+          isOffice: /(officedocument|ms-excel|msword|spreadsheet|wordprocessing)/i.test(mimeType),
+          size: doc.size,
+          createdAt: doc.createdAt,
+        });
+      } else {
+        // Texto plano: traemos el content extraído
+        const data = await documentsAPI.get(doc.id);
+        const d = data.document || data;
+        setViewingDoc({
+          id: d.id,
+          title: d.title || d.filename || 'Documento',
+          content: d.content || '(sin contenido)',
+          mimeType: mime || 'text/plain',
+          isPdf: false,
+          isImage: false,
+          size: doc.size,
+          createdAt: d.createdAt,
+        });
+      }
+    } catch (e) {
+      console.error('Error viewing document:', e);
+      alert('No se pudo cargar el documento');
+    } finally {
+      setLoadingDoc(false);
+    }
+  };
+
+  const closeViewer = () => {
+    if (viewingDoc?.blobUrl) {
+      window.URL.revokeObjectURL(viewingDoc.blobUrl);
+    }
+    setViewingDoc(null);
+  };
+
+  const handleDownloadDocument = async (doc: Document) => {
+    try {
+      const mime = doc.mimeType || '';
+      const isBinary =
+        !!doc.hasBinary ||
+        !!doc.isImage ||
+        !!doc.isOffice ||
+        /pdf|image|officedocument|ms-excel|msword|spreadsheet|wordprocessing/i.test(mime);
+      let blob: Blob;
+      let suggestedName: string;
+
+      if (isBinary) {
+        const res = await documentsAPI.fileBlob(doc.id, { download: true });
+        const mimeType = res.headers['content-type'] || doc.mimeType || 'application/octet-stream';
+        blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: mimeType });
+        // Extraer filename del Content-Disposition o usar el del documento
+        const cd = res.headers['content-disposition'] || '';
+        const match = cd.match(/filename="?([^";]+)"?/);
+        suggestedName = match
+          ? match[1]
+          : doc.filename || `${doc.title || 'documento'}${/pdf/i.test(mimeType) ? '.pdf' : ''}`;
+      } else {
+        const res = await documentsAPI.download(doc.id);
+        blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+        const safeName = (doc.filename || doc.title || 'documento')
+          .replace(/[^a-zA-Z0-9_\-. áéíóúÁÉÍÓÚñÑ]/g, '')
+          .slice(0, 120);
+        suggestedName = `${safeName}.txt`;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = suggestedName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Error downloading:', e);
+      alert('No se pudo descargar el documento');
+    }
+  };
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -72,13 +232,20 @@ export default function CaseDetailPage() {
   const loadCaseData = async () => {
     try {
       const data = await casesAPI.get(caseId);
-      // Add mock legal type and priority for enhanced UI
+      // Mapear legalMatter (real) → legalType (UI) para que pipeline/prompts/refs sean coherentes
+      const matter = (data.legalMatter || '').toLowerCase();
+      let legalType: LegalType = 'civil';
+      if (matter.includes('penal')) legalType = 'penal';
+      else if (matter.includes('laboral')) legalType = 'laboral';
+      else if (matter.includes('constituc')) legalType = 'constitucional';
+      else if (matter.includes('tránsi') || matter.includes('transi')) legalType = 'transito';
+      else if (matter.includes('administr')) legalType = 'administrativo';
+      else if (matter.includes('civil')) legalType = 'civil';
+
       const enhancedData = {
         ...data,
-        legalType: (['civil', 'penal', 'laboral', 'constitucional', 'transito', 'administrativo'] as LegalType[])[
-          Math.floor(Math.random() * 6)
-        ],
-        priority: (['high', 'medium', 'low'] as Priority[])[Math.floor(Math.random() * 3)],
+        legalType,
+        priority: (data.priority as Priority) || 'medium',
       };
       setCaseData(enhancedData);
     } catch (error) {
@@ -124,15 +291,29 @@ export default function CaseDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validación rápida en cliente
+    if (file.size > 50 * 1024 * 1024) {
+      alert('El archivo supera el límite de 50 MB');
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     try {
-      await documentsAPI.upload(caseId, file);
+      // Usar el nombre del archivo (sin extensión) como título
+      const title = file.name.replace(/\.[^.]+$/, '');
+      const res = await documentsAPI.upload(caseId, file, title);
       loadDocuments();
-    } catch (error) {
+      const chunks = res?.document?.chunksCount ?? 0;
+      if (chunks > 0) {
+        console.log(`Documento vectorizado: ${chunks} chunks generados`);
+      }
+    } catch (error: any) {
       console.error('Error uploading file:', error);
-      alert('Error al subir archivo');
+      alert(error?.response?.data?.error || 'Error al subir archivo');
     } finally {
       setUploading(false);
+      e.target.value = ''; // permitir re-subir mismo archivo
     }
   };
 
@@ -271,7 +452,7 @@ ${messages.slice(-5).map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: $
             <div class="section">
               <h2>Documentos (${documents.length})</h2>
               <ul>
-                ${documents.map(d => `<li>${d.filename} (${(d.size / 1024).toFixed(2)} KB)</li>`).join('')}
+                ${documents.map(d => `<li>${d.filename || d.title || 'Sin título'} (${typeof d.size === 'number' && d.size > 0 ? (d.size / 1024).toFixed(2) + ' KB' : '—'})</li>`).join('')}
               </ul>
             </div>
             <div class="section">
@@ -372,6 +553,33 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
       {/* Enhanced Case Header */}
       <EnhancedCaseHeader caseData={caseData} />
 
+      {/* Verificador de coherencia: detecta inconsistencias en cada carga */}
+      <CoherenceCheck
+        caseId={caseId}
+        triggerKey={coherenceKey}
+        onRepaired={() => {
+          loadCaseData();
+          bumpCoherence();
+        }}
+      />
+
+      {/* Metadata jurídica del caso (editable + IA) */}
+      <div data-section="case-metadata">
+        <CaseMetadataPanel
+          caseId={caseId}
+          onUpdated={(d) => {
+            setCaseData((prev: any) => ({ ...prev, ...d }));
+            bumpCoherence();
+          }}
+        />
+      </div>
+
+      {/* Parties & Notifications Panel */}
+      <PartiesPanel caseId={caseId} />
+
+      {/* Finanzas del caso */}
+      <FinancePanel caseId={caseId} />
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT SIDEBAR: Documents & Resources */}
@@ -393,6 +601,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
               <label className="block cursor-pointer">
                 <input
                   type="file"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.webp,.gif,.bmp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain,image/png,image/jpeg,image/webp,image/gif"
                   onChange={handleFileUpload}
                   className="hidden"
                   disabled={uploading}
@@ -452,21 +661,31 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                         <FileText className="w-5 h-5 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 truncate">{doc.filename}</p>
+                        <p className="font-medium text-sm text-gray-900 truncate">{doc.filename || doc.title || 'Sin título'}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {(doc.size / 1024).toFixed(1)} KB • {formatDate(doc.createdAt)}
+                          {typeof doc.size === 'number' && doc.size > 0
+                            ? `${(doc.size / 1024).toFixed(1)} KB`
+                            : '—'}
+                          {' • '}
+                          {formatDate(doc.createdAt)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
+                          type="button"
+                          onClick={() => handleViewDocument(doc)}
                           className="p-1.5 hover:bg-indigo-100 rounded transition-colors"
-                          title="Ver"
+                          title={doc.hasPdf ? 'Ver PDF' : 'Ver'}
+                          aria-label="Ver documento"
                         >
                           <Eye className="w-4 h-4 text-gray-600" />
                         </button>
                         <button
+                          type="button"
+                          onClick={() => handleDownloadDocument(doc)}
                           className="p-1.5 hover:bg-indigo-100 rounded transition-colors"
-                          title="Descargar"
+                          title={doc.hasPdf ? 'Descargar PDF' : 'Descargar'}
+                          aria-label="Descargar documento"
                         >
                           <Download className="w-4 h-4 text-gray-600" />
                         </button>
@@ -479,7 +698,26 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           </div>
 
           {/* Process Pipeline */}
-          <ProcessPipeline legalType={legalType} currentStage={Math.floor(Math.random() * 4)} />
+          <ProcessPipeline
+            legalType={legalType}
+            currentStage={(() => {
+              const stage = caseData.proceduralStage || '';
+              const stageMap: Record<string, Record<string, number>> = {
+                penal: { 'denuncia': 0, 'instrucción': 1, 'instruccion': 1, 'evaluación': 2, 'evaluacion': 2, 'preparatoria': 2, 'juicio': 3, 'sentencia': 4, 'ejecución': 5, 'ejecucion': 5 },
+                civil: { 'demanda': 0, 'contestación': 1, 'contestacion': 1, 'pruebas': 2, 'audiencia': 3, 'sentencia': 4, 'apelación': 5, 'apelacion': 5 },
+                laboral: { 'demanda': 0, 'mediación': 1, 'mediacion': 1, 'contestación': 2, 'contestacion': 2, 'audiencia': 3, 'sentencia': 4, 'ejecución': 5, 'ejecucion': 5 },
+                constitucional: { 'admisión': 0, 'admision': 0, 'análisis': 1, 'analisis': 1, 'audiencia': 2, 'deliberación': 3, 'deliberacion': 3, 'sentencia': 4 },
+                transito: { 'citación': 0, 'citacion': 0, 'revisión': 1, 'revision': 1, 'audiencia': 2, 'resolución': 3, 'resolucion': 3, 'apelación': 4, 'apelacion': 4 },
+                administrativo: { 'solicitud': 0, 'evaluación': 1, 'evaluacion': 1, 'resolución': 2, 'resolucion': 2, 'recurso': 3, 'sentencia': 4 },
+              };
+              const map = stageMap[legalType] || {};
+              const lower = stage.toLowerCase();
+              for (const [k, v] of Object.entries(map)) {
+                if (lower.includes(k)) return v;
+              }
+              return 0;
+            })()}
+          />
         </div>
 
         {/* CENTER PANEL: AI Assistant */}
@@ -607,7 +845,9 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        handleQuery(e as any);
+                        // Create a synthetic form event for handleQuery
+                        const syntheticEvent = new Event('submit', { bubbles: true, cancelable: true }) as unknown as React.FormEvent;
+                        handleQuery(syntheticEvent);
                       }
                     }}
                   />
@@ -773,6 +1013,133 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* View Document Modal */}
+      {viewingDoc && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeViewer();
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-gray-900 truncate">{viewingDoc.title}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {formatDate(viewingDoc.createdAt)}
+                  {viewingDoc.mimeType && (
+                    <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[10px]">
+                      {viewingDoc.mimeType}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    if (viewingDoc.isPdf && viewingDoc.blobUrl) {
+                      // Descarga directa del blob ya cargado
+                      const a = document.createElement('a');
+                      a.href = viewingDoc.blobUrl;
+                      a.download = viewingDoc.title.endsWith('.pdf')
+                        ? viewingDoc.title
+                        : `${viewingDoc.title}.pdf`;
+                      a.click();
+                    } else {
+                      await handleDownloadDocument({
+                        id: viewingDoc.id,
+                        title: viewingDoc.title,
+                        filename: viewingDoc.title,
+                        mimeType: viewingDoc.mimeType,
+                        hasPdf: viewingDoc.isPdf,
+                        hasBinary: viewingDoc.isPdf,
+                        createdAt: viewingDoc.createdAt,
+                      });
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar
+                </button>
+                <button
+                  onClick={closeViewer}
+                  className="p-2 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-900"
+                  aria-label="Cerrar"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {viewingDoc.isPdf && viewingDoc.blobUrl ? (
+              // Viewer PDF nativo del browser
+              <iframe
+                src={viewingDoc.blobUrl}
+                title={viewingDoc.title}
+                className="flex-1 w-full bg-gray-100"
+                style={{ border: 0 }}
+              />
+            ) : viewingDoc.isImage && viewingDoc.blobUrl ? (
+              // Viewer de imágenes
+              <div className="flex-1 flex items-center justify-center bg-gray-100 overflow-auto p-6">
+                <img
+                  src={viewingDoc.blobUrl}
+                  alt={viewingDoc.title}
+                  className="max-w-full max-h-full object-contain shadow-lg rounded"
+                />
+              </div>
+            ) : viewingDoc.isOffice && viewingDoc.blobUrl ? (
+              // Word / Excel: vista previa del texto extraído + opción descarga
+              <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+                <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-3 text-sm text-amber-900">
+                  <span className="font-semibold">📎 Documento Office</span>
+                  <span>·</span>
+                  <span>Para edición usa Word/Excel; aquí ves el texto extraído.</span>
+                  <a
+                    href={viewingDoc.blobUrl}
+                    download={viewingDoc.title}
+                    className="ml-auto px-3 py-1 bg-amber-600 text-white rounded text-xs font-semibold hover:bg-amber-700"
+                  >
+                    Descargar original
+                  </a>
+                </div>
+                <OfficeContentViewer docId={viewingDoc.id} />
+              </div>
+            ) : viewingDoc.blobUrl ? (
+              // Otros binarios
+              <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 text-gray-600 gap-3">
+                <p className="text-sm">No se puede previsualizar este tipo de archivo</p>
+                <p className="text-xs text-gray-400 font-mono">{viewingDoc.mimeType}</p>
+                <a
+                  href={viewingDoc.blobUrl}
+                  download={viewingDoc.title}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700"
+                >
+                  Descargar archivo
+                </a>
+              </div>
+            ) : (
+              // Texto plano (incluye contenido extraído de DOCX/XLSX cuando no hay binario)
+              <div className="overflow-auto flex-1 p-6">
+                <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed">
+                  {viewingDoc.content}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loadingDoc && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-lg px-6 py-4 shadow-lg flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium text-gray-700">Cargando documento...</span>
           </div>
         </div>
       )}

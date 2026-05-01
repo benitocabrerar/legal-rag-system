@@ -52,12 +52,8 @@ export default function EmbeddingsPage() {
 
   const loadEmbeddings = async () => {
     try {
-      // This endpoint would need to be created in the backend
-      // const response = await api.get('/admin/embeddings');
-      // setEmbeddings(response.data);
-
-      // Placeholder data
-      setEmbeddings([]);
+      const response = await api.get('/admin/embeddings', { params: { limit: 500 } });
+      setEmbeddings(response.data || []);
     } catch (error) {
       console.error('Error loading embeddings:', error);
     } finally {
@@ -67,8 +63,8 @@ export default function EmbeddingsPage() {
 
   const loadStats = async () => {
     try {
-      // const response = await api.get('/admin/embeddings/stats');
-      // setStats(response.data);
+      const response = await api.get('/admin/embeddings/stats');
+      setStats(response.data);
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -105,13 +101,11 @@ export default function EmbeddingsPage() {
 
     setTesting(true);
     try {
-      // const response = await api.post('/admin/embeddings/test-search', {
-      //   query: testQuery,
-      // });
-      // setTestResults(response.data.results);
-
-      // Placeholder results
-      setTestResults([]);
+      const response = await api.post('/admin/embeddings/test-search', {
+        query: testQuery,
+        limit: 5,
+      });
+      setTestResults(response.data?.results || []);
     } catch (error) {
       console.error('Error testing search:', error);
       alert('Error al realizar búsqueda de prueba');

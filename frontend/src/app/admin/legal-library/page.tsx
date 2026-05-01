@@ -155,7 +155,7 @@ export default function LegalLibraryPage() {
 
   const loadDocuments = async () => {
     try {
-      const response = await api.get('/legal-documents-v2');
+      const response = await api.get('/legal-documents-v2', { params: { limit: 500, page: 1 } });
       const docs = response.data.documents || [];
 
       // Map documents and add status field based on backend data

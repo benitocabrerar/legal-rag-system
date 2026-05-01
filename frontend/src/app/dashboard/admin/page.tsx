@@ -220,7 +220,10 @@ export default function AdminPage() {
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                  onChange={(e) => {
+                    const value = e.target.value as 'constitution' | 'law' | 'code' | 'regulation' | 'jurisprudence';
+                    setFormData({ ...formData, category: value });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >

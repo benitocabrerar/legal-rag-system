@@ -1,138 +1,84 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
+import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
+import BankTransferCheckout from '@/components/BankTransferCheckout';
 
-interface Payment {
+interface PayhubPayment {
   id: string;
-  amount: number;
+  status: 'pending' | 'processing' | 'paid' | 'failed' | 'refunded' | 'reversed' | 'disputed';
+  provider: string;
+  type: string;
+  amount_cents: number;
   currency: string;
-  method: string;
-  status: string;
-  description: string;
-  subscription: {
-    id: string;
-    plan: {
-      name: string;
-      nameEnglish: string;
-    };
-    billingCycle: string;
-  };
-  createdAt: string;
+  amount_usd_cents: number | null;
+  proof_url: string | null;
+  paid_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+interface BankAccount {
+  bank_slug: string;
+  bank_name: string;
+  account_holder: string;
+  account_number: string;
+  account_last4: string;
+  account_type: string | null;
+  currency: string;
+  country_code: string;
+  tax_id_holder: string | null;
+  app_deep_link: string | null;
+  web_url: string | null;
+  instructions_es: string | null;
+  instructions_en: string | null;
 }
 
 export default function PaymentPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const { t, locale } = useTranslation();
   const paymentId = params.id as string;
+  const paypalReturnFlag = searchParams.get('paypal');
 
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<PayhubPayment | null>(null);
+  const [banks, setBanks] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-
-  // Payment proof form
-  const [proofFile, setProofFile] = useState<File | null>(null);
-  const [bankName, setBankName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [referenceNumber, setReferenceNumber] = useState('');
-  const [depositDate, setDepositDate] = useState('');
-  const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    loadPayment();
+    loadPaymentAndBanks();
   }, [paymentId]);
 
-  const loadPayment = async () => {
+  async function loadPaymentAndBanks() {
     try {
-      const response = await api.get(`/api/payments?limit=100`);
-      const payments = response.data.payments || [];
-      const foundPayment = payments.find((p: Payment) => p.id === paymentId);
-
-      if (foundPayment) {
-        setPayment(foundPayment);
-      } else {
-        alert('Payment not found');
-        router.push('/pricing');
-      }
+      const [pRes, bRes] = await Promise.all([
+        api.get(`/payhub/payments/${paymentId}`),
+        api.get(`/payhub/bank-accounts`),
+      ]);
+      setPayment(pRes.data?.payment || null);
+      setBanks(bRes.data?.bankAccounts || []);
     } catch (error) {
       console.error('Error loading payment:', error);
-      alert('Error loading payment details');
+      alert('Error cargando el pago');
       router.push('/pricing');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProofFile(e.target.files[0]);
-    }
-  };
 
-  const handleSubmitProof = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!proofFile) {
-      alert('Por favor selecciona un archivo de comprobante');
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      // Upload file to server (you'll need to implement file upload endpoint)
-      const formData = new FormData();
-      formData.append('file', proofFile);
-      formData.append('paymentId', paymentId);
-
-      // For now, we'll use a placeholder URL
-      // In production, this should upload to S3 or similar storage
-      const fileUrl = `https://placeholder.com/proof/${proofFile.name}`;
-
-      // Submit payment proof
-      await api.post('/api/payment-proof', {
-        paymentId,
-        fileUrl,
-        fileName: proofFile.name,
-        fileSize: proofFile.size,
-        mimeType: proofFile.type,
-        bankName,
-        accountNumber,
-        referenceNumber,
-        depositDate: depositDate ? new Date(depositDate).toISOString() : undefined,
-        notes,
-      });
-
-      alert('Comprobante enviado exitosamente. Será revisado en las próximas 24-48 horas.');
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Error submitting proof:', error);
-      alert(error.response?.data?.error || 'Error al enviar comprobante');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const formatPrice = (price: number) => {
+  function formatPrice(cents: number, currency = 'USD') {
     return new Intl.NumberFormat('es-EC', {
       style: 'currency',
-      currency: 'USD',
+      currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(price);
-  };
-
-  const getPaymentMethodName = (method: string) => {
-    const methods: Record<string, string> = {
-      stripe: 'Tarjeta de Crédito (Stripe)',
-      paypal: 'PayPal',
-      bank_transfer: 'Transferencia Bancaria',
-      cash_deposit: 'Depósito en Efectivo',
-    };
-    return methods[method] || method;
-  };
+    }).format(cents / 100);
+  }
 
   if (loading) {
     return (
@@ -142,16 +88,19 @@ export default function PaymentPage() {
     );
   }
 
-  if (!payment) {
-    return null;
-  }
+  if (!payment) return null;
 
-  const isManualPayment = payment.method === 'bank_transfer' || payment.method === 'cash_deposit';
+  const refCode = (payment.metadata?.reference_code as string) || payment.id.slice(0, 8).toUpperCase();
+  const planLabel = (payment.metadata?.plan_code as string) || (payment.metadata?.label as string) || payment.type;
+  const billingCycle = (payment.metadata?.billing_cycle as string) || '—';
+  const isManual = payment.provider === 'bank_transfer' || payment.provider === 'cash';
+  const isPaypal = payment.provider === 'paypal';
+  const isPending = payment.status === 'pending';
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Payment Summary */}
+        {/* Resumen */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">
             Completar Pago
@@ -159,27 +108,31 @@ export default function PaymentPage() {
 
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Plan Seleccionado</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {payment.subscription.plan.name}
-              </p>
+              <p className="text-sm text-gray-600 mb-1">Plan / Producto</p>
+              <p className="text-lg font-semibold text-gray-900">{planLabel}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 mb-1">Ciclo de Facturación</p>
+              <p className="text-sm text-gray-600 mb-1">Ciclo</p>
               <p className="text-lg font-semibold text-gray-900">
-                {payment.subscription.billingCycle === 'monthly' ? 'Mensual' : 'Anual'}
+                {billingCycle === 'monthly' ? 'Mensual' : billingCycle === 'yearly' ? 'Anual' : billingCycle}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Método de Pago</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {getPaymentMethodName(payment.method)}
+              <p className="text-lg font-semibold text-gray-900 capitalize">
+                {payment.provider.replace('_', ' ')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 mb-1">Total a Pagar</p>
+              <p className="text-sm text-gray-600 mb-1">Total</p>
               <p className="text-2xl font-bold text-indigo-600">
-                {formatPrice(payment.amount)}
+                {formatPrice(payment.amount_cents, payment.currency)}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm text-gray-600 mb-1">Código de referencia</p>
+              <p className="text-lg font-mono font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded">
+                {refCode}
               </p>
             </div>
           </div>
@@ -187,204 +140,87 @@ export default function PaymentPage() {
           {payment.status === 'pending' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-yellow-800 font-medium">
-                ⏳ Pago pendiente - Por favor completa el proceso de pago
+                ⏳ Pago pendiente — Realiza la transferencia y sube el comprobante
               </p>
             </div>
           )}
-
           {payment.status === 'processing' && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-blue-800 font-medium">
-                🔄 Pago en proceso de verificación - Te notificaremos cuando sea aprobado
+                🔄 En verificación — Te avisaremos cuando se apruebe
               </p>
             </div>
           )}
-
-          {payment.status === 'completed' && (
+          {payment.status === 'paid' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-800 font-medium">
-                ✅ Pago completado exitosamente
-              </p>
+              <p className="text-green-800 font-medium">✅ Pago aprobado · activado el {payment.paid_at}</p>
+            </div>
+          )}
+          {payment.status === 'failed' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 font-medium">❌ Pago rechazado</p>
             </div>
           )}
         </div>
 
-        {/* Payment Instructions */}
-        {isManualPayment && payment.status === 'pending' && (
-          <>
-            {/* Bank Transfer Instructions */}
-            <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Instrucciones de Pago
-              </h2>
-
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-6">
-                <h3 className="font-semibold text-indigo-900 mb-4 text-lg">
-                  Datos Bancarios para Transferencia
-                </h3>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Banco:</span>
-                    <span className="text-indigo-900">Banco Pichincha</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Tipo de Cuenta:</span>
-                    <span className="text-indigo-900">Corriente</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Número de Cuenta:</span>
-                    <span className="text-indigo-900 font-mono">2100123456</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Beneficiario:</span>
-                    <span className="text-indigo-900">Legal RAG System S.A.</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">RUC:</span>
-                    <span className="text-indigo-900 font-mono">1234567890001</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Monto:</span>
-                    <span className="text-indigo-900 text-xl font-bold">{formatPrice(payment.amount)}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <span className="text-indigo-700 font-medium">Referencia:</span>
-                    <span className="text-indigo-900 font-mono">{payment.id.substring(0, 8)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-yellow-800 text-sm">
-                  <strong>Importante:</strong> Después de realizar la transferencia o depósito,
-                  sube el comprobante usando el formulario a continuación. Tu suscripción será
-                  activada una vez que nuestro equipo verifique el pago (24-48 horas).
-                </p>
-              </div>
-            </div>
-
-            {/* Upload Proof Form */}
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Subir Comprobante de Pago
-              </h2>
-
-              <form onSubmit={handleSubmitProof} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Comprobante (Imagen o PDF) *
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleFileChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  {proofFile && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      Archivo seleccionado: {proofFile.name} ({(proofFile.size / 1024).toFixed(2)} KB)
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Banco
-                    </label>
-                    <input
-                      type="text"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      placeholder="Ej: Banco Pichincha"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número de Cuenta (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      placeholder="Últimos 4 dígitos"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número de Referencia
-                    </label>
-                    <input
-                      type="text"
-                      value={referenceNumber}
-                      onChange={(e) => setReferenceNumber(e.target.value)}
-                      placeholder="Número de comprobante o referencia"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Depósito
-                    </label>
-                    <input
-                      type="date"
-                      value={depositDate}
-                      onChange={(e) => setDepositDate(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notas Adicionales (opcional)
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={4}
-                    placeholder="Cualquier información adicional sobre el pago..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={uploading || !proofFile}
-                  className="w-full py-3 px-6 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploading ? 'Enviando...' : 'Enviar Comprobante'}
-                </button>
-              </form>
-            </div>
-          </>
+        {/* Transferencia bancaria — UX optimizada */}
+        {isManual && isPending && banks.length > 0 && (
+          <BankTransferCheckout
+            paymentId={payment.id}
+            amountCents={payment.amount_cents}
+            currency={payment.currency}
+            referenceCode={refCode}
+            banks={banks}
+          />
         )}
 
-        {/* Automated Payment (Stripe/PayPal) */}
-        {!isManualPayment && payment.status === 'pending' && (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Pago con {getPaymentMethodName(payment.method)}
+        {/* PayPal flow */}
+        {isPaypal && isPending && (
+          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              🅿️ Pago con PayPal
             </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Aprobá el pago en la ventana de PayPal — la activación es instantánea.
+            </p>
+            <PayPalCheckoutButton
+              paymentId={payment.id}
+              amountCents={payment.amount_cents}
+              currency={payment.currency}
+              onSuccess={() => router.push(`/payment/${payment.id}?paypal=success`)}
+            />
+          </div>
+        )}
 
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-              <p className="text-gray-600 mb-4">
-                La integración de {payment.method === 'stripe' ? 'Stripe' : 'PayPal'} estará
-                disponible próximamente.
-              </p>
-              <p className="text-sm text-gray-500">
-                Por ahora, por favor selecciona "Transferencia Bancaria" o "Depósito en Efectivo"
-                en la página de planes.
-              </p>
-            </div>
+        {/* Banner cuando volvemos del flujo PayPal */}
+        {paypalReturnFlag === 'success' && payment.status !== 'paid' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+            <p className="text-blue-800 text-sm">
+              🔄 PayPal completó la aprobación. Estamos confirmando el pago…
+              recargá en unos segundos para ver el estado actualizado.
+            </p>
+          </div>
+        )}
+        {paypalReturnFlag === 'cancel' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8">
+            <p className="text-amber-800 text-sm">
+              ⚠️ Cancelaste el pago en PayPal. Podés volver a intentar arriba o usar transferencia bancaria.
+            </p>
+          </div>
+        )}
+
+        {/* Comprobante ya subido */}
+        {payment.proof_url && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6 mt-8">
+            <p className="text-emerald-900 font-semibold mb-2">✅ Comprobante enviado</p>
+            <a
+              href={payment.proof_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-700 underline text-sm break-all"
+            >
+              {payment.proof_url}
+            </a>
           </div>
         )}
       </div>

@@ -4,23 +4,24 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authAPI } from './api';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
   role: string;
+  preferredCountryCode?: string; // ISO-3166 alpha-2; default 'EC'
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => void | Promise<void>;
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: React.ReactNode;

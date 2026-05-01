@@ -6,10 +6,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { parseApiError } from '@/lib/api';
+import { loginWithGoogle as supabaseGoogleLogin } from '@/lib/auth-supabase';
+import { useTranslation } from '@/lib/i18n';
+
+const USE_SUPABASE_AUTH = process.env.NEXT_PUBLIC_AUTH_BACKEND === 'supabase';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,32 +28,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al iniciar sesión');
-      }
-
-      // Check if 2FA is required
-      if (data.requires2FA) {
+      // Usa el AuthContext (legacy o Supabase según NEXT_PUBLIC_AUTH_BACKEND).
+      await login(email, password);
+      router.push('/dashboard');
+    } catch (err: any) {
+      // Detect 2FA solo en flow legacy (Supabase no expone esto via signInWithPassword).
+      if (err?.requires2FA) {
         setRequires2FA(true);
         setLoading(false);
         return;
       }
-
-      // Normal login (no 2FA)
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard');
-    } catch (err: any) {
       const errorMessage = parseApiError(err);
       setError(errorMessage);
       setLoading(false);
@@ -94,9 +83,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Legal RAG System</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('landing.heroTitle')}</h1>
           <p className="text-gray-600">
-            {requires2FA ? 'Verificación de dos factores' : 'Inicia sesión en tu cuenta'}
+            {requires2FA ? t('settings.twoFactor') : t('auth.loginSubtitle')}
           </p>
         </div>
 
@@ -111,7 +100,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -120,13 +109,13 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder="tu@email.com"
+                placeholder={t('auth.emailPlaceholder')}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -144,7 +133,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              {loading ? t('auth.loggingIn') : t('auth.loginButton')}
             </button>
 
             <div className="relative my-6">
@@ -152,14 +141,23 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">o</span>
+                <span className="px-2 bg-white text-gray-500">{t('auth.or')}</span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={() => {
-                window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com'}/api/v1/auth/google`;
+              onClick={async () => {
+                setError('');
+                if (USE_SUPABASE_AUTH) {
+                  try {
+                    await supabaseGoogleLogin();
+                  } catch (err: any) {
+                    setError(err?.message || 'Error iniciando con Google');
+                  }
+                } else {
+                  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/auth/google`;
+                }
               }}
               className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all"
             >
@@ -181,7 +179,7 @@ export default function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Continuar con Google
+              {t('auth.signInGoogle')}
             </button>
           </form>
         ) : (
@@ -212,7 +210,7 @@ export default function LoginPage() {
               disabled={loading || twoFactorToken.length !== 6}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Verificando...' : 'Verificar'}
+              {loading ? t('common.loading') : t('common.confirm')}
             </button>
 
             <button
@@ -224,7 +222,7 @@ export default function LoginPage() {
               }}
               className="w-full text-sm text-gray-600 hover:text-gray-800"
             >
-              ← Volver al inicio de sesión
+              ← {t('common.back')}
             </button>
           </form>
         )}
@@ -232,9 +230,9 @@ export default function LoginPage() {
         {!requires2FA && (
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              ¿No tienes cuenta?{' '}
+              {t('auth.noAccount')}{' '}
               <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-                Regístrate
+                {t('auth.registerButton')}
               </Link>
             </p>
           </div>

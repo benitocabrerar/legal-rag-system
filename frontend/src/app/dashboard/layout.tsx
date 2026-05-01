@@ -4,11 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { useTranslation } from '@/lib/i18n';
+import CountrySelector from '@/components/CountrySelector';
 import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, logout, loading } = useAuth();
+  const { t } = useTranslation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -59,53 +62,64 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href="/dashboard"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                 >
-                  Casos
+                  {t('navigation.cases')}
                 </Link>
                 <Link
                   href="/dashboard/calendar"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
                   <Calendar className="w-4 h-4" />
-                  Calendario
+                  {t('navigation.calendar')}
                 </Link>
                 <Link
                   href="/dashboard/tasks"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
                   <CheckSquare className="w-4 h-4" />
-                  Tareas
+                  {t('navigation.tasks')}
                 </Link>
                 <Link
                   href="/dashboard/finance"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
                   <DollarSign className="w-4 h-4" />
-                  Finanzas
+                  {t('navigation.finance')}
                 </Link>
                 <Link
                   href="/pricing"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                 >
-                  Planes
+                  {t('navigation.pricing')}
                 </Link>
                 <Link
                   href="/dashboard/settings"
                   className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                 >
-                  Seguridad
+                  {t('settings.security')}
                 </Link>
                 {user.role === 'admin' && (
-                  <Link
-                    href="/admin"
-                    className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                  >
-                    Administración
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin"
+                      className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    >
+                      {t('navigation.admin')}
+                    </Link>
+                    <Link
+                      href="/admin/payhub"
+                      className="px-3 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                    >
+                      💳 Payhub
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Country selector (compact) */}
+              <CountrySelector variant="compact" />
+
               {/* User Menu Dropdown */}
               <div className="relative" ref={menuRef}>
                 <button
@@ -131,7 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <User className="w-4 h-4 text-gray-500" />
-                      Mi Cuenta
+                      {t('navigation.account')}
                     </Link>
                     <Link
                       href="/account/billing"
@@ -139,7 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <CreditCard className="w-4 h-4 text-gray-500" />
-                      Facturación
+                      {t('navigation.billing')}
                     </Link>
                     <Link
                       href="/account/settings"
@@ -147,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings className="w-4 h-4 text-gray-500" />
-                      Configuración
+                      {t('common.settings')}
                     </Link>
                     <hr className="my-1 border-gray-200" />
                     <button
@@ -158,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      Cerrar Sesión
+                      {t('common.logout')}
                     </button>
                   </div>
                 )}

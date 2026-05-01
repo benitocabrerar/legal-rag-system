@@ -85,6 +85,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Control de vectorización',
     },
     {
+      name: 'Modelo de IA',
+      href: '/admin/ai-settings',
+      icon: '🤖',
+      description: 'Configurar proveedor (OpenAI/Claude) y modelo',
+    },
+    {
       name: 'Analíticas',
       href: '/admin/analytics',
       icon: '📊',
@@ -97,10 +103,22 @@ export function getAdminNavItems(user: User | null) {
       description: 'Gestión de planes de suscripción',
     },
     {
-      name: 'Pagos',
+      name: 'Pagos (legacy)',
       href: '/admin/payments',
       icon: '💰',
-      description: 'Revisión de comprobantes de pago',
+      description: 'Revisión de comprobantes locales (deprecado)',
+    },
+    {
+      name: 'Payments Hub',
+      href: '/admin/payhub',
+      icon: '🏦',
+      description: 'Centro multi-app · aprobar pagos manuales (transferencia/efectivo)',
+    },
+    {
+      name: 'Backups',
+      href: '/admin/backups',
+      icon: '💾',
+      description: 'Respaldos y restauración de la BD',
     },
   ];
 }

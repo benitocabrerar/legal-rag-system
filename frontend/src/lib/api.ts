@@ -38,9 +38,27 @@ export const api = axios.create({
   },
 });
 
+// Feature flag — cuando está activo, el token viene de la sesión Supabase
+// (cookies + localStorage manejado por @supabase/ssr) en vez de localStorage('token').
+const USE_SUPABASE_AUTH =
+  typeof process !== 'undefined' &&
+  process.env.NEXT_PUBLIC_AUTH_BACKEND === 'supabase';
+
 // Request interceptor to add auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+api.interceptors.request.use(async (config) => {
+  let token: string | null = null;
+  if (USE_SUPABASE_AUTH) {
+    try {
+      const { getSupabaseBrowserClient } = await import('./supabase/client');
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token ?? null;
+    } catch {
+      token = null;
+    }
+  } else {
+    token = localStorage.getItem('token');
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -50,11 +68,20 @@ api.interceptors.request.use((config) => {
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      if (USE_SUPABASE_AUTH) {
+        try {
+          const { getSupabaseBrowserClient } = await import('./supabase/client');
+          await getSupabaseBrowserClient().auth.signOut();
+        } catch {}
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -113,10 +140,11 @@ export const casesAPI = {
 
 // Documents API
 export const documentsAPI = {
-  upload: async (caseId: string, file: File) => {
+  upload: async (caseId: string, file: File, title?: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('caseId', caseId);
+    if (title) formData.append('title', title);
 
     const response = await api.post('/documents/upload', formData, {
       headers: {
@@ -133,6 +161,20 @@ export const documentsAPI = {
     const response = await api.get(`/documents/${id}`);
     return response.data;
   },
+  // Devuelve el archivo binario inline (para iframe/object PDF)
+  fileBlob: async (id: string, opts: { download?: boolean } = {}) => {
+    const params = opts.download ? { download: '1' } : {};
+    const response = await api.get(`/documents/${id}/file`, {
+      responseType: 'blob',
+      params,
+    });
+    return response;
+  },
+  // Descarga el contenido como texto plano (legacy, para docs sin PDF original)
+  download: async (id: string) => {
+    const response = await api.get(`/documents/${id}/download`, { responseType: 'blob' });
+    return response;
+  },
   delete: async (id: string) => {
     const response = await api.delete(`/documents/${id}`);
     return response.data;
@@ -141,13 +183,29 @@ export const documentsAPI = {
 
 // Query API (RAG)
 export const queryAPI = {
-  query: async (data: { caseId: string; query: string }) => {
+  query: async (data: {
+    caseId: string;
+    query: string;
+    /** ISO-3166 alpha-2; si no se envía, backend usa users.preferred_country_code o 'EC' */
+    filterCountryCode?: string;
+  }) => {
     const response = await api.post('/query', data);
     return response.data;
   },
   getHistory: async (caseId: string) => {
     const response = await api.get(`/query/history/${caseId}`);
     return response.data.queries || [];
+  },
+  /** Búsqueda híbrida en biblioteca legal (RPC search_legal_chunks) */
+  searchLegal: async (data: {
+    query: string;
+    matchCount?: number;
+    filterCountryCode?: string;
+    filterDocId?: string;
+    filterNormType?: string;
+  }) => {
+    const response = await api.post('/search/legal', data);
+    return response.data;
   },
 };
 

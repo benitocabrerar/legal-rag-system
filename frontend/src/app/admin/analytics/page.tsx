@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 
 interface AnalyticsData {
@@ -30,6 +31,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const [aiInfo, setAiInfo] = useState<{ provider: string; model: string } | null>(null);
   const [data, setData] = useState<AnalyticsData>({
     usage: {
       totalQueries: 0,
@@ -61,6 +63,12 @@ export default function AnalyticsPage() {
   useEffect(() => {
     loadAnalytics();
   }, [period]);
+
+  useEffect(() => {
+    api.get('/admin/ai-settings/public')
+      .then((r) => setAiInfo({ provider: r.data.provider, model: r.data.model }))
+      .catch(() => setAiInfo(null));
+  }, []);
 
   const loadAnalytics = async () => {
     try {
@@ -343,7 +351,15 @@ export default function AnalyticsPage() {
 
       {/* System Info */}
       <div className="mt-6 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-lg p-6 text-white">
-        <h2 className="text-xl font-bold mb-4">Información del Sistema</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Información del Sistema</h2>
+          <Link
+            href="/admin/ai-settings"
+            className="text-sm text-indigo-300 hover:text-indigo-100 underline-offset-4 hover:underline"
+          >
+            Cambiar modelo de IA →
+          </Link>
+        </div>
         <div className="grid md:grid-cols-3 gap-6">
           <div>
             <p className="text-gray-400 text-sm mb-1">Versión</p>
@@ -351,7 +367,8 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <p className="text-gray-400 text-sm mb-1">Modelo IA</p>
-            <p className="text-2xl font-bold">GPT-4</p>
+            <p className="text-2xl font-bold">{aiInfo?.model || '—'}</p>
+            <p className="text-xs text-gray-400 mt-0.5 capitalize">{aiInfo?.provider || ''}</p>
           </div>
           <div>
             <p className="text-gray-400 text-sm mb-1">Uptime</p>
