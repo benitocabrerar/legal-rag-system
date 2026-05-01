@@ -36,7 +36,11 @@ export function BriefPanel({ data }: { data: LitigationBrief }) {
         </div>
       </div>
 
-      {next && <HearingJoinCard event={next} />}
+      {next ? (
+        <HearingJoinCard event={next} />
+      ) : (
+        <EmptyConvocatoria />
+      )}
 
       <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Resumen</div>
@@ -66,6 +70,28 @@ export function BriefPanel({ data }: { data: LitigationBrief }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function EmptyConvocatoria() {
+  return (
+    <div className="rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/40 p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-1.5">
+        Sin convocatoria registrada
+      </div>
+      <p className="text-[11px] text-amber-100/80 leading-relaxed">
+        Este caso aún no tiene un evento con enlace de audiencia.
+        Para que aparezca aquí el botón "Unirse" debes crear un evento
+        en el calendario y rellenar el bloque <span className="font-bold">"Convocatoria a la audiencia"</span>{' '}
+        (fuente, proveedor, código y enlace).
+      </p>
+      <a
+        href="/dashboard/calendar?new=1"
+        className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-200 hover:text-amber-50 underline"
+      >
+        Ir a calendario →
+      </a>
     </div>
   );
 }

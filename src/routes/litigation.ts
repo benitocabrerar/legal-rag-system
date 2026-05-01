@@ -110,13 +110,21 @@ export async function litigationRoutes(fastify: FastifyInstance) {
         });
       const timeline = enriched;
 
-      // Next upcoming hearing.
+      // Next event for the litigation room: prefer an upcoming hearing-like
+      // event; otherwise fall back to ANY upcoming event with a meeting link
+      // or location; finally fall back to the most recent past event so the
+      // user still sees the convocatoria card even mid-hearing or
+      // post-mortem.
       const now = new Date();
-      const nextHearing = timeline.find(
-        (e) =>
-          new Date(e.startTime) >= now &&
-          ['HEARING', 'COURT_DATE', 'DEPOSITION', 'MEDIATION'].includes(e.type as string),
-      );
+      const HEARING_TYPES = ['HEARING', 'COURT_DATE', 'DEPOSITION', 'MEDIATION'];
+      const upcoming = timeline.filter((e) => new Date(e.endTime) >= now);
+      const nextHearing =
+        upcoming.find((e) => HEARING_TYPES.includes(e.type as string)) ??
+        upcoming.find((e) => !!e.meetingLink || !!e.location) ??
+        upcoming[0] ??
+        // Past events: show the most recent one if any.
+        [...timeline].reverse().find((e) => HEARING_TYPES.includes(e.type as string) || !!e.meetingLink) ??
+        null;
 
       return {
         case: {
