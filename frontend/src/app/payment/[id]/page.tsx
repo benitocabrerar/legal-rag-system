@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { ArrowLeft, Home, LayoutDashboard, Tag, Scale } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
@@ -82,13 +84,32 @@ export default function PaymentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <Link href="/dashboard" className="text-sm text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Volver al dashboard
+        </Link>
       </div>
     );
   }
 
-  if (!payment) return null;
+  if (!payment) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <h1 className="text-xl font-bold text-gray-900">No encontramos este pago</h1>
+        <p className="text-sm text-gray-600">El enlace puede haber expirado o el pago ya fue procesado.</p>
+        <div className="flex gap-2 mt-2">
+          <Link href="/pricing" className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+            Ver planes
+          </Link>
+          <Link href="/dashboard" className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50">
+            Ir al dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const refCode = (payment.metadata?.reference_code as string) || payment.id.slice(0, 8).toUpperCase();
   const planLabel = (payment.metadata?.plan_code as string) || (payment.metadata?.label as string) || payment.type;
@@ -98,11 +119,57 @@ export default function PaymentPage() {
   const isPending = payment.status === 'pending';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Top nav — siempre visible para que el usuario tenga salida. */}
+      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+              title="Volver"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </button>
+            <span className="hidden sm:inline text-gray-300">/</span>
+            <Link href="/" className="hidden sm:inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition">
+              <Scale className="w-4 h-4 text-indigo-600" />
+              <span className="font-bold">Poweria Legal</span>
+            </Link>
+            <span className="hidden sm:inline text-gray-400 text-sm">·</span>
+            <span className="text-sm text-gray-500">Pago</span>
+          </div>
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Planes</span>
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Resumen */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
             Completar Pago
           </h1>
 
