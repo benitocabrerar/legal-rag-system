@@ -142,10 +142,10 @@ export default function CalendarPage() {
           </div>
         ) : (
           <>
-            {view === 'month'  && <MonthView  anchor={anchor} events={events as any} onEventClick={openEdit} onDateClick={openCreate} onEventDrop={handleEventDrop} />}
-            {view === 'week'   && <WeekView   anchor={anchor} events={events as any} onEventClick={openEdit} onSlotClick={openCreate} />}
-            {view === 'day'    && <DayView    anchor={anchor} events={events as any} onEventClick={openEdit} onSlotClick={openCreate} />}
-            {view === 'agenda' && <AgendaView anchor={anchor} events={events as any} onEventClick={openEdit} />}
+            {view === 'month'  && <MonthView  anchor={anchor} events={events as any} onEventClick={openEdit as any} onDateClick={openCreate} onEventDrop={handleEventDrop} />}
+            {view === 'week'   && <WeekView   anchor={anchor} events={events as any} onEventClick={openEdit as any} onSlotClick={openCreate} />}
+            {view === 'day'    && <DayView    anchor={anchor} events={events as any} onEventClick={openEdit as any} onSlotClick={openCreate} />}
+            {view === 'agenda' && <AgendaView anchor={anchor} events={events as any} onEventClick={openEdit as any} />}
           </>
         )}
 

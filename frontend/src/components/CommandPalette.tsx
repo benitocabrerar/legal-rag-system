@@ -22,6 +22,7 @@ const COMMANDS: CommandItemDef[] = [
   // Crear
   { id: 'new-task',     group: 'Crear',    label: 'Nueva tarea',          hint: '⌘ N',  icon: Plus,        keywords: ['create','add','tarea','task'],     run: (r) => r.push('/dashboard/tasks?new=1') },
   { id: 'new-event',    group: 'Crear',    label: 'Nuevo evento',         hint: '⌘ E',  icon: Calendar,    keywords: ['create','add','evento','event'],   run: (r) => r.push('/dashboard/calendar?new=1') },
+  { id: 'invoice-tasks',group: 'Crear',    label: 'Facturar desde tareas',             icon: DollarSign,  keywords: ['invoice','factura','billing'],     run: (r) => r.push('/dashboard/finance?action=invoice-tasks') },
   { id: 'templates',    group: 'Crear',    label: 'Aplicar plantilla legal',           icon: Sparkles,    keywords: ['template','plantilla','demanda'],  run: (r) => r.push('/dashboard/tasks?templates=1') },
 
   // Navegar
@@ -32,6 +33,7 @@ const COMMANDS: CommandItemDef[] = [
   { id: 'go-settings',  group: 'Navegar',  label: 'Ajustes',                           icon: Settings,    run: (r) => r.push('/dashboard/settings') },
 
   // Filtros rápidos
+  { id: 'collection',   group: 'Filtros rápidos', label: 'Cobranza vencida',               icon: AlertTriangle, keywords: ['collection','cobranza','overdue'], run: (r) => r.push('/dashboard/finance?tab=collection') },
   { id: 'overdue',      group: 'Filtros rápidos', label: 'Tareas vencidas',                icon: AlertTriangle, keywords: ['overdue','vencidas'], run: (r) => r.push('/dashboard/tasks?filter=overdue') },
   { id: 'today',        group: 'Filtros rápidos', label: 'Eventos de hoy',                 icon: Clock,         keywords: ['today','hoy'],         run: (r) => r.push('/dashboard/calendar?view=day&today=1') },
   { id: 'this-week',    group: 'Filtros rápidos', label: 'Esta semana en calendario',      icon: Calendar,      keywords: ['week','semana'],       run: (r) => r.push('/dashboard/calendar?view=week') },

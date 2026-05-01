@@ -577,4 +577,57 @@ export const financeAPI = {
     const response = await api.get(`/finance/case-finances/${caseId}`);
     return response.data.caseFinance;
   },
+
+  // Augmented analytics
+  dashboard: async (): Promise<FinanceDashboard> => {
+    const r = await api.get('/finance/dashboard');
+    return r.data;
+  },
+  invoiceFromTasks: async (data: {
+    caseId: string;
+    taskIds: string[];
+    hourlyRate: number;
+    taxRate?: number;
+    dueInDays?: number;
+    clientName?: string;
+    clientEmail?: string;
+    notes?: string;
+  }) => {
+    const r = await api.post('/finance/invoices/from-tasks', data);
+    return r.data;
+  },
+  invoicePdfUrl: (id: string) => `/api/v1/finance/invoices/${id}/pdf`,
+  exportCsvUrl: () => `/api/v1/finance/export.csv`,
+  aiInsight: async (payload: any): Promise<{ insight: string }> => {
+    const r = await api.post('/finance/ai/insight', payload);
+    return r.data;
+  },
+  listExpenses: async (caseId?: string) => {
+    const r = await api.get('/finance/expenses', { params: caseId ? { caseId } : undefined });
+    return r.data;
+  },
+  createExpense: async (data: {
+    caseId: string; amount: number; currency?: string;
+    category: string; description: string; date?: string;
+  }) => {
+    const r = await api.post('/finance/expenses', data);
+    return r.data.expense;
+  },
 };
+
+export interface FinanceDashboard {
+  currency: string;
+  generatedAt: string;
+  headline: {
+    totalBilled: number; totalPaid: number; totalOutstanding: number;
+    revenueThisMonth: number; revenuePrevMonth: number; momChange: number;
+    invoicesCount: number; overdueCount: number;
+    avgDaysToPay: number | null; collectionRatio: number;
+  };
+  monthly: Array<{ key: string; label: string; revenue: number; billed: number }>;
+  aging: { current: number; '1_30': number; '31_60': number; '61_90': number; '90_plus': number };
+  overdueInvoices: Array<{ id: string; clientName: string; balanceDue: number; daysOverdue: number; dueDate: string; caseId: string }>;
+  topClients: Array<{ name: string; billed: number; outstanding: number }>;
+  methodMix: Array<{ method: string; amount: number }>;
+  forecastWeeks: Array<{ weekStart: string; expected: number }>;
+}
