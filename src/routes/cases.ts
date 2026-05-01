@@ -145,9 +145,15 @@ export async function caseRoutes(fastify: FastifyInstance) {
           } else if (col === 'key_dates') {
             sets.push(`${col} = $${i++}::jsonb`);
             params.push(val ? JSON.stringify(val) : null);
+          } else if (col === 'filed_at') {
+            sets.push(`${col} = $${i++}::date`);
+            params.push(val === '' ? null : val);
+          } else if (col === 'next_hearing_at') {
+            sets.push(`${col} = $${i++}::timestamptz`);
+            params.push(val === '' ? null : val);
           } else {
             sets.push(`${col} = $${i++}`);
-            params.push(val);
+            params.push(val === '' ? null : val);
           }
         }
         params.push(baseCase.id);
@@ -798,6 +804,12 @@ Genera el super-resumen en JSON.`;
         } else if (col === 'key_dates') {
           sets.push(`${col} = $${i++}::jsonb`);
           params.push(v ? JSON.stringify(v) : null);
+        } else if (col === 'filed_at') {
+          sets.push(`${col} = $${i++}::date`);
+          params.push(v === '' ? null : v);
+        } else if (col === 'next_hearing_at') {
+          sets.push(`${col} = $${i++}::timestamptz`);
+          params.push(v === '' ? null : v);
         } else {
           sets.push(`${col} = $${i++}`);
           params.push(v === '' ? null : v);
