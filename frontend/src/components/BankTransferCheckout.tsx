@@ -225,13 +225,37 @@ Gracias.`
       {/* Botones de acción rápida */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {bank.app_deep_link && (
-          <a
-            href={bank.app_deep_link}
+          <button
+            type="button"
+            onClick={() => {
+              // Custom-scheme deep links sólo funcionan si el dispositivo tiene la
+              // app instalada. En desktop o sin app, el navegador imprime
+              // "Failed to launch 'pichincha://...'" en consola y no pasa nada.
+              // Intentamos abrir el deep link y caemos al sitio web del banco
+              // (o al SDK web del propio banco) tras un breve timeout.
+              const before = Date.now();
+              const fallbackUrl = bank.web_url ?? null;
+              const tab = fallbackUrl ? window.open('about:blank', '_blank') : null;
+              try {
+                window.location.href = bank.app_deep_link!;
+              } catch {
+                /* swallow — manejamos el fallback abajo */
+              }
+              setTimeout(() => {
+                // Si seguimos en la misma página después de >800ms, asumimos
+                // que el deep link falló — abrimos el sitio web si está disponible.
+                if (Date.now() - before < 1500 && fallbackUrl && tab) {
+                  tab.location.href = fallbackUrl;
+                } else if (tab) {
+                  tab.close();
+                }
+              }, 800);
+            }}
             className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-indigo-200 rounded-xl hover:border-indigo-400 transition-all hover:scale-105 active:scale-95"
           >
             <div className="text-3xl">📱</div>
             <span className="text-xs font-semibold text-gray-900 text-center">App del banco</span>
-          </a>
+          </button>
         )}
         {bank.web_url && (
           <a

@@ -19,8 +19,10 @@ interface PayPalCheckoutButtonProps {
   paymentId?: string;
   /** Callback cuando el pago se confirma (status COMPLETED). */
   onSuccess?: (info: { paymentId: string; orderId: string }) => void;
-  /** Callback en error/cancel. */
+  /** Callback en error real (NO se llama cuando el usuario solo cancela). */
   onError?: (err: unknown) => void;
+  /** Callback opcional cuando el usuario cierra el popup sin pagar. */
+  onCancel?: () => void;
 }
 
 declare global {
@@ -58,6 +60,7 @@ export default function PayPalCheckoutButton({
   paymentId: existingPaymentId,
   onSuccess,
   onError,
+  onCancel,
 }: PayPalCheckoutButtonProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -117,14 +120,29 @@ export default function PayPalCheckoutButton({
           },
 
           onCancel: () => {
-            setError('Pago cancelado');
-            onError?.(new Error('cancelled'));
+            // El usuario cerró el popup. NO es un error.
+            // Antes hacíamos onError?.(new Error('cancelled')) lo que hacía
+            // que el SDK volcara "paypal error Error: cancelled" a la consola.
+            setError('Pago cancelado. Podés volver a intentarlo cuando quieras.');
+            onCancel?.();
           },
 
           onError: (err: unknown) => {
-            console.error('paypal onError', err);
-            setError('Error en PayPal — intentá de nuevo o usá transferencia bancaria');
-            onError?.(err);
+            // No loguear los errores de cancelación ni los popups cerrados.
+            const msg = (err && typeof err === 'object' && 'message' in (err as any))
+              ? String((err as any).message ?? '')
+              : '';
+            const isCancel = /cancel/i.test(msg) || /popup\s*close/i.test(msg);
+            if (!isCancel) {
+              // Real error — vale la pena registrarlo.
+              // eslint-disable-next-line no-console
+              console.warn('[paypal]', msg || err);
+            }
+            setError(isCancel
+              ? 'Pago cancelado. Podés volver a intentarlo cuando quieras.'
+              : 'Error en PayPal — intentá de nuevo o usá transferencia bancaria');
+            if (!isCancel) onError?.(err);
+            else onCancel?.();
           },
         }).render(containerRef.current);
 
