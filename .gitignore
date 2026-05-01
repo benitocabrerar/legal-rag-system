@@ -70,3 +70,9 @@ scripts/_*
 # Sub-tool with its own node_modules (operator-only, not part of main build)
 admin-upload/node_modules/
 admin-upload/package-lock.json
+
+# Operator-only helpers (HTML guides + screenshots) — not part of the app
+/deployment-config.html
+/whatsapp-outreach.html
+/google-oauth-setup.html
+/error/
