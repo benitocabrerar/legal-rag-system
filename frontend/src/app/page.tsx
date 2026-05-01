@@ -415,7 +415,7 @@ export default function Home() {
           <FooterCol
             title="Legal"
             links={[
-              ['#privacidad', 'Privacidad'],
+              ['/privacy', 'Política de privacidad'],
               ['/terms', 'Términos de servicio'],
               ['/lopdp', 'LOPDP Ecuador'],
             ]}
