@@ -19,6 +19,10 @@ out/
 .env.*.local
 *.env
 
+# MCP server configuration (contiene tokens de servicios externos — Render, etc.)
+.mcp.json
+.mcp.local.json
+
 # Editor
 .vscode/
 .idea/
