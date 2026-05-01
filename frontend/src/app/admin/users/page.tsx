@@ -14,7 +14,7 @@ interface User {
   lastLogin?: string;
   casesCount?: number;
   queriesCount?: number;
-  subscriptionPlan?: string;
+  planTier?: string;
 }
 
 const ROLES = [
@@ -75,7 +75,7 @@ export default function UsersPage() {
         name: selectedUser.name,
         email: selectedUser.email,
         role: selectedUser.role,
-        planTier: selectedUser.subscriptionPlan,
+        planTier: selectedUser.planTier || 'free',
       });
       alert('Usuario actualizado exitosamente');
       setShowEditModal(false);
@@ -252,8 +252,24 @@ export default function UsersPage() {
                       {ROLES.find((r) => r.value === user.role)?.label}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.subscriptionPlan || 'N/A'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const tier = user.planTier || 'free';
+                      const label = SUBSCRIPTION_PLANS.find((p) => p.value === tier)?.label || tier;
+                      const color =
+                        tier === 'enterprise'
+                          ? 'bg-purple-100 text-purple-800'
+                          : tier === 'professional'
+                          ? 'bg-blue-100 text-blue-800'
+                          : tier === 'basic'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-gray-100 text-gray-700';
+                      return (
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>
@@ -347,9 +363,9 @@ export default function UsersPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Plan</label>
                 <select
-                  value={selectedUser.subscriptionPlan || 'free'}
+                  value={selectedUser.planTier || 'free'}
                   onChange={(e) =>
-                    setSelectedUser({ ...selectedUser, subscriptionPlan: e.target.value })
+                    setSelectedUser({ ...selectedUser, planTier: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
