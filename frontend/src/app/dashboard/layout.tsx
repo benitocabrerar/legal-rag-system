@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
-import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase } from 'lucide-react';
+import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon } from 'lucide-react';
+import { CommandPaletteProvider } from '@/components/CommandPalette';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -117,6 +118,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Cmd+K hint */}
+              <button
+                onClick={() => {
+                  // Re-dispatch the keyboard event so the provider opens.
+                  const ev = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+                  window.dispatchEvent(ev);
+                }}
+                className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                title="Abrir paleta de comandos"
+              >
+                <CommandIcon className="w-3.5 h-3.5" />
+                <span>Buscar…</span>
+                <kbd className="font-mono font-semibold bg-white border border-slate-200 px-1 rounded text-[10px]">⌘K</kbd>
+              </button>
+
               {/* Country selector (compact) */}
               <CountrySelector variant="compact" />
 
@@ -186,6 +202,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
+
+      {/* Cmd+K command palette — global */}
+      <CommandPaletteProvider />
     </div>
   );
 }

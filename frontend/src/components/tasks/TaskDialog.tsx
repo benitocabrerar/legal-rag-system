@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Task, TaskPriority, CreateTaskData } from '@/types/tasks';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { tasksAPI } from '@/lib/api';
 
 interface TaskDialogProps {
   isOpen: boolean;
@@ -34,6 +35,30 @@ export function TaskDialog({ isOpen, onClose, onSave, task }: TaskDialogProps) {
 
   const [tagInput, setTagInput] = useState('');
   const [checklistInput, setChecklistInput] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const suggestSubtasks = async () => {
+    if (!formData.title || formData.title.length < 3) {
+      setAiError('Escribe primero el título de la tarea');
+      return;
+    }
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const res = await tasksAPI.suggestSubtasks({ title: formData.title, description: formData.description });
+      const startPos = formData.checklistItems?.length || 0;
+      const newItems = res.subtasks.map((s, i) => ({ title: s.title, position: startPos + i }));
+      setFormData((prev) => ({
+        ...prev,
+        checklistItems: [...(prev.checklistItems || []), ...newItems],
+      }));
+    } catch (err: any) {
+      setAiError(err?.response?.data?.message ?? 'No se pudieron generar sugerencias');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (task) {
@@ -251,9 +276,30 @@ export function TaskDialog({ isOpen, onClose, onSave, task }: TaskDialogProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lista de verificación
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Lista de verificación
+                  </label>
+                  <button
+                    type="button"
+                    onClick={suggestSubtasks}
+                    disabled={aiLoading || !formData.title || formData.title.length < 3}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all',
+                      aiLoading || !formData.title || formData.title.length < 3
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:shadow-md hover:scale-[1.02]',
+                    )}
+                    title="Genera 4-7 subtareas sugeridas a partir del título"
+                  >
+                    {aiLoading ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Pensando…</>
+                    ) : (
+                      <><Sparkles className="w-3 h-3" /> Sugerir con IA</>
+                    )}
+                  </button>
+                </div>
+                {aiError && <p className="text-[11px] text-rose-600 mb-1.5">{aiError}</p>}
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"

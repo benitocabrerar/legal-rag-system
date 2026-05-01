@@ -1,204 +1,162 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { eventsAPI, parseApiError } from '@/lib/api';
+import { eventsAPI } from '@/lib/api';
 import { Event, CreateEventData } from '@/types/calendar';
-import { CalendarView } from '@/components/calendar/CalendarView';
-import { EventList } from '@/components/calendar/EventList';
+import { ALL_EVENT_TYPES, CalendarViewMode, EventType, moveEventToDate } from '@/lib/calendar-utils';
+import { CalendarSidebar } from '@/components/calendar/CalendarSidebar';
+import { CalendarHeader } from '@/components/calendar/CalendarHeader';
+import { MonthView } from '@/components/calendar/views/MonthView';
+import { WeekView } from '@/components/calendar/views/WeekView';
+import { DayView } from '@/components/calendar/views/DayView';
+import { AgendaView } from '@/components/calendar/views/AgendaView';
 import { EventDialog } from '@/components/calendar/EventDialog';
-import { Plus, Calendar, List } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-type ViewMode = 'calendar' | 'list';
+import { useRealtimeTable } from '@/hooks/useRealtimeTable';
 
 export default function CalendarPage() {
   const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
-  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [view, setView] = useState<CalendarViewMode>('month');
+  const [anchor, setAnchor] = useState<Date>(new Date());
+  const [enabledTypes, setEnabledTypes] = useState<Set<EventType>>(new Set(ALL_EVENT_TYPES));
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [defaultDate, setDefaultDate] = useState<Date | undefined>();
 
-  // Fetch events
-  const { data: eventsData, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['events'],
     queryFn: () => eventsAPI.list(),
   });
 
-  const events: Event[] = eventsData?.events || [];
-
-  // Create event mutation
-  const createEventMutation = useMutation({
-    mutationFn: (data: CreateEventData) => eventsAPI.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      setIsEventDialogOpen(false);
-      setSelectedEvent(null);
-      setSelectedDate(undefined);
-    },
-  });
-
-  // Update event mutation
-  const updateEventMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateEventData> }) =>
-      eventsAPI.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      setIsEventDialogOpen(false);
-      setSelectedEvent(null);
-      setSelectedDate(undefined);
-    },
-  });
-
-  // Delete event mutation
-  const deleteEventMutation = useMutation({
-    mutationFn: (id: string) => eventsAPI.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      setSelectedEvent(null);
-    },
-  });
-
-  const handleCreateEvent = () => {
-    setSelectedEvent(null);
-    setSelectedDate(undefined);
-    setIsEventDialogOpen(true);
-  };
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsEventDialogOpen(true);
-  };
-
-  const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    setSelectedEvent(null);
-    setIsEventDialogOpen(true);
-  };
-
-  const handleSaveEvent = async (data: CreateEventData) => {
-    if (selectedEvent) {
-      await updateEventMutation.mutateAsync({
-        id: selectedEvent.id,
-        data,
-      });
-    } else {
-      await createEventMutation.mutateAsync(data);
-    }
-  };
-
-  // Sort events by start time
-  const sortedEvents = [...events].sort((a, b) =>
-    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  useRealtimeTable({ table: 'events', invalidateKeys: [['events']] });
+  const allEvents: Event[] = data?.events || [];
+  const events = useMemo(
+    () => allEvents.filter((e) => enabledTypes.has(e.type as EventType)),
+    [allEvents, enabledTypes],
   );
 
+  const countsByType = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of allEvents) m[e.type] = (m[e.type] ?? 0) + 1;
+    return m;
+  }, [allEvents]);
+
+  const createMut = useMutation({
+    mutationFn: (d: CreateEventData) => eventsAPI.create(d),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      closeDialog();
+    },
+  });
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateEventData> }) => eventsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      closeDialog();
+    },
+  });
+
+  const openCreate = (d?: Date) => { setSelectedEvent(null); setDefaultDate(d); setIsDialogOpen(true); };
+  const openEdit = (event: Event) => { setSelectedEvent(event); setDefaultDate(undefined); setIsDialogOpen(true); };
+  const closeDialog = () => { setIsDialogOpen(false); setSelectedEvent(null); setDefaultDate(undefined); };
+
+  const handleSave = async (d: CreateEventData) => {
+    if (selectedEvent) await updateMut.mutateAsync({ id: selectedEvent.id, data: d });
+    else await createMut.mutateAsync(d);
+  };
+
+  const handleEventDrop = (eventId: string, newDate: Date) => {
+    const event = allEvents.find((e) => e.id === eventId);
+    if (!event) return;
+    const next = moveEventToDate(event as any, newDate);
+    // Optimistic update
+    queryClient.setQueryData<{ events: Event[] }>(['events'], (prev) =>
+      prev ? { ...prev, events: prev.events.map((e) => (e.id === eventId ? { ...e, ...next } : e)) } : prev,
+    );
+    updateMut.mutate({ id: eventId, data: next });
+  };
+
+  // Honor Cmd+K deep links: ?new=1, ?view=day|week|month|agenda, ?today=1
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (!searchParams) return;
+    const v = searchParams.get('view');
+    if (v === 'month' || v === 'week' || v === 'day' || v === 'agenda') setView(v);
+    if (searchParams.get('today') === '1') setAnchor(new Date());
+    if (searchParams.get('new') === '1') openCreate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Keyboard shortcuts: M/S/D/A
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement | null)?.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'm') setView('month');
+      else if (k === 's' || k === 'w') setView('week');
+      else if (k === 'd') setView('day');
+      else if (k === 'a') setView('agenda');
+      else if (k === 't') setAnchor(new Date());
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const toggleType = (t: EventType) => {
+    setEnabledTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  };
+
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="sm:flex sm:items-center sm:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calendario</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Gestiona tus reuniones, audiencias y fechas importantes
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0 flex items-center gap-3">
-          {/* View toggle */}
-          <div className="inline-flex rounded-md shadow-sm" role="group">
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border rounded-l-lg',
-                viewMode === 'calendar'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              )}
-            >
-              <Calendar className="w-4 h-4 inline mr-2" />
-              Calendario
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'px-4 py-2 text-sm font-medium border-t border-b border-r rounded-r-lg',
-                viewMode === 'list'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              )}
-            >
-              <List className="w-4 h-4 inline mr-2" />
-              Lista
-            </button>
-          </div>
-
-          {/* Create event button */}
-          <button
-            onClick={handleCreateEvent}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo evento
-          </button>
-        </div>
-      </div>
-
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      )}
-
-      {/* Calendar/List view */}
-      {!isLoading && (
-        <>
-          {viewMode === 'calendar' ? (
-            <CalendarView
-              events={events}
-              onEventClick={handleEventClick}
-              onDateClick={handleDateClick}
-            />
-          ) : (
-            <>
-              {sortedEvents.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
-                  <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    No hay eventos
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Comienza creando un nuevo evento.
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      onClick={handleCreateEvent}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Nuevo evento
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <EventList events={sortedEvents} onEventClick={handleEventClick} />
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {/* Event Dialog */}
-      <EventDialog
-        isOpen={isEventDialogOpen}
-        onClose={() => {
-          setIsEventDialogOpen(false);
-          setSelectedEvent(null);
-          setSelectedDate(undefined);
-        }}
-        onSave={handleSaveEvent}
-        event={selectedEvent}
-        defaultDate={selectedDate}
+    <div className="flex min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 to-white">
+      <CalendarSidebar
+        selected={anchor}
+        onSelect={(d) => { setAnchor(d); if (view === 'month') setView('day'); }}
+        events={allEvents as any}
+        enabledTypes={enabledTypes}
+        onToggleType={toggleType}
+        onCreate={() => openCreate()}
+        countsByType={countsByType}
       />
+
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Calendario</h1>
+            <p className="text-sm text-slate-500">Audiencias, plazos y reuniones — atajos: <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">M</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">S</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">D</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">A</kbd> <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-mono">T</kbd>oday</p>
+          </div>
+        </div>
+
+        <CalendarHeader anchor={anchor} view={view} onChangeView={setView} onAnchorChange={setAnchor} />
+
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-200 border-t-indigo-600"></div>
+          </div>
+        ) : (
+          <>
+            {view === 'month'  && <MonthView  anchor={anchor} events={events as any} onEventClick={openEdit} onDateClick={openCreate} onEventDrop={handleEventDrop} />}
+            {view === 'week'   && <WeekView   anchor={anchor} events={events as any} onEventClick={openEdit} onSlotClick={openCreate} />}
+            {view === 'day'    && <DayView    anchor={anchor} events={events as any} onEventClick={openEdit} onSlotClick={openCreate} />}
+            {view === 'agenda' && <AgendaView anchor={anchor} events={events as any} onEventClick={openEdit} />}
+          </>
+        )}
+
+        <EventDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          onSave={handleSave}
+          event={selectedEvent}
+          defaultDate={defaultDate}
+        />
+      </main>
     </div>
   );
 }

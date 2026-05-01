@@ -457,6 +457,30 @@ export const tasksAPI = {
     const response = await api.patch(`/tasks/${id}/status`, { status });
     return response.data.task;
   },
+  insights: async (): Promise<{
+    overdue: number; dueToday: number; dueThisWeek: number; urgent: number;
+    unassigned: number; inProgress: number; completedThisWeek: number; total: number;
+  }> => {
+    const response = await api.get('/tasks/insights');
+    return response.data;
+  },
+  suggestSubtasks: async (data: { title: string; description?: string; caseType?: string }): Promise<{
+    subtasks: Array<{ title: string; estimatedHours?: number; priority?: string }>;
+  }> => {
+    const response = await api.post('/tasks/suggest-subtasks', data);
+    return response.data;
+  },
+  listTemplates: async (): Promise<{
+    templates: Array<{ id: string; name: string; description: string; icon: string;
+      tasks: Array<{ title: string; priority: string; estimatedHours?: number; daysFromStart?: number }> }>;
+  }> => {
+    const response = await api.get('/tasks/templates');
+    return response.data;
+  },
+  createFromTemplate: async (data: { templateId: string; caseId?: string; startDate?: string }) => {
+    const response = await api.post('/tasks/from-template', data);
+    return response.data;
+  },
 };
 
 // Finance API
