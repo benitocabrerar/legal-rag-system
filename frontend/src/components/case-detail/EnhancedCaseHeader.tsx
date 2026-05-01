@@ -245,6 +245,13 @@ export function EnhancedCaseHeader({ caseData, onUpdated }: EnhancedCaseHeaderPr
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => router.push(`/dashboard/cases/${caseData.id}/litigation`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-br from-violet-600 to-fuchsia-600 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50"
+            title="Abrir Sala de Litigación a pantalla completa"
+          >
+            ⚖️ Sala de Litigación
+          </button>
+          <button
             onClick={generateReport}
             disabled={generating}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors group disabled:opacity-50"

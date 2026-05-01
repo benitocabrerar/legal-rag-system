@@ -219,6 +219,9 @@ export default function CaseDetailPage() {
     loadCaseData();
     loadDocuments();
     loadQueryHistory();
+    if (typeof window !== 'undefined' && caseId) {
+      window.localStorage.setItem('last-case-id', caseId);
+    }
   }, [caseId]);
 
   useEffect(() => {

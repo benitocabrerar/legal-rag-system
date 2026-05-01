@@ -615,6 +615,65 @@ export const financeAPI = {
   },
 };
 
+export const litigationAPI = {
+  brief: async (caseId: string): Promise<LitigationBrief> => {
+    const r = await api.get(`/cases/${caseId}/litigation-brief`);
+    return r.data;
+  },
+  article: async (ref: string, jurisdiction?: string): Promise<ArticleLookup> => {
+    const r = await api.get('/legal/article', { params: { ref, jurisdiction } });
+    return r.data;
+  },
+  /** Returns the absolute SSE URL — caller uses native EventSource/fetch streaming. */
+  chatUrl: (caseId: string) => `/api/v1/cases/${caseId}/litigation-chat`,
+};
+
+export interface LitigationBrief {
+  case: {
+    id: string; title: string; description: string | null;
+    clientName: string | null; caseNumber: string | null;
+    status: string; createdAt: string; updatedAt: string;
+  };
+  nextHearing: {
+    id: string; title: string; type: string; status: string;
+    startTime: string; endTime: string;
+    location: string | null; meetingLink: string | null;
+    description: string | null;
+  } | null;
+  timeline: Array<{
+    id: string; title: string; type: string; status: string;
+    startTime: string; endTime: string;
+    location: string | null; meetingLink: string | null;
+    description: string | null;
+  }>;
+  documents: Array<{
+    id: string; title: string; excerpt: string;
+    contentLength: number; createdAt: string;
+  }>;
+  tasks: Array<{
+    id: string; title: string; status: string; priority: string;
+    dueDate: string | null; progress: number; description: string | null;
+  }>;
+  finance: { totalBilled: number; totalPaid: number; totalOutstanding: number; invoiceCount: number; currency: string } | null;
+  agreements: Array<{ id: string; title: string; totalAmount: number; currency: string; status: string }>;
+  invoices: Array<{ id: string; invoiceNumber: string; totalAmount: number; balanceDue: number; status: string; dueDate: string }>;
+  counts: { documents: number; events: number; tasks: number; agreements: number };
+}
+
+export interface ArticleLookup {
+  article: {
+    id: string; number: number; numberText: string | null;
+    title: string | null; content: string;
+    summary: string | null; wordCount: number | null;
+  };
+  source: {
+    id: string; normType: string; title: string | null;
+    hierarchy: string; jurisdiction: string; publicationDate: string | null;
+  };
+  alternatives: Array<{ articleId: string; sourceTitle: string | null; normType: string }>;
+  parsed: { number: number; suffix?: string; sourceHint?: string };
+}
+
 export interface FinanceDashboard {
   currency: string;
   generatedAt: string;

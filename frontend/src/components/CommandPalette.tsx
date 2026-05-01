@@ -19,6 +19,12 @@ interface CommandItemDef {
 }
 
 const COMMANDS: CommandItemDef[] = [
+  // Acción rápida
+  { id: 'litigation',   group: 'Crear',    label: 'Abrir Sala de Litigación del último caso visto', icon: Sparkles, keywords: ['litigation','sala','audiencia','hearing'], run: (r) => {
+    const last = typeof window !== 'undefined' ? window.localStorage.getItem('last-case-id') : null;
+    if (last) r.push(`/dashboard/cases/${last}/litigation`);
+    else r.push('/dashboard');
+  } },
   // Crear
   { id: 'new-task',     group: 'Crear',    label: 'Nueva tarea',          hint: '⌘ N',  icon: Plus,        keywords: ['create','add','tarea','task'],     run: (r) => r.push('/dashboard/tasks?new=1') },
   { id: 'new-event',    group: 'Crear',    label: 'Nuevo evento',         hint: '⌘ E',  icon: Calendar,    keywords: ['create','add','evento','event'],   run: (r) => r.push('/dashboard/calendar?new=1') },

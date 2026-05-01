@@ -46,6 +46,7 @@ import { taskAiRoutes } from './routes/tasks-ai.js';
 import { notificationsEnhancedRoutes } from './routes/notifications-enhanced.js';
 import { financeRoutes } from './routes/finance.js';
 import { financeAugmentRoutes } from './routes/finance-augment.js';
+import { litigationRoutes } from './routes/litigation.js';
 import { diagnosticsRoutes } from './routes/diagnostics.js';
 import { migrationRoutesEmbedded } from './routes/admin/migration-embedded.js';
 import { feedbackRoutes } from './routes/feedback.js';
@@ -266,6 +267,7 @@ await app.register(taskAiRoutes, { prefix: '/api/v1' });
 await app.register(notificationsEnhancedRoutes, { prefix: '/api/v1' });
 await app.register(financeRoutes, { prefix: '/api/v1' });
 await app.register(financeAugmentRoutes, { prefix: '/api/v1' });
+await app.register(litigationRoutes, { prefix: '/api/v1' });
 
 // Register diagnostics routes
 await app.register(diagnosticsRoutes, { prefix: '/api/v1' });
