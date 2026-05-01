@@ -1,0 +1,1176 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Extended test queries (Q051-Q120) for comprehensive NLP testing",
+    "total_queries": 70,
+    "language": "es"
+  },
+  "test_queries": [
+    {
+      "id": "Q051",
+      "category": "article_lookup",
+      "query": "Artículo 234 Código Civil Ecuador",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Código Civil"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL"],
+          "articleNumber": "234"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q052",
+      "category": "simple_search",
+      "query": "Ley de Seguridad Social",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Seguridad Social"],
+        "filters": {
+          "normType": ["LEY_ORGANICA", "LEY_ORDINARIA"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q053",
+      "category": "entity_extraction",
+      "query": "Normativa del Instituto Ecuatoriano de Seguridad Social sobre jubilación",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["jubilación"],
+        "filters": {
+          "institution": "IESS"
+        },
+        "entities": {
+          "institution": "Instituto Ecuatoriano de Seguridad Social",
+          "topic": "jubilación"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q054",
+      "category": "date_based",
+      "query": "Acuerdos ministeriales emitidos el primer trimestre de 2023",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["ACUERDO_MINISTERIAL"],
+          "publicationDateFrom": "2023-01-01",
+          "publicationDateTo": "2023-03-31"
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q055",
+      "category": "article_lookup",
+      "query": "Arts. 12 a 34 Constitución sobre derechos del buen vivir",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["derechos buen vivir"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleRange": {
+            "from": "12",
+            "to": "34"
+          }
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q056",
+      "category": "comparative",
+      "query": "Diferencias entre Código del Trabajo y Ley de Servicio Público sobre vacaciones",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["vacaciones"],
+        "filters": {
+          "normType": ["CODIGO_TRABAJO", "LEY_SERVICIO_PUBLICO"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_TRABAJO", "LEY_SERVICIO_PUBLICO"],
+          "topic": "vacaciones"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q057",
+      "category": "simple_search",
+      "query": "Delitos informáticos en Ecuador",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["delitos informáticos"],
+        "filters": {
+          "normType": ["COIP"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q058",
+      "category": "jurisdiction_based",
+      "query": "Dictámenes de la Procuraduría General del Estado sobre contratos públicos",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["contratos públicos"],
+        "filters": {
+          "documentType": ["DICTAMEN"],
+          "institution": "PROCURADURIA_GENERAL"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q059",
+      "category": "complex_filters",
+      "query": "Reglamentos ejecutivos sobre medio ambiente publicados desde 2019",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["medio ambiente"],
+        "filters": {
+          "documentType": ["REGLAMENTO"],
+          "publicationDateFrom": "2019-01-01"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q060",
+      "category": "article_lookup",
+      "query": "Artículo 229 COIP delitos informáticos",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["delitos informáticos"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "229"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q061",
+      "category": "date_based",
+      "query": "Resoluciones de la Contraloría General del Estado en 2021",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["RESOLUCION"],
+          "institution": "CONTRALORIA_GENERAL",
+          "publicationYear": 2021
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q062",
+      "category": "entity_extraction",
+      "query": "¿Qué regula la Ley Orgánica de Comunicación sobre libertad de prensa?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["libertad prensa"],
+        "filters": {
+          "normType": ["LEY_ORGANICA_COMUNICACION"]
+        },
+        "entities": {
+          "document": "Ley Orgánica de Comunicación",
+          "topic": "libertad de prensa"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q063",
+      "category": "simple_search",
+      "query": "Normativa sobre violencia de género",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["violencia género"],
+        "filters": {},
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q064",
+      "category": "article_lookup",
+      "query": "Art. 155 COIP violencia contra la mujer",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["violencia mujer"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "155"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q065",
+      "category": "comparative",
+      "query": "Comparar regulación de sociedades en Código Civil y Ley de Compañías",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["sociedades"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "LEY_COMPANIAS"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_CIVIL", "LEY_COMPANIAS"],
+          "topic": "sociedades"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q066",
+      "category": "jurisdiction_based",
+      "query": "Sentencias de garantías jurisdiccionales sobre acción de protección",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["acción protección"],
+        "filters": {
+          "documentType": ["SENTENCIA"],
+          "sentenceType": "GARANTIAS_JURISDICCIONALES"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q067",
+      "category": "date_based",
+      "query": "Leyes sobre economía popular y solidaria desde 2011",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["economía popular solidaria"],
+        "filters": {
+          "publicationDateFrom": "2011-01-01"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q068",
+      "category": "simple_search",
+      "query": "Código Orgánico Monetario y Financiero",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Monetario Financiero"],
+        "filters": {
+          "legalHierarchy": ["CODIGOS_ORGANICOS"],
+          "normType": ["CODIGO_ORGANICO"]
+        },
+        "confidence_min": 0.92,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q069",
+      "category": "article_lookup",
+      "query": "Artículo 425 Constitución sobre jerarquía normativa",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["jerarquía normativa"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "425"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q070",
+      "category": "entity_extraction",
+      "query": "Normativa del Banco Central del Ecuador sobre reservas bancarias",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["reservas bancarias"],
+        "filters": {
+          "institution": "BANCO_CENTRAL"
+        },
+        "entities": {
+          "institution": "Banco Central del Ecuador",
+          "topic": "reservas bancarias"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q071",
+      "category": "complex_filters",
+      "query": "Códigos que regulan el derecho penal en Ecuador",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derecho penal"],
+        "filters": {
+          "legalHierarchy": ["CODIGOS_ORGANICOS", "CODIGOS"],
+          "legalArea": "PENAL"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q072",
+      "category": "date_based",
+      "query": "Reformas al Código del Trabajo en el año 2019",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["reformas", "Código Trabajo"],
+        "filters": {
+          "documentType": ["REFORMA", "LEY_REFORMATORIA"],
+          "publicationYear": 2019,
+          "affectsNorm": "CODIGO_TRABAJO"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q073",
+      "category": "simple_search",
+      "query": "Ley de Minería",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Minería"],
+        "filters": {
+          "normType": ["LEY"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q074",
+      "category": "article_lookup",
+      "query": "Arts. 220 a 225 COIP sobre tráfico de drogas",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["tráfico drogas"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleRange": {
+            "from": "220",
+            "to": "225"
+          }
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q075",
+      "category": "comparative",
+      "query": "Comparar tratamiento de sucesiones en Código Civil y Código de la Niñez",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["sucesiones"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "CODIGO_NINEZ"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_CIVIL", "CODIGO_NINEZ"],
+          "topic": "sucesiones"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q076",
+      "category": "jurisdiction_based",
+      "query": "Resoluciones del Consejo Nacional Electoral sobre campañas electorales",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["campañas electorales"],
+        "filters": {
+          "documentType": ["RESOLUCION"],
+          "institution": "CNE"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q077",
+      "category": "entity_extraction",
+      "query": "¿Qué establece la Ley Orgánica de Garantías Jurisdiccionales sobre hábeas corpus?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["hábeas corpus"],
+        "filters": {
+          "normType": ["LEY_ORGANICA_GARANTIAS"]
+        },
+        "entities": {
+          "document": "Ley Orgánica de Garantías Jurisdiccionales",
+          "topic": "hábeas corpus"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q078",
+      "category": "complex_filters",
+      "query": "Tratados internacionales ratificados por Ecuador sobre derechos humanos",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derechos humanos"],
+        "filters": {
+          "documentType": ["TRATADO_INTERNACIONAL"],
+          "status": "RATIFICADO"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q079",
+      "category": "date_based",
+      "query": "Normativa sobre transparencia publicada en 2022",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["transparencia"],
+        "filters": {
+          "publicationYear": 2022
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q080",
+      "category": "article_lookup",
+      "query": "Artículo 76 Constitución sobre debido proceso",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["debido proceso"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "76"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q081",
+      "category": "simple_search",
+      "query": "Ley de Transparencia y Acceso a la Información Pública",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Transparencia", "Acceso Información Pública"],
+        "filters": {
+          "normType": ["LEY"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q082",
+      "category": "jurisdiction_based",
+      "query": "Jurisprudencia sobre acciones de amparo",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["acciones amparo"],
+        "filters": {
+          "documentType": ["JURISPRUDENCIA", "SENTENCIA"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q083",
+      "category": "comparative",
+      "query": "Comparar COIP con Código Penal sobre legítima defensa",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["legítima defensa"],
+        "filters": {
+          "normType": ["COIP", "CODIGO_PENAL"]
+        },
+        "comparison": {
+          "documents": ["COIP", "CODIGO_PENAL"],
+          "topic": "legítima defensa"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q084",
+      "category": "entity_extraction",
+      "query": "Normativa del Ministerio de Educación sobre currículo escolar",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["currículo escolar"],
+        "filters": {
+          "institution": "MINISTERIO_EDUCACION"
+        },
+        "entities": {
+          "institution": "Ministerio de Educación",
+          "topic": "currículo escolar"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q085",
+      "category": "date_based",
+      "query": "Decretos de emergencia emitidos en 2020 por COVID-19",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["COVID-19", "emergencia"],
+        "filters": {
+          "documentType": ["DECRETO_EJECUTIVO", "DECRETO_EMERGENCIA"],
+          "publicationYear": 2020
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q086",
+      "category": "article_lookup",
+      "query": "Art. 245 COIP delitos ambientales",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["delitos ambientales"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "245"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q087",
+      "category": "complex_filters",
+      "query": "Leyes sobre protección al consumidor vigentes en Ecuador",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["protección consumidor"],
+        "filters": {
+          "status": "VIGENTE"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q088",
+      "category": "simple_search",
+      "query": "Código Orgánico de la Producción",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Producción"],
+        "filters": {
+          "legalHierarchy": ["CODIGOS_ORGANICOS"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q089",
+      "category": "jurisdiction_based",
+      "query": "Acuerdos de la Asamblea Nacional sobre reformas tributarias",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["reformas tributarias"],
+        "filters": {
+          "documentType": ["ACUERDO"],
+          "institution": "ASAMBLEA_NACIONAL"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q090",
+      "category": "article_lookup",
+      "query": "Artículos 298 a 339 COIP delitos económicos",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["delitos económicos"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleRange": {
+            "from": "298",
+            "to": "339"
+          }
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q091",
+      "category": "entity_extraction",
+      "query": "¿Qué dice el Código Tributario sobre exenciones fiscales?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["exenciones fiscales"],
+        "filters": {
+          "normType": ["CODIGO_TRIBUTARIO"]
+        },
+        "entities": {
+          "document": "Código Tributario",
+          "topic": "exenciones fiscales"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q092",
+      "category": "date_based",
+      "query": "Resoluciones sobre COVID-19 del Comité de Operaciones de Emergencia en 2020",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["COVID-19"],
+        "filters": {
+          "documentType": ["RESOLUCION"],
+          "institution": "COE",
+          "publicationYear": 2020
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q093",
+      "category": "comparative",
+      "query": "Diferencias entre Constitución 1998 y Constitución 2008 sobre estructura del Estado",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["estructura Estado"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "publicationYear": [1998, 2008]
+        },
+        "comparison": {
+          "documents": ["CONSTITUCION_1998", "CONSTITUCION_2008"],
+          "topic": "estructura del Estado"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q094",
+      "category": "simple_search",
+      "query": "Ley Orgánica de Tierras Rurales y Territorios Ancestrales",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Tierras Rurales", "Territorios Ancestrales"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q095",
+      "category": "article_lookup",
+      "query": "Art. 11 Constitución sobre principios de aplicación de derechos",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["principios aplicación derechos"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "11"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q096",
+      "category": "jurisdiction_based",
+      "query": "Sentencias de salas especializadas sobre conflictos comerciales",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["conflictos comerciales"],
+        "filters": {
+          "documentType": ["SENTENCIA"],
+          "jurisdiction": "SALA_COMERCIAL"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q097",
+      "category": "complex_filters",
+      "query": "Normativa sobre derechos de pueblos indígenas vigente",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derechos pueblos indígenas"],
+        "filters": {
+          "status": "VIGENTE"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q098",
+      "category": "entity_extraction",
+      "query": "Acuerdos del Ministerio del Ambiente sobre áreas protegidas",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["áreas protegidas"],
+        "filters": {
+          "documentType": ["ACUERDO_MINISTERIAL"],
+          "institution": "MINISTERIO_AMBIENTE"
+        },
+        "entities": {
+          "institution": "Ministerio del Ambiente",
+          "topic": "áreas protegidas"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q099",
+      "category": "date_based",
+      "query": "Leyes aprobadas en el período legislativo 2017-2021",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["LEY"],
+          "publicationDateFrom": "2017-05-01",
+          "publicationDateTo": "2021-05-14"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q100",
+      "category": "article_lookup",
+      "query": "Artículo 424 Constitución sobre supremacía constitucional",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["supremacía constitucional"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "424"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q101",
+      "category": "simple_search",
+      "query": "Ley de Movilidad Humana",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Movilidad Humana"],
+        "filters": {
+          "normType": ["LEY_ORGANICA", "LEY"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q102",
+      "category": "edge_cases",
+      "query": "Constitución",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "normType": ["CONSTITUCION"]
+        },
+        "confidence_min": 0.75,
+        "article_search": false,
+        "notes": "Very broad query - single word"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q103",
+      "category": "edge_cases",
+      "query": "Art",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": [],
+        "filters": {},
+        "confidence_min": 0.40,
+        "article_search": true,
+        "notes": "Incomplete query - needs article number and document"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q104",
+      "category": "edge_cases",
+      "query": "¿Qué es?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": [],
+        "filters": {},
+        "confidence_min": 0.30,
+        "article_search": false,
+        "notes": "Too vague - no context"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q105",
+      "category": "comparative",
+      "query": "Comparar todas las leyes sobre ambiente",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["ambiente"],
+        "filters": {
+          "documentType": ["LEY"]
+        },
+        "comparison": {
+          "topic": "ambiente"
+        },
+        "confidence_min": 0.70,
+        "article_search": false,
+        "notes": "Too broad comparison - multiple documents"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q106",
+      "category": "simple_search",
+      "query": "Código de la Democracia",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Democracia"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q107",
+      "category": "article_lookup",
+      "query": "Artículo 142 COIP homicidio",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["homicidio"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "142"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q108",
+      "category": "entity_extraction",
+      "query": "Normativa de la Superintendencia de Compañías sobre auditorías",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["auditorías"],
+        "filters": {
+          "institution": "SUPERINTENDENCIA_COMPANIAS"
+        },
+        "entities": {
+          "institution": "Superintendencia de Compañías",
+          "topic": "auditorías"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q109",
+      "category": "date_based",
+      "query": "Reglamentos publicados en el último año",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["REGLAMENTO"],
+          "publicationDateFrom": "2024-01-13"
+        },
+        "confidence_min": 0.85,
+        "article_search": false,
+        "notes": "Relative date - needs calculation"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q110",
+      "category": "complex_filters",
+      "query": "Sentencias de segunda instancia sobre delitos sexuales en Pichincha",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["delitos sexuales"],
+        "filters": {
+          "documentType": ["SENTENCIA"],
+          "instance": "SEGUNDA",
+          "jurisdiction": "PICHINCHA"
+        },
+        "confidence_min": 0.82,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q111",
+      "category": "comparative",
+      "query": "Evolución de la regulación sobre adopción en Ecuador desde 1990",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["adopción"],
+        "filters": {
+          "publicationDateFrom": "1990-01-01"
+        },
+        "comparison": {
+          "topic": "adopción",
+          "temporal": true
+        },
+        "confidence_min": 0.80,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q112",
+      "category": "simple_search",
+      "query": "Ley Orgánica de Economía Popular y Solidaria",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Economía Popular Solidaria"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q113",
+      "category": "article_lookup",
+      "query": "Art. 83 Constitución sobre deberes ciudadanos",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["deberes ciudadanos"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "83"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q114",
+      "category": "jurisdiction_based",
+      "query": "Opiniones consultivas de la Corte Interamericana aplicables a Ecuador",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["OPINION_CONSULTIVA"],
+          "jurisdiction": "CORTE_INTERAMERICANA"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q115",
+      "category": "entity_extraction",
+      "query": "¿Qué establece la Ley de Gestión Ambiental sobre evaluación de impacto?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["evaluación impacto"],
+        "filters": {
+          "normType": ["LEY_GESTION_AMBIENTAL"]
+        },
+        "entities": {
+          "document": "Ley de Gestión Ambiental",
+          "topic": "evaluación de impacto"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q116",
+      "category": "date_based",
+      "query": "Normativa sobre educación inclusiva publicada desde 2016",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["educación inclusiva"],
+        "filters": {
+          "publicationDateFrom": "2016-01-01"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q117",
+      "category": "complex_filters",
+      "query": "Leyes orgánicas derogadas sobre finanzas públicas",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["finanzas públicas"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"],
+          "status": "DEROGADA"
+        },
+        "confidence_min": 0.82,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q118",
+      "category": "article_lookup",
+      "query": "Artículo 57 Constitución derechos pueblos indígenas",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["derechos pueblos indígenas"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "57"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q119",
+      "category": "simple_search",
+      "query": "Código Orgánico de la Niñez y Adolescencia",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Niñez", "Adolescencia"],
+        "filters": {
+          "legalHierarchy": ["CODIGOS_ORGANICOS"]
+        },
+        "confidence_min": 0.92,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q120",
+      "category": "comparative",
+      "query": "Comparar regulación del matrimonio entre Código Civil y Constitución",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["matrimonio"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "CONSTITUCION"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_CIVIL", "CONSTITUCION"],
+          "topic": "matrimonio"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    }
+  ]
+}

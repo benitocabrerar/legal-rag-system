@@ -1,0 +1,861 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Annotated test queries for NLP Query Transformation validation",
+    "total_queries": 120,
+    "categories": [
+      "simple_search",
+      "article_lookup",
+      "date_based",
+      "jurisdiction_based",
+      "comparative",
+      "complex_filters",
+      "entity_extraction",
+      "edge_cases"
+    ],
+    "language": "es",
+    "legal_context": "Ecuadorian law"
+  },
+  "test_queries": [
+    {
+      "id": "Q001",
+      "category": "simple_search",
+      "query": "¿Cuáles son los derechos fundamentales en Ecuador?",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derechos fundamentales"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "legalHierarchy": ["CONSTITUCION"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q002",
+      "category": "article_lookup",
+      "query": "Artículo 234 del Código Civil",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Código Civil"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL"],
+          "articleNumber": "234"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q003",
+      "category": "date_based",
+      "query": "Leyes sobre medio ambiente publicadas en 2023",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["medio ambiente"],
+        "filters": {
+          "publicationDateFrom": "2023-01-01",
+          "publicationDateTo": "2023-12-31",
+          "legalHierarchy": ["LEYES_ORGANICAS", "LEYES_ORDINARIAS"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q004",
+      "category": "simple_search",
+      "query": "¿Qué dice la Constitución sobre la libertad de expresión?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["libertad de expresión", "libertad expresión"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "legalHierarchy": ["CONSTITUCION"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q005",
+      "category": "jurisdiction_based",
+      "query": "Jurisprudencia de la Corte Constitucional sobre matrimonio igualitario",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["matrimonio igualitario"],
+        "filters": {
+          "jurisdiction": "CORTE_CONSTITUCIONAL",
+          "documentType": ["JURISPRUDENCIA", "SENTENCIA"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q006",
+      "category": "article_lookup",
+      "query": "Código Orgánico Integral Penal artículo 140",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["COIP"],
+        "filters": {
+          "normType": ["COIP"],
+          "legalHierarchy": ["CODIGOS_ORGANICOS"],
+          "articleNumber": "140"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q007",
+      "category": "article_lookup",
+      "query": "Art. 123 COIP",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["COIP"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "123"
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q008",
+      "category": "article_lookup",
+      "query": "Art 456 del Código de Comercio",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Código de Comercio"],
+        "filters": {
+          "normType": ["CODIGO_COMERCIO"],
+          "articleNumber": "456"
+        },
+        "confidence_min": 0.90,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q009",
+      "category": "comparative",
+      "query": "Comparar Código Civil con Código de Comercio en materia de contratos",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["contratos"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "CODIGO_COMERCIO"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_CIVIL", "CODIGO_COMERCIO"],
+          "topic": "contratos"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q010",
+      "category": "simple_search",
+      "query": "Derechos de los trabajadores en Ecuador",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derechos trabajadores"],
+        "filters": {
+          "normType": ["CODIGO_TRABAJO", "CONSTITUCION"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q011",
+      "category": "date_based",
+      "query": "Reformas al COIP entre 2020 y 2023",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["reformas", "COIP"],
+        "filters": {
+          "normType": ["COIP"],
+          "publicationDateFrom": "2020-01-01",
+          "publicationDateTo": "2023-12-31",
+          "documentType": ["REFORMA", "LEY_REFORMATORIA"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q012",
+      "category": "entity_extraction",
+      "query": "¿Qué establece la Constitución 2008 sobre educación?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["educación"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "legalHierarchy": ["CONSTITUCION"],
+          "publicationYear": 2008
+        },
+        "entities": {
+          "document": "Constitución 2008",
+          "topic": "educación"
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q013",
+      "category": "simple_search",
+      "query": "Delito de estafa según el COIP",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["delito estafa"],
+        "filters": {
+          "normType": ["COIP"],
+          "legalHierarchy": ["CODIGOS_ORGANICOS"]
+        },
+        "confidence_min": 0.92,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q014",
+      "category": "complex_filters",
+      "query": "Leyes orgánicas sobre protección de datos personales publicadas después del 2015",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["protección datos personales"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"],
+          "publicationDateFrom": "2016-01-01"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q015",
+      "category": "article_lookup",
+      "query": "Artículo 32 de la Constitución",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Constitución"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "32"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q016",
+      "category": "jurisdiction_based",
+      "query": "Sentencias de la Corte Nacional de Justicia sobre responsabilidad civil",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["responsabilidad civil"],
+        "filters": {
+          "jurisdiction": "CORTE_NACIONAL_JUSTICIA",
+          "documentType": ["SENTENCIA", "JURISPRUDENCIA"]
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q017",
+      "category": "simple_search",
+      "query": "Normativa sobre teletrabajo",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["teletrabajo"],
+        "filters": {
+          "normType": ["LEY", "DECRETO", "ACUERDO_MINISTERIAL"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q018",
+      "category": "date_based",
+      "query": "Decretos ejecutivos emitidos en enero de 2024",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "documentType": ["DECRETO_EJECUTIVO"],
+          "publicationDateFrom": "2024-01-01",
+          "publicationDateTo": "2024-01-31"
+        },
+        "confidence_min": 0.92,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q019",
+      "category": "article_lookup",
+      "query": "Arts. 150 al 155 del COIP",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["COIP"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleRange": {
+            "from": "150",
+            "to": "155"
+          }
+        },
+        "confidence_min": 0.90,
+        "article_search": true
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q020",
+      "category": "simple_search",
+      "query": "Ley Orgánica de Telecomunicaciones",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Telecomunicaciones"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"],
+          "normType": ["LEY_ORGANICA"]
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q021",
+      "category": "entity_extraction",
+      "query": "¿Qué dice el Código del Trabajo sobre vacaciones?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["vacaciones"],
+        "filters": {
+          "normType": ["CODIGO_TRABAJO"]
+        },
+        "entities": {
+          "document": "Código del Trabajo",
+          "topic": "vacaciones"
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q022",
+      "category": "comparative",
+      "query": "Diferencias entre el Código Civil y Código de la Niñez en adopciones",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["adopciones"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "CODIGO_NINEZ"]
+        },
+        "comparison": {
+          "documents": ["CODIGO_CIVIL", "CODIGO_NINEZ"],
+          "topic": "adopciones"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q023",
+      "category": "complex_filters",
+      "query": "Acuerdos ministeriales del Ministerio de Salud sobre COVID-19 en 2020",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["COVID-19"],
+        "filters": {
+          "documentType": ["ACUERDO_MINISTERIAL"],
+          "institution": "MINISTERIO_SALUD",
+          "publicationDateFrom": "2020-01-01",
+          "publicationDateTo": "2020-12-31"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q024",
+      "category": "article_lookup",
+      "query": "Artículo 1 Constitución Ecuador",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Constitución"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "1"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q025",
+      "category": "date_based",
+      "query": "Normativa sobre femicidio publicada en los últimos 5 años",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["femicidio"],
+        "filters": {
+          "publicationDateFrom": "2019-01-01"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q026",
+      "category": "simple_search",
+      "query": "Ley de Protección al Consumidor",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Protección Consumidor"],
+        "filters": {
+          "normType": ["LEY_ORGANICA", "LEY_ORDINARIA"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q027",
+      "category": "entity_extraction",
+      "query": "Resoluciones de la Superintendencia de Bancos sobre lavado de activos",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["lavado activos"],
+        "filters": {
+          "documentType": ["RESOLUCION"],
+          "institution": "SUPERINTENDENCIA_BANCOS"
+        },
+        "entities": {
+          "institution": "Superintendencia de Bancos",
+          "topic": "lavado de activos"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q028",
+      "category": "article_lookup",
+      "query": "Art. 66 de la Constitución sobre derechos de libertad",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["derechos libertad"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "66"
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q029",
+      "category": "jurisdiction_based",
+      "query": "Precedentes judiciales sobre accidentes de tránsito",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["accidentes tránsito"],
+        "filters": {
+          "documentType": ["PRECEDENTE", "JURISPRUDENCIA", "SENTENCIA"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q030",
+      "category": "complex_filters",
+      "query": "Códigos orgánicos que regulan el sector financiero",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["sector financiero"],
+        "filters": {
+          "legalHierarchy": ["CODIGOS_ORGANICOS"]
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q031",
+      "category": "edge_cases",
+      "query": "Art 123",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": [],
+        "filters": {
+          "articleNumber": "123"
+        },
+        "confidence_min": 0.60,
+        "article_search": true,
+        "notes": "Incomplete query - missing document name"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q032",
+      "category": "edge_cases",
+      "query": "Leyes",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS", "LEYES_ORDINARIAS"]
+        },
+        "confidence_min": 0.70,
+        "article_search": false,
+        "notes": "Too broad query"
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q033",
+      "category": "date_based",
+      "query": "Normativa vigente sobre contratación pública",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["contratación pública"],
+        "filters": {
+          "status": "VIGENTE"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q034",
+      "category": "article_lookup",
+      "query": "Artículos 61 al 65 de la Constitución",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["Constitución"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleRange": {
+            "from": "61",
+            "to": "65"
+          }
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q035",
+      "category": "simple_search",
+      "query": "Regulación de sociedades anónimas",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["sociedades anónimas"],
+        "filters": {
+          "normType": ["CODIGO_CIVIL", "LEY_COMPANIAS"]
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q036",
+      "category": "entity_extraction",
+      "query": "Ordenanzas municipales de Quito sobre construcción",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["construcción"],
+        "filters": {
+          "documentType": ["ORDENANZA"],
+          "jurisdiction": "MUNICIPAL_QUITO"
+        },
+        "entities": {
+          "jurisdiction": "Quito",
+          "document_type": "Ordenanza",
+          "topic": "construcción"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q037",
+      "category": "comparative",
+      "query": "Comparación entre Ley de Propiedad Intelectual y Código Civil sobre derechos de autor",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["derechos autor"],
+        "filters": {
+          "normType": ["LEY_PROPIEDAD_INTELECTUAL", "CODIGO_CIVIL"]
+        },
+        "comparison": {
+          "documents": ["LEY_PROPIEDAD_INTELECTUAL", "CODIGO_CIVIL"],
+          "topic": "derechos de autor"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q038",
+      "category": "date_based",
+      "query": "Reformas constitucionales aprobadas en 2015",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["reformas constitucionales"],
+        "filters": {
+          "documentType": ["REFORMA_CONSTITUCIONAL"],
+          "publicationYear": 2015
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q039",
+      "category": "simple_search",
+      "query": "Ley Orgánica de Participación Ciudadana",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["Participación Ciudadana"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"]
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q040",
+      "category": "article_lookup",
+      "query": "Artículo 186 COIP sobre estafa",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["estafa"],
+        "filters": {
+          "normType": ["COIP"],
+          "articleNumber": "186"
+        },
+        "confidence_min": 0.95,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q041",
+      "category": "complex_filters",
+      "query": "Sentencias de la Corte Constitucional que declaran inconstitucionalidad en 2022",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["inconstitucionalidad"],
+        "filters": {
+          "jurisdiction": "CORTE_CONSTITUCIONAL",
+          "documentType": ["SENTENCIA"],
+          "publicationYear": 2022,
+          "sentenceType": "INCONSTITUCIONALIDAD"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q042",
+      "category": "entity_extraction",
+      "query": "¿Qué establece el Código Tributario sobre impuesto a la renta?",
+      "expected_output": {
+        "intent": "question",
+        "query_terms": ["impuesto renta"],
+        "filters": {
+          "normType": ["CODIGO_TRIBUTARIO"]
+        },
+        "entities": {
+          "document": "Código Tributario",
+          "topic": "impuesto a la renta"
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q043",
+      "category": "jurisdiction_based",
+      "query": "Resoluciones del Consejo de la Judicatura sobre mediación",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["mediación"],
+        "filters": {
+          "documentType": ["RESOLUCION"],
+          "institution": "CONSEJO_JUDICATURA"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q044",
+      "category": "date_based",
+      "query": "Leyes derogadas en el período 2018-2020",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": [],
+        "filters": {
+          "status": "DEROGADA",
+          "derogationDateFrom": "2018-01-01",
+          "derogationDateTo": "2020-12-31"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q045",
+      "category": "simple_search",
+      "query": "Normas sobre protección ambiental en la Amazonía",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["protección ambiental", "Amazonía"],
+        "filters": {},
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q046",
+      "category": "article_lookup",
+      "query": "Art. 77 Constitución sobre garantías procesales",
+      "expected_output": {
+        "intent": "article_lookup",
+        "query_terms": ["garantías procesales"],
+        "filters": {
+          "normType": ["CONSTITUCION"],
+          "articleNumber": "77"
+        },
+        "confidence_min": 0.92,
+        "article_search": true
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "Q047",
+      "category": "comparative",
+      "query": "Comparar COIP con Código Penal derogado sobre delitos sexuales",
+      "expected_output": {
+        "intent": "compare",
+        "query_terms": ["delitos sexuales"],
+        "filters": {
+          "normType": ["COIP", "CODIGO_PENAL"]
+        },
+        "comparison": {
+          "documents": ["COIP", "CODIGO_PENAL"],
+          "topic": "delitos sexuales"
+        },
+        "confidence_min": 0.85,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q048",
+      "category": "entity_extraction",
+      "query": "Acuerdos del Servicio de Rentas Internas sobre facturación electrónica",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["facturación electrónica"],
+        "filters": {
+          "documentType": ["ACUERDO", "RESOLUCION"],
+          "institution": "SRI"
+        },
+        "entities": {
+          "institution": "Servicio de Rentas Internas",
+          "topic": "facturación electrónica"
+        },
+        "confidence_min": 0.88,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "Q049",
+      "category": "complex_filters",
+      "query": "Leyes orgánicas relacionadas con derechos humanos vigentes",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["derechos humanos"],
+        "filters": {
+          "legalHierarchy": ["LEYES_ORGANICAS"],
+          "status": "VIGENTE"
+        },
+        "confidence_min": 0.87,
+        "article_search": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "Q050",
+      "category": "date_based",
+      "query": "Normativa sobre teletrabajo publicada durante la pandemia 2020-2021",
+      "expected_output": {
+        "intent": "search",
+        "query_terms": ["teletrabajo"],
+        "filters": {
+          "publicationDateFrom": "2020-03-01",
+          "publicationDateTo": "2021-12-31"
+        },
+        "confidence_min": 0.90,
+        "article_search": false
+      },
+      "difficulty": "medium"
+    }
+  ]
+}
