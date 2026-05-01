@@ -11,18 +11,33 @@ import { ArgumentsPanel } from '@/components/litigation/ArgumentsPanel';
 import { NotesPanel } from '@/components/litigation/NotesPanel';
 import { DocumentsPanel } from '@/components/litigation/DocumentsPanel';
 import { ArticleLookupPanel } from '@/components/litigation/ArticleLookupPanel';
+import { ArgumentDeck } from '@/components/litigation/ArgumentDeck';
 import { AudienceTimer } from '@/components/litigation/AudienceTimer';
 import { LitigationChat } from '@/components/litigation/LitigationChat';
 import { cn } from '@/lib/utils';
 
-type CenterTab = 'arguments' | 'documents' | 'article';
+type CenterTab = 'deck' | 'arguments' | 'documents' | 'article';
 
 export default function LitigationPage() {
   const router = useRouter();
   const params = useParams();
   const caseId = params?.id as string;
-  const [centerTab, setCenterTab] = useState<CenterTab>('arguments');
+  const [centerTab, setCenterTab] = useState<CenterTab>('deck');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [pendingArticleRef, setPendingArticleRef] = useState<string | null>(null);
+
+  const lookupArticle = (ref: string) => {
+    setPendingArticleRef(ref);
+    setCenterTab('article');
+    setTimeout(() => {
+      const el = document.getElementById('litigation-article-input') as HTMLInputElement | null;
+      if (el) {
+        el.value = ref;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.focus();
+      }
+    }, 50);
+  };
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['litigation-brief', caseId],
@@ -68,9 +83,10 @@ export default function LitigationPage() {
         e.preventDefault();
         setCenterTab('article');
         setTimeout(() => document.getElementById('litigation-article-input')?.focus(), 30);
-      } else if (e.key === '1') setCenterTab('arguments');
-      else if (e.key === '2') setCenterTab('documents');
-      else if (e.key === '3') setCenterTab('article');
+      } else if (e.key === '1') setCenterTab('deck');
+      else if (e.key === '2') setCenterTab('arguments');
+      else if (e.key === '3') setCenterTab('documents');
+      else if (e.key === '4') setCenterTab('article');
       else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) toggleFullscreen();
     };
     window.addEventListener('keydown', onKey);
@@ -134,6 +150,9 @@ export default function LitigationPage() {
             <CenterTabBar tab={centerTab} setTab={setCenterTab} />
 
             <div className="flex-1 overflow-y-auto space-y-3">
+              {centerTab === 'deck' && (
+                <ArgumentDeck caseId={caseId} onLookupArticle={lookupArticle} />
+              )}
               {centerTab === 'arguments' && (
                 <>
                   <ArgumentsPanel caseId={caseId} />
@@ -163,11 +182,14 @@ export default function LitigationPage() {
       {/* Footer with shortcuts hint */}
       <footer className="shrink-0 px-4 py-1 border-t border-slate-800/80 bg-slate-950/60 text-[10px] text-slate-500 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">1</kbd> argumentos</span>
-          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">2</kbd> documentos</span>
-          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">3</kbd> artículo</span>
-          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">⌘ /</kbd> buscar art.</span>
-          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">F</kbd> pantalla completa</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">1</kbd> tarjetas</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">2</kbd> notas</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">3</kbd> docs</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">4</kbd> art.</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">←/→</kbd> navegar mazo</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">␣</kbd> marcar expuesta</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">P</kbd> presentador</span>
+          <span><kbd className="px-1 py-0.5 bg-slate-800 rounded font-mono">F</kbd> fullscreen</span>
         </div>
         <span>Sala de Litigación · Poweria Legal</span>
       </footer>
@@ -177,9 +199,10 @@ export default function LitigationPage() {
 
 function CenterTabBar({ tab, setTab }: { tab: CenterTab; setTab: (t: CenterTab) => void }) {
   const tabs: Array<{ id: CenterTab; label: string; hint: string }> = [
-    { id: 'arguments',  label: 'Argumentos & notas', hint: '1' },
-    { id: 'documents',  label: 'Documentos',         hint: '2' },
-    { id: 'article',    label: 'Buscar artículo',    hint: '3' },
+    { id: 'deck',       label: '🎴 Tarjetas IA',       hint: '1' },
+    { id: 'arguments',  label: 'Argumentos & notas',   hint: '2' },
+    { id: 'documents',  label: 'Documentos',           hint: '3' },
+    { id: 'article',    label: 'Buscar artículo',      hint: '4' },
   ];
   return (
     <div className="inline-flex items-center bg-slate-900/60 border border-slate-700/50 rounded-xl p-1 self-start shadow-sm">

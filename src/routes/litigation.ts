@@ -194,6 +194,170 @@ export async function litigationRoutes(fastify: FastifyInstance) {
   });
 
   /**
+   * POST /cases/:id/litigation-cards (SSE)
+   * Streams a deck of 6-8 argumentation cards generated from the case.
+   * Each card emits as a single SSE `card` event so the UI can render
+   * them as they arrive. Supports a `slugs` array to regenerate only
+   * specific cards.
+   */
+  fastify.post<{ Params: { id: string }; Body: any }>(
+    '/cases/:id/litigation-cards',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const caseId = request.params.id;
+
+      const body = z.object({
+        slugs: z.array(z.string()).optional(),
+        tone: z.enum(['firme', 'persuasivo', 'tecnico']).default('firme'),
+      }).parse(request.body ?? {});
+
+      const c = await prisma.case.findFirst({
+        where: { id: caseId, userId },
+        include: {
+          documents: { orderBy: { createdAt: 'desc' }, take: 6,
+            select: { title: true, content: true } },
+          events: { orderBy: { startTime: 'asc' }, take: 12,
+            select: { title: true, type: true, startTime: true, description: true } },
+        },
+      });
+      if (!c) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      const docExcerpts = c.documents
+        .map((d, i) => `[Doc ${i + 1}] ${d.title}\n${stripWhitespace(d.content).slice(0, 1200)}`)
+        .join('\n\n');
+      const timeline = c.events
+        .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}`)
+        .join('\n');
+
+      const cardSlugs = body.slugs && body.slugs.length > 0
+        ? body.slugs
+        : ['APERTURA','HECHOS','FUNDAMENTO_JURIDICO','PRUEBA','REFUTACION','REPLICA','CIERRE'];
+
+      const systemPrompt = [
+        'Eres un litigante experimentado en derecho ecuatoriano que prepara la presentación oral de un caso.',
+        `Tono: ${body.tone}. Idioma: español de Ecuador.`,
+        '',
+        'TAREA: genera UN MAZO de tarjetas argumentativas, una por cada slug que se te pida.',
+        'CADA TARJETA debe contener EXACTAMENTE este formato JSON (una sola línea, sin markdown):',
+        '{"slug":"APERTURA","title":"Apertura","headline":"…","talking_points":["…","…","…"],"key_articles":["Art. 76, Constitución"],"risk":"…","est_seconds":60}',
+        '',
+        'Reglas:',
+        '- headline: una frase poderosa (máx 16 palabras) que el abogado dirá al iniciar la tarjeta.',
+        '- talking_points: 3-5 bullets accionables, en imperativo, máx 22 palabras cada uno.',
+        '- key_articles: 0-3 citas exactas con número y norma. NO inventes — si no estás 100% seguro, omite.',
+        '- risk: 1 frase con la trampa o objeción más probable que enfrentará la otra parte.',
+        '- est_seconds: 30-180, tiempo estimado para exponer la tarjeta.',
+        '- title canónico por slug:',
+        '    APERTURA "Apertura"',
+        '    HECHOS "Relato de los hechos"',
+        '    FUNDAMENTO_JURIDICO "Fundamento jurídico"',
+        '    PRUEBA "Prueba"',
+        '    REFUTACION "Refutación de la contraparte"',
+        '    REPLICA "Réplica"',
+        '    CIERRE "Cierre"',
+        '    ALEGATO_FINAL "Alegato final"',
+        '',
+        'IMPORTANTE: emite las tarjetas en este orden estricto:',
+        cardSlugs.join(' → '),
+        'Devuelve UNA tarjeta por línea, sin texto antes ni después de las tarjetas.',
+        '',
+        '=== CASO ===',
+        `Título: ${c.title}`,
+        c.caseNumber ? `Número: ${c.caseNumber}` : '',
+        c.clientName ? `Cliente: ${c.clientName}` : '',
+        c.description ? `Descripción: ${c.description}` : '',
+        '',
+        '=== CRONOLOGÍA ===',
+        timeline || '(sin eventos)',
+        '',
+        '=== EXTRACTOS DE DOCUMENTOS ===',
+        docExcerpts || '(sin documentos)',
+      ].filter(Boolean).join('\n');
+
+      const userPrompt = `Genera el mazo de ${cardSlugs.length} tarjetas: ${cardSlugs.join(', ')}.`;
+
+      // SSE plumbing.
+      reply
+        .raw.setHeader('Content-Type', 'text/event-stream')
+        .setHeader('Cache-Control', 'no-cache, no-transform')
+        .setHeader('Connection', 'keep-alive')
+        .setHeader('X-Accel-Buffering', 'no');
+      reply.raw.flushHeaders?.();
+
+      const send = (event: string, data: any) => {
+        reply.raw.write(`event: ${event}\n`);
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      try {
+        const aiClient = await getAiClient();
+        const messages = [
+          { role: 'system' as const, content: systemPrompt },
+          { role: 'user' as const, content: userPrompt },
+        ];
+
+        send('start', { total: cardSlugs.length, slugs: cardSlugs });
+
+        // Buffer the stream and ship complete JSON-card lines as they arrive.
+        let buffer = '';
+        let emitted = 0;
+
+        const flushLines = () => {
+          let nl;
+          while ((nl = buffer.indexOf('\n')) !== -1) {
+            const raw = buffer.slice(0, nl).trim();
+            buffer = buffer.slice(nl + 1);
+            if (!raw) continue;
+            const json = tryParseCard(raw);
+            if (json) {
+              emitted += 1;
+              send('card', { index: emitted - 1, card: json });
+            }
+          }
+        };
+
+        if (aiClient.provider === 'openai') {
+          const stream: any = await aiClient.chat.completions.create({
+            messages, temperature: 0.4, max_tokens: 2200, stream: true,
+          });
+          for await (const chunk of stream) {
+            const delta = chunk?.choices?.[0]?.delta?.content;
+            if (delta) {
+              buffer += delta;
+              flushLines();
+            }
+          }
+        } else {
+          const completion = await aiClient.chat.completions.create({
+            messages, temperature: 0.4, max_tokens: 2200,
+          });
+          buffer += completion.choices?.[0]?.message?.content ?? '';
+          flushLines();
+        }
+
+        // Flush any trailing card not terminated by \n.
+        if (buffer.trim()) {
+          const tail = tryParseCard(buffer.trim());
+          if (tail) {
+            emitted += 1;
+            send('card', { index: emitted - 1, card: tail });
+          }
+        }
+
+        send('done', { count: emitted });
+      } catch (err: any) {
+        request.log.error({ err }, 'litigation-cards failed');
+        send('error', { message: err?.message ?? 'AI error' });
+      } finally {
+        reply.raw.end();
+      }
+
+      return reply;
+    },
+  );
+
+  /**
    * POST /cases/:id/litigation-chat (SSE)
    * The system prompt embeds the case context the lawyer is litigating.
    * Body: { message, history?: [{role,content}] }
@@ -354,6 +518,27 @@ export function parseArticleRef(input: string): ParsedArticleRef | null {
     if (after.length >= 3) sourceHint = after.toLowerCase();
   }
   return { number, suffix, sourceHint };
+}
+
+function tryParseCard(raw: string): any | null {
+  // Strip optional code-fence backticks the model might emit.
+  let s = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  if (!s.startsWith('{')) {
+    // Sometimes the model prefixes "1. " or "- ".
+    const m = s.match(/\{.*\}\s*$/s);
+    if (!m) return null;
+    s = m[0];
+  }
+  try {
+    const obj = JSON.parse(s);
+    if (typeof obj?.slug !== 'string' || typeof obj?.title !== 'string') return null;
+    if (!Array.isArray(obj?.talking_points)) obj.talking_points = [];
+    if (!Array.isArray(obj?.key_articles)) obj.key_articles = [];
+    if (typeof obj?.est_seconds !== 'number') obj.est_seconds = 60;
+    return obj;
+  } catch {
+    return null;
+  }
 }
 
 function scoreSourceMatch(title: string, hint: string): number {

@@ -626,7 +626,18 @@ export const litigationAPI = {
   },
   /** Returns the absolute SSE URL — caller uses native EventSource/fetch streaming. */
   chatUrl: (caseId: string) => `/api/v1/cases/${caseId}/litigation-chat`,
+  cardsUrl: (caseId: string) => `/api/v1/cases/${caseId}/litigation-cards`,
 };
+
+export interface ArgumentCard {
+  slug: 'APERTURA' | 'HECHOS' | 'FUNDAMENTO_JURIDICO' | 'PRUEBA' | 'REFUTACION' | 'REPLICA' | 'CIERRE' | 'ALEGATO_FINAL' | string;
+  title: string;
+  headline: string;
+  talking_points: string[];
+  key_articles: string[];
+  risk?: string;
+  est_seconds: number;
+}
 
 export interface LitigationBrief {
   case: {
