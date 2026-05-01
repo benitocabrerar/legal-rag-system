@@ -36,3 +36,26 @@ Thumbs.db
 # Misc
 .cache/
 *.tsbuildinfo
+.supabase-access-token
+
+# Migration artifacts (sensitive)
+migration-baseline/
+supabase/.temp/
+
+# Local automation / browser profiles
+.chrome-cdp-profile/
+.claude/scheduled_tasks.lock
+
+# Test output
+e2e-screenshots/
+test-results/
+tsc-*.txt
+tsc-*-output.txt
+typescript-error-analysis-report.json
+
+# Shell artifacts (Windows path-escaping mishaps)
+(c)
+Microsoft
+nul
+srcservicesbackup*.ts
+srctypesbackup.types.ts
