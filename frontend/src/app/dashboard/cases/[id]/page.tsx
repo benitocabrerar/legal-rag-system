@@ -15,6 +15,8 @@ import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts'
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
 import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
 import { CaseAIChat } from '@/components/case-detail/CaseAIChat';
+import { CollapsibleSection, SectionsToolbar, type CompletionState } from '@/components/case-detail/CollapsibleSection';
+import { Briefcase as BriefcaseIcon, Users, Scale as ScaleIcon, DollarSign as DollarSignIcon, FileWarning } from 'lucide-react';
 import {
   FileText,
   Upload,
@@ -101,6 +103,28 @@ export default function CaseDetailPage() {
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
   const [showLegalDocGen, setShowLegalDocGen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Comando "expandir todo / colapsar todo" para todas las CollapsibleSections.
+  // El `key` cambia para forzar el efecto incluso si pulsamos el mismo botón dos veces.
+  const [sectionsForce, setSectionsForce] = useState<{ key: number; value: 'open' | 'closed' } | null>(null);
+
+  // Atajos: E = abrir todo, Q = cerrar todo (ignora si el foco está en input/textarea).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement | null)?.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        setSectionsForce({ key: Date.now(), value: 'open' });
+      } else if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault();
+        setSectionsForce({ key: Date.now(), value: 'closed' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [coherenceKey, setCoherenceKey] = useState(0);
   const bumpCoherence = () => setCoherenceKey((k) => k + 1);
@@ -559,32 +583,109 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
       {/* Enhanced Case Header */}
       <EnhancedCaseHeader caseData={caseData} />
 
-      {/* Verificador de coherencia: detecta inconsistencias en cada carga */}
-      <CoherenceCheck
-        caseId={caseId}
-        triggerKey={coherenceKey}
-        onRepaired={() => {
-          loadCaseData();
-          bumpCoherence();
-        }}
-      />
+      {/* Coherence + sections control --------------------------------- */}
+      {(() => {
+        // Heurísticas de completitud basadas en caseData.
+        // No tocan los componentes hijos: solo deciden el badge externo.
+        const filled = (v: any) =>
+          v != null && (typeof v !== 'string' || v.trim().length > 0) && !/^N\.?N\.?$/i.test(String(v ?? ''));
 
-      {/* Metadata jurídica del caso (editable + IA) */}
-      <div data-section="case-metadata">
-        <CaseMetadataPanel
-          caseId={caseId}
-          onUpdated={(d) => {
-            setCaseData((prev: any) => ({ ...prev, ...d }));
-            bumpCoherence();
-          }}
-        />
-      </div>
+        const metadataKeys = [
+          'legalMatter', 'actionType', 'jurisdiction', 'proceduralStage',
+          'judicialProcessNumber', 'courtName', 'judgeName', 'opposingParty',
+          'amountClaimed', 'filedAt',
+        ];
+        const metadataFilled = metadataKeys.filter((k) => filled(caseData?.[k])).length;
+        const metaTotal = metadataKeys.length;
+        const metaState: CompletionState =
+          metadataFilled === 0 ? 'empty' : metadataFilled < metaTotal * 0.6 ? 'partial' : 'complete';
+        const metaHint =
+          metaState === 'empty' ? 'Sin metadatos del caso'
+          : metaState === 'partial' ? `${metadataFilled}/${metaTotal} campos`
+          : `${metadataFilled}/${metaTotal} completos`;
 
-      {/* Parties & Notifications Panel */}
-      <PartiesPanel caseId={caseId} />
+        const partiesFilled = filled(caseData?.clientName) ? 1 : 0;
+        const partiesState: CompletionState =
+          partiesFilled === 0 ? 'empty' : 'partial';
+        const partiesHint =
+          partiesFilled === 0 ? 'Sin partes registradas' : 'Verifica partes y notificaciones';
 
-      {/* Finanzas del caso */}
-      <FinancePanel caseId={caseId} />
+        const financeState: CompletionState =
+          documents.length === 0 && !filled(caseData?.amountClaimed) ? 'empty' : 'unknown';
+        const financeHint =
+          financeState === 'empty' ? 'Sin acuerdos ni cuantía' : undefined;
+
+        // Totals para el toolbar.
+        const states: CompletionState[] = [metaState, partiesState, financeState];
+        const totals = {
+          complete: states.filter((s) => s === 'complete').length,
+          partial:  states.filter((s) => s === 'partial').length,
+          empty:    states.filter((s) => s === 'empty').length,
+        };
+
+        return (
+          <>
+            <CoherenceCheck
+              caseId={caseId}
+              triggerKey={coherenceKey}
+              onRepaired={() => {
+                loadCaseData();
+                bumpCoherence();
+              }}
+            />
+
+            <SectionsToolbar
+              onExpandAll={() => setSectionsForce({ key: Date.now(), value: 'open' })}
+              onCollapseAll={() => setSectionsForce({ key: Date.now(), value: 'closed' })}
+              totals={totals}
+            />
+
+            <CollapsibleSection
+              storageKey={`metadata-${caseId}`}
+              title="Metadatos jurídicos"
+              description="Materia, jurisdicción, juzgado, juez, opositor y cuantía."
+              icon={<ScaleIcon className="w-4 h-4" />}
+              completion={metaState}
+              completionHint={metaHint}
+              forceState={sectionsForce?.value ?? null}
+            >
+              <div data-section="case-metadata">
+                <CaseMetadataPanel
+                  caseId={caseId}
+                  onUpdated={(d) => {
+                    setCaseData((prev: any) => ({ ...prev, ...d }));
+                    bumpCoherence();
+                  }}
+                />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              storageKey={`parties-${caseId}`}
+              title="Partes y notificaciones"
+              description="Demandante, demandado, dirección y canal de notificación."
+              icon={<Users className="w-4 h-4" />}
+              completion={partiesState}
+              completionHint={partiesHint}
+              forceState={sectionsForce?.value ?? null}
+            >
+              <PartiesPanel caseId={caseId} />
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              storageKey={`finance-${caseId}`}
+              title="Finanzas del caso"
+              description="Honorarios, acuerdos, facturas y pagos vinculados."
+              icon={<DollarSignIcon className="w-4 h-4" />}
+              completion={financeState}
+              completionHint={financeHint}
+              forceState={sectionsForce?.value ?? null}
+            >
+              <FinancePanel caseId={caseId} />
+            </CollapsibleSection>
+          </>
+        );
+      })()}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
