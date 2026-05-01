@@ -639,24 +639,30 @@ export interface ArgumentCard {
   est_seconds: number;
 }
 
+export interface ConvocatoriaInfo {
+  source: string | null;
+  passcode: string | null;
+  provider: string;
+  freeText: string | null;
+}
+
+export interface LitigationEvent {
+  id: string; title: string; type: string; status: string;
+  startTime: string; endTime: string;
+  location: string | null; meetingLink: string | null;
+  description: string | null;
+  notes?: string | null;
+  convocatoria?: ConvocatoriaInfo;
+}
+
 export interface LitigationBrief {
   case: {
     id: string; title: string; description: string | null;
     clientName: string | null; caseNumber: string | null;
     status: string; createdAt: string; updatedAt: string;
   };
-  nextHearing: {
-    id: string; title: string; type: string; status: string;
-    startTime: string; endTime: string;
-    location: string | null; meetingLink: string | null;
-    description: string | null;
-  } | null;
-  timeline: Array<{
-    id: string; title: string; type: string; status: string;
-    startTime: string; endTime: string;
-    location: string | null; meetingLink: string | null;
-    description: string | null;
-  }>;
+  nextHearing: LitigationEvent | null;
+  timeline: LitigationEvent[];
   documents: Array<{
     id: string; title: string; excerpt: string;
     contentLength: number; createdAt: string;

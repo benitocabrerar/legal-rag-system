@@ -2,8 +2,49 @@
 
 import { useState, useEffect } from 'react';
 import { Event, EventType, CreateEventData } from '@/types/calendar';
-import { X } from 'lucide-react';
+import { X, FileText, KeyRound, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/** Lightweight in-frontend version of src/lib/convocatoria.ts (the protocol). */
+const TAG_PATTERNS: Array<[RegExp, 'source' | 'passcode' | 'provider']> = [
+  [/^\[FUENTE\]\s*/i,        'source'],
+  [/^\[CODIGO\]\s*/i,        'passcode'],
+  [/^\[CÓDIGO\]\s*/i,        'passcode'],
+  [/^\[PASSCODE\]\s*/i,      'passcode'],
+  [/^\[CONTRASE[ÑN]A\]\s*/i, 'passcode'],
+  [/^\[PROVEEDOR\]\s*/i,     'provider'],
+  [/^\[PROVIDER\]\s*/i,      'provider'],
+];
+
+function parseNotes(notes: string) {
+  const out = { source: '', passcode: '', provider: '', free: [] as string[] };
+  for (const raw of (notes || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) { out.free.push(''); continue; }
+    let matched = false;
+    for (const [re, key] of TAG_PATTERNS) {
+      if (re.test(line)) {
+        const value = line.replace(re, '').trim();
+        if (value) (out as any)[key] = value;
+        matched = true; break;
+      }
+    }
+    if (!matched) out.free.push(raw);
+  }
+  return { ...out, free: out.free.join('\n').trim() };
+}
+
+function buildNotes(meta: { source: string; passcode: string; provider: string; free: string }): string {
+  const lines: string[] = [];
+  if (meta.source.trim())   lines.push(`[FUENTE] ${meta.source.trim()}`);
+  if (meta.provider.trim()) lines.push(`[PROVEEDOR] ${meta.provider.trim()}`);
+  if (meta.passcode.trim()) lines.push(`[CODIGO] ${meta.passcode.trim()}`);
+  if (meta.free.trim()) {
+    if (lines.length > 0) lines.push('');
+    lines.push(meta.free.trim());
+  }
+  return lines.join('\n');
+}
 
 interface EventDialogProps {
   isOpen: boolean;
@@ -41,9 +82,13 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
     timezone: 'America/Guayaquil',
     notes: '',
   });
+  const [convocatoria, setConvocatoria] = useState({
+    source: '', passcode: '', provider: '', free: '',
+  });
 
   useEffect(() => {
     if (event) {
+      const parsed = parseNotes(event.notes || '');
       setFormData({
         title: event.title,
         description: event.description || '',
@@ -55,6 +100,10 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
         allDay: event.allDay,
         timezone: event.timezone,
         notes: event.notes || '',
+      });
+      setConvocatoria({
+        source: parsed.source, passcode: parsed.passcode,
+        provider: parsed.provider, free: parsed.free,
       });
     } else if (defaultDate) {
       const start = new Date(defaultDate);
@@ -76,8 +125,12 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
     setLoading(true);
 
     try {
+      const composedNotes = buildNotes(convocatoria);
       await onSave({
         ...formData,
+        notes: composedNotes,
+        // Cast through unknown so we can pass a transient field that
+        // doesn't break the typed API contract.
         startTime: new Date(formData.startTime).toISOString(),
         endTime: new Date(formData.endTime).toISOString(),
       });
@@ -235,14 +288,73 @@ export function EventDialog({ isOpen, onClose, onSave, event, defaultDate }: Eve
                 </div>
               </div>
 
+              <div className="rounded-xl border-2 border-dashed border-violet-200 bg-violet-50/50 p-3 space-y-2.5">
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-violet-600" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-violet-800">Convocatoria a la audiencia</span>
+                  <span className="text-[10px] text-violet-500">— de dónde vino el enlace</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-violet-900 mb-1">
+                    Fuente <span className="text-violet-500 font-normal">(providencia, oficio, correo del juez/fiscal…)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={convocatoria.source}
+                    onChange={(e) => setConvocatoria((c) => ({ ...c, source: e.target.value }))}
+                    placeholder="Providencia 0123-2026 del Juzgado de lo Civil — recibida por correo el 28 abr 2026"
+                    className="w-full px-2.5 py-1.5 text-sm border border-violet-200 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-violet-900 mb-1 flex items-center gap-1">
+                      <Video className="w-3 h-3" /> Proveedor
+                    </label>
+                    <select
+                      value={convocatoria.provider}
+                      onChange={(e) => setConvocatoria((c) => ({ ...c, provider: e.target.value }))}
+                      className="w-full px-2.5 py-1.5 text-sm border border-violet-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                    >
+                      <option value="">Auto-detectar</option>
+                      <option value="zoom">Zoom</option>
+                      <option value="teams">Microsoft Teams</option>
+                      <option value="meet">Google Meet</option>
+                      <option value="webex">Cisco Webex</option>
+                      <option value="jitsi">Jitsi</option>
+                      <option value="whereby">Whereby</option>
+                      <option value="skype">Skype</option>
+                      <option value="in_person">Presencial</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-violet-900 mb-1 flex items-center gap-1">
+                      <KeyRound className="w-3 h-3" /> Código / Contraseña
+                    </label>
+                    <input
+                      type="text"
+                      value={convocatoria.passcode}
+                      onChange={(e) => setConvocatoria((c) => ({ ...c, passcode: e.target.value }))}
+                      placeholder="123-456-789"
+                      className="w-full px-2.5 py-1.5 text-sm border border-violet-200 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-300 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notas
+                  Notas adicionales
                 </label>
                 <textarea
                   rows={2}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  value={convocatoria.free}
+                  onChange={(e) => setConvocatoria((c) => ({ ...c, free: e.target.value }))}
+                  placeholder="Notas internas, recordatorios..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>

@@ -1,9 +1,8 @@
 'use client';
 
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Briefcase, Hash, User, Clock, MapPin, Video, Calendar } from 'lucide-react';
+import { Briefcase, Hash, User } from 'lucide-react';
 import type { LitigationBrief } from '@/lib/api';
+import { HearingJoinCard } from './HearingJoinCard';
 
 export function BriefPanel({ data }: { data: LitigationBrief }) {
   const c = data.case;
@@ -37,37 +36,7 @@ export function BriefPanel({ data }: { data: LitigationBrief }) {
         </div>
       </div>
 
-      {next && (
-        <div className="rounded-xl bg-gradient-to-br from-rose-950/60 via-rose-900/40 to-orange-900/40 border border-rose-500/40 p-3 shadow-lg shadow-rose-500/10">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-300 mb-1.5">Próxima audiencia</div>
-          <div className="text-sm font-bold text-rose-50">{next.title}</div>
-          <div className="mt-1.5 space-y-1 text-[11px] text-rose-200">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" />
-              <span className="capitalize">
-                {format(parseISO(next.startTime), "EEEE d 'de' MMMM, yyyy", { locale: es })}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3" />
-              {format(parseISO(next.startTime), 'HH:mm')} – {format(parseISO(next.endTime), 'HH:mm')}
-            </div>
-            {next.location && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" />
-                <span className="truncate">{next.location}</span>
-              </div>
-            )}
-            {next.meetingLink && (
-              <a href={next.meetingLink} target="_blank" rel="noreferrer"
-                 className="flex items-center gap-1.5 text-emerald-300 hover:text-emerald-200 transition-colors">
-                <Video className="w-3 h-3" />
-                Unirse a la videollamada
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+      {next && <HearingJoinCard event={next} />}
 
       <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Resumen</div>

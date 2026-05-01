@@ -15,6 +15,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
+import { parseConvocatoria, detectProvider } from '../lib/convocatoria.js';
 
 interface LitigationDocument {
   id: string;
@@ -51,7 +52,7 @@ export async function litigationRoutes(fastify: FastifyInstance) {
             select: {
               id: true, title: true, type: true, status: true,
               startTime: true, endTime: true, location: true, meetingLink: true,
-              description: true,
+              description: true, notes: true,
             },
           },
           tasks: {
@@ -90,10 +91,24 @@ export async function litigationRoutes(fastify: FastifyInstance) {
         createdAt: d.createdAt,
       }));
 
-      // Sort events by startTime asc once for the timeline.
-      const timeline = [...c.events].sort(
-        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-      );
+      // Sort events by startTime asc once for the timeline; enrich with
+      // parsed convocatoria so the UI can render a join card.
+      const enriched = [...c.events]
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        .map((e) => {
+          const meta = parseConvocatoria(e.notes ?? '');
+          const provider = detectProvider(e.meetingLink, meta.provider);
+          return {
+            ...e,
+            convocatoria: {
+              source: meta.source ?? null,
+              passcode: meta.passcode ?? null,
+              provider,
+              freeText: meta.freeText ?? null,
+            },
+          };
+        });
+      const timeline = enriched;
 
       // Next upcoming hearing.
       const now = new Date();
