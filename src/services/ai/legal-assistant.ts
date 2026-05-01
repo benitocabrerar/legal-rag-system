@@ -1,5 +1,8 @@
 import { OpenAI } from 'openai';
 import { PrismaClient } from '@prisma/client';
+import { prisma as prismaClient } from '../../lib/prisma.js';
+import { getAiClient } from '../../lib/ai-client.js';
+import { getUserCountryContext, jurisdictionPromptFragment, type CountryContext } from '../../lib/country-context.js';
 
 interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
@@ -19,6 +22,26 @@ interface AssistantResponse {
   conversationId: string;
 }
 
+// Streaming types
+interface StreamChunk {
+  type: 'content' | 'citation' | 'metadata' | 'done' | 'error';
+  content?: string;
+  citations?: Array<{
+    id: string;
+    title: string;
+    relevance: number;
+    articleRefs?: string[];
+  }>;
+  metadata?: {
+    confidence?: number;
+    processingTimeMs?: number;
+    messageId?: string;
+  };
+  error?: string;
+}
+
+type StreamCallback = (chunk: StreamChunk) => void;
+
 interface ConversationContext {
   id: string;
   messages: ConversationMessage[];
@@ -26,21 +49,21 @@ interface ConversationContext {
 }
 
 export class LegalAssistant {
-  private openai: OpenAI;
+  private openai: OpenAI; // legacy, mantenido por compatibilidad
   private prisma: PrismaClient;
   private systemPrompt: string;
 
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is required for Legal Assistant');
-    }
-
+    // Mantenemos OpenAI para fallback / compat. La config dinámica vive en
+    // getAiClient() y se lee por petición (cache 30s).
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY || 'placeholder',
     });
 
-    this.prisma = new PrismaClient();
+    this.prisma = prismaClient;
 
+    // Default system prompt — Ecuador. Para multi-país, los callers usan
+    // buildSystemPrompt(countryContext) que reemplaza la jurisdicción.
     this.systemPrompt = `Eres un asistente legal especializado en el sistema jurídico de Ecuador.
 
 Tu rol es:
@@ -109,6 +132,17 @@ Formato de respuestas:
   }
 
   /**
+   * Construye el system prompt parametrizado por el país preferido del usuario.
+   * Reemplaza el "Ecuador" hardcoded por la jurisdicción del usuario.
+   */
+  private buildSystemPromptForUser(ctx: CountryContext): string {
+    return this.systemPrompt.replace(
+      'sistema jurídico de Ecuador',
+      `sistema jurídico de ${ctx.nameEs}`
+    );
+  }
+
+  /**
    * Process a user query and generate AI response
    */
   async processQuery(
@@ -133,9 +167,13 @@ Formato de respuestas:
         ).join('\n\n');
     }
 
+    // Resolver jurisdicción del usuario para parametrizar el prompt
+    const countryCtx = await getUserCountryContext(context.userId);
+    const localizedSystemPrompt = this.buildSystemPromptForUser(countryCtx);
+
     // Build messages for GPT-4
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: this.systemPrompt + documentContext },
+      { role: 'system', content: localizedSystemPrompt + documentContext },
       ...context.messages.map(m => ({
         role: m.role,
         content: m.content
@@ -154,14 +192,12 @@ Formato de respuestas:
     });
 
     try {
-      // Get AI response
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages,
+      // Get AI response — usa la config dinámica de public.ai_settings
+      const aiClient = await getAiClient();
+      const completion = await aiClient.chat.completions.create({
+        messages: messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
         temperature: 0.7,
         max_tokens: 1000,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1
       });
 
       const answer = completion.choices[0]?.message?.content || 'No pude generar una respuesta.';
@@ -184,7 +220,7 @@ Formato de respuestas:
           processingTimeMs,
           confidence,
           citedDocuments: citedDocs.map(d => d.id),
-          citedChunks: citedDocs.map(d => d.articleRefs).filter(Boolean)
+          citedChunks: JSON.stringify(citedDocs.map(d => d.articleRefs).filter(Boolean))
         }
       });
 
@@ -234,6 +270,184 @@ Formato de respuestas:
       });
 
       throw error;
+    }
+  }
+
+  /**
+   * Process a user query with streaming response
+   * Returns an async generator that yields response chunks
+   */
+  async *processQueryStreaming(
+    conversationId: string,
+    userQuery: string,
+    relevantDocs?: Array<{ id: string; content: string; title: string; articleNumber?: string }>
+  ): AsyncGenerator<StreamChunk> {
+    const startTime = Date.now();
+
+    // Get conversation context
+    const context = await this.getConversationContext(conversationId);
+    if (!context) {
+      yield { type: 'error', error: 'Conversation not found' };
+      return;
+    }
+
+    // Build context from relevant documents
+    let documentContext = '';
+    if (relevantDocs && relevantDocs.length > 0) {
+      documentContext = '\n\nDOCUMENTOS RELEVANTES:\n' +
+        relevantDocs.map((doc, idx) =>
+          `[${idx + 1}] ${doc.title}${doc.articleNumber ? ` - ${doc.articleNumber}` : ''}\n${doc.content}`
+        ).join('\n\n');
+    }
+
+    // Resolver jurisdicción del usuario para parametrizar el prompt
+    const countryCtx = await getUserCountryContext(context.userId);
+    const localizedSystemPrompt = this.buildSystemPromptForUser(countryCtx);
+
+    // Build messages for GPT-4
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: localizedSystemPrompt + documentContext },
+      ...context.messages.map(m => ({
+        role: m.role,
+        content: m.content
+      } as OpenAI.Chat.ChatCompletionMessageParam)),
+      { role: 'user', content: userQuery }
+    ];
+
+    // Save user message
+    await this.prisma.aIMessage.create({
+      data: {
+        conversationId,
+        role: 'user',
+        content: userQuery,
+        timestamp: new Date()
+      }
+    });
+
+    try {
+      // Streaming usa la config dinámica. Si provider=anthropic, recae en
+      // completion no-streaming (chunk único) — refactor SSE pendiente.
+      const aiClient = await getAiClient();
+      const stream: any = await aiClient.chat.completions.create({
+        messages: messages as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+        temperature: 0.7,
+        max_tokens: 1000,
+        stream: aiClient.provider === 'openai',
+      });
+
+      let fullAnswer = '';
+
+      // Stream content chunks (provider OpenAI) o single yield (Anthropic).
+      if (aiClient.provider === 'openai') {
+        for await (const chunk of stream as any) {
+          const content = chunk.choices[0]?.delta?.content;
+          if (content) {
+            fullAnswer += content;
+            yield { type: 'content', content };
+          }
+        }
+      } else {
+        const content = stream.choices?.[0]?.message?.content || '';
+        if (content) {
+          fullAnswer += content;
+          yield { type: 'content', content };
+        }
+      }
+
+      // Extract citations after full answer is received
+      const citedDocs = this.extractCitations(fullAnswer, relevantDocs || []);
+
+      // Yield citations
+      if (citedDocs.length > 0) {
+        yield { type: 'citation', citations: citedDocs };
+      }
+
+      // Calculate confidence
+      const confidence = this.calculateConfidence(fullAnswer, citedDocs.length, relevantDocs?.length || 0);
+      const processingTimeMs = Date.now() - startTime;
+
+      // Save assistant message
+      const assistantMessage = await this.prisma.aIMessage.create({
+        data: {
+          conversationId,
+          role: 'assistant',
+          content: fullAnswer,
+          timestamp: new Date(),
+          processingTimeMs,
+          confidence,
+          citedDocuments: citedDocs.map(d => d.id),
+          citedChunks: JSON.stringify(citedDocs.map(d => d.articleRefs).filter(Boolean))
+        }
+      });
+
+      // Save citations
+      for (const doc of citedDocs) {
+        await this.prisma.aICitation.create({
+          data: {
+            messageId: assistantMessage.id,
+            documentId: doc.id,
+            relevance: doc.relevance,
+            articleRef: doc.articleRefs?.join(', '),
+            timestamp: new Date()
+          }
+        });
+      }
+
+      // Update conversation
+      await this.prisma.aIConversation.update({
+        where: { id: conversationId },
+        data: {
+          lastMessageAt: new Date(),
+          messageCount: { increment: 2 }
+        }
+      });
+
+      // Yield metadata
+      yield {
+        type: 'metadata',
+        metadata: {
+          confidence,
+          processingTimeMs,
+          messageId: assistantMessage.id
+        }
+      };
+
+      // Signal completion
+      yield { type: 'done' };
+
+    } catch (error) {
+      console.error('Error in streaming response:', error);
+
+      // Save error message
+      await this.prisma.aIMessage.create({
+        data: {
+          conversationId,
+          role: 'assistant',
+          content: 'Error en el streaming de respuesta.',
+          timestamp: new Date(),
+          confidence: 0,
+          processingTimeMs: Date.now() - startTime
+        }
+      });
+
+      yield {
+        type: 'error',
+        error: error instanceof Error ? error.message : 'Unknown streaming error'
+      };
+    }
+  }
+
+  /**
+   * Process query with callback-based streaming (for SSE endpoints)
+   */
+  async processQueryWithCallback(
+    conversationId: string,
+    userQuery: string,
+    onChunk: StreamCallback,
+    relevantDocs?: Array<{ id: string; content: string; title: string; articleNumber?: string }>
+  ): Promise<void> {
+    for await (const chunk of this.processQueryStreaming(conversationId, userQuery, relevantDocs)) {
+      onChunk(chunk);
     }
   }
 
@@ -345,7 +559,7 @@ Formato de respuestas:
    */
   async listUserConversations(userId: string, limit: number = 20): Promise<Array<{
     id: string;
-    title: string;
+    title: string | null;
     startedAt: Date;
     lastMessageAt: Date;
     messageCount: number;
@@ -380,3 +594,6 @@ Formato de respuestas:
 }
 
 export const legalAssistant = new LegalAssistant();
+
+// Export types for use in routes
+export type { StreamChunk, StreamCallback, AssistantResponse, ConversationMessage };
