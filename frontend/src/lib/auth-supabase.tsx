@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from './supabase/client';
 import { AuthContext, type User, type AuthContextType } from './auth';
+import { logAuthEvent } from './auth-log';
 
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = getSupabaseBrowserClient();
@@ -72,20 +73,60 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, [supabase]);
 
   const login: AuthContextType['login'] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    void logAuthEvent({ eventType: 'login_attempt', provider: 'email', email });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      void logAuthEvent({
+        eventType: 'login_error',
+        provider: 'email',
+        email,
+        success: false,
+        errorCode: (error as any).code || error.name,
+        errorMessage: error.message,
+        metadata: { status: (error as any).status },
+      });
+      throw error;
+    }
+    void logAuthEvent({
+      eventType: 'login_success',
+      provider: 'email',
+      email,
+      success: true,
+      userId: data.user?.id ?? null,
+    });
   };
 
   const register: AuthContextType['register'] = async (email, password, name) => {
-    const { error } = await supabase.auth.signUp({
+    void logAuthEvent({ eventType: 'signup_attempt', provider: 'email', email, metadata: { name } });
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
-    if (error) throw error;
+    if (error) {
+      void logAuthEvent({
+        eventType: 'signup_error',
+        provider: 'email',
+        email,
+        success: false,
+        errorCode: (error as any).code || error.name,
+        errorMessage: error.message,
+        metadata: { status: (error as any).status },
+      });
+      throw error;
+    }
+    void logAuthEvent({
+      eventType: 'signup_success',
+      provider: 'email',
+      email,
+      success: true,
+      userId: data.user?.id ?? null,
+      metadata: { needsEmailConfirmation: !data.session },
+    });
   };
 
   const logout: AuthContextType['logout'] = async () => {
+    void logAuthEvent({ eventType: 'session_end', provider: 'email', success: true, userId: user?.id ?? null });
     await supabase.auth.signOut();
   };
 
@@ -98,10 +139,20 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
 
 // Helper extra solo para Supabase OAuth (no en el contexto compartido).
 export async function loginWithGoogle() {
+  void logAuthEvent({ eventType: 'oauth_init', provider: 'google' });
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: `${window.location.origin}/auth/callback` },
   });
-  if (error) throw error;
+  if (error) {
+    void logAuthEvent({
+      eventType: 'oauth_error',
+      provider: 'google',
+      success: false,
+      errorCode: (error as any).code || error.name,
+      errorMessage: error.message,
+    });
+    throw error;
+  }
 }
