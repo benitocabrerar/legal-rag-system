@@ -4,6 +4,37 @@ import { Briefcase, Hash, User } from 'lucide-react';
 import type { LitigationBrief } from '@/lib/api';
 import { HearingJoinCard } from './HearingJoinCard';
 
+function EmptyConvocatoria() {
+  return (
+    <div className="rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/40 p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-1.5">
+        Sin convocatoria registrada
+      </div>
+      <p className="text-[11px] text-amber-100/80 leading-relaxed">
+        Este caso aún no tiene un evento con enlace de audiencia.
+        Para que aparezca aquí el botón &quot;Unirse&quot; debes crear un evento
+        en el calendario y rellenar el bloque <span className="font-bold">&quot;Convocatoria a la audiencia&quot;</span>{' '}
+        (fuente, proveedor, código y enlace).
+      </p>
+      <a
+        href="/dashboard/calendar?new=1"
+        className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-200 hover:text-amber-50 underline"
+      >
+        Ir a calendario →
+      </a>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="text-center bg-slate-800/40 rounded-lg py-1.5">
+      <div className="text-base font-bold text-slate-100 tabular-nums">{value}</div>
+      <div className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
+
 export function BriefPanel({ data }: { data: LitigationBrief }) {
   const c = data.case;
   const next = data.nextHearing;
@@ -74,33 +105,3 @@ export function BriefPanel({ data }: { data: LitigationBrief }) {
   );
 }
 
-function EmptyConvocatoria() {
-  return (
-    <div className="rounded-xl bg-amber-950/30 border-2 border-dashed border-amber-500/40 p-3">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-1.5">
-        Sin convocatoria registrada
-      </div>
-      <p className="text-[11px] text-amber-100/80 leading-relaxed">
-        Este caso aún no tiene un evento con enlace de audiencia.
-        Para que aparezca aquí el botón "Unirse" debes crear un evento
-        en el calendario y rellenar el bloque <span className="font-bold">"Convocatoria a la audiencia"</span>{' '}
-        (fuente, proveedor, código y enlace).
-      </p>
-      <a
-        href="/dashboard/calendar?new=1"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-200 hover:text-amber-50 underline"
-      >
-        Ir a calendario →
-      </a>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="text-center bg-slate-800/40 rounded-lg py-1.5">
-      <div className="text-base font-bold text-slate-100 tabular-nums">{value}</div>
-      <div className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</div>
-    </div>
-  );
-}
