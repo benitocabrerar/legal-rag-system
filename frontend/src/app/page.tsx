@@ -193,13 +193,9 @@ export default function Home() {
           <SectionHeader
             kicker="Precios"
             title={<>Empieza gratis. <em className="not-italic bg-gradient-to-br from-amber-300 to-rose-400 bg-clip-text text-transparent">Crece cuando estés listo.</em></>}
-            subtitle="Sin sorpresas. Cancelas cuando quieras. Datos siempre tuyos."
+            subtitle="Sin sorpresas. Cancelas cuando quieras. Datos siempre tuyos. En el plan anual te llevas 2 meses de regalo."
           />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 mt-12">
-            {PLANS.map((p) => (
-              <PlanCard key={p.code} {...p} />
-            ))}
-          </div>
+          <PricingDeck />
           <div className="mt-8 text-center">
             <Link href="/pricing" className="text-sm text-slate-400 hover:text-white inline-flex items-center gap-1 underline-offset-4 hover:underline">
               Comparación detallada y opciones de pago <ArrowRight className="w-3.5 h-3.5" />
@@ -485,15 +481,85 @@ function StepCard({ index, title, body, icon: Icon, color }: {
   );
 }
 
-function PlanCard({ name, price, period, description, features, cta, popular, code }: {
-  name: string; price: string; period: string; description: string;
-  features: string[]; cta: string; popular?: boolean; code: string;
+function PricingDeck() {
+  const [yearly, setYearly] = useState(false);
+  return (
+    <>
+      {/* Billing cycle toggle */}
+      <div className="mt-10 flex items-center justify-center">
+        <div className="inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 p-1 backdrop-blur">
+          <button
+            onClick={() => setYearly(false)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+              !yearly ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            Mensual
+          </button>
+          <button
+            onClick={() => setYearly(true)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition inline-flex items-center gap-1.5 ${
+              yearly ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            Anual
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+              yearly ? 'bg-emerald-500 text-white' : 'bg-emerald-500/20 text-emerald-300'
+            }`}>
+              −2 meses
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Self-serve grid: 5 plans */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mt-10">
+        {PLANS.map((p) => (
+          <PlanCard key={p.code} {...p} yearly={yearly} />
+        ))}
+      </div>
+
+      {/* Institutional band */}
+      <div className="mt-6 rounded-2xl bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-violet-500/10 border border-white/10 p-5 sm:p-7 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center shadow-lg shadow-rose-500/30 shrink-0">
+          <Building2 className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] uppercase tracking-widest font-bold text-amber-300">Institucional · cotización personalizada</div>
+          <h3 className="text-lg sm:text-xl font-black text-white mt-0.5">¿Firma de 10+ abogados o institución pública?</h3>
+          <p className="text-sm text-slate-300 mt-1">
+            SSO / SAML, white-label, despliegue privado, SLA 99.9%, capacitación in-house y onboarding asistido.
+          </p>
+        </div>
+        <a
+          href="#contacto"
+          className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 text-white font-bold text-sm shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] transition-all"
+        >
+          Hablar con ventas
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+    </>
+  );
+}
+
+function PlanCard({ name, priceMonthly, priceYearly, description, features, cta, popular, yearly }: {
+  name: string;
+  priceMonthly: number;
+  priceYearly: number;
+  description: string;
+  features: string[];
+  cta: string;
+  popular?: boolean;
+  yearly: boolean;
 }) {
+  const monthlyEquiv = yearly ? priceYearly / 12 : priceMonthly;
+  const showFree = priceMonthly === 0;
   return (
     <div
-      className={`relative rounded-2xl p-6 sm:p-8 transition-all ${
+      className={`relative rounded-2xl p-5 sm:p-6 transition-all flex flex-col ${
         popular
-          ? 'bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 border-2 border-violet-500/40 shadow-2xl shadow-violet-500/20 scale-100 sm:scale-[1.03]'
+          ? 'bg-gradient-to-br from-violet-600/20 to-fuchsia-600/20 border-2 border-violet-500/40 shadow-2xl shadow-violet-500/20 lg:scale-[1.04]'
           : 'bg-white/[0.03] border border-white/5 hover:bg-white/[0.05]'
       }`}
     >
@@ -504,22 +570,44 @@ function PlanCard({ name, price, period, description, features, cta, popular, co
         </div>
       )}
       <h3 className="text-lg font-bold text-white">{name}</h3>
-      <p className="mt-1 text-xs text-slate-400">{description}</p>
-      <div className="mt-6 flex items-baseline gap-1">
-        <span className="text-4xl sm:text-5xl font-black text-white tracking-tight">{price}</span>
-        <span className="text-sm text-slate-500">{period}</span>
+      <p className="mt-1 text-xs text-slate-400 leading-snug min-h-[2.5em]">{description}</p>
+
+      <div className="mt-5">
+        {showFree ? (
+          <>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-black text-white tracking-tight">$0</span>
+              <span className="text-xs text-slate-500">/ mes</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">Sin tarjeta de crédito</p>
+          </>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-1">
+              <span className="text-4xl font-black text-white tracking-tight">${monthlyEquiv.toFixed(0)}</span>
+              <span className="text-xs text-slate-500">/ mes</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              {yearly
+                ? <>${priceYearly}/año facturado · <span className="text-emerald-400">2 meses gratis</span></>
+                : <>${priceMonthly} facturado mensual</>}
+            </p>
+          </>
+        )}
       </div>
-      <ul className="mt-6 space-y-2.5">
+
+      <ul className="mt-5 space-y-2 text-[12px] text-slate-300">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2 text-[13px] text-slate-300">
-            <Check className="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" />
-            <span>{f}</span>
+          <li key={f} className="flex items-start gap-1.5">
+            <Check className="w-3.5 h-3.5 mt-0.5 text-emerald-400 shrink-0" />
+            <span className="leading-snug">{f}</span>
           </li>
         ))}
       </ul>
+
       <Link
-        href={code === 'enterprise' ? '#contacto' : '/register'}
-        className={`mt-7 inline-flex w-full items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+        href="/register"
+        className={`mt-6 inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs transition-all ${
           popular
             ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/40 hover:shadow-violet-500/60 hover:scale-[1.01]'
             : 'bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20'
@@ -696,34 +784,89 @@ const STATS = [
   { value: '24/7', label: 'IA disponible' },
 ];
 
+// Aligned with the 5 self-serve tiers in supabase/migrations/0009_subscription_plans_reseed.sql.
+// Institucional vive en su propio band sales-led (sin precio público).
 const PLANS = [
   {
-    code: 'gratis',
+    code: 'free',
     name: 'Gratis',
-    price: '$0',
-    period: '/mes',
-    description: 'Para abogados que están explorando.',
-    features: ['Hasta 5 casos', 'Hasta 50 documentos', '100 consultas IA al mes', 'Calendario y tareas', 'Soporte por email'],
+    priceMonthly: 0,
+    priceYearly: 0,
+    description: 'Para probar la plataforma — sin tarjeta de crédito.',
+    features: [
+      '1 caso activo',
+      '30 consultas IA / mes',
+      'Base legal pública Ecuador',
+      'Calendario y tareas',
+    ],
     cta: 'Empezar gratis',
+  },
+  {
+    code: 'starter',
+    name: 'Starter',
+    priceMonthly: 19,
+    priceYearly: 190,
+    description: 'Abogado independiente que empieza a digitalizar su práctica.',
+    features: [
+      '10 casos activos',
+      '150 consultas IA / mes',
+      'OCR Vision (10 págs/mes)',
+      'Resúmenes ejecutivos IA',
+      'Soporte por email 48h',
+    ],
+    cta: 'Probar Starter',
   },
   {
     code: 'pro',
     name: 'Pro',
-    price: '$29',
-    period: '/mes',
-    description: 'Para el abogado independiente o estudio pequeño.',
-    features: ['Casos ilimitados', '5 GB de almacenamiento', '2 000 consultas IA', 'Sala de Litigación', 'Tarjetas argumentales con IA', 'Finanzas y facturación', 'Soporte prioritario'],
-    cta: 'Probar Pro 14 días',
+    priceMonthly: 49,
+    priceYearly: 490,
+    description: 'Recomendado para abogados con práctica activa.',
+    features: [
+      '50 casos activos',
+      '600 consultas IA / mes',
+      'OCR Vision (80 págs/mes)',
+      'Coherence Check + auto-fill',
+      'Módulo Finanzas con CFO virtual',
+      'Sala de Litigación + Tarjetas IA',
+      'Soporte chat 24h',
+    ],
+    cta: 'Probar Pro',
     popular: true,
   },
   {
-    code: 'enterprise',
-    name: 'Institucional',
-    price: 'A medida',
-    period: '',
-    description: 'Para estudios grandes, instituciones públicas o universidades.',
-    features: ['Todo lo del plan Pro', 'Usuarios ilimitados', 'SLA dedicado', 'On-boarding asistido', 'Integraciones a medida', 'Datos en tu jurisdicción', 'Capacitación al equipo'],
-    cta: 'Hablar con ventas',
+    code: 'pro_max',
+    name: 'Pro Max',
+    priceMonthly: 99,
+    priceYearly: 990,
+    description: 'Para abogados de alto volumen — el doble que Pro.',
+    features: [
+      '200 casos activos',
+      '1 200 consultas IA / mes',
+      'OCR Vision (200 págs/mes)',
+      'Prioridad en cola IA',
+      'API access (5K calls/mes)',
+      'Reportes avanzados',
+      'Soporte prioritario',
+    ],
+    cta: 'Probar Pro Max',
+  },
+  {
+    code: 'studio',
+    name: 'Studio',
+    priceMonthly: 249,
+    priceYearly: 2490,
+    description: 'Firmas de 2-5 abogados con colaboración real-time.',
+    features: [
+      '5 usuarios incluidos',
+      '100 casos (cuota equipo)',
+      '3 000 consultas IA / mes',
+      'OCR Vision (400 págs/mes)',
+      'Roles, permisos y workspace',
+      'API access (15K calls/mes)',
+      'Reportes consolidados',
+    ],
+    cta: 'Probar Studio',
   },
 ];
 
