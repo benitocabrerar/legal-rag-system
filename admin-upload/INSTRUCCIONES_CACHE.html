@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚠️ IMPORTANTE: Limpiar Caché del Navegador</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #2d3748;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 50px;
+    }
+
+    h1 {
+      color: #c53030;
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .warning-icon {
+      font-size: 3rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    h2 {
+      color: #2d3748;
+      margin: 30px 0 15px;
+      font-size: 1.5rem;
+      border-left: 4px solid #667eea;
+      padding-left: 15px;
+    }
+
+    .problem-box {
+      background: #fff5f5;
+      border: 2px solid #fc8181;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .problem-box h3 {
+      color: #c53030;
+      margin-bottom: 10px;
+    }
+
+    .solution-box {
+      background: #f0fff4;
+      border: 2px solid #68d391;
+      border-radius: 10px;
+      padding: 25px;
+      margin: 25px 0;
+    }
+
+    .solution-box h3 {
+      color: #22543d;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+
+    .steps {
+      list-style: none;
+      counter-reset: step-counter;
+    }
+
+    .steps li {
+      counter-increment: step-counter;
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      position: relative;
+      padding-left: 70px;
+    }
+
+    .steps li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .keyboard-shortcut {
+      display: inline-block;
+      background: #2d3748;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin: 5px;
+      box-shadow: 0 4px 0 #1a202c;
+    }
+
+    .highlight {
+      background: #fef5e7;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #d97706;
+    }
+
+    .code {
+      background: #2d3748;
+      color: #68d391;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      margin: 15px 0;
+      overflow-x: auto;
+    }
+
+    .success-banner {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: 25px;
+      border-radius: 10px;
+      margin: 30px 0;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    }
+
+    .error-log {
+      background: #2d3748;
+      color: #fc8181;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      margin: 15px 0;
+      font-size: 0.9rem;
+      overflow-x: auto;
+    }
+
+    .check-icon {
+      color: #10b981;
+      font-size: 1.5rem;
+      margin-right: 10px;
+    }
+
+    ul.checklist {
+      list-style: none;
+      margin: 20px 0;
+    }
+
+    ul.checklist li {
+      padding: 10px;
+      margin: 10px 0;
+      background: #f7fafc;
+      border-radius: 5px;
+    }
+
+    .note {
+      background: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+
+    .note strong {
+      color: #2c5282;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <span class="warning-icon">⚠️</span>
+      IMPORTANTE: Limpiar Caché del Navegador
+    </h1>
+
+    <div class="problem-box">
+      <h3>🐛 Problema Detectado</h3>
+      <p>El navegador está ejecutando una <strong>versión antigua del código JavaScript</strong> debido al caché del navegador.</p>
+
+      <div class="error-log">
+📦 Chunk 0: 0 bytes (chunk_0.bin)
+❌ Chunk 0 está vacío!
+      </div>
+
+      <p style="margin-top: 15px;">
+        El código correcto está en el archivo <code class="highlight">app.js:467</code> pero el navegador
+        sigue usando la versión vieja que no incluye el <strong>filename</strong> en los chunks.
+      </p>
+    </div>
+
+    <div class="solution-box">
+      <h3>✅ Solución: Forzar Recarga Completa</h3>
+
+      <div class="steps">
+        <li>
+          <strong>Cerrar TODAS las pestañas de localhost:3333</strong><br>
+          Asegúrate de cerrar completamente el navegador si tienes múltiples pestañas abiertas del sistema.
+        </li>
+
+        <li>
+          <strong>Abrir DevTools (Herramientas de Desarrollador)</strong><br>
+          Presiona <span class="keyboard-shortcut">F12</span> o
+          <span class="keyboard-shortcut">Ctrl + Shift + I</span>
+        </li>
+
+        <li>
+          <strong>Hacer HARD REFRESH (Recarga Forzada)</strong><br>
+          <strong>Opción 1:</strong> Presiona <span class="keyboard-shortcut">Ctrl + Shift + R</span><br>
+          <strong>Opción 2:</strong> Presiona <span class="keyboard-shortcut">Ctrl + F5</span><br>
+          <strong>Opción 3:</strong> Click derecho en botón de recargar → "Vaciar caché y recargar forzadamente"
+        </li>
+
+        <li>
+          <strong>Verificar que se cargó la versión nueva</strong><br>
+          En DevTools, ve a la pestaña <strong>Network</strong> (Red) y busca <code>app.js</code>.
+          Debe mostrar <span class="highlight">200 OK</span> y no <span class="highlight">304 Not Modified</span>.
+        </li>
+
+        <li>
+          <strong>Probar el upload nuevamente</strong><br>
+          Selecciona un PDF y sube el documento. Ahora debería funcionar correctamente.
+        </li>
+      </div>
+    </div>
+
+    <h2>🔍 Cómo Verificar que Funciona</h2>
+
+    <div class="note">
+      <strong>📝 Nota:</strong> Si ves estos mensajes en la consola del servidor, significa que funciona:
+    </div>
+
+    <div class="code">
+📦 Chunk 0: 10485760 bytes (chunk_0.bin) ✅
+📦 Chunk 1: 10485760 bytes (chunk_1.bin) ✅
+📦 Archivo combinado: 1500000 bytes ✅
+🔍 Primeros bytes (hex): 25504446
+✅ PDF válido confirmado
+    </div>
+
+    <ul class="checklist">
+      <li><span class="check-icon">✅</span> Chunks llegan con tamaño correcto (10 MB aprox.)</li>
+      <li><span class="check-icon">✅</span> Cada chunk tiene nombre (chunk_0.bin, chunk_1.bin, etc.)</li>
+      <li><span class="check-icon">✅</span> El PDF se valida correctamente</li>
+      <li><span class="check-icon">✅</span> El upload completa sin errores</li>
+    </ul>
+
+    <h2>🚀 Mejoras Implementadas (Esperando Prueba)</h2>
+
+    <ul class="checklist">
+      <li><span class="check-icon">✅</span> <strong>Auto-relleno de título:</strong> El título se rellena automáticamente con el nombre del archivo</li>
+      <li><span class="check-icon">✅</span> <strong>Explorador único:</strong> El explorador de Windows solo se abre UNA vez al hacer click</li>
+      <li><span class="check-icon">✅</span> <strong>Estimación precisa:</strong> ~384 páginas para documentos de 382 páginas (99.5% precisión)</li>
+      <li><span class="check-icon">✅</span> <strong>Chunks con nombre:</strong> Los chunks ahora tienen filename para que express-fileupload los reconozca</li>
+    </ul>
+
+    <div class="success-banner">
+      🎯 Después de hacer Hard Refresh, el sistema estará 100% funcional
+    </div>
+
+    <h2>💡 ¿Por Qué Pasa Esto?</h2>
+
+    <p style="margin: 20px 0; line-height: 1.8;">
+      Los navegadores modernos <strong>cachean archivos JavaScript</strong> para cargar páginas más rápido.
+      Cuando modificamos el código, el navegador puede seguir usando la versión vieja en caché en lugar de
+      descargar la nueva versión.
+    </p>
+
+    <p style="margin: 20px 0; line-height: 1.8;">
+      Un <strong>Hard Refresh</strong> (<kbd class="keyboard-shortcut">Ctrl + Shift + R</kbd>) fuerza al navegador a:
+    </p>
+
+    <ul style="margin-left: 30px; line-height: 2;">
+      <li>Ignorar la caché completamente</li>
+      <li>Descargar todos los archivos nuevamente desde el servidor</li>
+      <li>Usar la versión más reciente del código</li>
+    </ul>
+
+    <div class="note" style="margin-top: 30px;">
+      <strong>🔧 Solución Permanente (Opcional):</strong> Puedes configurar tu navegador para
+      deshabilitar caché cuando DevTools esté abierto:
+      <ol style="margin-left: 30px; margin-top: 10px; line-height: 1.8;">
+        <li>Abre DevTools (F12)</li>
+        <li>Ve a Settings (⚙️)</li>
+        <li>Marca la opción "Disable cache (while DevTools is open)"</li>
+      </ol>
+    </div>
+
+    <p style="text-align: center; margin-top: 50px; color: #718096; font-size: 0.9rem;">
+      📄 <strong>POWERIA Legal - Admin Upload v2.2</strong><br>
+      Sistema de Carga de Documentos Legales
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrucciones - Archivos BAT del Servidor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .file-card {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .file-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .file-icon {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        .description {
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .how-to {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .success {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Archivos BAT - Servidor de Carga</h1>
+        <p class="subtitle">Gestiona el servidor con un simple doble clic</p>
+
+        <div class="file-card">
+            <div class="file-name">
+                <span class="file-icon">▶️</span> start-server.bat
+            </div>
+            <div class="description">
+                <strong>Función:</strong> Inicia el servidor de carga de archivos grandes
+            </div>
+            <div class="how-to">
+                <strong>📖 Cómo usar:</strong>
+                <ul>
+                    <li><span class="step-number">1</span> Haz <strong>doble clic</strong> en el archivo</li>
+                    <li><span class="step-number">2</span> Se abrirá una ventana de terminal negra</li>
+                    <li><span class="step-number">3</span> Espera a ver: <code>Servidor iniciado en: http://localhost:3333</code></li>
+                    <li><span class="step-number">4</span> Abre tu navegador en: <code>http://localhost:3333</code></li>
+                </ul>
+            </div>
+            <div class="success">
+                ✅ <strong>Qué hace automáticamente:</strong>
+                <ul>
+                    <li>Verifica que Node.js esté instalado</li>
+                    <li>Instala dependencias si faltan (npm install)</li>
+                    <li>Inicia el servidor en puerto 3333</li>
+                    <li>Mantiene la ventana abierta para ver logs</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <div class="file-name">
+                <span class="file-icon">⏹️</span> stop-server.bat
+            </div>
+            <div class="description">
+                <strong>Función:</strong> Detiene el servidor de carga
+            </div>
+            <div class="how-to">
+                <strong>📖 Cómo usar:</strong>
+                <ul>
+                    <li><span class="step-number">1</span> Haz <strong>doble clic</strong> en el archivo</li>
+                    <li><span class="step-number">2</span> Se abrirá una ventana que dice "Servidor detenido"</li>
+                    <li><span class="step-number">3</span> La ventana se cerrará automáticamente después de 3 segundos</li>
+                </ul>
+            </div>
+            <div class="success">
+                ✅ <strong>Qué hace automáticamente:</strong>
+                <ul>
+                    <li>Busca procesos usando el puerto 3333</li>
+                    <li>Busca procesos de Node.js ejecutando server.js</li>
+                    <li>Detiene todos los procesos encontrados</li>
+                    <li>Confirma que el servidor se detuvo correctamente</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <div class="file-name">
+                <span class="file-icon">🔄</span> restart-server.bat
+            </div>
+            <div class="description">
+                <strong>Función:</strong> Detiene y reinicia el servidor (útil después de cambios en código)
+            </div>
+            <div class="how-to">
+                <strong>📖 Cómo usar:</strong>
+                <ul>
+                    <li><span class="step-number">1</span> Haz <strong>doble clic</strong> en el archivo</li>
+                    <li><span class="step-number">2</span> Verás que primero detiene el servidor</li>
+                    <li><span class="step-number">3</span> Espera 2 segundos</li>
+                    <li><span class="step-number">4</span> Inicia el servidor nuevamente</li>
+                </ul>
+            </div>
+            <div class="success">
+                ✅ <strong>Cuándo usar:</strong>
+                <ul>
+                    <li>Después de modificar archivos de código</li>
+                    <li>Después de cambiar variables de entorno (.env)</li>
+                    <li>Si el servidor se queda "colgado"</li>
+                    <li>Para aplicar cambios en la configuración</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Notas Importantes:</strong>
+            <ul>
+                <li>NO cierres la ventana negra mientras el servidor esté funcionando</li>
+                <li>Si cierras la ventana, el servidor se detendrá automáticamente</li>
+                <li>Para detener el servidor correctamente, usa <code>stop-server.bat</code></li>
+                <li>También puedes presionar <code>Ctrl+C</code> en la ventana del servidor</li>
+            </ul>
+        </div>
+
+        <div class="file-card">
+            <div class="file-name">
+                <span class="file-icon">🛠️</span> Solución de Problemas
+            </div>
+
+            <div class="how-to">
+                <strong>❌ Error: "Node.js no está instalado"</strong>
+                <ul>
+                    <li>Descarga Node.js desde: <code>https://nodejs.org</code></li>
+                    <li>Instala la versión LTS (recomendada)</li>
+                    <li>Reinicia tu computadora</li>
+                    <li>Intenta nuevamente</li>
+                </ul>
+            </div>
+
+            <div class="how-to">
+                <strong>❌ Error: "Puerto 3333 ya está en uso"</strong>
+                <ul>
+                    <li>Ejecuta <code>stop-server.bat</code></li>
+                    <li>Espera 5 segundos</li>
+                    <li>Ejecuta <code>start-server.bat</code> nuevamente</li>
+                </ul>
+            </div>
+
+            <div class="how-to">
+                <strong>❌ La página no carga (ERR_CONNECTION_REFUSED)</strong>
+                <ul>
+                    <li>Verifica que la ventana del servidor esté abierta</li>
+                    <li>Verifica que diga "Servidor iniciado en: http://localhost:3333"</li>
+                    <li>Verifica que no haya errores en rojo en la ventana</li>
+                    <li>Intenta con <code>restart-server.bat</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="success">
+            <h2 style="color: #4caf50; margin-bottom: 15px;">✅ Flujo Normal de Trabajo</h2>
+            <ol>
+                <li><strong>Inicio del día:</strong> Doble clic en <code>start-server.bat</code></li>
+                <li><strong>Trabajar:</strong> Abrir http://localhost:3333 y cargar documentos</li>
+                <li><strong>Si haces cambios:</strong> Usar <code>restart-server.bat</code></li>
+                <li><strong>Fin del día:</strong> Doble clic en <code>stop-server.bat</code></li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+            <h2 style="color: white; margin-bottom: 10px;">🎉 ¡Todo Listo!</h2>
+            <p style="margin: 0;">Ahora puedes gestionar el servidor con un simple doble clic</p>
+        </div>
+    </div>
+</body>
+</html>

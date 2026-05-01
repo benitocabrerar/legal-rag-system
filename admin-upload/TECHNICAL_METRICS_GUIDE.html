@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 Guía de Métricas Técnicas - POWERIA Legal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 3px solid #667eea;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: #6b7280;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      color: #4f46e5;
+      margin: 2rem 0 1rem;
+      padding-left: 1rem;
+      border-left: 4px solid #667eea;
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      color: #6366f1;
+      margin: 1.5rem 0 0.75rem;
+    }
+
+    .section {
+      background: #f9fafb;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border-left: 4px solid #10b981;
+    }
+
+    .metric-title {
+      font-weight: 700;
+      color: #059669;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-description {
+      color: #4b5563;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-example {
+      background: #f3f4f6;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      color: #1f2937;
+      margin-top: 0.5rem;
+    }
+
+    .code {
+      background: #f3f4f6;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #dc2626;
+    }
+
+    .highlight {
+      background: #fef3c7;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .formula {
+      background: #dbeafe;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .success {
+      background: #d1fae5;
+      border-left: 4px solid #10b981;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    ul {
+      margin: 1rem 0 1rem 2rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 Guía de Métricas Técnicas</h1>
+      <p class="subtitle">Informe Completo de Carga de Documentos Legales</p>
+    </div>
+
+    <div class="success">
+      <strong>✅ Actualización Completada</strong>
+      <p>Se han agregado métricas técnicas avanzadas al informe de carga, incluyendo uso de IA, información de red, y datos del sistema.</p>
+    </div>
+
+    <!-- SECCIÓN 1: USO DE IA -->
+    <h2>🤖 Sección 1: Uso de Inteligencia Artificial</h2>
+    <div class="section">
+      <p>Esta sección muestra el consumo de recursos de IA durante el procesamiento del documento.</p>
+
+      <div class="metric-card">
+        <div class="metric-title">Modelo Metadatos: GPT-4</div>
+        <div class="metric-description">
+          Modelo utilizado para la extracción automática de metadatos del documento (tipo de norma, fecha de publicación, número de registro oficial, etc.)
+        </div>
+        <div class="metric-example">Ejemplo: gpt-4</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Tokens Metadatos</div>
+        <div class="metric-description">
+          Número total de tokens consumidos en la extracción de metadatos. Incluye:
+          <ul>
+            <li><strong>Prompt Tokens:</strong> Tokens enviados al modelo (texto del documento + instrucciones)</li>
+            <li><strong>Completion Tokens:</strong> Tokens generados por el modelo (JSON con metadatos)</li>
+            <li><strong>Total Tokens:</strong> Suma de ambos</li>
+          </ul>
+        </div>
+        <div class="metric-example">Ejemplo: 1,250 tokens (1,000 prompt + 250 completion)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Costo Metadatos</div>
+        <div class="metric-description">
+          Costo estimado de la extracción de metadatos basado en precios de OpenAI 2024:
+        </div>
+        <div class="formula">
+          <strong>Fórmula:</strong><br>
+          Costo = (Prompt Tokens × $0.03/1K) + (Completion Tokens × $0.06/1K)
+        </div>
+        <div class="metric-example">Ejemplo: $0.0450 ($0.03 input + $0.015 output)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Modelo Embeddings: text-embedding-ada-002</div>
+        <div class="metric-description">
+          Modelo utilizado para generar embeddings (vectores semánticos) de cada chunk del documento para búsqueda RAG.
+        </div>
+        <div class="metric-example">Ejemplo: text-embedding-ada-002</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Tokens Embeddings</div>
+        <div class="metric-description">
+          Número total de tokens procesados para generar embeddings. Cada chunk de 1000 caracteres consume aproximadamente 250-300 tokens.
+        </div>
+        <div class="metric-example">Ejemplo: 45,000 tokens (180 chunks × ~250 tokens/chunk)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Costo Embeddings</div>
+        <div class="metric-description">
+          Costo de generar todos los embeddings del documento:
+        </div>
+        <div class="formula">
+          <strong>Fórmula:</strong><br>
+          Costo = Total Tokens × $0.0001/1K
+        </div>
+        <div class="metric-example">Ejemplo: $0.0045 (45,000 tokens × $0.0001/1K)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">📊 Tokens Totales</div>
+        <div class="metric-description">
+          Suma de todos los tokens consumidos (metadatos + embeddings).
+        </div>
+        <div class="metric-example">Ejemplo: 46,250 tokens</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">💰 Costo Total Estimado</div>
+        <div class="metric-description">
+          Costo total de procesamiento de IA para este documento. Suma de costos de metadatos y embeddings.
+        </div>
+        <div class="metric-example">Ejemplo: $0.0495 (~5 centavos de dólar)</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: INFORMACIÓN DE RED -->
+    <h2>🌐 Sección 2: Información de Red</h2>
+    <div class="section">
+      <p>Esta sección muestra detalles de conectividad y red durante la carga.</p>
+
+      <div class="metric-card">
+        <div class="metric-title">IP Cliente</div>
+        <div class="metric-description">
+          Dirección IP desde donde se realizó la carga. Útil para auditoría y seguridad. Se captura usando múltiples métodos de fallback:
+          <ul>
+            <li><code>x-forwarded-for</code> (cuando está detrás de proxy/balanceador)</li>
+            <li><code>x-real-ip</code> (cuando usa proxy Nginx)</li>
+            <li><code>socket.remoteAddress</code> (conexión directa)</li>
+          </ul>
+        </div>
+        <div class="metric-example">Ejemplo: 192.168.1.100 o ::1 (localhost IPv6)</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">IP Base de Datos</div>
+        <div class="metric-description">
+          Host del servidor PostgreSQL donde se almacenó el documento. Extraído automáticamente de la variable <code>DATABASE_URL</code>.
+        </div>
+        <div class="metric-example">Ejemplo: dpg-d46iarje5dus73ar46c0-a.oregon-postgres.render.com</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Región Servidor</div>
+        <div class="metric-description">
+          Región geográfica donde está alojado el servidor de base de datos.
+        </div>
+        <div class="metric-example">Ejemplo: Oregon, USA</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Protocolo de Conexión</div>
+        <div class="metric-description">
+          Protocolo usado para conectarse a la base de datos. PostgreSQL con cifrado SSL para seguridad.
+        </div>
+        <div class="metric-example">Ejemplo: PostgreSQL SSL</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Protocolo de Carga</div>
+        <div class="metric-description">
+          Protocolos usados durante la carga del archivo:
+          <ul>
+            <li><strong>HTTP:</strong> Para la carga inicial de chunks</li>
+            <li><strong>WebSocket:</strong> Para actualizaciones en tiempo real del progreso</li>
+          </ul>
+        </div>
+        <div class="metric-example">Ejemplo: HTTP/WebSocket</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: INFORMACIÓN DEL SISTEMA -->
+    <h2>💻 Sección 3: Información del Sistema</h2>
+    <div class="section">
+      <p>Esta sección muestra el estado del servidor al momento de la carga.</p>
+
+      <div class="metric-card">
+        <div class="metric-title">Versión Node.js</div>
+        <div class="metric-description">
+          Versión del runtime de Node.js ejecutando el servidor. Importante para compatibilidad y debugging.
+        </div>
+        <div class="metric-example">Ejemplo: v18.17.0 o v20.10.0</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Plataforma</div>
+        <div class="metric-description">
+          Sistema operativo del servidor. Valores posibles:
+          <ul>
+            <li><code>win32</code> - Windows</li>
+            <li><code>linux</code> - Linux</li>
+            <li><code>darwin</code> - macOS</li>
+          </ul>
+        </div>
+        <div class="metric-example">Ejemplo: win32</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Memoria Usada</div>
+        <div class="metric-description">
+          Memoria heap actualmente en uso por el proceso de Node.js. Útil para monitorear el consumo de recursos.
+        </div>
+        <div class="metric-example">Ejemplo: 125.50 MB</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Memoria Total</div>
+        <div class="metric-description">
+          Tamaño total del heap asignado al proceso de Node.js.
+        </div>
+        <div class="metric-example">Ejemplo: 256.00 MB</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-title">Uptime del Servidor</div>
+        <div class="metric-description">
+          Tiempo que el servidor ha estado ejecutándose sin reiniciar. Indica estabilidad del servicio.
+        </div>
+        <div class="metric-example">Ejemplo: 45.3 minutos</div>
+      </div>
+    </div>
+
+    <!-- TABLA DE PRECIOS -->
+    <h2>💵 Tabla de Precios de OpenAI (2024)</h2>
+    <div class="section">
+      <table>
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Tipo de Uso</th>
+            <th>Precio por 1K Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>GPT-4</strong></td>
+            <td>Input (Prompt)</td>
+            <td>$0.03</td>
+          </tr>
+          <tr>
+            <td><strong>GPT-4</strong></td>
+            <td>Output (Completion)</td>
+            <td>$0.06</td>
+          </tr>
+          <tr>
+            <td><strong>text-embedding-ada-002</strong></td>
+            <td>Embeddings</td>
+            <td>$0.0001</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- EJEMPLO DE CÁLCULO COMPLETO -->
+    <h2>🧮 Ejemplo de Cálculo Completo</h2>
+    <div class="section">
+      <h3>Escenario: Documento de 200 páginas</h3>
+
+      <div class="formula">
+        <strong>1. Extracción de Metadatos con GPT-4</strong><br>
+        - Prompt Tokens: 1,000 tokens<br>
+        - Completion Tokens: 250 tokens<br>
+        - Costo = (1,000 × $0.03/1K) + (250 × $0.06/1K) = $0.03 + $0.015 = <strong>$0.045</strong>
+      </div>
+
+      <div class="formula">
+        <strong>2. Generación de Embeddings</strong><br>
+        - Texto total: ~100,000 palabras ≈ 400,000 caracteres<br>
+        - Chunks generados: 400 chunks (1,000 caracteres cada uno)<br>
+        - Tokens embeddings: 400 × 250 = 100,000 tokens<br>
+        - Costo = 100,000 × $0.0001/1K = <strong>$0.01</strong>
+      </div>
+
+      <div class="formula">
+        <strong>3. Costo Total</strong><br>
+        $0.045 (metadatos) + $0.01 (embeddings) = <strong>$0.055</strong> (~6 centavos)
+      </div>
+
+      <div class="success">
+        <strong>💡 Conclusión:</strong> Procesar un documento legal de 200 páginas cuesta aproximadamente 6 centavos de dólar.
+      </div>
+    </div>
+
+    <!-- CASOS DE USO -->
+    <h2>📋 Casos de Uso de las Métricas</h2>
+    <div class="section">
+      <h3>1. Control de Costos</h3>
+      <p>Monitorear el costo acumulado de procesamiento de documentos para presupuestar recursos de IA.</p>
+
+      <h3>2. Auditoría de Seguridad</h3>
+      <p>Rastrear las IPs de carga para detectar accesos no autorizados o actividad sospechosa.</p>
+
+      <h3>3. Optimización de Rendimiento</h3>
+      <p>Analizar el uso de memoria y uptime para identificar necesidades de escalamiento.</p>
+
+      <h3>4. Depuración Técnica</h3>
+      <p>Usar versión de Node.js, plataforma y detalles de red para resolver problemas de compatibilidad.</p>
+
+      <h3>5. Reporting Ejecutivo</h3>
+      <p>Generar reportes de uso de IA para stakeholders y justificación de inversión en tecnología.</p>
+    </div>
+
+    <!-- IMPLEMENTACIÓN TÉCNICA -->
+    <h2>⚙️ Implementación Técnica</h2>
+    <div class="section">
+      <h3>Backend (server.js)</h3>
+      <div class="metric-description">
+        <strong>Funciones modificadas:</strong>
+        <ul>
+          <li><code>extractMetadataWithAI()</code> - Captura tokens de GPT-4</li>
+          <li><code>generateChunksAndEmbeddings()</code> - Acumula tokens de embeddings</li>
+          <li><code>/api/upload/start</code> - Captura IP del cliente</li>
+          <li><code>processComplete()</code> - Calcula métricas y genera reporte completo</li>
+          <li><code>processWithSplit()</code> - Mismo proceso para documentos divididos</li>
+        </ul>
+      </div>
+
+      <h3>Frontend (app.js)</h3>
+      <div class="metric-description">
+        <strong>Función modificada:</strong>
+        <ul>
+          <li><code>showUploadReport()</code> - Renderiza las 3 nuevas secciones del modal</li>
+        </ul>
+      </div>
+
+      <h3>CSS (style.css)</h3>
+      <div class="metric-description">
+        <strong>Clase agregada:</strong>
+        <ul>
+          <li><code>.highlight-success</code> - Estilo especial para costo total (verde brillante con sombra)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- NOTAS IMPORTANTES -->
+    <div class="warning">
+      <strong>⚠️ Notas Importantes:</strong>
+      <ul>
+        <li>Los costos son <strong>estimaciones</strong> basadas en precios públicos de OpenAI al 2024</li>
+        <li>Los precios pueden cambiar sin previo aviso</li>
+        <li>No incluyen costos de infraestructura (base de datos, servidor, etc.)</li>
+        <li>La IP del cliente puede ser la IP interna si se ejecuta localmente</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <p><strong>🚀 POWERIA Legal</strong> - Sistema de Administración de Documentos Legales</p>
+      <p>Versión 2.0 con Métricas Técnicas Avanzadas</p>
+    </div>
+  </div>
+</body>
+</html>

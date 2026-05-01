@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Informe de Carga Completado - Nueva Funcionalidad</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .success-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .success-banner h2 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .section {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e3f2fd;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .feature-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .feature-desc {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .screenshot-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #999;
+        }
+
+        .files-modified {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .files-modified h3 {
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+
+        .file-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Informe de Carga Completado</h1>
+        <p class="subtitle">Nueva Funcionalidad Implementada</p>
+
+        <div class="success-banner">
+            <h2>✅ Implementación Exitosa</h2>
+            <p>El sistema ahora muestra un informe completo cuando termina la carga de un documento</p>
+        </div>
+
+        <div class="section">
+            <h2>🎯 ¿Qué se implementó?</h2>
+            <p>Se agregó un <strong>modal de informe completo</strong> que aparece automáticamente cuando finaliza la carga de un documento legal. Este informe muestra toda la información relevante del proceso de carga en un formato visual y organizado.</p>
+        </div>
+
+        <div class="section">
+            <h2>📋 Secciones del Informe</h2>
+            <p>El informe está dividido en 5 secciones principales:</p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-title">1. Información del Documento</div>
+                    <div class="feature-desc">
+                        • Título<br>
+                        • Archivo original<br>
+                        • Tipo de norma<br>
+                        • Total de páginas<br>
+                        • Tamaño del archivo<br>
+                        • Indicador si fue dividido
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-title">2. Metadatos Extraídos (IA)</div>
+                    <div class="feature-desc">
+                        • Jerarquía legal<br>
+                        • Tipo de publicación<br>
+                        • Número R.O.<br>
+                        • Fechas clave<br>
+                        • Estado y jurisdicción<br>
+                        • Nivel de confianza IA
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <div class="feature-title">3. Procesamiento</div>
+                    <div class="feature-desc">
+                        • Método de carga<br>
+                        • Chunks generados<br>
+                        • Tamaño en BD<br>
+                        • Partes creadas (si aplica)
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <div class="feature-title">4. Tiempos de Carga</div>
+                    <div class="feature-desc">
+                        • Duración total<br>
+                        • Hora de inicio<br>
+                        • Hora de finalización<br>
+                        • Timestamps completos
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-title">5. Ubicación de Almacenamiento</div>
+                    <div class="feature-desc">
+                        • Base de datos<br>
+                        • Región del servidor<br>
+                        • Host de PostgreSQL<br>
+                        • Tablas utilizadas<br>
+                        • ID del documento
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Cómo Usar</h2>
+
+            <p><span class="step-number">1</span> <strong>Carga un documento normalmente</strong></p>
+            <ul>
+                <li>Selecciona el tipo de norma</li>
+                <li>Escribe el título</li>
+                <li>Selecciona o arrastra el archivo PDF</li>
+                <li>Haz clic en "Iniciar Carga"</li>
+            </ul>
+
+            <p style="margin-top: 20px;"><span class="step-number">2</span> <strong>Espera a que termine la carga</strong></p>
+            <ul>
+                <li>Observa el progreso en tiempo real</li>
+                <li>El sistema procesará el documento automáticamente</li>
+                <li>Generará embeddings con IA</li>
+            </ul>
+
+            <p style="margin-top: 20px;"><span class="step-number">3</span> <strong>¡El informe aparece automáticamente!</strong></p>
+            <ul>
+                <li>Se abrirá un modal con el informe completo</li>
+                <li>Podrás revisar toda la información</li>
+                <li>Cierra haciendo clic en la X o fuera del modal</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>💡 Características Especiales</h2>
+
+            <div class="info">
+                <strong>🎨 Diseño Profesional</strong><br>
+                • Modal grande y legible (900px)<br>
+                • Header con gradiente morado<br>
+                • Animaciones suaves al abrir/cerrar<br>
+                • Hover effects en cada sección<br>
+                • Tema oscuro/claro automático
+            </div>
+
+            <div class="info">
+                <strong>📊 Información Técnica Completa</strong><br>
+                • Tamaño exacto en base de datos (calculado en bytes)<br>
+                • Número preciso de chunks de embeddings<br>
+                • Host real de PostgreSQL en Render (Oregon, USA)<br>
+                • Timestamps en formato local español
+            </div>
+
+            <div class="info">
+                <strong>🔄 Documentos Divididos</strong><br>
+                • Detecta automáticamente si el documento fue dividido<br>
+                • Muestra el número total de partes creadas<br>
+                • Calcula el tamaño total de todas las partes<br>
+                • Lista las tablas utilizadas (legal_documents + LegalDocumentPart)
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ Archivos Modificados</h2>
+
+            <div class="files-modified">
+                <h3>✅ Backend (server.js)</h3>
+                <div class="file-item">admin-upload/server.js</div>
+                <ul>
+                    <li>Líneas 443-509: Función <code>processComplete()</code> modificada</li>
+                    <li>Líneas 591-662: Función <code>processWithSplit()</code> modificada</li>
+                    <li>Agregado cálculo de tamaño en BD con <code>Buffer.byteLength()</code></li>
+                    <li>Agregado query Prisma para contar chunks</li>
+                    <li>Agregado query SQL raw para sumar tamaños de partes</li>
+                    <li>Creado objeto <code>uploadReport</code> con 5 secciones</li>
+                </ul>
+            </div>
+
+            <div class="files-modified">
+                <h3>✅ Frontend JavaScript (app.js)</h3>
+                <div class="file-item">admin-upload/public/app.js</div>
+                <ul>
+                    <li>Líneas 58-76: Corrección del doble clic en explorador de archivos</li>
+                    <li>Líneas 251-266: Handler WebSocket <code>processing_complete</code> actualizado</li>
+                    <li>Líneas 669-850: Nueva función <code>showUploadReport()</code></li>
+                    <li>Funciones helper para formateo de fechas</li>
+                    <li>Generación dinámica de HTML del reporte</li>
+                    <li>Event handlers para cerrar el modal</li>
+                </ul>
+            </div>
+
+            <div class="files-modified">
+                <h3>✅ Frontend HTML (index.html)</h3>
+                <div class="file-item">admin-upload/public/index.html</div>
+                <ul>
+                    <li>Líneas 177-188: Modal HTML agregado</li>
+                    <li>Div <code>#reportModal</code> con clase <code>modal</code></li>
+                    <li>Div <code>#reportContent</code> para contenido dinámico</li>
+                    <li>Botón <code>#closeReport</code> para cerrar</li>
+                </ul>
+            </div>
+
+            <div class="files-modified">
+                <h3>✅ Frontend CSS (style.css)</h3>
+                <div class="file-item">admin-upload/public/style.css</div>
+                <ul>
+                    <li>Líneas 834-1019: Estilos completos del reporte</li>
+                    <li>Clase <code>.report-modal</code> (modal grande 900px)</li>
+                    <li>Clase <code>.modal-header</code> con gradiente</li>
+                    <li>Clase <code>.report-section</code> para secciones</li>
+                    <li>Clase <code>.report-grid</code> layout responsive</li>
+                    <li>Clase <code>.confidence-badge</code> badge verde</li>
+                    <li>Clase <code>.highlight</code> valores destacados</li>
+                    <li>Clase <code>.code</code> valores técnicos</li>
+                    <li>Media queries para móviles</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Ejemplo de Datos del Informe</h2>
+
+            <div class="code-block">
+{
+  "documentInfo": {
+    "title": "Código Orgánico Integral Penal",
+    "type": "ORGANIC_CODE",
+    "filename": "COIP.pdf",
+    "totalPages": 245,
+    "fileSizeMB": "12.50"
+  },
+  "extractedMetadata": {
+    "legalHierarchy": "Código Orgánico",
+    "publicationType": "Registro Oficial",
+    "publicationNumber": "180",
+    "publicationDate": "2014-02-10T00:00:00.000Z",
+    "lastReformDate": "2023-10-20T00:00:00.000Z",
+    "documentState": "Vigente",
+    "jurisdiction": "Nacional",
+    "year": "2014",
+    "confidence": "95%"
+  },
+  "processing": {
+    "chunksGenerated": 1250,
+    "textSize": "8.75 MB",
+    "uploadMethod": "Dividido en 3 partes de 100 páginas"
+  },
+  "timing": {
+    "uploadDuration": "125.3s",
+    "startTime": "2025-11-11T20:00:00.000Z",
+    "endTime": "2025-11-11T20:02:05.300Z"
+  },
+  "storage": {
+    "database": "PostgreSQL - Render",
+    "region": "Oregon, USA",
+    "host": "dpg-d46iarje5dus73ar46c0-a.oregon-postgres.render.com",
+    "tables": ["legal_documents", "LegalDocumentPart"]
+  }
+}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Beneficios</h2>
+
+            <ul>
+                <li>✅ <strong>Transparencia total:</strong> El usuario ve exactamente qué se guardó y dónde</li>
+                <li>✅ <strong>Validación inmediata:</strong> Confirma que la IA extrajo correctamente los metadatos</li>
+                <li>✅ <strong>Métricas de rendimiento:</strong> Tiempo exacto de procesamiento</li>
+                <li>✅ <strong>Información técnica:</strong> Detalles sobre chunks, tamaños y ubicación</li>
+                <li>✅ <strong>Auditoría:</strong> Registro visual de lo que se cargó</li>
+                <li>✅ <strong>Debugging:</strong> Facilita identificar problemas en la carga</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Nota Importante</strong><br>
+            El informe se genera automáticamente vía WebSocket cuando el servidor emite el evento <code>processing_complete</code>.
+            Si no aparece, verifica que:<br>
+            • El WebSocket esté conectado (indicador verde en la esquina inferior izquierda)<br>
+            • La consola del navegador no muestre errores<br>
+            • El servidor esté ejecutándose correctamente
+        </div>
+
+        <div class="section">
+            <h2>🔍 Cómo Probar</h2>
+
+            <p><span class="step-number">1</span> Asegúrate que el servidor esté corriendo:</p>
+            <div class="code-block">http://localhost:3333</div>
+
+            <p style="margin-top: 20px;"><span class="step-number">2</span> Inicia sesión con credenciales de admin</p>
+
+            <p style="margin-top: 20px;"><span class="step-number">3</span> Carga un PDF de prueba (cualquier tamaño)</p>
+
+            <p style="margin-top: 20px;"><span class="step-number">4</span> Espera a que termine el procesamiento</p>
+
+            <p style="margin-top: 20px;"><span class="step-number">5</span> ¡El modal del informe aparecerá automáticamente!</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+            <h2 style="color: white; margin-bottom: 10px;">🎉 ¡Funcionalidad Lista!</h2>
+            <p style="margin: 0;">El informe de carga completado está funcionando y listo para usar</p>
+        </div>
+    </div>
+</body>
+</html>

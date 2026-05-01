@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracción Automática de Metadatos con IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        h3 {
+            color: #764ba2;
+            margin: 20px 0 10px 0;
+            font-size: 1.3em;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+
+        .field-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .field-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .field-name {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .field-description {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .example-box {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #ffd89b 0%, #19547b 100%);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .feature-title {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e91e63;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Extracción Automática de Metadatos con IA</h1>
+        <p class="subtitle">Tu servidor de carga ahora extrae metadatos legales automáticamente usando GPT-4</p>
+
+        <div class="section">
+            <h2>✨ ¿Qué hace esto?</h2>
+            <p>Cuando cargas un PDF, el sistema ahora <span class="highlight">extrae automáticamente</span> toda la información legal importante usando inteligencia artificial:</p>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <div class="feature-title">Fechas</div>
+                    <p>Publicación y reformas</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <div class="feature-title">Tipo de Norma</div>
+                    <p>Constitución, Ley, Código, etc.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏛️</div>
+                    <div class="feature-title">Jerarquía</div>
+                    <p>Nivel legal del documento</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📰</div>
+                    <div class="feature-title">Registro Oficial</div>
+                    <p>Número y tipo de publicación</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Campos que se Extraen Automáticamente</h2>
+
+            <div class="field-list">
+                <div class="field-item">
+                    <div class="field-name">📋 Tipo de Norma (normType)</div>
+                    <div class="field-description">
+                        Constitución, Ley Orgánica, Ley Ordinaria, Código, Reglamento, Ordenanza, Resolución, etc.
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">🏛️ Jerarquía Legal (legalHierarchy)</div>
+                    <div class="field-description">
+                        CONSTITUCION, TRATADOS_INTERNACIONALES_DDHH, LEYES_ORGANICAS, LEYES_ORDINARIAS, CODIGOS_ORGANICOS, CODIGOS_ORDINARIOS, REGLAMENTOS, ORDENANZAS, RESOLUCIONES
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">📰 Tipo de Publicación (publicationType)</div>
+                    <div class="field-description">
+                        ORDINARIO, SUPLEMENTO, SEGUNDO_SUPLEMENTO, SUPLEMENTO_ESPECIAL, EDICION_CONSTITUCIONAL
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">🔢 Número de R.O. (publicationNumber)</div>
+                    <div class="field-description">
+                        Número del Registro Oficial (ej: "449", "298")
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">📅 Fecha de Publicación (publicationDate)</div>
+                    <div class="field-description">
+                        Fecha exacta de publicación en Registro Oficial
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">🔄 Fecha de Última Reforma (lastReformDate)</div>
+                    <div class="field-description">
+                        Fecha de la reforma más reciente (si existe)
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">📄 Estado del Documento (documentState)</div>
+                    <div class="field-description">
+                        ORIGINAL (sin reformas) o REFORMADO (tiene modificaciones)
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">🌍 Jurisdicción (jurisdiction)</div>
+                    <div class="field-description">
+                        NACIONAL, PROVINCIAL, MUNICIPAL, INTERNACIONAL
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">📆 Año (year)</div>
+                    <div class="field-description">
+                        Año de publicación del documento
+                    </div>
+                </div>
+
+                <div class="field-item">
+                    <div class="field-name">🎯 Confianza de Extracción</div>
+                    <div class="field-description">
+                        Nivel de confianza de la IA (0.0 a 1.0)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 ¿Cómo Funciona?</h2>
+
+            <h3>1. Extracción de Texto</h3>
+            <p>El sistema lee las <strong>primeras 5 páginas</strong> del PDF (donde suele estar toda la información legal)</p>
+
+            <h3>2. Análisis con GPT-4</h3>
+            <p>GPT-4 analiza el texto y busca patrones típicos de documentos legales ecuatorianos:</p>
+
+            <div class="example-box">
+REGISTRO OFICIAL
+Órgano del Gobierno del Ecuador
+Año II - Quito, Jueves 20 de Octubre del 2008 - Nº 449
+
+CONSTITUCIÓN DE LA REPÚBLICA DEL ECUADOR
+...
+            </div>
+
+            <h3>3. Extracción Estructurada</h3>
+            <p>La IA retorna un JSON con todos los campos:</p>
+
+            <div class="example-box">
+{
+  "normType": "CONSTITUTIONAL_NORM",
+  "legalHierarchy": "CONSTITUCION",
+  "publicationType": "ORDINARIO",
+  "publicationNumber": "449",
+  "publicationDate": "2008-10-20",
+  "lastReformDate": null,
+  "documentState": "ORIGINAL",
+  "jurisdiction": "NACIONAL",
+  "year": 2008,
+  "extractionConfidence": 0.95
+}
+            </div>
+
+            <h3>4. Guardado en Base de Datos</h3>
+            <p>Todos los campos se guardan automáticamente en la tabla <code>LegalDocument</code> en tu base de datos PostgreSQL en Render</p>
+        </div>
+
+        <div class="section">
+            <h2>⚡ Ventajas</h2>
+            <ul>
+                <li><strong>✅ 100% Automático:</strong> No necesitas escribir nada manualmente</li>
+                <li><strong>🎯 Alta Precisión:</strong> GPT-4 está entrenado para identificar estos patrones</li>
+                <li><strong>⏱️ Rápido:</strong> Toma solo 2-3 segundos adicionales</li>
+                <li><strong>📊 Completo:</strong> Extrae TODOS los campos necesarios</li>
+                <li><strong>🔄 Confiable:</strong> Si falla, usa valores por defecto seguros</li>
+                <li><strong>💾 Persistente:</strong> Todo se guarda en Render PostgreSQL</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🎬 Ejemplo de Uso</h2>
+
+            <p>Cuando cargas la Constitución de Ecuador:</p>
+
+            <div class="alert-info">
+                <strong>1. Cargas el PDF:</strong> "Constitucion-Ecuador-2008.pdf"
+            </div>
+
+            <div class="alert-success">
+                <strong>2. El sistema extrae automáticamente:</strong><br>
+                📋 Tipo: CONSTITUTIONAL_NORM<br>
+                🏛️ Jerarquía: CONSTITUCION<br>
+                📰 Tipo Publicación: ORDINARIO<br>
+                🔢 R.O. Nº: 449<br>
+                📅 Fecha: 20 de Octubre de 2008<br>
+                📄 Estado: ORIGINAL<br>
+                🌍 Jurisdicción: NACIONAL<br>
+                📆 Año: 2008
+            </div>
+
+            <div class="alert-success">
+                <strong>3. Todo se guarda en la base de datos</strong> con estos metadatos y el contenido completo procesado
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ Tecnología Utilizada</h2>
+
+            <ul>
+                <li><strong>GPT-4:</strong> Modelo de lenguaje para análisis semántico</li>
+                <li><strong>pdf.js-extract:</strong> Extracción de texto del PDF</li>
+                <li><strong>JSON Structured Output:</strong> Garantiza respuesta en formato JSON válido</li>
+                <li><strong>Temperature 0.1:</strong> Respuestas más consistentes y precisas</li>
+                <li><strong>Fallback Automático:</strong> Si falla, usa valores por defecto</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>📝 Notas Importantes</h2>
+
+            <div class="alert-info">
+                <strong>ℹ️ Solo necesitas:</strong><br>
+                - Seleccionar el tipo de norma<br>
+                - Escribir el título<br>
+                - Cargar el PDF<br><br>
+                <strong>¡El resto es automático!</strong> 🎉
+            </div>
+
+            <div class="alert-success">
+                <strong>✅ Todos los metadatos extraídos:</strong><br>
+                - Se guardan en la base de datos de Render<br>
+                - Están disponibles para búsquedas<br>
+                - Se pueden usar para filtros<br>
+                - Aparecen en el metadata del documento
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 ¿Qué Sigue?</h2>
+
+            <p>En el futuro se podría agregar:</p>
+            <ul>
+                <li>Vista previa de metadatos antes de guardar</li>
+                <li>Edición manual de metadatos extraídos</li>
+                <li>Validación contra base de datos de R.O.</li>
+                <li>Extracción de artículos y capítulos</li>
+                <li>Análisis de concordancias y referencias</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+            <h2 style="color: white; margin-bottom: 10px;">🎉 ¡La Extracción Automática Está Activa!</h2>
+            <p style="margin: 0;">Prueba cargando cualquier PDF legal y observa cómo se extraen los metadatos automáticamente</p>
+        </div>
+    </div>
+</body>
+</html>

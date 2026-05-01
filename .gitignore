@@ -62,3 +62,7 @@ srctypesbackup.types.ts
 
 # Ad-hoc operator screenshots and dumps (scripts/_*)
 scripts/_*
+
+# Sub-tool with its own node_modules (operator-only, not part of main build)
+admin-upload/node_modules/
+admin-upload/package-lock.json

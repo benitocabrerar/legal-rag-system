@@ -1,0 +1,39 @@
+{
+  "name": "poweria-legal-admin-upload",
+  "version": "1.0.0",
+  "description": "🚀 POWERIA Legal - Admin Upload Server - Carga de documentos sin límites con división automática",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "poweria",
+    "legal",
+    "admin",
+    "upload",
+    "pdf",
+    "chunked-upload",
+    "websocket"
+  ],
+  "author": "POWERIA Legal",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.2.0",
+    "bcrypt": "^5.1.1",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "openai": "^4.75.0",
+    "pdf-lib": "^1.17.1",
+    "pdf.js-extract": "^0.2.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

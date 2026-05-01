@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚀 POWERIA Legal - Admin Upload</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Modal de Login -->
+  <div id="loginModal" class="modal active">
+    <div class="modal-content glass">
+      <div class="login-header">
+        <div class="logo-container">
+          <div class="logo-icon">⚖️</div>
+          <h1>POWERIA Legal</h1>
+        </div>
+        <p class="subtitle">Panel de Administrador</p>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="email">📧 Email</label>
+          <input type="email" id="email" required placeholder="admin@poweria.com" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">🔑 Contraseña</label>
+          <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <span class="btn-text">Iniciar Sesión</span>
+          <span class="btn-loader" style="display: none;">⏳</span>
+        </button>
+
+        <div class="error-message" id="loginError" style="display: none;"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Principal -->
+  <div id="dashboard" style="display: none;">
+
+    <!-- Header -->
+    <header class="header glass">
+      <div class="header-left">
+        <h1>⚖️ POWERIA Legal</h1>
+        <span class="badge badge-admin">Admin</span>
+      </div>
+
+      <div class="header-center">
+        <div class="stats-mini">
+          <div class="stat-item">
+            <span class="stat-label">Documentos</span>
+            <span class="stat-value" id="totalDocs">-</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Hoy</span>
+            <span class="stat-value" id="recentDocs">-</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Chunks</span>
+            <span class="stat-value" id="totalChunks">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="themeToggle" class="btn-icon" title="Cambiar tema">🌓</button>
+        <button id="refreshStats" class="btn-icon" title="Actualizar estadísticas">🔄</button>
+        <span class="user-email" id="userEmail"></span>
+        <button id="logoutBtn" class="btn btn-secondary">Salir</button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+
+      <!-- Upload Section -->
+      <section class="upload-section glass">
+        <h2>📤 Cargar Documento Legal</h2>
+        <p class="section-subtitle">Sin límite de tamaño • División automática • Procesamiento en tiempo real</p>
+
+        <!-- Form de Metadatos -->
+        <div class="metadata-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="normType">Tipo de Norma</label>
+              <select id="normType" required>
+                <option value="ORGANIC_CODE">Código Orgánico</option>
+                <option value="ORDINARY_LAW">Ley Ordinaria</option>
+                <option value="ORGANIC_LAW">Ley Orgánica</option>
+                <option value="DECREE">Decreto</option>
+                <option value="RESOLUTION">Resolución</option>
+                <option value="REGULATION">Reglamento</option>
+                <option value="AGREEMENT">Acuerdo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="normTitle">Título del Documento</label>
+              <input type="text" id="normTitle" placeholder="Ej: Código Orgánico Integral Penal" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drop Zone -->
+        <div id="dropZone" class="drop-zone">
+          <div class="drop-zone-content">
+            <div class="drop-icon">📄</div>
+            <h3>Arrastra tu archivo PDF aquí</h3>
+            <p>o haz clic para seleccionar</p>
+            <button type="button" id="selectFileBtn" class="btn btn-primary">Seleccionar Archivo</button>
+            <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+          </div>
+
+          <div id="filePreview" class="file-preview" style="display: none;">
+            <div class="file-info">
+              <div class="file-icon">📕</div>
+              <div class="file-details">
+                <h4 id="fileName"></h4>
+                <p id="fileSize"></p>
+                <p id="filePages" class="file-meta"></p>
+              </div>
+              <button id="removeFile" class="btn-icon btn-danger">🗑️</button>
+            </div>
+
+            <div class="progress-container" id="uploadProgress" style="display: none;">
+              <div class="progress-header">
+                <span id="progressLabel">Cargando...</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-details">
+                <span id="progressDetails"></span>
+                <span id="uploadSpeed"></span>
+              </div>
+            </div>
+
+            <button id="uploadBtn" class="btn btn-success" style="display: none;">
+              🚀 Iniciar Carga
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Processing Queue -->
+      <section class="queue-section glass" id="queueSection" style="display: none;">
+        <h2>⚙️ Cola de Procesamiento</h2>
+        <div id="queueList" class="queue-list"></div>
+      </section>
+
+      <!-- Recent Documents -->
+      <section class="recent-section glass">
+        <h2>📚 Documentos Recientes</h2>
+        <div id="recentList" class="recent-list">
+          <p class="loading-text">Cargando...</p>
+        </div>
+      </section>
+
+      <!-- WebSocket Status -->
+      <div class="ws-status" id="wsStatus">
+        <div class="ws-indicator"></div>
+        <span>Conectado</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Upload Report Modal -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content report-modal glass">
+      <div class="modal-header">
+        <h2>📊 Informe de Carga Completado</h2>
+        <button id="closeReport" class="btn-icon btn-close">✖️</button>
+      </div>
+      <div id="reportContent" class="report-content">
+        <!-- El contenido se generará dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2.2.4"></script>
+</body>
+</html>
