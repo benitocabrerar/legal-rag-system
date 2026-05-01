@@ -74,7 +74,7 @@ export function HelpFab() {
               </span>
               <div className="min-w-0">
                 <div className="text-[12px] font-bold text-slate-900">Centro de ayuda</div>
-                <div className="text-[11px] text-slate-500">13 artículos sobre todo el producto</div>
+                <div className="text-[11px] text-slate-500">22 artículos sobre todo el producto</div>
               </div>
             </Link>
 
@@ -130,10 +130,15 @@ export function HelpFab() {
 }
 
 function pickTourForRoute(pathname: string): string | null {
+  if (pathname.startsWith('/admin/auth-events')) return 'admin-auth-events';
+  if (pathname.startsWith('/admin/users')) return 'admin-users';
+  if (pathname === '/admin' || pathname.startsWith('/admin')) return 'admin-overview';
+  if (pathname.includes('/generate-document') || pathname.includes('/document-generator')) return 'doc-generator';
   if (pathname.startsWith('/dashboard/calendar')) return 'calendar';
   if (pathname.startsWith('/dashboard/tasks')) return 'tasks';
   if (pathname.startsWith('/dashboard/finance')) return 'finance';
   if (pathname.includes('/litigation')) return 'litigation';
+  if (/\/dashboard\/cases\/[^/]+$/.test(pathname)) return 'case-detail';
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) return 'dashboard';
   return null;
 }

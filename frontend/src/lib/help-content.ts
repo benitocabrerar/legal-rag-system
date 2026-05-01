@@ -5,7 +5,7 @@
 export interface HelpArticle {
   id: string;
   title: string;
-  category: 'inicio' | 'casos' | 'litigacion' | 'productividad' | 'finanzas' | 'cuenta' | 'avanzado';
+  category: 'inicio' | 'casos' | 'litigacion' | 'productividad' | 'finanzas' | 'cuenta' | 'admin' | 'troubleshooting' | 'avanzado';
   description: string;
   keywords: string[];
   icon: string;
@@ -14,13 +14,15 @@ export interface HelpArticle {
 }
 
 export const HELP_CATEGORIES: Record<HelpArticle['category'], { label: string; emoji: string; color: string }> = {
-  inicio:        { label: 'Empezar',          emoji: '🚀', color: 'text-violet-700' },
-  casos:         { label: 'Casos',            emoji: '📁', color: 'text-indigo-700' },
-  litigacion:    { label: 'Litigación',       emoji: '⚖️', color: 'text-fuchsia-700' },
-  productividad: { label: 'Productividad',    emoji: '🗓️', color: 'text-sky-700' },
-  finanzas:      { label: 'Finanzas',         emoji: '💼', color: 'text-emerald-700' },
-  cuenta:        { label: 'Cuenta y datos',   emoji: '🔐', color: 'text-slate-700' },
-  avanzado:      { label: 'Avanzado',         emoji: '✨', color: 'text-amber-700' },
+  inicio:          { label: 'Empezar',         emoji: '🚀', color: 'text-violet-700' },
+  casos:           { label: 'Casos',           emoji: '📁', color: 'text-indigo-700' },
+  litigacion:      { label: 'Litigación',      emoji: '⚖️', color: 'text-fuchsia-700' },
+  productividad:   { label: 'Productividad',   emoji: '🗓️', color: 'text-sky-700' },
+  finanzas:        { label: 'Finanzas',        emoji: '💼', color: 'text-emerald-700' },
+  cuenta:          { label: 'Cuenta y datos',  emoji: '🔐', color: 'text-slate-700' },
+  admin:           { label: 'Administración',  emoji: '🛠️', color: 'text-rose-700' },
+  troubleshooting: { label: 'Solución de problemas', emoji: '🆘', color: 'text-orange-700' },
+  avanzado:        { label: 'Avanzado',        emoji: '✨', color: 'text-amber-700' },
 };
 
 export const HELP_ARTICLES: HelpArticle[] = [
@@ -405,6 +407,290 @@ Acceso · Rectificación · Eliminación · Portabilidad · Oposición · Limita
 Cuando un abogado sube docs de su cliente, COGNITEX actúa como **Encargado** del tratamiento. El abogado es el Responsable y debe obtener consentimiento del cliente cuando proceda.
 
 Lee también: [Política de Privacidad completa](/privacy) · [Términos de Servicio](/terms) · [LOPDP Ecuador](/lopdp).
+`,
+  },
+  {
+    id: 'doc-gen-etapa',
+    title: 'IA recomienda el documento según la etapa del caso',
+    category: 'litigacion',
+    description: 'El generador analiza la etapa procesal y propone qué documento conviene redactar (demanda, recurso, alegato…).',
+    keywords: ['generador', 'etapa', 'procesal', 'recomendación', 'sugerir', 'demanda', 'recurso'],
+    icon: '🪄',
+    body: `## Cómo funciona
+
+Cuando entras al **Generador de documentos legales** desde un caso, la IA lee la etapa procesal actual (campo \`procedural_stage\` del caso, o lo deduce del expediente) y resalta el tipo de documento que tiene más sentido producir ahora.
+
+Ejemplos:
+
+- Etapa **Demanda** sin contestación → sugiere *Demanda* o *Solicitud de medida cautelar*.
+- Etapa **Audiencia preliminar** próxima → sugiere *Alegato preparatorio* o *Pliego de pruebas*.
+- Sentencia desfavorable reciente → sugiere *Apelación* o *Casación*.
+- Negociación en curso → sugiere *Acuerdo Transaccional*.
+
+La sugerencia aparece como un **chip violeta brillante** sobre la opción recomendada. Puedes seguirla o ignorarla y elegir cualquier otro tipo.
+
+## Por qué es útil
+
+Muchos abogados pierden minutos decidiendo qué redactar. Esta capa sólo te ahorra esa fricción inicial — la decisión final siempre es tuya.
+
+## Si no lo ves
+
+- Verifica que el caso tenga **descripción** y al menos un **documento subido**.
+- Llena los campos *Metadatos jurídicos* del caso (especialmente \`procedural_stage\` y \`legal_matter\`).
+`,
+  },
+  {
+    id: 'pwa-instalar',
+    title: 'Instalar Poweria como app (PWA)',
+    category: 'productividad',
+    description: 'Convierte la web en una app real en tu móvil o escritorio. Funciona offline para lo básico.',
+    keywords: ['pwa', 'instalar', 'app', 'móvil', 'offline', 'home screen'],
+    icon: '📲',
+    body: `## En el móvil (Android / Chrome)
+
+1. Abre **https://poweria-legal.vercel.app** en Chrome
+2. Menú ⋮ → **Agregar a pantalla de inicio**
+3. Confirma. Aparece el ícono de Poweria como cualquier otra app.
+
+## En iPhone (Safari)
+
+1. Abre la URL en Safari
+2. Botón **compartir** (cuadrado con flecha) → **Añadir a pantalla de inicio**
+3. Confirma.
+
+## En escritorio (Chrome / Edge)
+
+1. Abre la URL
+2. En la barra de direcciones, ícono ⊕ a la derecha → **Instalar Poweria Legal**
+3. Se abre como ventana standalone, sin pestañas del navegador.
+
+## Qué obtienes
+
+- Inicio más rápido (cache local de assets).
+- Modo offline para vistas que ya cargaste antes (no podrás llamar a la IA sin internet, pero sí leer un caso ya abierto).
+- Notificaciones push (próximamente).
+
+## Si una versión vieja se quedó pegada
+
+Cuando publicamos un fix, a veces el navegador sirve los chunks viejos del cache local. Solución:
+
+1. Configuración del sitio → **Borrar datos del sitio** o
+2. DevTools → Application → **Service Workers → Unregister** + **Cache Storage → Delete**
+3. Recarga.
+`,
+  },
+  {
+    id: 'admin-panel',
+    title: 'Panel de administración: vista general',
+    category: 'admin',
+    description: 'Solo para administradores. Resumen de las secciones del panel y qué controla cada una.',
+    keywords: ['admin', 'panel', 'gestión', 'cognitex'],
+    icon: '🛠️',
+    body: `## Quién ve este panel
+
+Solo usuarios con rol \`admin\`. Los demás ni siquiera ven el menú. Si tu cuenta tiene rol admin, aparece un chip "Administrador" en tu avatar superior derecho.
+
+## Secciones disponibles
+
+- **Usuarios** — gestión de roles, estado activo y plan.
+- **Especialidades Legales** — taxonomía jerárquica (Penal, Civil, Constitucional…) que alimenta los selects de casos y el generador.
+- **Auth Events** — auditoría en tiempo real de signup/login/OAuth/errores. Útil cuando un usuario reporta no poder entrar.
+- **Auditoría general** — KPIs del sistema (total usuarios/casos, almacenamiento, etc.).
+- **Cuotas y planes** — definición de límites por tier (\`MAX_CASES_*\`).
+- **Embeddings** — re-vectorizar documentos cuando se actualiza el modelo.
+- **AI Settings** — credenciales de proveedores IA (Anthropic, OpenAI), modelo por defecto.
+- **Backups** — backups manuales y restauración (con cola BullMQ + SSE en vivo).
+- **PayHub / Pagos** — integración con el hub de pagos centralizado (PayPal live).
+
+## Consejo
+
+Cuando alguien reporte un problema, abre primero **Auth Events** filtrando por su email — el código y mensaje exactos del error aparecen ahí sin necesidad de pedir screenshot.
+`,
+  },
+  {
+    id: 'admin-usuarios',
+    title: 'Gestión de usuarios y cambio de plan',
+    category: 'admin',
+    description: 'Cambiar rol, activar/desactivar y promover a un plan superior desde un click.',
+    keywords: ['admin', 'usuarios', 'plan', 'rol', 'promover', 'desactivar'],
+    icon: '👥',
+    body: `## Tabla de usuarios
+
+\`/admin/users\` lista todos los usuarios con: nombre, email, rol, **plan** (badge colorizado por tier), actividad (casos + consultas), estado.
+
+Filtros disponibles: rol, estado activo/inactivo, búsqueda por nombre o email.
+
+## Editar un usuario
+
+Botón **Editar** abre un modal con:
+
+- Nombre, email
+- Rol: Administrador / Abogado / Usuario
+- **Plan**: Gratis / Básico / Profesional / Empresarial — el dropdown precarga el plan actual del usuario.
+
+Click **Guardar** y el cambio se persiste en la DB y en sus claims JWT (próxima sesión recoge el plan nuevo).
+
+## Activar / desactivar
+
+Botón **Desactivar** marca al usuario como inactivo: no podrá iniciar sesión hasta que lo reactives. Sus datos se conservan.
+
+## Cuándo cambiar el plan manualmente
+
+- Promociones o cuentas de prueba para socios.
+- Equipos que pagaron por transferencia bancaria (en lugar de PayPal).
+- Resolver disputas: subir tier por unas horas mientras se diagnostica un problema de cuota.
+
+## Auditoría
+
+Cada cambio en plan o rol queda registrado en la tabla \`admin_audit_log\` con quién, qué, cuándo. Se ve desde **/admin/audit**.
+`,
+  },
+  {
+    id: 'admin-especialidades',
+    title: 'Especialidades legales: árbol y taxonomía',
+    category: 'admin',
+    description: 'Editar el catálogo de especialidades del derecho que alimenta selects y filtros.',
+    keywords: ['admin', 'especialidades', 'taxonomía', 'derecho', 'árbol', 'jerarquía'],
+    icon: '🌳',
+    body: `## Para qué sirve
+
+Esta tabla alimenta los selects de **Materia / Especialidad** en los casos y las recomendaciones del generador de documentos. La taxonomía actual cubre el sistema legal ecuatoriano:
+
+- 5 raíces: Derecho Público · Derecho Privado · Derecho Social · Derecho Procesal · Otras
+- 23 ramas de nivel 2
+- 16 sub-especialidades de nivel 3
+
+## Vistas
+
+\`/admin/specialties\` ofrece dos vistas:
+
+- **Árbol** — jerarquía expandible/colapsable con códigos (ej. \`DPRIV-CIVIL-FAM\` para Familia).
+- **Lista** — tabla plana con búsqueda y conteo de casos por especialidad.
+
+## Crear o editar
+
+Botón **+ Nueva Especialidad** o **Editar** en cada nodo:
+
+- Nombre, código único, descripción
+- Padre (puedes anidar a cualquier nivel)
+- Color e ícono opcional
+
+## Eliminar
+
+Solo si no hay casos referenciando esa especialidad. Si los hay, primero reasigna esos casos a otra rama.
+
+## Reset
+
+Si quieres volver a la taxonomía base (44 especialidades del seed), corre desde el repo:
+
+\`DATABASE_URL=<session-pooler> npx tsx prisma/seeds/specialties.ts\`
+
+Esto NO borra las existentes — solo intenta crear las que falten.
+`,
+  },
+  {
+    id: 'admin-auth-events',
+    title: 'Auth Events: monitor de logins en tiempo real',
+    category: 'admin',
+    description: 'Registro detallado de signup, login, OAuth y errores. La primera parada cuando un usuario reporta no poder entrar.',
+    keywords: ['auth', 'events', 'logs', 'login', 'signup', 'oauth', 'monitor', 'observabilidad'],
+    icon: '📡',
+    body: `## Qué es
+
+\`/admin/auth-events\` es un dashboard en tiempo real de **toda interacción de autenticación**: signup, login, OAuth init, OAuth callback, errores, magic-links, logouts. Cada evento incluye email, IP, user-agent, código de error, mensaje completo y metadata (status code, etapa del flujo, etc.).
+
+## Cuándo usarlo
+
+- Un usuario te dice "no puedo entrar" → filtra por su email y verás el error exacto sin pedirle screenshot.
+- Subió el tráfico y quieres ver cuántos signups del día funcionaron vs. fallaron → contadores arriba (24h éxitos · 24h errores · total).
+- Sospechas un intento de fuerza bruta → filtra por IP o por \`success=false\` en una ventana corta.
+
+## Filtros
+
+- Tipo de evento (16 tipos): \`signup_attempt/success/error\`, \`login_attempt/success/error\`, \`oauth_init/callback/error\`, \`password_reset_*\`, \`magic_link_*\`, \`session_start/end\`.
+- Solo éxitos / solo errores.
+- Email contiene…
+- Auto-refresh cada 15 segundos.
+
+## Modal de detalle
+
+Click "Detalle" en cualquier fila → ID, timestamp completo, user-agent completo, URL (incluyendo query params del callback), metadata JSON.
+
+## Privacidad
+
+La tabla guarda email + IP + user-agent. **No** se guarda contraseña ni token de sesión. Retención sugerida: 12 meses para auditoría LOPDP. Para purgar antes:
+
+\`DELETE FROM auth_events WHERE created_at < now() - interval '90 days';\`
+`,
+  },
+  {
+    id: 'troubleshooting-no-puedo-entrar',
+    title: 'No puedo iniciar sesión',
+    category: 'troubleshooting',
+    description: 'Pasos en orden para resolver problemas de login (email/password, Google, magic-link).',
+    keywords: ['login', 'no puedo', 'error', 'autenticación', 'oauth', 'google', 'rechazado'],
+    icon: '🚪',
+    body: `## Primero — limpia el estado del navegador
+
+PWAs cachean agresivo. Si el login falla y nada cambia al recargar:
+
+1. **Ctrl+Shift+R** (hard reload) para forzar bypass del Service Worker.
+2. Si persiste, DevTools → Application → **Service Workers → Unregister** + **Cache Storage → Delete**, y vuelve a abrir.
+
+## Email + contraseña
+
+- ¿Mensaje "credenciales inválidas"? Usa **¿Olvidaste tu contraseña?** desde la pantalla de login. Te llega un magic-link.
+- ¿No llega el email? Revisa spam. Si tampoco, escribe a **francisecuador1@gmail.com**.
+
+## Botón "Continuar con Google"
+
+- Si ves *"Acceso bloqueado: Missing required parameter: client_id"* → es config del lado servidor (Supabase Auth Providers). Avisa al admin.
+- Si ves *"redirect_uri_mismatch"* → la URI del callback no está en el OAuth Client de Google Cloud. También admin.
+- Si Google pide elegir cuenta y luego rebota a localhost → el Site URL en Supabase está mal. Admin debe revisar URL Configuration.
+
+## Para administradores
+
+Antes que nada, abre **/admin/auth-events** y filtra por el email del usuario. El código y mensaje exactos te dirán de qué se trata.
+
+## Cuenta desactivada
+
+Si tu cuenta fue desactivada por inactividad o moderación, el login devuelve un error genérico. Escribe a **francisecuador1@gmail.com** desde tu correo registrado pidiendo reactivación.
+`,
+  },
+  {
+    id: 'troubleshooting-app-vieja',
+    title: 'La app no muestra cambios recientes',
+    category: 'troubleshooting',
+    description: 'Si ves bugs ya corregidos o un layout viejo, casi siempre es el Service Worker sirviendo cache.',
+    keywords: ['cache', 'pwa', 'sw', 'service worker', 'viejo', 'desactualizado'],
+    icon: '🔄',
+    body: `## Síntomas
+
+- Reportas un bug, te confirman que está corregido en producción, pero tú lo sigues viendo.
+- El layout se ve "viejo" comparado con el de otra persona.
+- Después de un deploy, los chunks JS no se actualizan.
+
+## Por qué
+
+Las versiones viejas de nuestra PWA (anteriores al **2026-05-01**) usaban política **cache-first** para los chunks JS, lo que pinneaba bundles viejos en tu navegador. Ya está arreglado en producción (network-first) — pero si tu navegador tiene el SW antiguo registrado, se queda con la política vieja.
+
+## Solución (una sola vez)
+
+1. Abre DevTools (F12)
+2. Pestaña **Application**
+3. Sección **Service Workers** → click **Unregister** en \`poweria-legal.vercel.app\`
+4. Sección **Cache Storage** → borra todos los caches \`legal-rag-*\`
+5. Cierra la pestaña por completo y vuelve a abrir la URL.
+
+A partir de ahí, futuros deploys toman efecto inmediato.
+
+## Móvil
+
+Configuración del navegador → Privacidad → **Borrar datos del sitio** para *poweria-legal.vercel.app*.
+
+## Si no funciona
+
+Reporta a **francisecuador1@gmail.com** con captura de pantalla y la versión de tu navegador. Probablemente sea otro problema.
 `,
   },
   {
