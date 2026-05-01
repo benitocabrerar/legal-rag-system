@@ -654,6 +654,21 @@ export const eventsExtractAPI = {
   },
 };
 
+export interface CaseChatSuggestion {
+  icon: string;
+  label: string;
+  prompt: string;
+  category: string;
+}
+
+export const caseChatAPI = {
+  suggestions: async (caseId: string): Promise<{ suggestions: CaseChatSuggestion[] }> => {
+    const r = await api.get(`/cases/${caseId}/chat/suggestions`);
+    return r.data;
+  },
+  streamUrl: (caseId: string) => `/api/v1/cases/${caseId}/chat`,
+};
+
 export interface LegalDocPreflight {
   status: 'ok' | 'incomplete';
   docType: string;

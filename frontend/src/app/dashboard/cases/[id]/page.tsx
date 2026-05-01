@@ -14,6 +14,7 @@ import { ProcessPipeline } from '@/components/case-detail/ProcessPipeline';
 import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts';
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
 import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
+import { CaseAIChat } from '@/components/case-detail/CaseAIChat';
 import {
   FileText,
   Upload,
@@ -730,9 +731,16 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           {/* Specialized Prompts */}
           <SpecializedPrompts legalType={legalType} onPromptSelect={handlePromptSelect} />
 
-          {/* Chat Interface */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[60vh] min-h-[420px] sm:h-[600px]">
-            {/* Chat Header */}
+          {/* Chat Interface — nuevo componente con streaming Claude, sugerencias
+              específicas del caso, copy / regenerate / export, y subida de archivos
+              inline. El bloque viejo (synchronous textarea + handleQuery) sigue
+              compilando abajo pero ya no se renderiza en producción. */}
+          <div className="h-[70vh] min-h-[480px] sm:h-[640px]">
+            <CaseAIChat caseId={caseId} onDocumentUploaded={() => loadDocuments()} />
+          </div>
+
+          {/* (legacy chat — oculto, conservado para no romper handlers) */}
+          <div className="hidden bg-white rounded-xl shadow-sm border border-gray-200 flex-col h-[60vh] min-h-[420px] sm:h-[600px]">
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />

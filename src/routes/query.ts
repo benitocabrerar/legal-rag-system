@@ -3,6 +3,10 @@ import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { OpenAI } from 'openai';
 import { getUserCountryContext, jurisdictionPromptFragment } from '../lib/country-context.js';
+import { getAiClient } from '../lib/ai-client.js';
+
+// OpenAI directo se mantiene SOLO para embeddings (text-embedding-ada-002).
+// Para completions usamos el aiClient dinámico (Claude por defecto).
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -251,8 +255,11 @@ Always clarify that your answers are general legal information and not specific 
         ? `Context from case documents:\n\n${context}\n\n---\n\nQuestion: ${body.query}\n\nPlease provide a detailed answer based on the context above.`
         : `Question: ${body.query}\n\nPlease provide a helpful answer with general legal information and guidance.`;
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
+      // Usamos el cliente dinámico (Claude por defecto, OpenAI si el admin
+      // lo cambió en /admin/ai-settings). Antes era new OpenAI() + gpt-4
+      // hardcoded, lo que ignoraba la preferencia del operador.
+      const aiClient = await getAiClient();
+      const completion = await aiClient.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -260,8 +267,7 @@ Always clarify that your answers are general legal information and not specific 
         temperature: 0.3,
         max_tokens: 1500,
       });
-
-      const answer = completion.choices[0].message.content;
+      const answer = completion.choices?.[0]?.message?.content ?? '';
 
       // Format source documents
       const sources = topChunks.map((chunk) => ({
