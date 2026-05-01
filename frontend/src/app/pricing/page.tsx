@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getAuthToken } from '@/lib/get-auth-token';
 import { useTranslation } from '@/lib/i18n';
 import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
 
@@ -48,7 +49,7 @@ export default function PricingPage() {
     const target = plans.find((p) => p.code === code);
     if (!target) return;
     setAutoOpenedFor(code);
-    handleSelectPlan(target);
+    void handleSelectPlan(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plans, searchParams, autoOpenedFor]);
 
@@ -65,11 +66,19 @@ export default function PricingPage() {
     }
   };
 
-  const handleSelectPlan = (plan: HubPlan) => {
-    const token = localStorage.getItem('token');
+  const handleSelectPlan = async (plan: HubPlan) => {
+    // getAuthToken() unifica ambos backends: legacy lee de localStorage,
+    // Supabase lee de la sesión activa (cookies via @supabase/ssr).
+    // Antes esto leía sólo localStorage y, en modo Supabase, devolvía null
+    // aunque el usuario estuviera autenticado → "Suscribirse" no abría
+    // el modal y mandaba al login.
+    let token: string | null = null;
+    try {
+      token = await getAuthToken();
+    } catch {
+      token = null;
+    }
     if (!token) {
-      // Preserve plan + cycle through the auth roundtrip so the modal
-      // re-opens automatically once the user is signed in.
       const back = `/pricing?plan=${encodeURIComponent(plan.code)}&cycle=${billingCycle}`;
       router.push(`/login?redirect=${encodeURIComponent(back)}`);
       return;
