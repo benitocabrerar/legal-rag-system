@@ -1,0 +1,201 @@
+// Backup System Database Schema
+// Add these models to your existing schema.prisma file
+
+model Backup {
+  id               String          @id @default(cuid())
+  name             String
+  description      String?
+  type             String          // BackupType enum
+  status           String          // BackupStatus enum
+  size             BigInt
+  compressedSize   BigInt
+  compressionType  String          // CompressionType enum
+  encrypted        Boolean         @default(false)
+  encryptionKeyId  String?
+  s3Bucket         String
+  s3Key            String
+  s3Region         String
+  s3VersionId      String?
+  checksum         String
+  tableCount       Int
+  recordCount      BigInt
+  metadata         Json?
+  error            String?         @db.Text
+
+  createdAt        DateTime        @default(now())
+  completedAt      DateTime?
+  expiresAt        DateTime?
+
+  createdById      String
+  createdBy        User            @relation(fields: [createdById], references: [id])
+
+  restoreJobs      RestoreJob[]
+  auditLogs        BackupAuditLog[]
+
+  scheduleId       String?
+  schedule         BackupSchedule?  @relation(fields: [scheduleId], references: [id])
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([createdById])
+  @@index([scheduleId])
+  @@index([s3Bucket, s3Key])
+  @@map("backups")
+}
+
+model BackupSchedule {
+  id                  String          @id @default(cuid())
+  name                String
+  description         String?
+  cronExpression      String
+  timezone            String          @default("UTC")
+  enabled             Boolean         @default(true)
+  backupConfig        Json            // BackupConfig
+  retentionDays       Int             @default(30)
+  maxRetainedBackups  Int             @default(10)
+
+  lastRunAt           DateTime?
+  nextRunAt           DateTime?
+  lastRunStatus       String?         // BackupStatus enum
+  runCount            Int             @default(0)
+  failureCount        Int             @default(0)
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  createdById         String
+  createdBy           User            @relation(fields: [createdById], references: [id])
+
+  backups             Backup[]
+  auditLogs           BackupAuditLog[]
+
+  @@index([enabled])
+  @@index([nextRunAt])
+  @@index([createdById])
+  @@map("backup_schedules")
+}
+
+model RestoreJob {
+  id                String          @id @default(cuid())
+  backupId          String
+  backup            Backup          @relation(fields: [backupId], references: [id], onDelete: Cascade)
+
+  status            String          // RestoreStatus enum
+  options           Json            // RestoreOptions
+  progress          Float           @default(0)
+  currentStep       String?
+  steps             Json?           // RestoreStep[]
+
+  targetDatabase    String?
+  restoredTables    Int             @default(0)
+  restoredRecords   BigInt          @default(0)
+
+  error             String?         @db.Text
+  warnings          Json?           // string[]
+
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+
+  initiatedById     String
+  initiatedBy       User            @relation(fields: [initiatedById], references: [id])
+
+  auditLogs         BackupAuditLog[]
+
+  @@index([backupId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([initiatedById])
+  @@map("restore_jobs")
+}
+
+model BackupAuditLog {
+  id                String          @id @default(cuid())
+  action            String          // BackupAction enum
+
+  backupId          String?
+  backup            Backup?         @relation(fields: [backupId], references: [id], onDelete: SetNull)
+
+  scheduleId        String?
+  schedule          BackupSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  restoreJobId      String?
+  restoreJob        RestoreJob?     @relation(fields: [restoreJobId], references: [id], onDelete: SetNull)
+
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  userEmail         String
+
+  ipAddress         String?
+  userAgent         String?
+  metadata          Json?
+
+  createdAt         DateTime        @default(now())
+
+  @@index([action])
+  @@index([backupId])
+  @@index([scheduleId])
+  @@index([restoreJobId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("backup_audit_logs")
+}
+
+model BackupNotification {
+  id                String          @id @default(cuid())
+  type              String          // email, webhook, slack
+  event             String          // BackupWebhookEvent enum
+  recipient         String          // email address, webhook URL, slack channel
+
+  backupId          String?
+  scheduleId        String?
+  restoreJobId      String?
+
+  payload           Json
+  status            String          // pending, sent, failed
+  attempts          Int             @default(0)
+  lastAttemptAt     DateTime?
+  error             String?         @db.Text
+
+  createdAt         DateTime        @default(now())
+  sentAt            DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("backup_notifications")
+}
+
+model BackupEncryptionKey {
+  id                String          @id @default(cuid())
+  keyId             String          @unique
+  algorithm         String          @default("AES-256-GCM")
+  encryptedKey      String          @db.Text // Encrypted with master key
+  iv                String          // Initialization vector
+  salt              String
+
+  isActive          Boolean         @default(true)
+  rotatedFrom       String?         // Previous key ID
+
+  createdAt         DateTime        @default(now())
+  rotatedAt         DateTime?
+  lastUsedAt        DateTime?
+
+  createdById       String
+  createdBy         User            @relation(fields: [createdById], references: [id])
+
+  @@index([keyId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("backup_encryption_keys")
+}
+
+// Add these relations to your existing User model:
+// model User {
+//   ...existing fields...
+//   createdBackups        Backup[]
+//   createdSchedules      BackupSchedule[]
+//   initiatedRestoreJobs  RestoreJob[]
+//   backupAuditLogs       BackupAuditLog[]
+//   createdEncryptionKeys BackupEncryptionKey[]
+// }

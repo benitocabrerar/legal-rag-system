@@ -1,0 +1,1976 @@
+openapi: 3.0.3
+info:
+  title: Legal RAG System API
+  description: |
+    Comprehensive API documentation for the Legal RAG (Retrieval-Augmented Generation) System.
+
+    This system provides AI-powered legal document management, semantic search, and intelligent
+    legal assistance for Ecuadorian law.
+
+    ## Features
+    - **Authentication**: JWT-based authentication with 2FA support
+    - **Legal Documents Management**: Upload, search, and manage legal documents
+    - **AI Assistant**: Conversational legal assistant with RAG capabilities
+    - **Advanced Search**: Semantic search with spell-checking and query expansion
+    - **Analytics**: Track user behavior and system performance
+    - **Feedback Loop**: User interaction tracking and A/B testing
+    - **Admin Tools**: User management, quotas, and system administration
+
+    ## Architecture
+    - Built with Fastify (Node.js/TypeScript)
+    - PostgreSQL database with Prisma ORM
+    - OpenAI GPT-4 and text-embedding-ada-002
+    - Redis for caching and queues
+    - S3-compatible storage for PDFs
+
+  version: 2.0.0
+  contact:
+    name: Legal RAG Support
+    email: support@legalrag.com
+  license:
+    name: Proprietary
+    url: https://legalrag.com/license
+
+servers:
+  - url: https://api.legalrag.com/api/v1
+    description: Production server
+  - url: https://staging-api.legalrag.com/api/v1
+    description: Staging server
+  - url: http://localhost:3001/api/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: OAuth
+    description: OAuth2 social login (Google)
+  - name: Two-Factor Auth
+    description: Two-factor authentication (2FA) management
+  - name: Legal Documents
+    description: Legal document CRUD operations
+  - name: Legal Documents v2
+    description: Enhanced legal documents with AI extraction and vectorization
+  - name: AI Assistant
+    description: Conversational AI legal assistant
+  - name: Advanced Search
+    description: Enhanced search with spell-checking and query expansion
+  - name: Query
+    description: RAG-based legal document queries
+  - name: Analytics
+    description: Usage analytics and metrics
+  - name: Feedback
+    description: User interaction tracking and feedback
+  - name: User Management
+    description: User profile and settings
+  - name: Subscription
+    description: Subscription plans and billing
+  - name: Admin
+    description: Administrative operations
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from login endpoint.
+        Format: `Authorization: Bearer <token>`
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: object
+          description: Additional error details
+        code:
+          type: string
+          description: Error code
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        planTier:
+          type: string
+          enum: [free, basic, professional, enterprise]
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePass123!
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          example: newuser@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePass123!
+        name:
+          type: string
+          minLength: 2
+          example: John Doe
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT authentication token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    TwoFactorSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          description: Base32 encoded secret
+        qrCode:
+          type: string
+          description: QR code data URL
+        otpauthUrl:
+          type: string
+          description: OTP auth URL
+
+    LegalDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        normTitle:
+          type: string
+          description: Title of the legal norm
+        normType:
+          type: string
+          enum:
+            - CONSTITUTIONAL_NORM
+            - ORGANIC_LAW
+            - ORDINARY_LAW
+            - ORGANIC_CODE
+            - ORDINARY_CODE
+            - REGULATION_GENERAL
+            - REGULATION_EXECUTIVE
+            - ORDINANCE_MUNICIPAL
+            - ORDINANCE_METROPOLITAN
+            - RESOLUTION_ADMINISTRATIVE
+            - RESOLUTION_JUDICIAL
+            - ADMINISTRATIVE_AGREEMENT
+            - INTERNATIONAL_TREATY
+            - JUDICIAL_PRECEDENT
+        legalHierarchy:
+          type: string
+          enum:
+            - CONSTITUCION
+            - TRATADOS_INTERNACIONALES_DDHH
+            - LEYES_ORGANICAS
+            - LEYES_ORDINARIAS
+            - CODIGOS_ORGANICOS
+            - CODIGOS_ORDINARIOS
+            - REGLAMENTOS
+            - ORDENANZAS
+            - RESOLUCIONES
+            - ACUERDOS_ADMINISTRATIVOS
+        publicationType:
+          type: string
+          enum:
+            - ORDINARIO
+            - SUPLEMENTO
+            - SEGUNDO_SUPLEMENTO
+            - SUPLEMENTO_ESPECIAL
+            - EDICION_CONSTITUCIONAL
+        publicationNumber:
+          type: string
+        publicationDate:
+          type: string
+          format: date-time
+        jurisdiction:
+          type: string
+          enum: [NACIONAL, PROVINCIAL, MUNICIPAL, INTERNACIONAL]
+        content:
+          type: string
+          description: Full text content of the document
+        documentState:
+          type: string
+          enum: [ORIGINAL, REFORMADO]
+        lastReformDate:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLegalDocumentRequest:
+      type: object
+      required:
+        - normTitle
+        - normType
+        - legalHierarchy
+        - content
+      properties:
+        normTitle:
+          type: string
+          example: Constitución de la República del Ecuador
+        normType:
+          type: string
+          enum:
+            - CONSTITUTIONAL_NORM
+            - ORGANIC_LAW
+            - ORDINARY_LAW
+            - ORGANIC_CODE
+            - ORDINARY_CODE
+        legalHierarchy:
+          type: string
+          enum:
+            - CONSTITUCION
+            - TRATADOS_INTERNACIONALES_DDHH
+            - LEYES_ORGANICAS
+            - LEYES_ORDINARIAS
+        content:
+          type: string
+          description: Full text content (or will be extracted from PDF)
+        publicationType:
+          type: string
+          enum: [ORDINARIO, SUPLEMENTO, SEGUNDO_SUPLEMENTO]
+        publicationNumber:
+          type: string
+          example: "449"
+        publicationDate:
+          type: string
+          format: date-time
+        jurisdiction:
+          type: string
+          enum: [NACIONAL, PROVINCIAL, MUNICIPAL, INTERNACIONAL]
+
+    AIQueryRequest:
+      type: object
+      required:
+        - conversationId
+        - query
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        query:
+          type: string
+          minLength: 1
+          example: ¿Qué dice el artículo 66 de la Constitución sobre los derechos de libertad?
+        searchResults:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              content:
+                type: string
+              articleNumber:
+                type: string
+
+    AIQueryResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+          description: AI-generated answer
+        citedDocuments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              excerpt:
+                type: string
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        processingTimeMs:
+          type: number
+          description: Processing time in milliseconds
+        intent:
+          type: object
+          properties:
+            type:
+              type: string
+            confidence:
+              type: number
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          example: derechos humanos
+        filters:
+          type: object
+          properties:
+            normType:
+              type: array
+              items:
+                type: string
+            legalHierarchy:
+              type: array
+              items:
+                type: string
+            dateFrom:
+              type: string
+              format: date
+            dateTo:
+              type: string
+              format: date
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        sortBy:
+          type: string
+          enum: [relevance, date, popularity, authority]
+          default: relevance
+        enableSpellCheck:
+          type: boolean
+          default: true
+        enableQueryExpansion:
+          type: boolean
+          default: true
+        enableReranking:
+          type: boolean
+          default: true
+
+    SearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  excerpt:
+                    type: string
+                  relevanceScore:
+                    type: number
+                  normType:
+                    type: string
+                  legalHierarchy:
+                    type: string
+            totalCount:
+              type: integer
+            spellingSuggestion:
+              type: string
+              nullable: true
+            expandedTerms:
+              type: array
+              items:
+                type: string
+            queryTime:
+              type: number
+              description: Query execution time in milliseconds
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: professional
+        name:
+          type: string
+          example: Professional Plan
+        description:
+          type: string
+        monthlyPrice:
+          type: number
+          format: decimal
+          example: 49.99
+        yearlyPrice:
+          type: number
+          format: decimal
+          example: 499.99
+        storageGB:
+          type: integer
+          example: 100
+        documentsLimit:
+          type: integer
+          example: 1000
+        monthlyQueries:
+          type: integer
+          example: 10000
+        features:
+          type: array
+          items:
+            type: string
+
+paths:
+  # ==================== AUTHENTICATION ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and obtain JWT token
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthResponse'
+                  - type: object
+                    properties:
+                      requires2FA:
+                        type: boolean
+                        example: true
+                      email:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Get authenticated user profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== OAUTH ====================
+  /auth/google:
+    get:
+      tags:
+        - OAuth
+      summary: Initiate Google OAuth
+      description: Redirect to Google OAuth consent screen
+      operationId: initiateGoogleOAuth
+      security: []
+      responses:
+        '302':
+          description: Redirect to Google OAuth
+
+  /auth/google/callback:
+    get:
+      tags:
+        - OAuth
+      summary: Google OAuth callback
+      description: Handle Google OAuth callback and create/link user
+      operationId: googleOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from Google
+      responses:
+        '302':
+          description: Redirect to frontend with token
+        '400':
+          description: Authorization code missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ==================== TWO-FACTOR AUTH ====================
+  /auth/2fa/setup:
+    post:
+      tags:
+        - Two-Factor Auth
+      summary: Setup 2FA
+      description: Generate 2FA secret and QR code
+      operationId: setup2FA
+      responses:
+        '200':
+          description: 2FA setup data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorSetupResponse'
+        '500':
+          description: Failed to setup 2FA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/2fa/verify:
+    post:
+      tags:
+        - Two-Factor Auth
+      summary: Verify and enable 2FA
+      description: Verify TOTP token and enable 2FA
+      operationId: verify2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "123456"
+      responses:
+        '200':
+          description: 2FA enabled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  backupCodes:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid verification code or 2FA not set up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/2fa/disable:
+    post:
+      tags:
+        - Two-Factor Auth
+      summary: Disable 2FA
+      description: Disable two-factor authentication
+      operationId: disable2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+                - token
+              properties:
+                password:
+                  type: string
+                token:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        '200':
+          description: 2FA disabled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Invalid verification code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/2fa/verify-login:
+    post:
+      tags:
+        - Two-Factor Auth
+      summary: Verify 2FA during login
+      description: Complete login with 2FA token or backup code
+      operationId: verify2FALogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - token
+              properties:
+                email:
+                  type: string
+                  format: email
+                token:
+                  type: string
+                  minLength: 6
+                  maxLength: 8
+                  description: 6-digit TOTP code or 8-char backup code
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid verification code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/2fa/status:
+    get:
+      tags:
+        - Two-Factor Auth
+      summary: Get 2FA status
+      description: Check if 2FA is enabled for current user
+      operationId: get2FAStatus
+      responses:
+        '200':
+          description: 2FA status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  verifiedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+
+  # ==================== LEGAL DOCUMENTS V2 ====================
+  /legal-documents-v2:
+    get:
+      tags:
+        - Legal Documents v2
+      summary: Query legal documents
+      description: Search and filter legal documents with pagination
+      operationId: queryLegalDocuments
+      parameters:
+        - name: normType
+          in: query
+          schema:
+            type: string
+          description: Filter by norm type
+        - name: legalHierarchy
+          in: query
+          schema:
+            type: string
+          description: Filter by legal hierarchy
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Full-text search query
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of legal documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LegalDocument'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+
+    post:
+      tags:
+        - Legal Documents v2
+      summary: Create legal document
+      description: |
+        Upload a new legal document (admin only).
+        Supports both JSON and multipart/form-data for PDF upload.
+        Automatically extracts text from PDF and generates semantic embeddings.
+      operationId: createLegalDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLegalDocumentRequest'
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - norm_title
+                - norm_type
+                - legal_hierarchy
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file to upload
+                norm_title:
+                  type: string
+                norm_type:
+                  type: string
+                legal_hierarchy:
+                  type: string
+                publication_type:
+                  type: string
+                publication_number:
+                  type: string
+                publication_date:
+                  type: string
+                  format: date
+                jurisdiction:
+                  type: string
+      responses:
+        '201':
+          description: Document created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  document:
+                    $ref: '#/components/schemas/LegalDocument'
+                  vectorization:
+                    type: object
+                    properties:
+                      totalChunks:
+                        type: integer
+                      embeddingsGenerated:
+                        type: integer
+                      embeddingsFailed:
+                        type: integer
+                      successRate:
+                        type: string
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Validation error or invalid PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /legal-documents-v2/{id}:
+    get:
+      tags:
+        - Legal Documents v2
+      summary: Get legal document by ID
+      description: Retrieve a single legal document
+      operationId: getLegalDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Legal document details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  document:
+                    $ref: '#/components/schemas/LegalDocument'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Legal Documents v2
+      summary: Update legal document
+      description: Update legal document metadata (admin only)
+      operationId: updateLegalDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLegalDocumentRequest'
+      responses:
+        '200':
+          description: Document updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  document:
+                    $ref: '#/components/schemas/LegalDocument'
+        '403':
+          description: Admin access required
+        '404':
+          description: Document not found
+
+    delete:
+      tags:
+        - Legal Documents v2
+      summary: Delete legal document
+      description: Soft delete a legal document (admin only)
+      operationId: deleteLegalDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '403':
+          description: Admin access required
+        '404':
+          description: Document not found
+
+  /legal-documents-v2/{id}/file:
+    get:
+      tags:
+        - Legal Documents v2
+      summary: Download PDF file
+      description: Get presigned URL to download original PDF file
+      operationId: downloadLegalDocumentPDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '302':
+          description: Redirect to presigned S3 URL
+        '404':
+          description: Document or file not found
+        '503':
+          description: S3 storage temporarily unavailable
+
+  /legal-documents-v2/{id}/regenerate-embeddings:
+    post:
+      tags:
+        - Legal Documents v2
+      summary: Regenerate embeddings
+      description: Re-vectorize document chunks (admin only)
+      operationId: regenerateEmbeddings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Embeddings regenerated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  vectorization:
+                    type: object
+        '400':
+          description: Document not eligible for regeneration
+        '403':
+          description: Admin access required
+        '404':
+          description: Document not found
+
+  /legal-documents-v2/search:
+    post:
+      tags:
+        - Legal Documents v2
+      summary: Semantic search
+      description: Search documents using semantic embeddings
+      operationId: semanticSearchLegalDocuments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  example: derechos de libertad
+                limit:
+                  type: integer
+                  default: 10
+                  maximum: 50
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+
+  /legal-documents-v2/extract-metadata:
+    post:
+      tags:
+        - Legal Documents v2
+      summary: AI metadata extraction
+      description: Extract metadata from document content using AI (admin only)
+      operationId: extractMetadataAI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 100
+      responses:
+        '200':
+          description: Extracted metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  metadata:
+                    type: object
+        '400':
+          description: Content too short or invalid
+        '403':
+          description: Admin access required
+
+  /legal-documents-v2/enums:
+    get:
+      tags:
+        - Legal Documents v2
+      summary: Get enum values
+      description: Get all valid enum values for dropdowns
+      operationId: getLegalDocumentEnums
+      responses:
+        '200':
+          description: Enum values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  enums:
+                    type: object
+                    properties:
+                      normTypes:
+                        type: array
+                        items:
+                          type: string
+                      legalHierarchy:
+                        type: array
+                        items:
+                          type: string
+                      publicationTypes:
+                        type: array
+                        items:
+                          type: string
+                      documentStates:
+                        type: array
+                        items:
+                          type: string
+
+  # ==================== AI ASSISTANT ====================
+  /api/ai/conversation:
+    post:
+      tags:
+        - AI Assistant
+      summary: Create conversation
+      description: Initialize a new AI conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  example: Consulta sobre derechos constitucionales
+      responses:
+        '200':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+
+  /api/ai/query:
+    post:
+      tags:
+        - AI Assistant
+      summary: Process AI query
+      description: Send a query to the AI legal assistant
+      operationId: processAIQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIQueryRequest'
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIQueryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Failed to process query
+
+  /api/ai/conversation/{id}/history:
+    get:
+      tags:
+        - AI Assistant
+      summary: Get conversation history
+      description: Retrieve message history for a conversation
+      operationId: getConversationHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        role:
+                          type: string
+                          enum: [user, assistant]
+                        content:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+
+  /api/ai/conversations:
+    get:
+      tags:
+        - AI Assistant
+      summary: List user conversations
+      description: Get all conversations for the authenticated user
+      operationId: listConversations
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+
+  /api/ai/feedback:
+    post:
+      tags:
+        - AI Assistant
+      summary: Submit AI feedback
+      description: Provide feedback on AI response quality
+      operationId: submitAIFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+                - wasHelpful
+              properties:
+                messageId:
+                  type: string
+                wasHelpful:
+                  type: boolean
+                feedbackText:
+                  type: string
+      responses:
+        '200':
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ==================== ADVANCED SEARCH ====================
+  /advanced:
+    post:
+      tags:
+        - Advanced Search
+      summary: Advanced search
+      description: Execute advanced search with all features
+      operationId: advancedSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid query
+
+  /autocomplete:
+    get:
+      tags:
+        - Advanced Search
+      summary: Autocomplete suggestions
+      description: Get autocomplete suggestions for query
+      operationId: getAutocompleteSuggestions
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 20
+      responses:
+        '200':
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      query:
+                        type: string
+                      suggestions:
+                        type: array
+                        items:
+                          type: string
+
+  /spell-check:
+    post:
+      tags:
+        - Advanced Search
+      summary: Spell check
+      description: Check spelling and get corrections
+      operationId: spellCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+      responses:
+        '200':
+          description: Spell check results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      hasErrors:
+                        type: boolean
+                      corrections:
+                        type: array
+                        items:
+                          type: object
+                      suggestion:
+                        type: string
+
+  # ==================== USER MANAGEMENT ====================
+  /user/profile:
+    get:
+      tags:
+        - User Management
+      summary: Get user profile
+      description: Get current user profile
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+
+    patch:
+      tags:
+        - User Management
+      summary: Update user profile
+      description: Update user profile information
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phoneNumber:
+                  type: string
+                address:
+                  type: string
+                city:
+                  type: string
+                country:
+                  type: string
+                bio:
+                  type: string
+                language:
+                  type: string
+                timezone:
+                  type: string
+                theme:
+                  type: string
+                  enum: [light, dark]
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  message:
+                    type: string
+
+  /user/avatar:
+    post:
+      tags:
+        - User Management
+      summary: Upload avatar
+      description: Upload user avatar image
+      operationId: uploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      avatarUrl:
+                        type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid file type
+
+    delete:
+      tags:
+        - User Management
+      summary: Delete avatar
+      description: Remove user avatar
+      operationId: deleteAvatar
+      responses:
+        '200':
+          description: Avatar deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  # ==================== SUBSCRIPTION ====================
+  /user/subscription:
+    get:
+      tags:
+        - Subscription
+      summary: Get user subscription
+      description: Get current subscription and quota information
+      operationId: getUserSubscription
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    type: object
+                    nullable: true
+                  quota:
+                    type: object
+
+  /user/subscription/plans:
+    get:
+      tags:
+        - Subscription
+      summary: Get subscription plans
+      description: List all available subscription plans
+      operationId: getSubscriptionPlans
+      security: []
+      responses:
+        '200':
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubscriptionPlan'
+
+  /user/subscription/upgrade:
+    post:
+      tags:
+        - Subscription
+      summary: Upgrade subscription
+      description: Upgrade or change subscription plan
+      operationId: upgradeSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planCode
+              properties:
+                planCode:
+                  type: string
+                  example: professional
+                billingCycle:
+                  type: string
+                  enum: [monthly, yearly]
+                  default: monthly
+      responses:
+        '200':
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    type: object
+                  message:
+                    type: string
+        '404':
+          description: Plan not found
+
+  /user/subscription/cancel:
+    post:
+      tags:
+        - Subscription
+      summary: Cancel subscription
+      description: Cancel active subscription
+      operationId: cancelSubscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                immediately:
+                  type: boolean
+                  default: false
+                  description: Cancel immediately vs at period end
+      responses:
+        '200':
+          description: Subscription cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    type: object
+                  message:
+                    type: string
+        '404':
+          description: No active subscription found
+
+  # ==================== ANALYTICS ====================
+  /api/analytics/trending:
+    get:
+      tags:
+        - Analytics
+      summary: Get trending documents
+      description: Retrieve most viewed/popular documents
+      operationId: getTrendingDocuments
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Trending documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      type: object
+
+  /api/analytics/user/engagement:
+    get:
+      tags:
+        - Analytics
+      summary: Get user engagement metrics
+      description: Get engagement metrics for authenticated user
+      operationId: getUserEngagement
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Engagement metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: object
+
+  /api/analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics dashboard
+      description: Get system-wide analytics dashboard (admin only)
+      operationId: getAnalyticsDashboard
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dashboard:
+                    type: object
+        '403':
+          description: Admin access required
+
+  # ==================== FEEDBACK ====================
+  /search:
+    post:
+      tags:
+        - Feedback
+      summary: Track search interaction
+      description: Track user search for analytics
+      operationId: trackSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+                - resultsCount
+              properties:
+                query:
+                  type: string
+                resultsCount:
+                  type: integer
+                filters:
+                  type: object
+                sortBy:
+                  type: string
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: Search tracked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+
+  /click:
+    post:
+      tags:
+        - Feedback
+      summary: Track click event
+      description: Track when user clicks on search result
+      operationId: trackClick
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - searchInteractionId
+                - documentId
+                - position
+              properties:
+                searchInteractionId:
+                  type: string
+                documentId:
+                  type: string
+                position:
+                  type: integer
+                relevanceScore:
+                  type: number
+      responses:
+        '200':
+          description: Click tracked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+
+  /relevance:
+    post:
+      tags:
+        - Feedback
+      summary: Track relevance feedback
+      description: Track explicit user relevance feedback
+      operationId: trackRelevanceFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - searchInteractionId
+                - documentId
+                - rating
+              properties:
+                searchInteractionId:
+                  type: string
+                documentId:
+                  type: string
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                isRelevant:
+                  type: boolean
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Feedback tracked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+
+  /metrics/ctr:
+    get:
+      tags:
+        - Feedback
+        - Analytics
+      summary: Get CTR metrics
+      description: Get click-through rate metrics
+      operationId: getCTRMetrics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CTR metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalSearches:
+                    type: integer
+                  searchesWithClicks:
+                    type: integer
+                  totalClicks:
+                    type: integer
+                  ctr:
+                    type: number
+                  avgClicksPerSearch:
+                    type: number
+                  avgPosition:
+                    type: number
+
+components:
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unauthorized
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Forbidden
+            message: Admin access required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Not Found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Internal server error
