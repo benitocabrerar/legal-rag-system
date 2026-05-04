@@ -76,3 +76,7 @@ admin-upload/package-lock.json
 /whatsapp-outreach.html
 /google-oauth-setup.html
 /error/
+
+# Operator-only · plan de fases del módulo Fiscal y kit portable de pagos (con credenciales reales)
+/docs/PLAN_MODULO_FISCAL.md
+/payments-kit/
