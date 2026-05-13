@@ -16,6 +16,8 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
 import { parseConvocatoria, detectProvider } from '../lib/convocatoria.js';
+import { setSseHeaders, startSseKeepalive } from '../lib/sse-cors.js';
+import { synthesizeCaseBrain } from './documents.js';
 
 interface LitigationDocument {
   id: string;
@@ -383,6 +385,162 @@ export async function litigationRoutes(fastify: FastifyInstance) {
         reply.raw.end();
       }
 
+      return reply;
+    },
+  );
+
+  /**
+   * POST /cases/:id/litigation-warmup (SSE)
+   *
+   * Endpoint orquestador que se llama al entrar a la Sala de Litigación.
+   * Garantiza que TODA la información del caso esté al día antes de que
+   * el abogado entre a la audiencia. Ejecuta en paralelo:
+   *
+   *   1) Re-sintetizar el cerebro del caso (re-lee TODOS los documentos)
+   *   2) Recargar el brief de litigación
+   *   3) Recargar fingerprint para detectar staleness de tarjetas
+   *
+   * Streamea phase events para que la UI muestre progreso real:
+   *   phase:starting → phase:brain → phase:brief → phase:fingerprint →
+   *   phase:summary → phase:done
+   *
+   * Tiempo total esperado: 8-20s dependiendo del tamaño del expediente.
+   */
+  fastify.post<{ Params: { id: string } }>(
+    '/cases/:id/litigation-warmup',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const caseId = request.params.id;
+
+      // Verificar ownership ANTES del SSE
+      const own = await prisma.case.findFirst({
+        where: { id: caseId, userId },
+        select: { id: true, title: true },
+      });
+      if (!own) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      setSseHeaders(request, reply);
+      const stopKa = startSseKeepalive(reply, 1000);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+      const phase = (key: string, label: string, pct: number, extra?: any) =>
+        write('phase', { phase: key, label, pct, ...(extra || {}) });
+
+      try {
+        phase('starting', 'Iniciando pre-warmup de la sala…', 2);
+
+        // 1) Re-sintetizar el cerebro del caso (operación más cara)
+        phase('brain', 'Re-sintetizando cerebro del caso…', 10);
+        let brain: any = null;
+        try {
+          brain = await synthesizeCaseBrain(caseId);
+          phase('brain-done', `Cerebro actualizado · ${brain?.documentCount ?? 0} docs analizados`, 55, {
+            documentCount: brain?.documentCount ?? 0,
+            riskLevel: brain?.riskLevel,
+          });
+        } catch (e: any) {
+          phase('brain-error', `No se pudo regenerar cerebro: ${e?.message || 'error'}`, 55);
+        }
+
+        // 2 + 3) Brief de litigación + fingerprint en paralelo
+        phase('parallel', 'Recargando brief y fingerprint…', 60);
+        const [briefData, fpData] = await Promise.all([
+          // Brief inline (replicamos lógica mínima sin requerir helper externo)
+          prisma.case.findFirst({
+            where: { id: caseId, userId },
+            include: {
+              documents: { orderBy: { createdAt: 'desc' }, take: 12 },
+              events: { orderBy: { startTime: 'asc' }, take: 20 },
+            },
+          }),
+          // Fingerprint: queries paralelas internas
+          (async () => {
+            const [lastDoc, lastAnalysis, lastCourtFiled, lastTask, totals] = await Promise.all([
+              prisma.$queryRawUnsafe<Array<{ created_at: Date; title: string; kind: string | null }>>(
+                `SELECT created_at, title, kind FROM public.documents
+                  WHERE case_id = $1 AND replaced_at IS NULL ORDER BY created_at DESC LIMIT 1`, caseId
+              ),
+              prisma.$queryRawUnsafe<Array<{ created_at: Date; title: string }>>(
+                `SELECT created_at, title FROM public.documents
+                  WHERE case_id = $1 AND kind = 'ai_analysis' AND replaced_at IS NULL
+                  ORDER BY created_at DESC LIMIT 1`, caseId
+              ),
+              prisma.$queryRawUnsafe<Array<{ presented_at: Date; title: string }>>(
+                `SELECT presented_at, title FROM public.documents
+                  WHERE case_id = $1 AND kind = 'court_filed' AND presented_at IS NOT NULL
+                  ORDER BY presented_at DESC LIMIT 1`, caseId
+              ),
+              prisma.$queryRawUnsafe<Array<{ completed_at: Date | null; title: string }>>(
+                `SELECT completed_at, title FROM public.tasks
+                  WHERE case_id = $1 AND completed_at IS NOT NULL
+                  ORDER BY completed_at DESC LIMIT 1`, caseId
+              ).catch(() => []),
+              prisma.$queryRawUnsafe<Array<{ docs: bigint; analyses: bigint; court_filed: bigint }>>(
+                `SELECT
+                    COUNT(*) FILTER (WHERE replaced_at IS NULL)::bigint AS docs,
+                    COUNT(*) FILTER (WHERE kind = 'ai_analysis' AND replaced_at IS NULL)::bigint AS analyses,
+                    COUNT(*) FILTER (WHERE kind = 'court_filed' AND replaced_at IS NULL)::bigint AS court_filed
+                  FROM public.documents WHERE case_id = $1`, caseId
+              ),
+            ]);
+            return {
+              lastDocument: lastDoc[0] || null,
+              lastAnalysis: lastAnalysis[0] || null,
+              lastCourtFiled: lastCourtFiled[0] || null,
+              lastTaskCompleted: lastTask[0] || null,
+              totals: totals[0] || { docs: 0n, analyses: 0n, court_filed: 0n },
+            };
+          })(),
+        ]);
+        phase('parallel-done', 'Brief y fingerprint recargados', 88);
+
+        // 4) Summary de cambios para el cliente
+        const changes: string[] = [];
+        if (brain?.generatedAt) changes.push('cerebro recién sintetizado');
+        if (fpData.lastDocument) changes.push(`último doc: ${fpData.lastDocument.title.slice(0, 40)}`);
+        if (fpData.lastAnalysis) changes.push('análisis IA reciente disponible');
+        if (fpData.lastCourtFiled) changes.push('documento presentado al juzgado');
+        if (fpData.lastTaskCompleted) changes.push('tareas recientemente completadas');
+
+        write('summary', {
+          ready: true,
+          brain: brain ? {
+            generatedAt: brain.generatedAt,
+            documentCount: brain.documentCount,
+            riskLevel: brain.riskLevel,
+            riskReasoning: brain.riskReasoning?.slice(0, 200),
+            summary: brain.summary?.slice(0, 300),
+            proceduralStage: brain.proceduralStage,
+            nextActionsCount: brain.nextActions?.length ?? 0,
+          } : null,
+          totals: {
+            documents: Number(fpData.totals.docs),
+            aiAnalyses: Number(fpData.totals.analyses),
+            courtFiled: Number(fpData.totals.court_filed),
+            events: briefData?.events?.length ?? 0,
+          },
+          lastDocument: fpData.lastDocument ? {
+            title: fpData.lastDocument.title,
+            kind: fpData.lastDocument.kind,
+            createdAt: fpData.lastDocument.created_at.toISOString(),
+          } : null,
+          changesDetected: changes,
+        });
+
+        phase('done', '¡Sala lista para la audiencia!', 100);
+        write('done', { caseId, at: new Date().toISOString() });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'litigation-warmup failed');
+        write('error', { error: e?.message || 'Pre-warmup failed' });
+      } finally {
+        stopKa();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
       return reply;
     },
   );

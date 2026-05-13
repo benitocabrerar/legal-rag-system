@@ -55,12 +55,8 @@ export function UserClock({ userName, compact = false }: Props) {
   if (!now) {
     // SSR placeholder: mantenemos el footprint para evitar layout shift
     return (
-      <div
-        className={`hidden md:flex items-center gap-3 rounded-xl border border-indigo-200/60 bg-gradient-to-r from-indigo-50/80 via-white to-fuchsia-50/80 px-4 py-2 shadow-sm select-none ${compact ? '' : 'min-w-[280px]'}`}
-        aria-hidden="true"
-      >
-        <Clock className="w-4 h-4 text-indigo-500" />
-        <div className="text-xs text-indigo-700/70">Sincronizando reloj…</div>
+      <div className="hidden lg:flex items-center gap-2.5 select-none opacity-0" aria-hidden="true">
+        <div className="font-mono text-lg font-black tabular-nums">--:--:--</div>
       </div>
     );
   }
@@ -94,34 +90,36 @@ export function UserClock({ userName, compact = false }: Props) {
   }
 
   // ─── Versión completa (header dashboard) ───
+  // Compact + transparent: solo hora grande + fecha corta, sin background
+  // opaco para no tapar elementos del navbar. Mismo footprint en desktop pero
+  // sin caja visible — el pill desaparece sobre el header blanco.
+  const shortDate = `${day.slice(0, 3)} ${date} ${month.slice(0, 3)}`;
   return (
     <div
-      className="hidden md:flex items-center gap-3 rounded-xl border border-indigo-200/70 bg-gradient-to-r from-indigo-50 via-white to-fuchsia-50 px-4 py-2 shadow-sm select-none"
+      className="hidden lg:flex items-center gap-2.5 select-none"
       role="status"
       aria-label={`${hello}${name ? ', ' + name : ''}. ${day} ${date} de ${month} de ${year}, ${hh}:${mm}`}
+      title={`${hello}${name ? ', ' + name : ''} · ${day} ${date} de ${month} de ${year}`}
     >
-      {/* Hora grande */}
+      {/* Hora grande, sin fondo */}
       <div className="flex flex-col items-end leading-none">
-        <div className="font-mono text-2xl font-black tabular-nums text-transparent bg-gradient-to-br from-indigo-700 via-fuchsia-600 to-purple-700 bg-clip-text">
-          {hh}<span className="text-indigo-400">:</span>{mm}<span className="text-xl text-indigo-400">:{ss}</span>
+        <div className="font-mono text-lg font-black tabular-nums text-indigo-700">
+          {hh}<span className="text-indigo-400">:</span>{mm}<span className="text-sm text-indigo-400 ml-0.5">:{ss}</span>
         </div>
-        <div className="text-[10px] uppercase tracking-wider font-bold text-indigo-600/80 mt-0.5">
-          Hora del Ecuador
-        </div>
-      </div>
-
-      {/* Separador */}
-      <div className="h-9 w-px bg-gradient-to-b from-transparent via-indigo-300 to-transparent" />
-
-      {/* Fecha + saludo */}
-      <div className="flex flex-col leading-tight">
-        <div className="text-[13px] font-bold text-gray-900 capitalize">
-          {hello}{name ? <span className="text-indigo-700">, {name}</span> : ''}
-        </div>
-        <div className="text-[11px] text-gray-600 capitalize">
-          {day} {date} de {month} {year}
+        <div className="text-[10px] capitalize text-slate-500 font-semibold mt-0.5 tracking-tight">
+          {shortDate}
         </div>
       </div>
+      {/* Saludo + nombre — solo en pantallas anchas */}
+      {name && (
+        <>
+          <div className="h-7 w-px bg-slate-200" />
+          <div className="flex flex-col leading-tight">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{hello}</div>
+            <div className="text-[12px] font-bold text-indigo-700 truncate max-w-[100px]">{name}</div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

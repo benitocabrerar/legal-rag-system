@@ -1997,7 +1997,7 @@ function brainSummary(b: CaseBrain) {
   };
 }
 
-async function synthesizeCaseBrain(caseId: string): Promise<CaseBrain> {
+export async function synthesizeCaseBrain(caseId: string): Promise<CaseBrain> {
   // Cargar caso + documentos (raw SQL para incluir priority/metadata que no
   // están en el schema Prisma pero sí en la BD).
   const caseRows = await prisma.$queryRawUnsafe<Array<{

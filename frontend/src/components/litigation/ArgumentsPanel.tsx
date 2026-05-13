@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, GripVertical, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, CheckCircle2, Circle, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getAuthToken } from '@/lib/get-auth-token';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface Argument {
   id: string;
   text: string;
   done: boolean;
+  /** True si el item fue agregado por sugerencia de la IA (cerebro del caso). */
+  fromAI?: boolean;
 }
 
 const STORAGE_KEY = (caseId: string) => `litigation-args:${caseId}`;
@@ -24,7 +29,40 @@ const SEED_BY_CASE: Argument[] = [
 export function ArgumentsPanel({ caseId }: { caseId: string }) {
   const [items, setItems] = useState<Argument[]>([]);
   const [draft, setDraft] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /** Trae las "nextActions" del cerebro del caso y las suma como argumentos
+   *  nuevos al checklist, evitando duplicados con los que ya están. */
+  const suggestFromBrain = async () => {
+    setSuggesting(true);
+    try {
+      const token = await getAuthToken();
+      const r = await fetch(`${API_URL}/api/v1/cases/${caseId}/brain`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      const brain = data?.full || data?.brain || data;
+      const next: Array<{ action: string }> = Array.isArray(brain?.nextActions) ? brain.nextActions : [];
+      const keyFacts: string[] = Array.isArray(brain?.keyFacts) ? brain.keyFacts : [];
+      const sugerencias = [
+        ...next.map((a) => a.action).filter(Boolean),
+        ...keyFacts.slice(0, 4),
+      ].filter((s) => typeof s === 'string' && s.length > 8 && s.length < 200);
+      if (sugerencias.length === 0) return;
+      setItems((prev) => {
+        const existing = new Set(prev.map((p) => p.text.toLowerCase().trim()));
+        const nuevos = sugerencias
+          .filter((s) => !existing.has(s.toLowerCase().trim()))
+          .slice(0, 8)
+          .map((text) => ({ id: crypto.randomUUID(), text, done: false, fromAI: true }));
+        return [...prev, ...nuevos];
+      });
+    } catch { /* silencioso */ }
+    finally { setSuggesting(false); }
+  };
 
   // Load from localStorage on mount.
   useEffect(() => {
@@ -59,15 +97,26 @@ export function ArgumentsPanel({ caseId }: { caseId: string }) {
 
   return (
     <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
-      <div className="flex items-center justify-between mb-2.5">
-        <div>
+      <div className="flex items-center justify-between mb-2.5 gap-2">
+        <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Argumentos</div>
           <div className="text-[10px] text-slate-500">
             {completed}/{items.length} expuestos · se guarda automáticamente
           </div>
         </div>
-        <div className="text-xs font-bold text-slate-300 tabular-nums">
-          {items.length === 0 ? 0 : Math.round((completed / items.length) * 100)}%
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => void suggestFromBrain()}
+            disabled={suggesting}
+            title="Sumar argumentos sugeridos por el cerebro del caso (IA)"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-violet-200 bg-gradient-to-r from-violet-600/40 to-fuchsia-600/40 hover:from-violet-600/70 hover:to-fuchsia-600/70 border border-violet-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {suggesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            <span>{suggesting ? 'Pidiendo IA…' : 'Sugerir IA'}</span>
+          </button>
+          <div className="text-xs font-bold text-slate-300 tabular-nums">
+            {items.length === 0 ? 0 : Math.round((completed / items.length) * 100)}%
+          </div>
         </div>
       </div>
 

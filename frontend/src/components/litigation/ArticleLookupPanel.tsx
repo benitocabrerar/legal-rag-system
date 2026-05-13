@@ -1,15 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Loader2, BookMarked, Volume2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Search, Loader2, BookMarked, Volume2, X, Sparkles, ChevronRight } from 'lucide-react';
 import { litigationAPI, type ArticleLookup } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { getAuthToken } from '@/lib/get-auth-token';
 
-export function ArticleLookupPanel() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+interface ArticleLookupPanelProps {
+  /** Si está presente, el panel pre-carga artículos sugeridos del cerebro del caso. */
+  caseId?: string;
+}
+
+export function ArticleLookupPanel({ caseId }: ArticleLookupPanelProps = {}) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<ArticleLookup | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [suggested, setSuggested] = useState<Array<{ norm: string; reasoning?: string }>>([]);
+  const [loadingSuggested, setLoadingSuggested] = useState(false);
+
+  // Cargar artículos sugeridos del cerebro del caso (applicableLaws)
+  const fetchSuggested = async () => {
+    if (!caseId) return;
+    setLoadingSuggested(true);
+    try {
+      const token = await getAuthToken();
+      const r = await fetch(`${API_URL}/api/v1/cases/${caseId}/brain`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      const brain = data?.full || data?.brain || data;
+      const laws = Array.isArray(brain?.applicableLaws) ? brain.applicableLaws : [];
+      setSuggested(laws.slice(0, 8));
+    } catch { /* ignore */ }
+    finally { setLoadingSuggested(false); }
+  };
+
+  useEffect(() => {
+    if (caseId) void fetchSuggested();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
 
   const search = async (override?: string) => {
     const q = (override ?? query).trim();
@@ -74,6 +107,51 @@ export function ArticleLookupPanel() {
       </div>
 
       {error && <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-md px-2 py-1.5 mb-2">{error}</div>}
+
+      {/* Sugerencias IA del cerebro del caso — artículos aplicables al caso */}
+      {caseId && (suggested.length > 0 || loadingSuggested) && !result && (
+        <div className="mb-3 rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-2.5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Sugeridos por la IA para este caso
+            </div>
+            <button
+              onClick={() => void fetchSuggested()}
+              disabled={loadingSuggested}
+              className="text-[10px] text-cyan-200/70 hover:text-cyan-100 disabled:opacity-50 transition"
+              title="Re-cargar sugerencias desde el cerebro del caso"
+            >
+              {loadingSuggested ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Actualizar'}
+            </button>
+          </div>
+          {loadingSuggested && suggested.length === 0 ? (
+            <div className="text-[11px] text-cyan-100/60 italic">Cargando…</div>
+          ) : (
+            <ul className="space-y-1">
+              {suggested.map((law, i) => (
+                <li key={i}>
+                  <button
+                    onClick={() => {
+                      setQuery(law.norm);
+                      void search(law.norm);
+                    }}
+                    className="w-full text-left flex items-start gap-1.5 px-2 py-1 rounded-md hover:bg-cyan-700/20 text-[11px] text-cyan-100 group transition"
+                  >
+                    <ChevronRight className="w-3 h-3 text-cyan-500 mt-0.5 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                    <span className="flex-1 min-w-0">
+                      <span className="font-bold text-cyan-200">{law.norm}</span>
+                      {law.reasoning && (
+                        <span className="block text-[10px] text-cyan-200/60 mt-0.5 line-clamp-2">{law.reasoning}</span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {result && (
         <div className="rounded-lg bg-slate-800/40 border border-slate-700/50 p-3 space-y-2 max-h-[40vh] overflow-y-auto">

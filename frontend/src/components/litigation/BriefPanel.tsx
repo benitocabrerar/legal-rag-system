@@ -1,6 +1,6 @@
 'use client';
 
-import { Briefcase, Hash, User } from 'lucide-react';
+import { Briefcase, Hash, User, RefreshCw, Loader2 } from 'lucide-react';
 import type { LitigationBrief } from '@/lib/api';
 import { HearingJoinCard } from './HearingJoinCard';
 
@@ -35,14 +35,38 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function BriefPanel({ data }: { data: LitigationBrief }) {
+interface BriefPanelProps {
+  data: LitigationBrief;
+  /** Si está presente, muestra botón de refresh en el encabezado. */
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
+}
+
+export function BriefPanel({ data, onRefresh, refreshing }: BriefPanelProps) {
   const c = data.case;
   const next = data.nextHearing;
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mb-1.5">Caso</div>
+      <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3 relative">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Resumen del caso</div>
+          {onRefresh && (
+            <button
+              onClick={() => void onRefresh()}
+              disabled={refreshing}
+              title="Re-sintetizar el cerebro del caso (IA) con la información más reciente"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-violet-200 bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              {refreshing ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              <span>{refreshing ? 'Actualizando…' : 'Actualizar IA'}</span>
+            </button>
+          )}
+        </div>
         <h2 className="text-sm font-bold text-slate-100 leading-snug">{c.title}</h2>
         {c.description && (
           <p className="mt-1 text-[12px] text-slate-400 leading-relaxed line-clamp-3">{c.description}</p>

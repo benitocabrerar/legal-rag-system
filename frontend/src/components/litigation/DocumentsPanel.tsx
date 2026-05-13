@@ -1,27 +1,56 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, ChevronRight, X } from 'lucide-react';
+import { FileText, ChevronRight, X, RefreshCw, Loader2 } from 'lucide-react';
 import type { LitigationBrief } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-export function DocumentsPanel({ documents }: { documents: LitigationBrief['documents'] }) {
+interface DocumentsPanelProps {
+  documents: LitigationBrief['documents'];
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
+}
+
+export function DocumentsPanel({ documents, onRefresh, refreshing }: DocumentsPanelProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const open = openId ? documents.find((d) => d.id === openId) : null;
 
   if (documents.length === 0) {
     return (
       <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3 text-center">
-        <p className="text-xs text-slate-500">Sin documentos en el caso</p>
+        <p className="text-xs text-slate-500 mb-2">Sin documentos en el caso</p>
+        {onRefresh && (
+          <button
+            onClick={() => void onRefresh()}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-emerald-200 bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/30 disabled:opacity-50 transition"
+          >
+            {refreshing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Actualizar
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 gap-2">
         <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Documentos</div>
-        <span className="text-[10px] text-slate-500">{documents.length}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-500">{documents.length}</span>
+          {onRefresh && (
+            <button
+              onClick={() => void onRefresh()}
+              disabled={refreshing}
+              title="Re-cargar documentos + re-sintetizar cerebro con la lista actualizada"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold text-emerald-200 bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/30 disabled:opacity-50 transition"
+            >
+              {refreshing ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <RefreshCw className="w-2.5 h-2.5" />}
+              Actualizar IA
+            </button>
+          )}
+        </div>
       </div>
       <ul className="space-y-1 max-h-[40vh] overflow-y-auto">
         {documents.map((d) => (
