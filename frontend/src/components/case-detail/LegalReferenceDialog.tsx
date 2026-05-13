@@ -28,6 +28,8 @@ import {
 import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const ANALYZE_PATH = '/api/v1/legal-reference/expand';
+const BUILD_SHA = (process.env.NEXT_PUBLIC_GIT_SHA || 'dev').slice(0, 7);
 
 interface PenaltyOrEffect {
   type?: string;
@@ -142,7 +144,7 @@ export default function LegalReferenceDialog({
       }, 500);
       try {
         const token = await getAuthToken();
-        const r = await fetch(`${API_URL}/api/v1/legal-reference/expand`, {
+        const r = await fetch(`${API_URL}${ANALYZE_PATH}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -324,13 +326,17 @@ export default function LegalReferenceDialog({
                 />
               </div>
               {/* Diagnostic line — útil si SSE se cuelga, el usuario puede copiar/pegar */}
-              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono text-indigo-700/70">
-                <div>HTTP {diag.status ?? '—'}</div>
-                <div>{diag.contentType || 'pendiente'}</div>
-                <div>TTFB {diag.ttfb != null ? `${diag.ttfb}ms` : '—'}</div>
-                <div>{diag.elapsed != null ? `${diag.elapsed}s elapsed` : '—'}</div>
-                <div>{(diag.bytesReceived ?? 0).toLocaleString()} bytes</div>
-                <div>{diag.eventsReceived ?? 0} events</div>
+              <div className="mt-2 space-y-0.5 text-[10px] font-mono text-indigo-700/70">
+                <div className="truncate text-indigo-900 font-bold">→ {ANALYZE_PATH}</div>
+                <div className="grid grid-cols-2 gap-x-3">
+                  <div>HTTP {diag.status ?? '—'}</div>
+                  <div>{diag.contentType || 'pendiente'}</div>
+                  <div>TTFB {diag.ttfb != null ? `${diag.ttfb}ms` : '—'}</div>
+                  <div>{diag.elapsed != null ? `${diag.elapsed}s elapsed` : '—'}</div>
+                  <div>{(diag.bytesReceived ?? 0).toLocaleString()} bytes</div>
+                  <div>{diag.eventsReceived ?? 0} events</div>
+                </div>
+                <div className="text-[9px] opacity-70">build {BUILD_SHA} · {API_URL.replace(/^https?:\/\//, '')}</div>
               </div>
 
               {/* Steps mini timeline */}
