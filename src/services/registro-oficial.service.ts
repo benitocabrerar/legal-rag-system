@@ -15,8 +15,12 @@
  */
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
-// @ts-ignore - pdf-parse no tiene types pero funciona
-import pdfParse from 'pdf-parse';
+
+// NOTA: pdf-parse@1.1.1 tiene un bug conocido — su index.js abre un archivo
+// de test (`./test/data/05-versions-space.pdf`) al importarse, que NO existe
+// en el paquete npm. Si lo importamos top-level, crashea el server con
+// ENOENT en cold start. Lo importamos dinámicamente dentro del handler que
+// realmente lo usa (downloadAndExtractPdf). Issue: github.com/modesty/pdf-parse#18
 
 const RO_BASE = 'https://www.registroficial.gob.ec';
 const USER_AGENT = 'Mozilla/5.0 (compatible; PoweriaLegalBot/1.0; +https://poweria.cognitex.app/contact)';
@@ -203,6 +207,9 @@ async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
     clearTimeout(timeout);
     if (!r.ok) return null;
     const buf = Buffer.from(await r.arrayBuffer());
+    // Dynamic import para evitar el bug ENOENT de pdf-parse al cold start.
+    // @ts-ignore - pdf-parse no tiene types
+    const pdfParse = (await import('pdf-parse')).default;
     const parsed = await pdfParse(buf);
     return parsed.text || null;
   } catch {
