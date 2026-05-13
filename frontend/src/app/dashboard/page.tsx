@@ -7,6 +7,7 @@ import { QuickStatsCards } from '@/components/dashboard/QuickStatsCards';
 import { AIInsightsPanel } from '@/components/dashboard/AIInsightsPanel';
 import { LegalTypeFilterTabs } from '@/components/dashboard/LegalTypeFilterTabs';
 import { EnhancedCaseCard } from '@/components/dashboard/EnhancedCaseCard';
+import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { Plus } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 
@@ -206,7 +207,10 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Quick Stats Cards */}
+      {/* ─── NUEVO: Panel de control de alto impacto con agregados IA ─── */}
+      <DashboardOverview />
+
+      {/* Quick Stats Cards (versión legacy — agregado con DashboardOverview arriba) */}
       <QuickStatsCards
         totalCases={cases.length}
         activeCases={activeCases}

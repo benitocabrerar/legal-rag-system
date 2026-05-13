@@ -250,6 +250,7 @@ await app.register(healthRoutes, { prefix: '/observability' });
 
 // Register API routes
 await app.register(authRoutes, { prefix: '/api/v1' });
+await app.register((await import('./routes/dashboard.js')).dashboardRoutes, { prefix: '/api/v1' });
 await app.register((await import('./routes/auth-events.js')).authEventsRoutes, { prefix: '/api/v1' });
 await app.register((await import('./routes/admin/analytics.js')).adminAnalyticsRoutes, { prefix: '/api/v1' });
 await app.register(twoFactorRoutes, { prefix: '/api/v1' });
