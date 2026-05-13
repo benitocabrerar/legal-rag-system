@@ -1295,54 +1295,101 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
   //   Devuelve un JSON con `prompts: Array<{ id, label, prompt, category, icon, why }>`
   //   donde `category` ∈ analysis|drafting|research|strategy|compliance|search|document|citation
   // =========================================================================
-  fastify.post<{ Params: { id: string } }>(
+  fastify.post<{ Params: { id: string }; Querystring: { category?: string } }>(
     '/cases/:id/suggested-prompts',
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
       const userId = (request.user as any).id;
+      const validCats = new Set(['analysis', 'drafting', 'research', 'strategy', 'compliance', 'search', 'document', 'citation']);
+      const onlyCategory = request.query?.category && validCats.has(request.query.category)
+        ? String(request.query.category)
+        : null;
 
-      const ownRows = await prisma.$queryRawUnsafe<Array<{
-        id: string; title: string; description: string | null;
-        legal_matter: string | null; procedural_stage: string | null;
-        metadata: any;
-      }>>(
-        `SELECT id, title, description, legal_matter, procedural_stage, metadata
-           FROM public.cases
-          WHERE id = $1 AND user_id = $2
-          LIMIT 1`,
-        request.params.id, userId,
-      );
-      const own = ownRows[0];
-      if (!own) return reply.code(404).send({ error: 'Case not found' });
+      // SSE: phase events + token events + structured + done/error
+      setSseHeaders(request, reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+      const phase = (key: string, label: string, pct: number) =>
+        write('phase', { phase: key, label, pct });
 
-      const docs = await prisma.$queryRawUnsafe<Array<{
-        title: string; kind: string | null; presented_to: string | null;
-      }>>(
-        `SELECT title, COALESCE(kind, 'uploaded') AS kind, presented_to
-           FROM public.documents
-          WHERE case_id = $1 AND replaced_at IS NULL
-          ORDER BY
-            CASE COALESCE(kind, 'uploaded')
-              WHEN 'court_filed' THEN 0
-              WHEN 'uploaded' THEN 1
-              WHEN 'ai_generated' THEN 2
-              WHEN 'ai_analysis' THEN 3
-              ELSE 4
-            END,
-            created_at DESC
-          LIMIT 15`,
-        request.params.id,
-      );
+      try {
+        phase('starting', 'Iniciando generación…', 2);
+        phase('case-load', 'Cargando contexto del caso…', 8);
 
-      const brain = (own.metadata && typeof own.metadata === 'object'
-        && 'brain' in own.metadata) ? (own.metadata as any).brain : null;
+        const ownRows = await prisma.$queryRawUnsafe<Array<{
+          id: string; title: string; description: string | null;
+          legal_matter: string | null; procedural_stage: string | null;
+          metadata: any;
+        }>>(
+          `SELECT id, title, description, legal_matter, procedural_stage, metadata
+             FROM public.cases
+            WHERE id = $1 AND user_id = $2
+            LIMIT 1`,
+          request.params.id, userId,
+        );
+        const own = ownRows[0];
+        if (!own) {
+          write('error', { error: 'Case not found' });
+          reply.raw.end();
+          return;
+        }
 
-      const aiClient = await getAiClient();
+        phase('docs', 'Indexando documentos del expediente…', 16);
+        const docs = await prisma.$queryRawUnsafe<Array<{
+          title: string; kind: string | null; presented_to: string | null;
+        }>>(
+          `SELECT title, COALESCE(kind, 'uploaded') AS kind, presented_to
+             FROM public.documents
+            WHERE case_id = $1 AND replaced_at IS NULL
+            ORDER BY
+              CASE COALESCE(kind, 'uploaded')
+                WHEN 'court_filed' THEN 0
+                WHEN 'uploaded' THEN 1
+                WHEN 'ai_generated' THEN 2
+                WHEN 'ai_analysis' THEN 3
+                ELSE 4
+              END,
+              created_at DESC
+            LIMIT 15`,
+          request.params.id,
+        );
 
-      const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior diseñando ATAJOS DE TRABAJO
-contextualizados para un caso real. Vas a generar entre 8 y 14 prompts de
-trabajo distribuidos en categorías. Cada prompt debe:
+        phase('brain', 'Consultando cerebro del caso…', 22);
+        const brain = (own.metadata && typeof own.metadata === 'object'
+          && 'brain' in own.metadata) ? (own.metadata as any).brain : null;
 
+        const aiClient = await getAiClient();
+
+        // Descripción semántica de cada categoría para el modelo
+        const CATEGORY_GUIDE: Record<string, string> = {
+          analysis:   'análisis legal/probatorio (elementos del tipo, valoración de prueba, dictamen jurídico)',
+          drafting:   'redacción de escritos jurídicos (demandas, contestaciones, recursos, alegatos)',
+          research:   'investigación normativa, doctrinaria y jurisprudencial profunda',
+          strategy:   'estrategia procesal/táctica (movimientos, secuencia de actos, anticipar contraparte)',
+          compliance: 'cumplimiento de plazos legales, formas y requisitos procesales',
+          search:     'búsqueda dentro del expediente o RAG sobre documentos del caso',
+          document:   'trabajar sobre un documento específico (extraer datos, validarlo, contrastarlo)',
+          citation:   'buscar y citar normas, precedentes y jurisprudencia con referencias completas',
+        };
+
+        const categoryInstruction = onlyCategory
+          ? `Genera entre 6 y 10 prompts EXCLUSIVAMENTE en la categoría "${onlyCategory}"
+(${CATEGORY_GUIDE[onlyCategory]}). NO mezcles otras categorías.
+Estos prompts deben ser MÁS PROFUNDOS y AVANZADOS que un set general:
+- Asumen al lector como abogado senior, no expliques conceptos básicos.
+- Cada prompt debe activar razonamiento legal complejo (multi-paso).
+- Si la materia es penal/civil/laboral/etc., usa terminología técnica precisa.
+- Pueden ser largos (3-5 oraciones) si eso permite ser más específicos.`
+          : `Genera entre 8 y 14 prompts distribuidos en 4-7 categorías distintas.`;
+
+        const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior diseñando ATAJOS DE TRABAJO
+contextualizados para un caso real. ${categoryInstruction}
+
+REGLAS GENERALES:
 - Ser ESPECÍFICO al caso (mencionar partes, montos, fechas, normas concretas
   cuando aplique — NO genérico tipo "analizar el caso").
 - Ser INMEDIATAMENTE EJECUTABLE (que el abogado pueda copiarlo y pegarlo en
@@ -1353,71 +1400,126 @@ trabajo distribuidos en categorías. Cada prompt debe:
 - Considerar la mezcla de documentos disponibles (uploaded vs court_filed vs
   ai_generated) — si hay docs court_filed, prioriza estrategia ofensiva.
 
-CATEGORÍAS VÁLIDAS (usa entre 4 y 7 distintas):
-- analysis    → análisis legal/probatorio
-- drafting    → redacción de escritos
-- research    → investigación normativa/jurisprudencial
-- strategy    → estrategia procesal/táctica
-- compliance  → cumplimiento de plazos/forma
-- search      → búsqueda en el expediente o RAG
-- document    → trabajar con un documento específico
-- citation    → buscar/citar normas o jurisprudencia
+CATEGORÍAS VÁLIDAS:
+- analysis    → ${CATEGORY_GUIDE.analysis}
+- drafting    → ${CATEGORY_GUIDE.drafting}
+- research    → ${CATEGORY_GUIDE.research}
+- strategy    → ${CATEGORY_GUIDE.strategy}
+- compliance  → ${CATEGORY_GUIDE.compliance}
+- search      → ${CATEGORY_GUIDE.search}
+- document    → ${CATEGORY_GUIDE.document}
+- citation    → ${CATEGORY_GUIDE.citation}
 
 SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
 {
   "prompts": [
     {
       "id": "<kebab-case único>",
-      "category": "analysis|drafting|research|strategy|compliance|search|document|citation",
+      "category": "${onlyCategory || 'analysis|drafting|research|strategy|compliance|search|document|citation'}",
       "icon": "<un emoji que sintetice la acción>",
       "label": "<título corto (3-6 palabras) que el abogado verá en el card>",
-      "prompt": "<el texto exacto que se envía al chat IA — 1 a 3 frases concretas, en imperativo, mencionando elementos del caso>",
+      "prompt": "<el texto exacto que se envía al chat IA — 1 a 5 frases concretas, en imperativo, mencionando elementos del caso>",
       "why": "<1 línea explicando por qué este prompt es relevante AHORA para este caso>"
     }
   ]
 }`;
 
-      const docsList = docs.length === 0
-        ? '(sin documentos en el expediente)'
-        : docs.map((d, i) => {
-            const tag = d.kind === 'court_filed' && d.presented_to
-              ? `${d.kind} → ${d.presented_to}`
-              : d.kind;
-            return `${i + 1}. [${tag}] ${d.title}`;
-          }).join('\n');
+        const docsList = docs.length === 0
+          ? '(sin documentos en el expediente)'
+          : docs.map((d, i) => {
+              const tag = d.kind === 'court_filed' && d.presented_to
+                ? `${d.kind} → ${d.presented_to}`
+                : d.kind;
+              return `${i + 1}. [${tag}] ${d.title}`;
+            }).join('\n');
 
-      const brainBlock = brain ? [
-        '=== CEREBRO DEL CASO (síntesis previa) ===',
-        brain.summary ? `Resumen: ${String(brain.summary).slice(0, 800)}` : '',
-        brain.proceduralStage ? `Etapa según cerebro: ${brain.proceduralStage}` : '',
-        brain.riskLevel ? `Nivel de riesgo: ${brain.riskLevel} — ${String(brain.riskReasoning || '').slice(0, 300)}` : '',
-        Array.isArray(brain.gaps) && brain.gaps.length
-          ? `Gaps detectados: ${brain.gaps.slice(0, 5).map((g: any) => String(g)).join('; ')}` : '',
-        Array.isArray(brain.nextActions) && brain.nextActions.length
-          ? `Próximas acciones según cerebro: ${brain.nextActions.slice(0, 5).map((a: any) => `${a.priority || ''} ${a.action || ''}`).join('; ')}` : '',
-      ].filter(Boolean).join('\n') : '(sin cerebro todavía generado)';
+        const brainBlock = brain ? [
+          '=== CEREBRO DEL CASO (síntesis previa) ===',
+          brain.summary ? `Resumen: ${String(brain.summary).slice(0, 800)}` : '',
+          brain.proceduralStage ? `Etapa según cerebro: ${brain.proceduralStage}` : '',
+          brain.riskLevel ? `Nivel de riesgo: ${brain.riskLevel} — ${String(brain.riskReasoning || '').slice(0, 300)}` : '',
+          Array.isArray(brain.gaps) && brain.gaps.length
+            ? `Gaps detectados: ${brain.gaps.slice(0, 5).map((g: any) => String(g)).join('; ')}` : '',
+          Array.isArray(brain.nextActions) && brain.nextActions.length
+            ? `Próximas acciones según cerebro: ${brain.nextActions.slice(0, 5).map((a: any) => `${a.priority || ''} ${a.action || ''}`).join('; ')}` : '',
+        ].filter(Boolean).join('\n') : '(sin cerebro todavía generado)';
 
-      const ctx = [
-        '=== CASO ===',
-        `Título: ${own.title}`,
-        own.legal_matter ? `Materia legal: ${own.legal_matter}` : '',
-        own.procedural_stage ? `Etapa procesal: ${own.procedural_stage}` : '',
-        own.description ? `Descripción: ${String(own.description).slice(0, 1500)}` : '',
-        '',
-        '=== DOCUMENTOS DEL EXPEDIENTE ===',
-        docsList,
-        '',
-        brainBlock,
-        '',
-        'Generá los prompts especializados ahora.',
-      ].filter(Boolean).join('\n');
+        const ctx = [
+          '=== CASO ===',
+          `Título: ${own.title}`,
+          own.legal_matter ? `Materia legal: ${own.legal_matter}` : '',
+          own.procedural_stage ? `Etapa procesal: ${own.procedural_stage}` : '',
+          own.description ? `Descripción: ${String(own.description).slice(0, 1500)}` : '',
+          '',
+          '=== DOCUMENTOS DEL EXPEDIENTE ===',
+          docsList,
+          '',
+          brainBlock,
+          '',
+          onlyCategory
+            ? `Generá AHORA los prompts AVANZADOS para la categoría "${onlyCategory}".`
+            : 'Generá los prompts especializados ahora.',
+        ].filter(Boolean).join('\n');
 
-      try {
-        const completion = await aiClient.chat.completions.create({
+        phase('ai-start', `Claude Opus 4.7 generando${onlyCategory ? ` (${onlyCategory})` : ''}…`, 28);
+
+        // Streaming: detectamos progreso por cantidad de objetos `}` cerrados
+        // dentro del array (cada prompt completo = +X%).
+        const targetCount = onlyCategory ? 8 : 12;
+        let fullText = '';
+        let depthBrace = 0, depthBracket = 0, inString = false, escape = false;
+        let promptsCompleted = 0;
+        let arrayStarted = false;
+
+        const stream: any = await (aiClient as any).chat.completions.create({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
           max_tokens: 8000,
+          stream: true,
         });
-        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+
+        let lastReportedPct = 28;
+        for await (const chunk of stream) {
+          const delta = chunk?.choices?.[0]?.delta?.content;
+          if (!delta) continue;
+          fullText += delta;
+          write('token', { delta });
+
+          // Avanzar contadores carácter a carácter sobre el delta
+          for (let i = 0; i < delta.length; i++) {
+            const ch = delta[i];
+            if (escape) { escape = false; continue; }
+            if (ch === '\\') { escape = true; continue; }
+            if (ch === '"') { inString = !inString; continue; }
+            if (inString) continue;
+            if (ch === '{') depthBrace++;
+            else if (ch === '}') {
+              depthBrace--;
+              if (arrayStarted && depthBrace === 1) {
+                promptsCompleted++;
+                const pctRange = Math.max(0, 90 - 28);
+                const ratio = Math.min(1, promptsCompleted / targetCount);
+                const newPct = Math.round(28 + pctRange * ratio);
+                if (newPct > lastReportedPct + 1) {
+                  lastReportedPct = newPct;
+                  phase(
+                    'ai-progress',
+                    `Generando prompt ${promptsCompleted} de ~${targetCount}…`,
+                    newPct,
+                  );
+                }
+              }
+            }
+            else if (ch === '[') {
+              depthBracket++;
+              if (!arrayStarted && depthBrace === 1) arrayStarted = true;
+            }
+            else if (ch === ']') depthBracket--;
+          }
+        }
+
+        phase('parsing', 'Estructurando prompts…', 94);
+
+        const raw = fullText.trim();
         const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
         const start = fenced.indexOf('{');
         const end = fenced.lastIndexOf('}');
@@ -1431,28 +1533,36 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
             } catch { /* null */ }
           }
         }
-        // Fallback: el JSON se truncó por max_tokens. Recuperamos las entradas
-        // completas del array prompts cerrando manualmente el array y objeto.
         if (!parsed && start >= 0) {
           parsed = repairTruncatedPromptsJson(fenced.slice(start));
         }
         if (!parsed || !Array.isArray(parsed.prompts)) {
-          return reply.code(502).send({ error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          reply.raw.end();
+          return;
         }
-        const validCats = new Set(['analysis', 'drafting', 'research', 'strategy', 'compliance', 'search', 'document', 'citation']);
-        const prompts = (parsed.prompts as any[])
+
+        let prompts = (parsed.prompts as any[])
           .filter((p) => p && typeof p === 'object' && typeof p.prompt === 'string' && typeof p.label === 'string')
           .slice(0, 14)
           .map((p, i) => ({
             id: typeof p.id === 'string' && p.id ? String(p.id).slice(0, 80) : `ai-suggested-${i + 1}`,
-            category: validCats.has(p.category) ? p.category : 'analysis',
+            category: validCats.has(p.category) ? p.category : (onlyCategory || 'analysis'),
             icon: typeof p.icon === 'string' && p.icon ? String(p.icon).slice(0, 4) : '✨',
             label: String(p.label).slice(0, 80),
-            prompt: String(p.prompt).slice(0, 1200),
+            prompt: String(p.prompt).slice(0, 1500),
             why: typeof p.why === 'string' ? String(p.why).slice(0, 240) : '',
           }));
-        return reply.send({
+
+        // Si filtramos por categoría, descartamos los que el modelo haya
+        // sacado en otra (más fuerte que el system prompt).
+        if (onlyCategory) {
+          prompts = prompts.filter((p) => p.category === onlyCategory);
+        }
+
+        write('structured', {
           prompts,
+          category: onlyCategory,
           model: aiClient.model,
           generatedAt: new Date().toISOString(),
           context: {
@@ -1462,9 +1572,13 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
             hasBrain: !!brain,
           },
         });
+        phase('done', 'Listo', 100);
+        write('done', { count: prompts.length });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'suggested-prompts failed');
-        return reply.code(500).send({ error: e?.message || 'AI failed' });
+        write('error', { error: e?.message || 'AI failed' });
+      } finally {
+        try { reply.raw.end(); } catch { /* ignore */ }
       }
     },
   );
