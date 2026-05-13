@@ -1826,24 +1826,48 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         phase('parsing', 'Estructurando respuesta…', 96);
 
         const raw = fullText.trim();
-        const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-        const start = fenced.indexOf('{');
-        const end = fenced.lastIndexOf('}');
-        let parsed: any = null;
-        if (start >= 0 && end > start) {
+        let parsed: any = tryParseJsonObject(raw);
+
+        if (!parsed) {
+          phase('repair-json', 'Normalizando respuesta de IA...', 98);
           try {
-            parsed = JSON.parse(fenced.slice(start, end + 1));
-          } catch {
-            try {
-              parsed = JSON.parse(fenced.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1'));
-            } catch { /* null */ }
+            const repair = await aiClient.chat.completions.create({
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Eres un convertidor estricto. Te paso un texto que deberia ser JSON. Devuelve EXCLUSIVAMENTE un objeto JSON valido, sin markdown ni prosa. Preserva todos los datos legales.',
+                },
+                { role: 'user', content: raw.slice(0, 12000) },
+              ],
+              max_tokens: 4500,
+            });
+            parsed = tryParseJsonObject(repair.choices?.[0]?.message?.content || '');
+          } catch (e: any) {
+            fastify.log.warn({ err: e?.message }, 'legal-reference/expand: JSON repair failed');
           }
         }
         if (!parsed || typeof parsed !== 'object') {
-          write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
-          stopKeepalive();
-          reply.raw.end();
-          return reply;
+          fastify.log.warn({ rawPreview: raw.slice(0, 500) }, 'legal-reference/expand: invalid JSON, returning fallback analysis');
+          parsed = {
+            norm: body.norm,
+            article: body.article || null,
+            literalText: sources[0]?.content?.slice(0, 3000) || null,
+            summary: raw
+              ? raw.slice(0, 900)
+              : 'La IA genero una respuesta que no pudo estructurarse completamente.',
+            legalAnalysis: raw || 'No se pudo estructurar el analisis juridico ampliado.',
+            importanceForCase: caseCtx
+              ? 'Revisar esta norma frente a los hechos y documentos del expediente para definir su uso procesal.'
+              : null,
+            penaltiesOrEffects: [],
+            requirements: [],
+            relatedNorms: [],
+            jurisprudence: [],
+            strategyForCase: [],
+            commonDefenses: [],
+            redFlags: ['La respuesta de IA no tuvo formato JSON valido; verificar manualmente antes de citar.'],
+            notes: 'Respuesta recuperada en modo de contingencia por formato JSON invalido.',
+          };
         }
 
         write('structured', {
