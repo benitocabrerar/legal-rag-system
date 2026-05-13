@@ -25,7 +25,7 @@ const PREFS = (caseId: string) => `case-chat-prefs:${caseId}`;
 
 interface Props {
   caseId: string;
-  onDocumentUploaded?: () => void;
+  onDocumentUploaded?: (info?: { id: string; title: string }) => void;
 }
 
 export function CaseAIChat({ caseId, onDocumentUploaded }: Props) {
@@ -227,8 +227,10 @@ export function CaseAIChat({ caseId, onDocumentUploaded }: Props) {
     };
     setMessages((m) => [...m, tmp]);
     try {
-      await documentsAPI.upload(caseId, file);
-      onDocumentUploaded?.();
+      const resp = await documentsAPI.upload(caseId, file);
+      const newDocId: string | undefined = resp?.document?.id;
+      const newDocTitle: string = resp?.document?.title || file.name;
+      onDocumentUploaded?.(newDocId ? { id: newDocId, title: newDocTitle } : undefined);
       // re-pide sugerencias para reflejar el nuevo doc en los quick prompts
       void fetchSuggestions();
       // y le da contexto al modelo en el siguiente turno

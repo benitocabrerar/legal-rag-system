@@ -989,6 +989,249 @@ Devuelve EXCLUSIVAMENTE este JSON (primer carácter '{', último '}'):
       }
     },
   );
+
+  // =========================================================================
+  // POST /cases/:caseId/documents/:docId/post-upload-analysis  (SSE)
+  //
+  //   Justo después de subir un documento, esta ruta lanza un análisis IA
+  //   profundo cuyo único propósito es decirle al abogado:
+  //     - qué aporta este documento al expediente
+  //     - qué hay que actualizar de inmediato
+  //     - qué acciones tomar / con qué urgencia
+  //     - qué tareas crear
+  //     - qué documentos generar/enviar como respuesta
+  //     - riesgos detectados
+  //
+  //   El resultado se streamea como SSE (events: token | structured | done | error)
+  //   y al final se persiste como Document kind='ai_analysis' con
+  //   ai_generation_meta.generator='post_upload_analysis' y un link al doc
+  //   fuente vía ai_generation_meta.sourceDocumentId.
+  // =========================================================================
+  fastify.post<{ Params: { caseId: string; docId: string } }>(
+    '/cases/:caseId/documents/:docId/post-upload-analysis',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const { caseId, docId } = request.params;
+
+      // Verificar pertenencia + leer columnas legal_type/procedural_stage que
+      // no están mapeadas en Prisma.
+      const ownRows = await prisma.$queryRawUnsafe<Array<{
+        id: string; title: string; description: string | null;
+        legal_type: string | null; procedural_stage: string | null;
+      }>>(
+        `SELECT id, title, description, legal_type, procedural_stage
+           FROM public.cases
+          WHERE id = $1 AND user_id = $2
+          LIMIT 1`,
+        caseId, userId,
+      );
+      const own = ownRows[0];
+      if (!own) return reply.code(404).send({ error: 'Case not found' });
+
+      const docRows = await prisma.$queryRawUnsafe<Array<{
+        id: string; title: string; content: string | null; kind: string | null;
+      }>>(
+        `SELECT id, title, content, COALESCE(kind, 'uploaded') AS kind
+           FROM public.documents
+          WHERE id = $1 AND case_id = $2
+          LIMIT 1`,
+        docId, caseId,
+      );
+      const sourceDoc = docRows[0];
+      if (!sourceDoc) return reply.code(404).send({ error: 'Document not found' });
+
+      // Contexto: otros documentos del expediente (truncados)
+      const others = await prisma.$queryRawUnsafe<Array<{
+        title: string; content: string | null; kind: string | null; presented_to: string | null;
+      }>>(
+        `SELECT title, LEFT(COALESCE(content, ''), 1200) AS content,
+                COALESCE(kind, 'uploaded') AS kind, presented_to
+           FROM public.documents
+          WHERE case_id = $1 AND id <> $2 AND replaced_at IS NULL
+          ORDER BY
+            CASE COALESCE(kind, 'uploaded')
+              WHEN 'court_filed' THEN 0
+              WHEN 'uploaded' THEN 1
+              WHEN 'ai_generated' THEN 2
+              WHEN 'ai_analysis' THEN 3
+              ELSE 4
+            END,
+            created_at DESC
+          LIMIT 12`,
+        caseId, docId,
+      );
+
+      setSseHeaders(request, reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      write('started', { caseId, docId, model: 'claude-opus-4-7', at: new Date().toISOString() });
+
+      const aiClient = await getAiClient();
+
+      const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior especializado(a) en litigio activo.
+Acaban de incorporar un nuevo documento al expediente. Tu única tarea es decirle
+al abogado titular, en términos accionables, qué cambia en el caso a partir de
+ahora.
+
+REGLAS:
+- Habla en español ecuatoriano profesional, sin relleno.
+- Sé concreto: nombres de actos procesales, plazos en días hábiles, normas (COIP/COGEP/CRE) con artículo cuando aplique.
+- Distingue urgencias REALES (con plazo legal o táctico) de mejoras opcionales.
+- Si el documento es un borrador IA, di explícitamente que aún no es oficial.
+- Si el documento ya fue presentado en juzgado (court_filed) trátalo como verdad oficial.
+- No inventes hechos. Si falta información, dilo en "gaps".
+
+SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
+{
+  "headline": "<1 frase corta — el cambio más importante>",
+  "contribution": "<2-4 oraciones explicando qué aporta este documento al caso>",
+  "urgentActions": [
+    { "action": "<qué hacer>", "deadline": "<plazo legal o 'sin plazo formal'>", "rationale": "<por qué urge>", "priority": "high|medium|low" }
+  ],
+  "actionPlan": [
+    { "step": 1, "title": "<paso>", "detail": "<descripción breve>", "owner": "abogado|cliente|fiscal|juez|otro" }
+  ],
+  "tasksToCreate": [
+    { "title": "<tarea concreta>", "dueInDays": <numero|null>, "priority": "high|medium|low", "category": "investigación|redacción|notificación|audiencia|gestión|otro" }
+  ],
+  "documentsToGenerate": [
+    { "docType": "<ej. 'escrito de impugnación', 'recurso de apelación'>", "purpose": "<para qué>", "deadlineDays": <numero|null>, "addressee": "<juzgado/tribunal/fiscalía>" }
+  ],
+  "thingsToUpdate": [
+    "<qué hay que actualizar de inmediato en el expediente, partes, montos, etapa, etc.>"
+  ],
+  "riskFlags": [
+    { "risk": "<riesgo detectado>", "severity": "high|medium|low", "mitigation": "<qué hacer para mitigar>" }
+  ],
+  "applicableNorms": [
+    { "norm": "<ej. 'Art. 605 COIP'>", "relevance": "<por qué aplica aquí>" }
+  ],
+  "gaps": [ "<qué información falta para tomar la mejor decisión>" ],
+  "confidence": 0.0
+}`;
+
+      const ctx = [
+        `=== CASO ===`,
+        `Título: ${own.title}`,
+        own.legal_type ? `Tipo: ${own.legal_type}` : '',
+        own.procedural_stage ? `Etapa procesal actual: ${own.procedural_stage}` : '',
+        own.description ? `Descripción: ${own.description}` : '',
+        '',
+        `=== DOCUMENTO RECIÉN SUBIDO (analizar este) ===`,
+        `Tipo: ${sourceDoc.kind}`,
+        `Título: ${sourceDoc.title}`,
+        `Contenido:`,
+        (sourceDoc.content || '(sin texto extraído)').slice(0, 12000),
+        '',
+        `=== RESTO DEL EXPEDIENTE (contexto) ===`,
+        others.length === 0
+          ? '(no hay otros documentos)'
+          : others.map((d, i) => {
+              const tag = d.kind === 'court_filed' && d.presented_to
+                ? `${d.kind} → ${d.presented_to}`
+                : d.kind;
+              return `[Doc ${i + 1} · ${tag}] ${d.title}\n${(d.content || '').slice(0, 800)}`;
+            }).join('\n\n'),
+      ].filter(Boolean).join('\n');
+
+      let fullText = '';
+      try {
+        // Streaming para feedback en vivo
+        const stream: any = await (aiClient as any).chat.completions.create({
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
+          max_tokens: 4000,
+          stream: true,
+        });
+
+        for await (const chunk of stream) {
+          const delta = chunk?.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            write('token', { delta });
+          }
+        }
+
+        // Parse JSON (mismo patrón tolerante que infer-stage)
+        const raw = fullText.trim();
+        const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+        const start = fenced.indexOf('{');
+        const end = fenced.lastIndexOf('}');
+        let parsed: any = null;
+        if (start >= 0 && end > start) {
+          try {
+            parsed = JSON.parse(fenced.slice(start, end + 1));
+          } catch {
+            // intento con trailing commas removidas
+            try {
+              parsed = JSON.parse(fenced.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1'));
+            } catch { /* sigue null */ }
+          }
+        }
+
+        if (!parsed || typeof parsed !== 'object') {
+          write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          reply.raw.end();
+          return;
+        }
+
+        // Persistir como ai_analysis adjunto
+        const newId = randomUUID();
+        const title = `🧠 Análisis post-upload — ${sourceDoc.title.slice(0, 80)}`;
+        const summary = [
+          `# Análisis IA del documento "${sourceDoc.title}"`,
+          '',
+          `**Modelo:** Claude Opus 4.7  ·  **Fecha:** ${new Date().toISOString()}`,
+          '',
+          `## ${parsed.headline || 'Resumen'}`,
+          parsed.contribution || '',
+          '',
+          '```json',
+          JSON.stringify(parsed, null, 2),
+          '```',
+        ].join('\n');
+
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO public.documents
+             (id, case_id, user_id, title, content, mime_type, kind, ai_generation_meta, metadata, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, 'ai_analysis', $7::jsonb, $8::jsonb, now(), now())`,
+          newId, caseId, userId, title, summary, 'text/markdown',
+          JSON.stringify({
+            generator: 'post_upload_analysis',
+            sourceDocumentId: docId,
+            sourceDocumentTitle: sourceDoc.title,
+            model: aiClient.model,
+            confidence: parsed.confidence ?? null,
+          }),
+          JSON.stringify({
+            aiGenerated: true,
+            kind: 'ai_analysis',
+            postUpload: true,
+            sourceDocumentId: docId,
+          }),
+        );
+
+        logActivityAsync(userId, 'POST_UPLOAD_ANALYSIS', 'document', docId, {
+          caseId,
+          analysisDocumentId: newId,
+          confidence: parsed.confidence,
+        });
+
+        write('structured', parsed);
+        write('done', { analysisDocumentId: newId, sourceDocumentId: docId });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'post-upload-analysis failed');
+        write('error', { error: e?.message || 'AI failed' });
+      } finally {
+        reply.raw.end();
+      }
+    },
+  );
 }
 
 // ============================================================================

@@ -20,6 +20,7 @@ import DeleteDocumentConfirm from '@/components/case-detail/DeleteDocumentConfir
 import DeepAnalysisDialog from '@/components/case-detail/DeepAnalysisDialog';
 import CaseActivityDrawer from '@/components/case-detail/CaseActivityDrawer';
 import MarkAsPresentedDialog from '@/components/case-detail/MarkAsPresentedDialog';
+import PostUploadAnalysisDialog from '@/components/case-detail/PostUploadAnalysisDialog';
 import { History as HistoryIcon, Gavel as GavelIcon, Sparkles as SparklesIcon, FileSignature as FileSignatureIcon } from 'lucide-react';
 import { CollapsibleSection, SectionsToolbar, type CompletionState } from '@/components/case-detail/CollapsibleSection';
 import { Briefcase as BriefcaseIcon, Users, Scale as ScaleIcon, DollarSign as DollarSignIcon, FileWarning } from 'lucide-react';
@@ -120,6 +121,7 @@ export default function CaseDetailPage() {
   const [activityOpen, setActivityOpen] = useState(false);
   // Modal "Marcar como presentado"
   const [docToMark, setDocToMark] = useState<Document | null>(null);
+  const [postUploadDoc, setPostUploadDoc] = useState<{ id: string; title: string } | null>(null);
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
@@ -894,7 +896,13 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
               inline. El bloque viejo (synchronous textarea + handleQuery) sigue
               compilando abajo pero ya no se renderiza en producción. */}
           <div className="h-[70vh] min-h-[480px] sm:h-[640px]">
-            <CaseAIChat caseId={caseId} onDocumentUploaded={() => loadDocuments()} />
+            <CaseAIChat
+              caseId={caseId}
+              onDocumentUploaded={(info) => {
+                loadDocuments();
+                if (info?.id) setPostUploadDoc({ id: info.id, title: info.title });
+              }}
+            />
           </div>
 
           {/* (legacy chat — oculto, conservado para no romper handlers) */}
@@ -1337,9 +1345,15 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           setUploadDialogOpen(false);
           setUploadFile(null);
         }}
-        onComplete={() => {
+        onComplete={(result) => {
           // Refrescar la lista de documentos del expediente
           loadDocuments();
+          if (result?.document?.id) {
+            setPostUploadDoc({
+              id: result.document.id,
+              title: result.document.title || 'Documento',
+            });
+          }
         }}
       />
 
@@ -1376,6 +1390,15 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
         documentTitle={docToMark?.title || docToMark?.filename || 'Documento'}
         onClose={() => setDocToMark(null)}
         onMarked={() => loadDocuments()}
+      />
+
+      <PostUploadAnalysisDialog
+        open={!!postUploadDoc}
+        caseId={caseId}
+        documentId={postUploadDoc?.id ?? null}
+        documentTitle={postUploadDoc?.title ?? ''}
+        onClose={() => setPostUploadDoc(null)}
+        onAnalysisSaved={() => loadDocuments()}
       />
     </div>
   );

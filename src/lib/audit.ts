@@ -27,6 +27,7 @@ export type AuditAction =
   | 'DEEP_ANALYSIS_REQUESTED'
   | 'DEEP_ANALYSIS_COMPLETED'
   | 'BRAIN_REFRESHED'
+  | 'POST_UPLOAD_ANALYSIS'
   | 'CHAT_QUERY';
 
 export interface AuditExtra {

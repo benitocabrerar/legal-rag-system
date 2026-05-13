@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, RefreshCw, Copy, Check } from 'lucide-react';
 import { legalPromptsByType, LegalType, PromptCategory } from '@/lib/legal-prompts';
 import { legalTypeConfig } from '@/lib/design-tokens';
 
@@ -26,6 +26,15 @@ export function SpecializedPrompts({ legalType, onPromptSelect, onRefresh }: Spe
   const [expandedCategory, setExpandedCategory] = useState<PromptCategory | null>('analysis');
   const [seed, setSeed] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyPrompt = async (id: string, prompt: string) => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
+    } catch { /* ignore */ }
+  };
   const config = legalTypeConfig[legalType];
   const prompts = legalPromptsByType[legalType] || [];
 
@@ -130,11 +139,21 @@ export function SpecializedPrompts({ legalType, onPromptSelect, onRefresh }: Spe
               {/* Prompts List */}
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-2">
-                  {categoryPrompts.map((promptItem) => (
-                    <button
+                  {categoryPrompts.map((promptItem) => {
+                    const isCopied = copiedId === promptItem.id;
+                    return (
+                    <div
                       key={promptItem.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onPromptSelect(promptItem.prompt)}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onPromptSelect(promptItem.prompt);
+                        }
+                      }}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all group cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <div className="flex items-start gap-3">
                         <span className="text-2xl group-hover:scale-110 transition-transform">{promptItem.icon}</span>
@@ -144,10 +163,29 @@ export function SpecializedPrompts({ legalType, onPromptSelect, onRefresh }: Spe
                           </h4>
                           <p className="text-xs text-gray-600 line-clamp-2">{promptItem.prompt}</p>
                         </div>
-                        <Sparkles className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void copyPrompt(promptItem.id, promptItem.prompt);
+                            }}
+                            title={isCopied ? '¡Copiado!' : 'Copiar prompt al portapapeles'}
+                            aria-label="Copiar prompt"
+                            className={`p-1.5 rounded-md transition-all border ${
+                              isCopied
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                : 'bg-white border-gray-200 text-gray-400 hover:text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                            }`}
+                          >
+                            {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                          <Sparkles className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+                        </div>
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

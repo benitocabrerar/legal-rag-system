@@ -17,7 +17,7 @@
  *   cache name not in the current set.
  */
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const STATIC_CACHE  = `legal-rag-static-${VERSION}`;
 const DYNAMIC_CACHE = `legal-rag-dynamic-${VERSION}`;
 const ALLOWLIST = [STATIC_CACHE, DYNAMIC_CACHE];
@@ -101,7 +101,8 @@ self.addEventListener('fetch', (event) => {
     /\/upload-stream$/.test(url.pathname) ||
     /\/chat$/.test(url.pathname) ||
     /\/generate-document$/.test(url.pathname) ||
-    /\/summarization\/stream/.test(url.pathname);
+    /\/summarization\/stream/.test(url.pathname) ||
+    /\/post-upload-analysis$/.test(url.pathname);
 
   if (url.pathname.startsWith('/api/')) {
     if (isStreamingPath) {

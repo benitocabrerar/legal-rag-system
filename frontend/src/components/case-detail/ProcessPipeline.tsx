@@ -62,14 +62,15 @@ export function ProcessPipeline({ legalType, currentStage, stages, caseId, onSta
         throw new Error(`HTTP ${r.status}: ${txt.slice(0, 160)}`);
       }
       const data = await r.json();
-      const idx = typeof data?.stageIndex === 'number' ? data.stageIndex : null;
-      const label = typeof data?.stageLabel === 'string' ? data.stageLabel : '';
-      const rationale = typeof data?.rationale === 'string' ? data.rationale : '';
-      if (idx !== null && idx >= 0) {
+      const label = String(data?.stage || data?.stageLabel || '').trim();
+      const rationale = String(data?.reasoning || data?.rationale || '').trim();
+      if (label) {
         setLastRationale(rationale || null);
-        onStageInferred?.(idx, label, rationale);
+        // El padre mantiene el stageMap por tipo legal; le pasamos -1 como hint
+        // de "calcula tú el índice a partir del label que te paso".
+        onStageInferred?.(-1, label, rationale);
       } else {
-        setInferError('La IA no devolvió un índice de etapa válido');
+        setInferError('La IA no devolvió una etapa válida');
       }
     } catch (e: any) {
       setInferError(e?.message || 'No se pudo inferir la etapa');
