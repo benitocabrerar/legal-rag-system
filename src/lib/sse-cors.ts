@@ -55,12 +55,42 @@ export function setSseHeaders(request: FastifyRequest, reply: FastifyReply): voi
   reply.raw.setHeader('X-Accel-Buffering', 'no');
   reply.raw.flushHeaders?.();
 
-  // Preámbulo: comentario SSE de 2KB que fuerza a Render/nginx a desbufferar
-  // y enviar headers + primer chunk al cliente inmediatamente, antes de que
-  // arranquen operaciones lentas (embedding, RAG, IA). Sin esto, algunos
-  // proxies esperan a tener ~4KB acumulados antes de iniciar la entrega,
-  // dejando al cliente colgado en "Iniciando…" sin ver progreso.
+  // Disable Nagle's algorithm — TCP_NODELAY. Sin esto, Node junta paquetes
+  // chicos durante ~40ms antes de enviarlos, lo que rompe la entrega
+  // progresiva de los eventos SSE (chunks <1KB suelen quedarse).
   try {
-    reply.raw.write(`: ${'#'.repeat(2048)}\n\n`);
+    (reply.raw.socket as any)?.setNoDelay?.(true);
+  } catch { /* socket gone */ }
+
+  // Preámbulo: comentario SSE de 4KB que fuerza a Render/nginx/cualquier
+  // proxy a desbufferar y enviar headers + primer chunk al cliente
+  // inmediatamente, antes de que arranquen operaciones lentas (embedding,
+  // RAG, IA). Sin esto, varios proxies acumulan hasta 4KB antes de iniciar
+  // la entrega, dejando al cliente colgado en "Iniciando…" sin ver progreso.
+  try {
+    reply.raw.write(`: ${'#'.repeat(4096)}\n\n`);
   } catch { /* client gone */ }
+}
+
+/**
+ * Arranca un keepalive SSE que escribe un comentario `: ping\n\n` cada
+ * `intervalMs` ms al stream. Devuelve un cleanup que cancela el intervalo.
+ *
+ * Usar en endpoints SSE largos: garantiza que el cliente reciba algún byte
+ * cada N ms aunque las operaciones internas (RAG, IA) sean silenciosas,
+ * evitando que Render cierre la conexión por idle timeout o que el browser
+ * marque la respuesta como "stalled".
+ */
+export function startSseKeepalive(
+  reply: FastifyReply,
+  intervalMs: number = 1000,
+): () => void {
+  const handle = setInterval(() => {
+    try {
+      reply.raw.write(`: ka ${Date.now()}\n\n`);
+    } catch {
+      clearInterval(handle);
+    }
+  }, intervalMs);
+  return () => clearInterval(handle);
 }

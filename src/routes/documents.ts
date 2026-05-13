@@ -6,7 +6,7 @@ import { getAiClient } from '../lib/ai-client.js';
 import { extractText } from '../lib/extract-text.js';
 import { serviceRoleClient } from '../lib/supabase.js';
 import { logActivityAsync, listCaseActivity } from '../lib/audit.js';
-import { setSseHeaders } from '../lib/sse-cors.js';
+import { setSseHeaders, startSseKeepalive } from '../lib/sse-cors.js';
 
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_DOCUMENTS || 'legal-documents';
 const CHUNK_SIZE = 1000;
@@ -1116,6 +1116,7 @@ Devuelve EXCLUSIVAMENTE este JSON (primer carácter '{', último '}'):
       );
 
       setSseHeaders(request, reply);
+      const stopKeepalive = startSseKeepalive(reply, 1000);
       const write = (event: string, data: any) => {
         try {
           reply.raw.write(`event: ${event}\n`);
@@ -1281,6 +1282,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         fastify.log.error({ err: e?.message }, 'post-upload-analysis failed');
         write('error', { error: e?.message || 'AI failed' });
       } finally {
+        stopKeepalive();
         reply.raw.end();
       }
     },
@@ -1307,6 +1309,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
 
       // SSE: phase events + token events + structured + done/error
       setSseHeaders(request, reply);
+      const stopKeepalive = startSseKeepalive(reply, 1000);
       const write = (event: string, data: any) => {
         try {
           reply.raw.write(`event: ${event}\n`);
@@ -1578,6 +1581,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         fastify.log.error({ err: e?.message }, 'suggested-prompts failed');
         write('error', { error: e?.message || 'AI failed' });
       } finally {
+        stopKeepalive();
         try { reply.raw.end(); } catch { /* ignore */ }
       }
     },
@@ -1621,6 +1625,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       //   error     { error }
       //   done      { generatedAt }
       setSseHeaders(request, reply);
+      const stopKeepalive = startSseKeepalive(reply, 1000);
       const write = (event: string, data: any) => {
         try {
           reply.raw.write(`event: ${event}\n`);
@@ -1844,6 +1849,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         fastify.log.error({ err: e?.message }, 'legal-reference/analyze failed');
         write('error', { error: e?.message || 'AI failed' });
       } finally {
+        stopKeepalive();
         try { reply.raw.end(); } catch { /* ignore */ }
       }
     },
