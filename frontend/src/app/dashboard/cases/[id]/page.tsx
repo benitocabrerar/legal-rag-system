@@ -778,7 +778,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                           {formatDate(doc.createdAt)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           type="button"
                           onClick={() => handleViewDocument(doc)}
@@ -804,7 +804,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                           title="Eliminar del caso"
                           aria-label="Eliminar documento"
                         >
-                          <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-700" />
+                          <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
                         </button>
                       </div>
                     </div>
@@ -1033,7 +1033,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           </div>
 
           {/* Legal References */}
-          <LegalReferences legalType={legalType} />
+          <LegalReferences legalType={legalType} caseId={caseId} />
         </div>
       </div>
 

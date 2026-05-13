@@ -10,6 +10,7 @@ import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare,
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
 import { HelpFab } from '@/components/help/HelpFab';
+import DeployBadge from '@/components/DeployBadge';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -365,6 +366,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Cmd+K command palette — global */}
       <CommandPaletteProvider />
+
+      {/* Deploy info badge — esquina inferior izquierda */}
+      <DeployBadge />
     </div>
   );
 }

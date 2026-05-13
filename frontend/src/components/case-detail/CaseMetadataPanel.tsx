@@ -189,32 +189,63 @@ export function CaseMetadataPanel({ caseId, onUpdated }: Props) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 overflow-hidden">
-      {/* Header */}
+    <div className="relative bg-white border border-slate-200 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_24px_-8px_rgba(15,23,42,0.08)] mb-6 overflow-hidden">
+      {/* Accent ribbon */}
+      <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-slate-900 via-blue-700 to-indigo-700" />
+
+      {/* Header — minimalista, refinado, con quick stats */}
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200"
+        className="w-full flex items-center justify-between px-7 py-5 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 border-b border-slate-200/70 group"
       >
-        <div className="flex items-center gap-3">
-          <Scale className="w-5 h-5 text-blue-600" />
-          <h2 className="font-bold text-gray-900">{t('cases.caseDataTitle')}</h2>
-          {data.legalMatter && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">
-              {data.legalMatter}
-            </span>
-          )}
-          {data.judicialProcessNumber && (
-            <span className="text-xs text-gray-500 font-mono">
-              N° {data.judicialProcessNumber}
-            </span>
-          )}
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          {/* Icon orb */}
+          <div className="relative flex-shrink-0">
+            <div className="absolute -inset-1 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-xl blur opacity-25" />
+            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 grid place-items-center text-white shadow-md">
+              <Scale className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-slate-900 tracking-tight">{t('cases.caseDataTitle')}</h2>
+              {data.legalMatter && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-white font-bold uppercase tracking-wider">
+                  {data.legalMatter}
+                </span>
+              )}
+              {dirty && (
+                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold uppercase tracking-wider">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+                  Sin guardar
+                </span>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+              {data.clientName && <span className="font-medium text-slate-700">{data.clientName}</span>}
+              {data.judicialProcessNumber && (
+                <>
+                  {data.clientName && <span className="text-slate-300">·</span>}
+                  <span className="font-mono">N° {data.judicialProcessNumber}</span>
+                </>
+              )}
+              {data.proceduralStage && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="italic">{data.proceduralStage}</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        {expanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        <div className="text-slate-400 group-hover:text-slate-700 transition-colors flex-shrink-0">
+          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </div>
       </button>
 
       {!expanded ? null : (
-        <div className="p-6 space-y-5">
+        <div className="px-7 py-6 space-y-6 bg-gradient-to-b from-white to-slate-50/30">
           {/* AI Extraction Banner */}
           <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-4">
             <div className="flex items-start justify-between gap-3">
@@ -326,9 +357,18 @@ export function CaseMetadataPanel({ caseId, onUpdated }: Props) {
               placeholder="Ej: Art. 278 COIP, Art. 76.4 CRE, Art. 188 CT"
             />
             {data.relatedLaws && data.relatedLaws.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 {data.relatedLaws.map((law, i) => (
-                  <span key={i} className="text-[10px] font-mono px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
+                  <span
+                    key={i}
+                    className="
+                      inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1
+                      bg-gradient-to-br from-blue-50 to-indigo-50
+                      text-blue-800 border border-blue-200/60 rounded-md
+                      shadow-sm hover:shadow transition-shadow
+                    "
+                  >
+                    <Briefcase className="w-3 h-3 opacity-60" />
                     {law}
                   </span>
                 ))}
@@ -341,21 +381,51 @@ export function CaseMetadataPanel({ caseId, onUpdated }: Props) {
             <Textarea value={data.factsSummary} onChange={(v) => setField('factsSummary', v)} placeholder={t('cases.factsPlaceholder')} />
           </Section>
 
-          {/* Save */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-            <div className="text-xs text-gray-500">
-              {dirty ? '⚠️ Hay cambios sin guardar' : '✓ Sin cambios pendientes'}
-            </div>
-            <div className="flex items-center gap-2">
-              {success && <span className="text-xs text-emerald-700 font-semibold">{success}</span>}
-              <button
-                onClick={save}
-                disabled={!dirty || saving}
-                className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
+          {/* Save bar — sticky cuando hay cambios */}
+          <div className={`
+            sticky bottom-0 -mx-7 -mb-6 px-7 py-4 backdrop-blur-md border-t transition-all
+            ${dirty
+              ? 'bg-gradient-to-r from-slate-900/95 to-slate-800/95 border-slate-700 text-white shadow-[0_-4px_20px_-4px_rgba(15,23,42,0.25)]'
+              : 'bg-white/80 border-slate-200/70'}
+          `}>
+            <div className="flex items-center justify-between">
+              <div className={`text-xs ${dirty ? 'text-amber-300 font-semibold' : 'text-slate-500'} flex items-center gap-2`}>
+                {dirty ? (
+                  <>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    </span>
+                    Hay cambios sin guardar
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    Sin cambios pendientes
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {success && (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded-md">
+                    <Check className="w-3 h-3" /> {success}
+                  </span>
+                )}
+                <button
+                  onClick={save}
+                  disabled={!dirty || saving}
+                  className={`
+                    inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all
+                    ${dirty
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
+                  `}
+                >
+                  {saving
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <Save className="w-4 h-4" />}
+                  {saving ? 'Guardando…' : 'Guardar cambios'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -366,12 +436,18 @@ export function CaseMetadataPanel({ caseId, onUpdated }: Props) {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-1">
-        {icon}
+    <section className="relative pl-4">
+      {/* Línea decorativa lateral */}
+      <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-gradient-to-b from-blue-200 via-indigo-100 to-transparent rounded-full" />
+      <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.12em] flex items-center gap-2 mb-3">
+        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 ring-1 ring-slate-200/70">
+          {icon}
+        </span>
         {title}
       </h3>
-      {children}
+      <div className="space-y-3">
+        {children}
+      </div>
     </section>
   );
 }
@@ -385,14 +461,21 @@ interface InputProps {
 }
 function Input({ label, value, onChange, type = 'text', placeholder = '' }: InputProps) {
   return (
-    <label className="block">
-      <span className="text-xs font-semibold text-gray-700">{label}</span>
+    <label className="block group">
+      <span className="text-[11px] font-semibold text-slate-600 tracking-wide">{label}</span>
       <input
         type={type}
         value={value ?? ''}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="
+          mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900
+          placeholder-slate-400
+          focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500
+          hover:border-slate-300
+          transition-all
+          shadow-sm
+        "
       />
     </label>
   );
@@ -407,13 +490,19 @@ interface TextareaProps {
 function Textarea({ label, value, onChange, placeholder = '' }: TextareaProps) {
   return (
     <label className="block">
-      {label && <span className="text-xs font-semibold text-gray-700">{label}</span>}
+      {label && <span className="text-[11px] font-semibold text-slate-600 tracking-wide">{label}</span>}
       <textarea
-        rows={3}
+        rows={4}
         value={value ?? ''}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        className="
+          mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900
+          placeholder-slate-400
+          focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500
+          hover:border-slate-300
+          transition-all shadow-sm resize-none
+        "
       />
     </label>
   );
@@ -428,11 +517,16 @@ interface SelectProps {
 function Select({ label, value, onChange, options }: SelectProps) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-gray-700">{label}</span>
+      <span className="text-[11px] font-semibold text-slate-600 tracking-wide">{label}</span>
       <select
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+        className="
+          mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900
+          focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500
+          hover:border-slate-300
+          transition-all shadow-sm
+        "
       >
         {options.map(([v, lbl]: [string, string]) => (
           <option key={v} value={v}>{lbl}</option>

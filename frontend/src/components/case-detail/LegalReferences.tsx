@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { BookOpen, Scale, FileText, ExternalLink, Search } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { BookOpen, Scale, FileText, Search, RefreshCw, Sparkles, ExternalLink } from 'lucide-react';
 import { LegalType, legalTypeConfig } from '@/lib/design-tokens';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface LegalReference {
   id: string;
@@ -17,6 +19,10 @@ interface LegalReference {
 interface LegalReferencesProps {
   legalType: LegalType;
   references?: LegalReference[];
+  /** Si se pasa, el componente intenta cargar referencias REALES desde el
+   *  cerebro del caso (applicableLaws sintetizadas por la IA tras cada
+   *  upload de documento). Permite refresh manual. */
+  caseId?: string;
 }
 
 // Mock references by legal type
@@ -84,12 +90,77 @@ const mockReferencesByType: Partial<Record<LegalType, LegalReference[]>> = {
   ],
 };
 
-export function LegalReferences({ legalType, references }: LegalReferencesProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const config = legalTypeConfig[legalType];
-  const displayReferences = references || mockReferencesByType[legalType] || [];
+/** Convierte applicableLaws del cerebro del caso al shape LegalReference. */
+function brainLawsToReferences(laws: Array<{ norm: string; reasoning?: string }>): LegalReference[] {
+  return laws.map((l, i) => {
+    const norm = l.norm || '';
+    // Inferir type por keywords del título
+    let type: LegalReference['type'] = 'law';
+    const lower = norm.toLowerCase();
+    if (/constituci[oó]n|carta magna/.test(lower)) type = 'constitution';
+    else if (/c[oó]digo/.test(lower)) type = 'code';
+    else if (/sentencia|resoluci[oó]n|fallo|providencia/.test(lower)) type = 'jurisprudence';
 
-  const filteredReferences = displayReferences.filter(
+    // Extraer "Art. X" del título si lo trae
+    const artMatch = norm.match(/art(?:[íi]culo)?\.?\s*(\d+[a-z]?)/i);
+    return {
+      id: `brain-${i}`,
+      type,
+      title: norm.replace(/^art(?:[íi]culo)?\.?\s*\d+[a-z]?\s*(?:de\s*la?\s*)?/i, '').trim() || norm,
+      article: artMatch ? `Art. ${artMatch[1]}` : undefined,
+      description: l.reasoning || 'Aplicable según el análisis IA del expediente.',
+      relevance: 'high',
+    };
+  });
+}
+
+export function LegalReferences({ legalType, references, caseId }: LegalReferencesProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [brainRefs, setBrainRefs] = useState<LegalReference[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [usingBrain, setUsingBrain] = useState(false);
+  const config = legalTypeConfig[legalType];
+
+  // Cargar referencias del cerebro del caso (si está disponible)
+  const fetchFromBrain = useCallback(async (regenerate = false) => {
+    if (!caseId) return;
+    setLoading(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const url = regenerate
+        ? `${API_URL}/api/v1/cases/${caseId}/brain/refresh`
+        : `${API_URL}/api/v1/cases/${caseId}/brain`;
+      const r = await fetch(url, {
+        method: regenerate ? 'POST' : 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      const brain = data.full || data.brain;
+      const laws = brain?.applicableLaws || [];
+      if (Array.isArray(laws) && laws.length > 0) {
+        setBrainRefs(brainLawsToReferences(laws));
+        setUsingBrain(true);
+      } else {
+        setBrainRefs([]);
+        setUsingBrain(false);
+      }
+    } catch {
+      // Mantener mock si falla el cerebro
+      setBrainRefs(null);
+      setUsingBrain(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [caseId]);
+
+  // Carga inicial
+  useEffect(() => {
+    if (caseId) void fetchFromBrain(false);
+  }, [caseId, fetchFromBrain]);
+
+  const sourceRefs = references ?? (brainRefs && brainRefs.length > 0 ? brainRefs : mockReferencesByType[legalType] || []);
+  const filteredReferences = sourceRefs.filter(
     (ref) =>
       ref.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ref.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -153,7 +224,28 @@ export function LegalReferences({ legalType, references }: LegalReferencesProps)
       >
         <div className="flex items-center gap-2 mb-3">
           <BookOpen className="w-5 h-5" style={{ color: config.color }} />
-          <h3 className="font-bold text-gray-900">Referencias Legales</h3>
+          <h3 className="font-bold text-gray-900 flex-1">Referencias Legales</h3>
+          {usingBrain && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700"
+              title="Estas referencias fueron sintetizadas por la IA a partir de los documentos del caso"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              IA
+            </span>
+          )}
+          {caseId && (
+            <button
+              type="button"
+              onClick={() => fetchFromBrain(true)}
+              disabled={loading}
+              title="Regenerar referencias desde los documentos del caso"
+              aria-label="Actualizar referencias legales"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-white/80 transition disabled:opacity-40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Search */}
