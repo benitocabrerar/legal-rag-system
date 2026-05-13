@@ -54,4 +54,13 @@ export function setSseHeaders(request: FastifyRequest, reply: FastifyReply): voi
   reply.raw.setHeader('Connection', 'keep-alive');
   reply.raw.setHeader('X-Accel-Buffering', 'no');
   reply.raw.flushHeaders?.();
+
+  // Preámbulo: comentario SSE de 2KB que fuerza a Render/nginx a desbufferar
+  // y enviar headers + primer chunk al cliente inmediatamente, antes de que
+  // arranquen operaciones lentas (embedding, RAG, IA). Sin esto, algunos
+  // proxies esperan a tener ~4KB acumulados antes de iniciar la entrega,
+  // dejando al cliente colgado en "Iniciando…" sin ver progreso.
+  try {
+    reply.raw.write(`: ${'#'.repeat(2048)}\n\n`);
+  } catch { /* client gone */ }
 }

@@ -106,9 +106,26 @@ export default function LegalReferenceDialog({
     if (!open || !norm) return;
     const ac = new AbortController();
     abortRef.current = ac;
+    // Timeout de inactividad: si no recibimos NINGÚN dato por 90s, abort
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    let lastActivity = Date.now();
+    const armWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog);
+      watchdog = setTimeout(() => {
+        const idle = Date.now() - lastActivity;
+        if (idle >= 90000 && !ac.signal.aborted) {
+          ac.abort();
+          setError('El servidor no respondió en 90s. Render puede estar terminando un deploy; recargá en 1-2 minutos.');
+          setLoading(false);
+        }
+      }, 95000);
+    };
+    const bumpActivity = () => { lastActivity = Date.now(); armWatchdog(); };
+
     const run = async () => {
       reset();
       setLoading(true);
+      armWatchdog();
       try {
         const token = await getAuthToken();
         const r = await fetch(`${API_URL}/api/v1/legal-reference/analyze`, {
@@ -120,9 +137,25 @@ export default function LegalReferenceDialog({
           body: JSON.stringify({ norm, article, description, caseId }),
           signal: ac.signal,
         });
+        bumpActivity();
         if (!r.ok || !r.body) {
           const txt = await r.text().catch(() => '');
           throw new Error(`HTTP ${r.status}: ${txt.slice(0, 250)}`);
+        }
+
+        // Fallback: si el backend aún no es SSE (deploy antiguo), parseamos JSON
+        const contentType = (r.headers.get('content-type') || '').toLowerCase();
+        const isSse = contentType.includes('text/event-stream');
+        if (!isSse) {
+          const data = await r.json();
+          if (ac.signal.aborted) return;
+          setAnalysis(data?.analysis || null);
+          setSources(Array.isArray(data?.sources) ? data.sources : []);
+          setModel(data?.model || '');
+          setProgressPct(100);
+          setProgressLabel('Listo');
+          setLoading(false);
+          return;
         }
 
         const reader = r.body.getReader();
@@ -133,12 +166,14 @@ export default function LegalReferenceDialog({
           const { done, value } = await reader.read();
           if (done) break;
           if (ac.signal.aborted) return;
+          bumpActivity();
           buffer += decoder.decode(value, { stream: true });
           let idx;
           while ((idx = buffer.indexOf('\n\n')) >= 0) {
             const chunk = buffer.slice(0, idx);
             buffer = buffer.slice(idx + 2);
-            const lines = chunk.split('\n');
+            // Ignorar líneas que sean comentarios SSE (preamble keepalive)
+            const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
             const evLine = lines.find((l) => l.startsWith('event:'));
             const dataLine = lines.find((l) => l.startsWith('data:'));
             if (!dataLine) continue;
@@ -170,11 +205,15 @@ export default function LegalReferenceDialog({
           setError(e?.message || 'No se pudo analizar la referencia');
         }
       } finally {
+        if (watchdog) clearTimeout(watchdog);
         if (!ac.signal.aborted) setLoading(false);
       }
     };
     void run();
-    return () => ac.abort();
+    return () => {
+      if (watchdog) clearTimeout(watchdog);
+      ac.abort();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, norm, article, caseId]);
 

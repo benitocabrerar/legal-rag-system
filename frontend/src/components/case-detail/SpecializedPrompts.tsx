@@ -113,6 +113,26 @@ export function SpecializedPrompts({ legalType, onPromptSelect, caseId, onRefres
       const txt = await r.text().catch(() => '');
       throw new Error(`HTTP ${r.status}: ${txt.slice(0, 200)}`);
     }
+    // Fallback: backend viejo todavía devolvía JSON. Detectamos por content-type.
+    const contentType = (r.headers.get('content-type') || '').toLowerCase();
+    if (!contentType.includes('text/event-stream')) {
+      const data = await r.json();
+      const list = Array.isArray(data?.prompts) ? (data.prompts as SuggestedPrompt[]) : [];
+      if (onlyCategory) {
+        setCategoryAi((c) => ({ ...c, [onlyCategory]: list }));
+        setCategoryProgress((p) => ({ ...p, [onlyCategory]: { pct: 100, label: 'Listo', promptsCount: list.length } }));
+      } else {
+        setAiSuggested(list);
+        setAiMeta({
+          generatedAt: data?.generatedAt,
+          model: data?.model,
+          documentCount: data?.context?.documentCount,
+          proceduralStage: data?.context?.proceduralStage,
+        });
+        setGlobalProgress({ pct: 100, label: 'Listo', promptsCount: list.length });
+      }
+      return;
+    }
     const reader = r.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -125,7 +145,7 @@ export function SpecializedPrompts({ legalType, onPromptSelect, caseId, onRefres
       while ((idx = buffer.indexOf('\n\n')) >= 0) {
         const chunk = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 2);
-        const lines = chunk.split('\n');
+        const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
         const evLine = lines.find((l) => l.startsWith('event:'));
         const dataLine = lines.find((l) => l.startsWith('data:'));
         if (!dataLine) continue;
