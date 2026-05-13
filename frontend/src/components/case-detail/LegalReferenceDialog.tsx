@@ -87,6 +87,14 @@ export default function LegalReferenceDialog({
   const [progressPct, setProgressPct] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
   const [tokensReceived, setTokensReceived] = useState(0);
+  const [diag, setDiag] = useState<{
+    status?: number;
+    contentType?: string;
+    ttfb?: number;
+    bytesReceived?: number;
+    eventsReceived?: number;
+    elapsed?: number;
+  }>({});
   const abortRef = useRef<AbortController | null>(null);
 
   const reset = () => {
@@ -126,6 +134,12 @@ export default function LegalReferenceDialog({
       reset();
       setLoading(true);
       armWatchdog();
+      const startTs = Date.now();
+      let bytes = 0;
+      let events = 0;
+      const tickElapsed = setInterval(() => {
+        setDiag((d) => ({ ...d, elapsed: Math.round((Date.now() - startTs) / 1000), bytesReceived: bytes, eventsReceived: events }));
+      }, 500);
       try {
         const token = await getAuthToken();
         const r = await fetch(`${API_URL}/api/v1/legal-reference/analyze`, {
@@ -138,13 +152,15 @@ export default function LegalReferenceDialog({
           signal: ac.signal,
         });
         bumpActivity();
+        const ttfb = Date.now() - startTs;
+        const contentType = (r.headers.get('content-type') || '').toLowerCase();
+        setDiag((d) => ({ ...d, status: r.status, contentType, ttfb }));
         if (!r.ok || !r.body) {
           const txt = await r.text().catch(() => '');
           throw new Error(`HTTP ${r.status}: ${txt.slice(0, 250)}`);
         }
 
         // Fallback: si el backend aún no es SSE (deploy antiguo), parseamos JSON
-        const contentType = (r.headers.get('content-type') || '').toLowerCase();
         const isSse = contentType.includes('text/event-stream');
         if (!isSse) {
           const data = await r.json();
@@ -167,6 +183,7 @@ export default function LegalReferenceDialog({
           if (done) break;
           if (ac.signal.aborted) return;
           bumpActivity();
+          if (value) bytes += value.byteLength;
           buffer += decoder.decode(value, { stream: true });
           let idx;
           while ((idx = buffer.indexOf('\n\n')) >= 0) {
@@ -177,6 +194,7 @@ export default function LegalReferenceDialog({
             const evLine = lines.find((l) => l.startsWith('event:'));
             const dataLine = lines.find((l) => l.startsWith('data:'));
             if (!dataLine) continue;
+            events += 1;
             const event = evLine ? evLine.slice(6).trim() : 'message';
             let payload: any = null;
             try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { /* ignore */ }
@@ -205,7 +223,9 @@ export default function LegalReferenceDialog({
           setError(e?.message || 'No se pudo analizar la referencia');
         }
       } finally {
+        clearInterval(tickElapsed);
         if (watchdog) clearTimeout(watchdog);
+        setDiag((d) => ({ ...d, elapsed: Math.round((Date.now() - startTs) / 1000), bytesReceived: bytes, eventsReceived: events }));
         if (!ac.signal.aborted) setLoading(false);
       }
     };
@@ -303,6 +323,16 @@ export default function LegalReferenceDialog({
                   }}
                 />
               </div>
+              {/* Diagnostic line — útil si SSE se cuelga, el usuario puede copiar/pegar */}
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono text-indigo-700/70">
+                <div>HTTP {diag.status ?? '—'}</div>
+                <div>{diag.contentType || 'pendiente'}</div>
+                <div>TTFB {diag.ttfb != null ? `${diag.ttfb}ms` : '—'}</div>
+                <div>{diag.elapsed != null ? `${diag.elapsed}s elapsed` : '—'}</div>
+                <div>{(diag.bytesReceived ?? 0).toLocaleString()} bytes</div>
+                <div>{diag.eventsReceived ?? 0} events</div>
+              </div>
+
               {/* Steps mini timeline */}
               <div className="mt-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider">
                 {[

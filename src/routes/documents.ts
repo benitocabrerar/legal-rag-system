@@ -1230,8 +1230,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
 
         if (!parsed || typeof parsed !== 'object') {
           write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          stopKeepalive();
           reply.raw.end();
-          return;
+          return reply;
         }
 
         // Persistir como ai_analysis adjunto
@@ -1283,8 +1284,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         write('error', { error: e?.message || 'AI failed' });
       } finally {
         stopKeepalive();
-        reply.raw.end();
+        try { reply.raw.end(); } catch { /* ignore */ }
       }
+      return reply;
     },
   );
 
@@ -1541,8 +1543,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         }
         if (!parsed || !Array.isArray(parsed.prompts)) {
           write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          stopKeepalive();
           reply.raw.end();
-          return;
+          return reply;
         }
 
         let prompts = (parsed.prompts as any[])
@@ -1584,6 +1587,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         stopKeepalive();
         try { reply.raw.end(); } catch { /* ignore */ }
       }
+      return reply;
     },
   );
 
@@ -1611,19 +1615,10 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
       const userId = (request.user as any).id;
-      const body = z.object({
-        norm: z.string().min(1).max(300),
-        article: z.string().max(80).optional().nullable(),
-        caseId: z.string().uuid().optional().nullable(),
-        description: z.string().max(800).optional().nullable(),
-      }).parse(request.body);
 
-      // SSE — el cliente recibe eventos:
-      //   phase     { phase, label, pct }       progreso categorizado
-      //   token     { delta }                   chunks del modelo
-      //   structured{ analysis, sources, model } resultado final parseado
-      //   error     { error }
-      //   done      { generatedAt }
+      // CRÍTICO — setSseHeaders ANTES de cualquier parsing. Si z.parse fallaba
+      // antes, Fastify mandaba un JSON 400 sin Content-Type: text/event-stream,
+      // y el cliente quedaba colgado en readyState=CONNECTING esperando SSE.
       setSseHeaders(request, reply);
       const stopKeepalive = startSseKeepalive(reply, 1000);
       const write = (event: string, data: any) => {
@@ -1634,6 +1629,22 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       };
       const phase = (phaseKey: string, label: string, pct: number) =>
         write('phase', { phase: phaseKey, label, pct });
+
+      // Validar body ahora — si Zod falla, lo reportamos como evento SSE.
+      let body: { norm: string; article?: string | null; caseId?: string | null; description?: string | null };
+      try {
+        body = z.object({
+          norm: z.string().min(1).max(300),
+          article: z.string().max(80).optional().nullable(),
+          caseId: z.string().uuid().optional().nullable(),
+          description: z.string().max(800).optional().nullable(),
+        }).parse(request.body);
+      } catch (zerr: any) {
+        write('error', { error: 'INVALID_BODY', detail: zerr?.message || 'validation failed' });
+        stopKeepalive();
+        try { reply.raw.end(); } catch { /* ignore */ }
+        return reply;
+      }
 
       try {
         phase('starting', 'Iniciando análisis…', 2);
@@ -1830,8 +1841,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         }
         if (!parsed || typeof parsed !== 'object') {
           write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          stopKeepalive();
           reply.raw.end();
-          return;
+          return reply;
         }
 
         write('structured', {
@@ -1852,6 +1864,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         stopKeepalive();
         try { reply.raw.end(); } catch { /* ignore */ }
       }
+      return reply;
     },
   );
 }
