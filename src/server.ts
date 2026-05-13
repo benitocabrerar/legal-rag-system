@@ -87,9 +87,35 @@ applyPrismaMiddleware(prisma);
 
 const app = Fastify({ logger: true });
 
-// Plugins
+// Plugins — CORS multi-origen.
+// CORS_ORIGIN puede ser:
+//   '*'                                          → permite todo (sólo dev)
+//   'https://app.example.com'                    → un solo origen
+//   'https://a.com,https://b.com,https://c.com'  → varios separados por coma
+// Además, siempre se permite localhost en dev. La función valida case-by-case
+// para que multi-dominio (vercel.app + custom domain cognitex.app) funcione
+// sin tener que adivinar cuál pega en cada request.
+const CORS_RAW = process.env.CORS_ORIGIN || '';
+const CORS_ALLOWLIST: string[] = CORS_RAW === '*'
+  ? []
+  : CORS_RAW.split(',').map(s => s.trim()).filter(Boolean);
+const isWildcard = CORS_RAW === '*' || CORS_RAW === '';
 await app.register(cors, {
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, cb) => {
+    // Requests same-origin / curl / Postman llegan sin Origin → permitir.
+    if (!origin) return cb(null, true);
+    if (isWildcard) return cb(null, true);
+    if (CORS_ALLOWLIST.includes(origin)) return cb(null, true);
+    // Vercel preview deploys auto-permitidos (*.vercel.app del mismo proyecto)
+    if (/^https:\/\/poweria-legal-[a-z0-9]+-benitos-projects-eadee50c\.vercel\.app$/.test(origin)) {
+      return cb(null, true);
+    }
+    // Localhost en dev
+    if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
+      return cb(null, true);
+    }
+    return cb(new Error(`CORS: origin '${origin}' not allowed`), false);
+  },
   credentials: true,
 });
 
