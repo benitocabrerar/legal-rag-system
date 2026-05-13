@@ -251,6 +251,152 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
     },
   );
 
+  // ─── GET /admin/registro-oficial/ingestion-log ─────────────────────────
+  // Lista detallada de TODAS las publicaciones que fueron ingestadas al
+  // corpus legal vectorizado (status='ingested'). Incluye join a
+  // legal_documents y legal_document_chunks para reportar tamaño real
+  // del texto + chunks generados.
+  fastify.get<{ Querystring: { limit?: string; q?: string } }>(
+    '/admin/registro-oficial/ingestion-log',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const limit = Math.min(500, Math.max(10, parseInt(request.query.limit || '100', 10)));
+      const q = (request.query.q || '').trim();
+
+      const conditions: string[] = ["rp.status = 'ingested'", 'rp.ingested_legal_doc_id IS NOT NULL'];
+      const params: any[] = [];
+      if (q) {
+        params.push(`%${q}%`);
+        conditions.push(`(rp.title ILIKE $${params.length} OR rp.ai_summary ILIKE $${params.length} OR ld.title ILIKE $${params.length})`);
+      }
+      params.push(limit);
+
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        publication_id: string;
+        legal_doc_id: string | null;
+        legal_doc_title: string | null;
+        legal_doc_norm_type: string | null;
+        legal_doc_jurisdiction: string | null;
+        published_at: Date | null;
+        edition_number: string | null;
+        edition_date: Date | null;
+        edition_pdf_url: string | null;
+        publication_type: string | null;
+        publication_number: string | null;
+        title: string;
+        issuing_entity: string | null;
+        ai_summary: string | null;
+        ai_classification: string | null;
+        ai_relevance_score: number | null;
+        ai_keywords: string[] | null;
+        raw_text_length: number | null;
+        content_size_bytes: number | null;
+        chunks_count: bigint | null;
+        reviewed_by: string | null;
+        reviewer_email: string | null;
+        reviewed_at: Date | null;
+        ingested_at: Date | null;
+        created_at: Date;
+      }>>(
+        `SELECT
+            rp.id AS publication_id,
+            rp.ingested_legal_doc_id AS legal_doc_id,
+            ld.title AS legal_doc_title,
+            ld.norm_type AS legal_doc_norm_type,
+            ld.jurisdiction AS legal_doc_jurisdiction,
+            ld.published_at,
+            rp.edition_number,
+            rp.edition_date,
+            rp.edition_pdf_url,
+            rp.publication_type,
+            rp.publication_number,
+            rp.title,
+            rp.issuing_entity,
+            rp.ai_summary,
+            rp.ai_classification,
+            rp.ai_relevance_score,
+            rp.ai_keywords,
+            rp.raw_text_length,
+            OCTET_LENGTH(COALESCE(ld.content, ''))::int AS content_size_bytes,
+            (SELECT COUNT(*)::bigint FROM public.legal_document_chunks ldc
+              WHERE ldc.legal_document_id = ld.id) AS chunks_count,
+            rp.reviewed_by,
+            u.email AS reviewer_email,
+            rp.reviewed_at,
+            rp.ingested_at,
+            rp.created_at
+          FROM public.registry_publications rp
+          LEFT JOIN public.legal_documents ld ON ld.id = rp.ingested_legal_doc_id
+          LEFT JOIN public.users u ON u.id = rp.reviewed_by
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY rp.ingested_at DESC NULLS LAST, rp.created_at DESC
+          LIMIT $${params.length}`,
+        ...params,
+      );
+
+      // Aggregate stats para el header del tab
+      const agg = await prisma.$queryRawUnsafe<Array<{
+        total: bigint;
+        total_bytes: bigint;
+        total_chunks: bigint;
+        last_24h: bigint;
+        last_7d: bigint;
+      }>>(
+        `SELECT
+            COUNT(*)::bigint AS total,
+            COALESCE(SUM(OCTET_LENGTH(COALESCE(ld.content, ''))), 0)::bigint AS total_bytes,
+            COALESCE(SUM(
+              (SELECT COUNT(*) FROM public.legal_document_chunks ldc
+                WHERE ldc.legal_document_id = ld.id)
+            ), 0)::bigint AS total_chunks,
+            COUNT(*) FILTER (WHERE rp.ingested_at >= now() - interval '24 hours')::bigint AS last_24h,
+            COUNT(*) FILTER (WHERE rp.ingested_at >= now() - interval '7 days')::bigint AS last_7d
+          FROM public.registry_publications rp
+          LEFT JOIN public.legal_documents ld ON ld.id = rp.ingested_legal_doc_id
+          WHERE rp.status = 'ingested' AND rp.ingested_legal_doc_id IS NOT NULL`,
+      );
+      const a = agg[0] || { total: 0n, total_bytes: 0n, total_chunks: 0n, last_24h: 0n, last_7d: 0n };
+
+      return reply.send({
+        summary: {
+          totalIngested: Number(a.total),
+          totalBytes: Number(a.total_bytes),
+          totalChunks: Number(a.total_chunks),
+          last24h: Number(a.last_24h),
+          last7d: Number(a.last_7d),
+        },
+        items: rows.map((r) => ({
+          publicationId: r.publication_id,
+          legalDocId: r.legal_doc_id,
+          legalDocTitle: r.legal_doc_title,
+          normType: r.legal_doc_norm_type,
+          jurisdiction: r.legal_doc_jurisdiction,
+          publishedAt: r.published_at?.toISOString() ?? null,
+          editionNumber: r.edition_number,
+          editionDate: r.edition_date?.toISOString() ?? null,
+          editionPdfUrl: r.edition_pdf_url,
+          publicationType: r.publication_type,
+          publicationNumber: r.publication_number,
+          title: r.title,
+          issuingEntity: r.issuing_entity,
+          aiSummary: r.ai_summary,
+          aiClassification: r.ai_classification,
+          aiRelevanceScore: r.ai_relevance_score,
+          aiKeywords: r.ai_keywords || [],
+          rawTextLength: r.raw_text_length,
+          contentSizeBytes: r.content_size_bytes,
+          chunksCount: Number(r.chunks_count || 0),
+          reviewedBy: r.reviewed_by,
+          reviewerEmail: r.reviewer_email,
+          reviewedAt: r.reviewed_at?.toISOString() ?? null,
+          ingestedAt: r.ingested_at?.toISOString() ?? null,
+          createdAt: r.created_at.toISOString(),
+        })),
+      });
+    },
+  );
+
   // ─── POST /admin/registro-oficial/scan-now ─────────────────────────────
   // Dispara un scan manual de forma asíncrona
   fastify.post<{ Body: { year?: number } }>(
