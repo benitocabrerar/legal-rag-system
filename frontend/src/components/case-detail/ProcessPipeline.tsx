@@ -56,6 +56,7 @@ export function ProcessPipeline({ legalType, currentStage, stages, caseId, onSta
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        body: '{}',
       });
       if (!r.ok) {
         const txt = await r.text().catch(() => '');

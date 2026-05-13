@@ -889,7 +889,7 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
         {/* CENTER PANEL: AI Assistant */}
         <div className="lg:col-span-6 space-y-6">
           {/* Specialized Prompts */}
-          <SpecializedPrompts legalType={legalType} onPromptSelect={handlePromptSelect} />
+          <SpecializedPrompts legalType={legalType} caseId={caseId} onPromptSelect={handlePromptSelect} />
 
           {/* Chat Interface — nuevo componente con streaming Claude, sugerencias
               específicas del caso, copy / regenerate / export, y subida de archivos

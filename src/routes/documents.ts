@@ -1232,6 +1232,184 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       }
     },
   );
+
+  // =========================================================================
+  // POST /cases/:id/suggested-prompts  —  IA genera prompts especializados
+  //   altamente personalizados según el caso, su etapa procesal, sus
+  //   documentos y los hallazgos del cerebro. Reemplaza la lista estática
+  //   por sugerencias contextualizadas (5-10 por categoría).
+  //
+  //   Devuelve un JSON con `prompts: Array<{ id, label, prompt, category, icon, why }>`
+  //   donde `category` ∈ analysis|drafting|research|strategy|compliance|search|document|citation
+  // =========================================================================
+  fastify.post<{ Params: { id: string } }>(
+    '/cases/:id/suggested-prompts',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+
+      const ownRows = await prisma.$queryRawUnsafe<Array<{
+        id: string; title: string; description: string | null;
+        legal_type: string | null; procedural_stage: string | null;
+        metadata: any;
+      }>>(
+        `SELECT id, title, description, legal_type, procedural_stage, metadata
+           FROM public.cases
+          WHERE id = $1 AND user_id = $2
+          LIMIT 1`,
+        request.params.id, userId,
+      );
+      const own = ownRows[0];
+      if (!own) return reply.code(404).send({ error: 'Case not found' });
+
+      const docs = await prisma.$queryRawUnsafe<Array<{
+        title: string; kind: string | null; presented_to: string | null;
+      }>>(
+        `SELECT title, COALESCE(kind, 'uploaded') AS kind, presented_to
+           FROM public.documents
+          WHERE case_id = $1 AND replaced_at IS NULL
+          ORDER BY
+            CASE COALESCE(kind, 'uploaded')
+              WHEN 'court_filed' THEN 0
+              WHEN 'uploaded' THEN 1
+              WHEN 'ai_generated' THEN 2
+              WHEN 'ai_analysis' THEN 3
+              ELSE 4
+            END,
+            created_at DESC
+          LIMIT 15`,
+        request.params.id,
+      );
+
+      const brain = (own.metadata && typeof own.metadata === 'object'
+        && 'brain' in own.metadata) ? (own.metadata as any).brain : null;
+
+      const aiClient = await getAiClient();
+
+      const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior diseñando ATAJOS DE TRABAJO
+contextualizados para un caso real. Vas a generar entre 8 y 14 prompts de
+trabajo distribuidos en categorías. Cada prompt debe:
+
+- Ser ESPECÍFICO al caso (mencionar partes, montos, fechas, normas concretas
+  cuando aplique — NO genérico tipo "analizar el caso").
+- Ser INMEDIATAMENTE EJECUTABLE (que el abogado pueda copiarlo y pegarlo en
+  un chat IA y obtener valor real).
+- Estar en español ecuatoriano profesional.
+- Reflejar la etapa procesal real ("${own.procedural_stage || 'sin etapa definida'}"):
+  si está en instrucción fiscal, NO sugieras prompts de apelación.
+- Considerar la mezcla de documentos disponibles (uploaded vs court_filed vs
+  ai_generated) — si hay docs court_filed, prioriza estrategia ofensiva.
+
+CATEGORÍAS VÁLIDAS (usa entre 4 y 7 distintas):
+- analysis    → análisis legal/probatorio
+- drafting    → redacción de escritos
+- research    → investigación normativa/jurisprudencial
+- strategy    → estrategia procesal/táctica
+- compliance  → cumplimiento de plazos/forma
+- search      → búsqueda en el expediente o RAG
+- document    → trabajar con un documento específico
+- citation    → buscar/citar normas o jurisprudencia
+
+SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
+{
+  "prompts": [
+    {
+      "id": "<kebab-case único>",
+      "category": "analysis|drafting|research|strategy|compliance|search|document|citation",
+      "icon": "<un emoji que sintetice la acción>",
+      "label": "<título corto (3-6 palabras) que el abogado verá en el card>",
+      "prompt": "<el texto exacto que se envía al chat IA — 1 a 3 frases concretas, en imperativo, mencionando elementos del caso>",
+      "why": "<1 línea explicando por qué este prompt es relevante AHORA para este caso>"
+    }
+  ]
+}`;
+
+      const docsList = docs.length === 0
+        ? '(sin documentos en el expediente)'
+        : docs.map((d, i) => {
+            const tag = d.kind === 'court_filed' && d.presented_to
+              ? `${d.kind} → ${d.presented_to}`
+              : d.kind;
+            return `${i + 1}. [${tag}] ${d.title}`;
+          }).join('\n');
+
+      const brainBlock = brain ? [
+        '=== CEREBRO DEL CASO (síntesis previa) ===',
+        brain.summary ? `Resumen: ${String(brain.summary).slice(0, 800)}` : '',
+        brain.proceduralStage ? `Etapa según cerebro: ${brain.proceduralStage}` : '',
+        brain.riskLevel ? `Nivel de riesgo: ${brain.riskLevel} — ${String(brain.riskReasoning || '').slice(0, 300)}` : '',
+        Array.isArray(brain.gaps) && brain.gaps.length
+          ? `Gaps detectados: ${brain.gaps.slice(0, 5).map((g: any) => String(g)).join('; ')}` : '',
+        Array.isArray(brain.nextActions) && brain.nextActions.length
+          ? `Próximas acciones según cerebro: ${brain.nextActions.slice(0, 5).map((a: any) => `${a.priority || ''} ${a.action || ''}`).join('; ')}` : '',
+      ].filter(Boolean).join('\n') : '(sin cerebro todavía generado)';
+
+      const ctx = [
+        '=== CASO ===',
+        `Título: ${own.title}`,
+        own.legal_type ? `Tipo legal: ${own.legal_type}` : '',
+        own.procedural_stage ? `Etapa procesal: ${own.procedural_stage}` : '',
+        own.description ? `Descripción: ${String(own.description).slice(0, 1500)}` : '',
+        '',
+        '=== DOCUMENTOS DEL EXPEDIENTE ===',
+        docsList,
+        '',
+        brainBlock,
+        '',
+        'Generá los prompts especializados ahora.',
+      ].filter(Boolean).join('\n');
+
+      try {
+        const completion = await aiClient.chat.completions.create({
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
+          max_tokens: 3500,
+        });
+        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+        const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+        const start = fenced.indexOf('{');
+        const end = fenced.lastIndexOf('}');
+        let parsed: any = null;
+        if (start >= 0 && end > start) {
+          try {
+            parsed = JSON.parse(fenced.slice(start, end + 1));
+          } catch {
+            try {
+              parsed = JSON.parse(fenced.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1'));
+            } catch { /* null */ }
+          }
+        }
+        if (!parsed || !Array.isArray(parsed.prompts)) {
+          return reply.code(502).send({ error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+        }
+        const validCats = new Set(['analysis', 'drafting', 'research', 'strategy', 'compliance', 'search', 'document', 'citation']);
+        const prompts = (parsed.prompts as any[])
+          .filter((p) => p && typeof p === 'object' && typeof p.prompt === 'string' && typeof p.label === 'string')
+          .slice(0, 14)
+          .map((p, i) => ({
+            id: typeof p.id === 'string' && p.id ? String(p.id).slice(0, 80) : `ai-suggested-${i + 1}`,
+            category: validCats.has(p.category) ? p.category : 'analysis',
+            icon: typeof p.icon === 'string' && p.icon ? String(p.icon).slice(0, 4) : '✨',
+            label: String(p.label).slice(0, 80),
+            prompt: String(p.prompt).slice(0, 1200),
+            why: typeof p.why === 'string' ? String(p.why).slice(0, 240) : '',
+          }));
+        return reply.send({
+          prompts,
+          model: aiClient.model,
+          generatedAt: new Date().toISOString(),
+          context: {
+            legalType: own.legal_type,
+            proceduralStage: own.procedural_stage,
+            documentCount: docs.length,
+            hasBrain: !!brain,
+          },
+        });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'suggested-prompts failed');
+        return reply.code(500).send({ error: e?.message || 'AI failed' });
+      }
+    },
+  );
 }
 
 // ============================================================================
