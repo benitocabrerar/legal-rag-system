@@ -729,4 +729,183 @@ Grupos: Crear · Navegar · Filtros rápidos · Ayuda. Algunos:
 - "Centro de ayuda" · "Iniciar tour de esta página"
 `,
   },
+  {
+    id: 'ciclo-vida-documentos',
+    title: 'Ciclo de vida de los documentos del expediente',
+    category: 'casos',
+    description: 'Cada documento del caso tiene un tipo (kind) que la IA usa para priorizar: subido, borrador IA, análisis IA o presentado oficialmente.',
+    keywords: ['documentos', 'kind', 'lifecycle', 'court_filed', 'ai_generated', 'ai_analysis', 'borrador', 'presentado'],
+    icon: '📑',
+    body: `## Los 4 tipos de documento
+
+Cada documento en el expediente tiene un **kind** que se muestra como badge de color. La IA prioriza unos sobre otros al razonar sobre tu caso:
+
+- **uploaded** (indigo, ícono 📄) — El que vos subís. Evidencia, contratos, providencias, escritos de contraparte.
+- **ai_generated** (purple, ícono ✨) — Borrador generado por la IA con el módulo de Generación de Documentos. **No es oficial todavía** — la IA y los demás abogados lo tratan como propuesta.
+- **ai_analysis** (fucsia, ícono ✨) — Análisis o dictamen producido por la IA (Análisis Profundo, Post-Upload, Referencia Legal). Conclusiones, no evidencia. **Nunca se vectoriza** para que no contamine la búsqueda RAG.
+- **court_filed** (esmeralda, ícono ⚖️) — Documento que ya presentaste oficialmente al juzgado/fiscalía. **Verdad oficial del expediente** — la IA le da máxima prioridad sobre cualquier borrador propio.
+
+## Cómo marcar un documento como presentado
+
+1. En la lista de documentos del caso, encontrá el documento (típicamente uno **uploaded** o **ai_generated**).
+2. Click en el ícono ⚖️ (Gavel) que aparece a la derecha.
+3. Se abre el dialog "Marcar como presentado oficialmente":
+   - **Presentado ante**: el juzgado/tribunal/fiscalía. Hay chips con los más comunes (Tribunal de Garantías Penales, Unidad Judicial Civil, etc).
+   - **Fecha**: por defecto hoy, ajustable.
+4. Confirmá. El documento cambia a **court_filed** y la IA recalcula el cerebro del caso.
+
+A partir de ahí, cuando pidas un análisis profundo, generes un escrito o consultes el chat, la IA verá ese documento como verdad oficial y orientará su razonamiento.
+
+## Reemplazo de versiones
+
+Si subís una versión nueva que reemplaza a un documento anterior, el sistema marca el original con \`replaced_at\` (se oculta de la lista por defecto pero queda en historial). Útil para versionar borradores antes de presentar.
+`,
+  },
+  {
+    id: 'analisis-ia-post-upload',
+    title: 'Análisis IA al subir un documento',
+    category: 'casos',
+    description: 'Cada vez que subís un nuevo documento al expediente, la IA produce un análisis automático con acciones urgentes, plan de trabajo y tareas sugeridas.',
+    keywords: ['post-upload', 'análisis automático', 'IA', 'subir documento', 'acciones urgentes', 'plan de trabajo'],
+    icon: '🧠',
+    body: `## Qué dispara el análisis
+
+Apenas termina la subida de un documento (desde el panel del caso o desde el chat del asistente), se abre automáticamente el dialog **Análisis IA del documento**. Claude Opus 4.7 lee:
+
+- El documento recién subido (texto completo).
+- El resto del expediente (priorizando los **court_filed** y **uploaded**).
+- El cerebro del caso (resumen, partes, etapa procesal).
+
+Y devuelve un JSON estructurado que se renderiza en secciones colapsables coloreadas.
+
+## Secciones del análisis
+
+- **Conclusión clave** — 1 línea en violeta: el cambio más importante para el caso.
+- **Qué aporta al expediente** — 2-4 oraciones explicando el valor del documento.
+- **Acciones urgentes** — Lista con plazo legal o táctico, prioridad alta/media/baja (rojo/ámbar/verde).
+- **Plan de trabajo** — Pasos numerados con owner sugerido (abogado / cliente / fiscal / juez).
+- **Tareas a crear** — Botón "Crear" para generar la tarea con plazo y categoría sugeridos.
+- **Documentos a generar** — Qué escritos preparar, plazo y juzgado destinatario.
+- **A actualizar ya** — Qué corregir o completar en el expediente.
+- **Riesgos detectados** — Con severidad y mitigación propuesta.
+- **Normas aplicables** — Artículos del COIP/COGEP/CRE con relevancia.
+- **Información faltante** — Gaps que la IA no pudo resolver.
+- **Confianza del modelo** — Porcentaje 0-100%.
+
+El resultado se guarda automáticamente como documento del expediente con kind **ai_analysis** linkeado al documento original. Lo encontrás siempre en la lista del caso con un ícono ✨ y borde fucsia.
+
+## Cuándo regenerar
+
+Si la IA falló en parsear el documento (PDF escaneado sin OCR, archivo dañado) podés volver a subirlo. El nuevo análisis reemplaza al anterior automáticamente.
+`,
+  },
+  {
+    id: 'prompts-ia-categoria',
+    title: 'Prompts especializados generados por IA',
+    category: 'litigacion',
+    description: 'Cada categoría de prompts (Análisis, Redacción, Estrategia, etc.) tiene un botón "IA avanzado" que genera 6-10 prompts específicos al caso con razonamiento multi-paso.',
+    keywords: ['prompts', 'IA avanzado', 'categoría', 'análisis', 'redacción', 'estrategia', 'investigación'],
+    icon: '🧩',
+    body: `## El panel Prompts Especializados
+
+En la página de detalle del caso, el panel central tiene un acordeón **"Prompts Especializados - <Tipo>"** con 8 categorías:
+
+- 📊 Análisis Legal · 📝 Redacción · 🔍 Investigación · ♟️ Estrategia
+- ✅ Cumplimiento · ✅ Búsqueda · ✅ Documentos · ✅ Citas Legales
+
+Cada categoría tiene un conjunto base de prompts estáticos (cargados según el tipo legal del caso: penal/civil/laboral/etc).
+
+## Botón "IA avanzado" por categoría
+
+A la derecha del título de cada categoría hay un botón **Brain / IA avanzado** (gradient fucsia→purple). Al pulsarlo:
+
+1. Se expande la categoría y aparece una **barra de progreso inline** con porcentaje grande, label de fase ("Generando prompt 4 de ~8…") y un pulse overlay.
+2. Claude Opus 4.7 genera **6 a 10 prompts AVANZADOS exclusivos para esa categoría**, mucho más profundos que los estáticos:
+   - Asumen abogado senior — no explican básico.
+   - Activan razonamiento legal multi-paso.
+   - Usan terminología técnica precisa de la materia (penal/civil/etc).
+   - Cada prompt puede ser de 3-5 frases, mencionando partes, montos, normas concretas del caso real.
+3. Los prompts IA aparecen al inicio de la lista con borde fucsia 2px y badge **"IA · avanzado"**, junto con un texto \`Why\` explicando por qué ese prompt es relevante AHORA para el caso.
+
+## Botón "Generar con IA" global
+
+Arriba del panel, junto al título "Prompts Especializados", hay otro botón que genera 8-14 prompts distribuidos en varias categorías de una sola pasada. Útil para un primer vistazo panorámico. Los prompts globales se muestran en una sección destacada arriba de las categorías.
+
+## Copiar un prompt
+
+Cada prompt tiene un mini-botón de copy (visible al hover) con feedback de check verde por 1.5s. Útil cuando querés llevarte el prompt a otra herramienta o quedártelo en el portapapeles.
+
+## Refrescar etapa procesal
+
+A la izquierda del panel está el bloque **Proceso <Tipo> — Etapa N de M** con un botón **"Re-evaluar IA"**. La IA lee los documentos del expediente y propone la etapa procesal actual con un *rationale* breve (por qué cree que está en esa etapa). Vos podés aceptarla o mantener la que ya tenías.
+`,
+  },
+  {
+    id: 'analisis-referencia-legal',
+    title: 'Análisis profundo de una norma (Referencias Legales)',
+    category: 'litigacion',
+    description: 'Click en cualquier card del panel Referencias Legales y la IA + corpus RAG generan análisis completo: texto literal, importancia para tu caso, jurisprudencia, estrategia.',
+    keywords: ['referencias legales', 'norma', 'artículo', 'COIP', 'COGEP', 'jurisprudencia', 'análisis ampliado'],
+    icon: '⚖️',
+    body: `## Cómo se dispara
+
+En la columna derecha del caso encontrás el panel **Referencias Legales** con normas pertinentes al caso (sintetizadas por el cerebro IA cuando subiste documentos). Cada card muestra: tipo (Constitución/Código/Ley/Jurisprudencia), título, artículo, descripción corta y badge de relevancia (Alta/Media/Baja).
+
+**Click en cualquier card** y se abre el dialog **Análisis profundo de la norma**. El sistema:
+
+1. **Cargando contexto** — toma título de norma + artículo + descripción + tu caso (título, materia, etapa, descripción).
+2. **Embedding semántico** — calcula el vector de búsqueda.
+3. **RAG sobre corpus legal** — busca en \`legal_document_chunks\` (138 leyes ecuatorianas vectorizadas con 36.704 chunks). Filtro por país (EC), top-5 fuentes por score combinado semántico+keyword.
+4. **Análisis IA** — Claude Opus 4.7 con el texto del artículo + extractos + contexto del caso.
+
+Una **barra de progreso con mini-timeline** (Contexto → Embedding → RAG → Análisis IA → Estrategia → Listo) muestra el avance en tiempo real (TTFB, bytes, eventos recibidos).
+
+## Qué muestra el análisis
+
+- **Texto literal del artículo** — transcrito EXACTO del corpus. Si no se recuperó, la IA dice "literal no recuperado" sin inventar.
+- **Resumen** — qué establece la norma en 3-5 oraciones.
+- **Análisis jurídico** — bien protegido, tipo penal/civil, sujetos, verbo rector, elementos objetivos y subjetivos.
+- **Importancia para este caso** — específicamente por qué importa AHORA, conectando con hechos del expediente.
+- **Penas o efectos** — pena/nulidad/indemnización con detalle.
+- **Requisitos** — qué tiene que probarse para que la norma aplique.
+- **Normas relacionadas** — concordancias, excepciones, antecedentes (con artículo + relación).
+- **Jurisprudencia clave** — sentencias con referencia + relevancia (Corte Constitucional, Corte Nacional).
+- **Estrategia para este caso** — tácticas concretas para usar la norma.
+- **Defensas comunes** — si sos la defensa, qué se suele alegar contra esta norma.
+- **Errores comunes a evitar** — red flags al invocarla.
+- **Fuentes del corpus** — los chunks RAG recuperados con scores (transparencia total).
+
+## Persistencia
+
+Si pulsás "Guardar al expediente" desde el dialog, el análisis queda como documento del caso con kind \`ai_analysis\`. Útil para volver a consultarlo sin regenerar (que tarda 20-45s y consume tokens).
+`,
+  },
+  {
+    id: 'pwa-y-cache',
+    title: 'PWA: ChunkLoadError y "la app no carga"',
+    category: 'troubleshooting',
+    description: 'Si ves un error de carga tras un deploy nuevo, la app se auto-recupera. Si no, hacé un hard refresh para purgar el Service Worker.',
+    keywords: ['pwa', 'service worker', 'chunkloaderror', 'app rota', 'no carga', 'caché viejo'],
+    icon: '🔄',
+    body: `## Qué pasa
+
+Poweria Legal es una PWA: el Service Worker acelera la app guardando recursos en caché local. Cuando hacemos un deploy nuevo, los nombres de los archivos JavaScript cambian (cada build tiene hashes únicos). Si tu Service Worker cacheó la versión anterior, intenta cargar archivos que ya no existen y tira **ChunkLoadError**.
+
+## La app se auto-recupera (a partir de mayo 2026)
+
+El ErrorBoundary detecta el ChunkLoadError, purga toda la caché del navegador, desregistra el Service Worker viejo y recarga la página automáticamente. La primera vez que abras la app tras un deploy puede haber un parpadeo, pero después funciona normal.
+
+Si el auto-recover entra en loop (mismo error tras recargar), el sistema deja un fallback UI con un botón **"Reintentar"** explícito.
+
+## Recovery manual
+
+Si nada de lo anterior funciona:
+
+1. **Hard refresh** — \`Ctrl + Shift + R\` (Windows/Linux) o \`⌘ + Shift + R\` (Mac).
+2. **Desregistrar el SW manualmente**: DevTools → Application → Service Workers → "Unregister", luego recargar.
+3. **Limpiar Storage**: DevTools → Application → Storage → "Clear site data".
+
+A partir de la versión de mayo 2026, el Service Worker **NUNCA cachea HTML** — solo recursos versionados (CSS/JS hasheados, imágenes). Eso elimina el problema de raíz.
+`,
+  },
 ];

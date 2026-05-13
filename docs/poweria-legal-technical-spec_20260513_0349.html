@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poweria Legal — Especificación Técnica Integral · 2026-05-13</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --ink-2: #334155;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --line-soft: #f1f5f9;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --primary: #4f46e5;
+    --primary-soft: #eef2ff;
+    --accent: #db2777;
+    --accent-soft: #fdf2f8;
+    --emerald: #059669;
+    --emerald-soft: #ecfdf5;
+    --amber: #d97706;
+    --amber-soft: #fffbeb;
+    --rose: #e11d48;
+    --rose-soft: #fff1f2;
+    --code-bg: #0f172a;
+    --code-fg: #e2e8f0;
+    --code-comment: #64748b;
+    --code-string: #86efac;
+    --code-keyword: #c4b5fd;
+    --code-fn: #f9a8d4;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 56px 48px 96px;
+  }
+  @media (max-width: 720px) {
+    .container { padding: 32px 20px 64px; }
+  }
+
+  /* ─── COVER ─── */
+  .cover {
+    border-bottom: 4px solid var(--ink);
+    padding-bottom: 32px;
+    margin-bottom: 56px;
+  }
+  .cover .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: var(--primary-soft);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-size: 44px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  .cover .subtitle {
+    font-size: 19px;
+    color: var(--ink-2);
+    margin: 0 0 28px;
+    max-width: 720px;
+    line-height: 1.5;
+  }
+  .cover .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 20px 24px;
+    background: var(--bg-soft);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+  }
+  .cover .meta .item {
+    border-left: 3px solid var(--primary);
+    padding-left: 14px;
+  }
+  .cover .meta .label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .cover .meta .value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+
+  /* ─── HEADINGS ─── */
+  h1, h2, h3, h4 { color: var(--ink); }
+  h2 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 64px 0 16px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+  }
+  h2 .section-num {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 22px;
+    margin-right: 12px;
+  }
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 36px 0 10px;
+    color: var(--ink);
+  }
+  h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 0 8px;
+    color: var(--ink-2);
+  }
+  p { margin: 0 0 14px; color: var(--ink-2); }
+  strong { color: var(--ink); font-weight: 700; }
+  ul, ol { padding-left: 22px; margin: 8px 0 16px; }
+  li { margin-bottom: 6px; color: var(--ink-2); }
+  li::marker { color: var(--primary); }
+
+  /* ─── TOC ─── */
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin: 0 0 64px;
+  }
+  .toc h3 {
+    margin: 0 0 16px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: toc;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc li {
+    counter-increment: toc;
+    margin: 0 0 8px;
+    padding-left: 28px;
+    position: relative;
+    break-inside: avoid;
+  }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 700;
+    line-height: 24px;
+  }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--primary); text-decoration: underline; }
+
+  /* ─── CALLOUTS ─── */
+  .callout {
+    padding: 18px 22px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border-left: 4px solid;
+  }
+  .callout.info {
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: #312e81;
+  }
+  .callout.warn {
+    background: var(--amber-soft);
+    border-color: var(--amber);
+    color: #78350f;
+  }
+  .callout.success {
+    background: var(--emerald-soft);
+    border-color: var(--emerald);
+    color: #064e3b;
+  }
+  .callout.danger {
+    background: var(--rose-soft);
+    border-color: var(--rose);
+    color: #881337;
+  }
+  .callout .title {
+    font-weight: 800;
+    margin-bottom: 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ─── TABLE ─── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 28px;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-soft);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 2px solid var(--line);
+  }
+  td code {
+    background: var(--line-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+
+  /* ─── CODE ─── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 18px 0;
+    font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+  }
+  code {
+    font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92em;
+  }
+  p > code, li > code, td > code {
+    background: var(--line-soft);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-size: 0.88em;
+  }
+  .lang-tag {
+    display: inline-block;
+    background: var(--ink);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: -8px;
+    transform: translateY(-4px);
+  }
+  pre .c { color: var(--code-comment); font-style: italic; }
+  pre .k { color: var(--code-keyword); }
+  pre .s { color: var(--code-string); }
+  pre .f { color: var(--code-fn); }
+
+  /* ─── GRID ─── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 24px 0;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin: 24px 0;
+  }
+  @media (max-width: 720px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card .icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .card h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+  }
+  .card p {
+    font-size: 13px;
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ─── PILL / TAGS ─── */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-right: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pill.indigo { background: #e0e7ff; color: #3730a3; }
+  .pill.purple { background: #ede9fe; color: #5b21b6; }
+  .pill.fuchsia { background: #fae8ff; color: #86198f; }
+  .pill.emerald { background: #d1fae5; color: #065f46; }
+  .pill.amber   { background: #fef3c7; color: #92400e; }
+  .pill.gray    { background: #e2e8f0; color: #1e293b; }
+
+  /* ─── DIAGRAM ─── */
+  .arch-diagram {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px 0;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-2);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ─── PRINT ─── */
+  @media print {
+    body { font-size: 11pt; }
+    .container { padding: 0; max-width: 100%; }
+    h2 { page-break-before: always; }
+    .cover { page-break-after: always; }
+    .toc { page-break-after: always; }
+    pre { page-break-inside: avoid; }
+    table { page-break-inside: avoid; }
+    .card { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ─── COVER ─── -->
+<section class="cover">
+  <span class="badge">Especificación técnica · Producto</span>
+  <h1>Poweria Legal</h1>
+  <p class="subtitle">Plataforma de IA jurídica para abogados de Ecuador y LATAM — sistema RAG sobre 138 cuerpos normativos, generación de documentos con Claude Opus 4.7, ciclo de vida documental verificable y módulo financiero con CFO virtual.</p>
+  <div class="meta">
+    <div class="item"><div class="label">Versión</div><div class="value">2026-05-13</div></div>
+    <div class="item"><div class="label">Producto</div><div class="value">Poweria Legal SaaS</div></div>
+    <div class="item"><div class="label">Empresa</div><div class="value">COGNITEX</div></div>
+    <div class="item"><div class="label">Stack</div><div class="value">Next.js · Fastify · Supabase</div></div>
+    <div class="item"><div class="label">Modelo IA</div><div class="value">Claude Opus 4.7</div></div>
+    <div class="item"><div class="label">Audiencia</div><div class="value">Equipo técnico / Inversores</div></div>
+  </div>
+</section>
+
+<!-- ─── TOC ─── -->
+<nav class="toc">
+  <h3>Tabla de contenidos</h3>
+  <ol>
+    <li><a href="#resumen-ejecutivo">Resumen ejecutivo</a></li>
+    <li><a href="#arquitectura">Arquitectura</a></li>
+    <li><a href="#stack">Stack tecnológico</a></li>
+    <li><a href="#frontend">Frontend Next.js</a></li>
+    <li><a href="#backend">Backend Fastify</a></li>
+    <li><a href="#data-model">Modelo de datos</a></li>
+    <li><a href="#api-reference">API Reference</a></li>
+    <li><a href="#ai-pipeline">Pipeline de IA</a></li>
+    <li><a href="#rag">RAG y embeddings</a></li>
+    <li><a href="#document-lifecycle">Ciclo de vida documental</a></li>
+    <li><a href="#sse">Server-Sent Events</a></li>
+    <li><a href="#pwa">PWA y Service Worker</a></li>
+    <li><a href="#auth">Autenticación y autorización</a></li>
+    <li><a href="#observability">Observabilidad</a></li>
+    <li><a href="#deployment">Deployment</a></li>
+    <li><a href="#help-system">Sistema de ayuda</a></li>
+    <li><a href="#security">Seguridad y compliance</a></li>
+    <li><a href="#roadmap">Roadmap técnico</a></li>
+  </ol>
+</nav>
+
+<!-- ─── 01 ─── -->
+<h2 id="resumen-ejecutivo"><span class="section-num">01</span>Resumen ejecutivo</h2>
+
+<p><strong>Poweria Legal</strong> es una plataforma SaaS B2B/B2C diseñada para abogados litigantes y firmas legales en Ecuador. Combina <strong>gestión documental forense</strong>, un <strong>asistente conversacional con IA</strong> entrenado contextualmente con cada expediente, <strong>generación asistida de escritos legales</strong> con citas verificables y <strong>análisis profundo basado en RAG</strong> sobre el corpus normativo nacional vectorizado.</p>
+
+<div class="grid-3">
+  <div class="card">
+    <div class="icon">🧠</div>
+    <h4>Claude Opus 4.7</h4>
+    <p>Modelo de razonamiento legal con context window de 1M tokens. Streaming SSE end-to-end.</p>
+  </div>
+  <div class="card">
+    <div class="icon">📚</div>
+    <h4>138 leyes vectorizadas</h4>
+    <p>Constitución, COIP, COGEP, LOSEP, Código Civil y más. 36 704 chunks indexados con HNSW + FTS español.</p>
+  </div>
+  <div class="card">
+    <div class="icon">⚖️</div>
+    <h4>237+ endpoints REST</h4>
+    <p>Cobertura completa: casos, documentos, IA, billing, observabilidad, admin, backup.</p>
+  </div>
+  <div class="card">
+    <div class="icon">🔐</div>
+    <h4>Cumplimiento LOPDP</h4>
+    <p>Cifrado en reposo y tránsito. Audit log granular. Datos del cliente nunca entrenan modelos.</p>
+  </div>
+  <div class="card">
+    <div class="icon">⚡</div>
+    <h4>SSE con TCP_NODELAY</h4>
+    <p>Streaming progresivo de IA con keepalive 1s, preámbulo anti-buffering y barra de progreso real.</p>
+  </div>
+  <div class="card">
+    <div class="icon">📑</div>
+    <h4>Lifecycle documental</h4>
+    <p>4 estados (uploaded, ai_generated, ai_analysis, court_filed) con trigger de reemplazo y priorización IA.</p>
+  </div>
+</div>
+
+<h3>Métricas operacionales (mayo 2026)</h3>
+<table>
+  <tr><th>Indicador</th><th>Valor</th><th>Notas</th></tr>
+  <tr><td>Endpoints REST</td><td>237+</td><td>15 módulos funcionales</td></tr>
+  <tr><td>Modelos Prisma</td><td>97</td><td>incluye 8 sub-sistemas (cases, docs, AI, backup, etc.)</td></tr>
+  <tr><td>Páginas Next.js</td><td>46</td><td>dashboard + landing + admin + cuenta</td></tr>
+  <tr><td>Componentes case-detail</td><td>18</td><td>cada uno con responsabilidad atómica</td></tr>
+  <tr><td>Categorías de ayuda</td><td>9</td><td>37 artículos curados</td></tr>
+  <tr><td>Tours guiados</td><td>13</td><td>cubren onboarding, sala de litigación, admin, etc.</td></tr>
+  <tr><td>Migraciones Prisma</td><td>20+</td><td>versionado lineal con rollback</td></tr>
+  <tr><td>Tipos legales soportados</td><td>6</td><td>penal, civil, laboral, constitucional, tránsito, administrativo</td></tr>
+</table>
+
+<!-- ─── 02 ─── -->
+<h2 id="arquitectura"><span class="section-num">02</span>Arquitectura</h2>
+
+<p>Poweria Legal sigue una arquitectura <strong>multi-tier serverless-first</strong> con separación estricta entre presentación, lógica de negocio y almacenamiento. Cada capa puede escalar independientemente.</p>
+
+<div class="arch-diagram">
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  USUARIO (Browser PWA)                                                       │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Next.js 14 · React 18 · Tailwind · shadcn/ui · Service Worker v11    │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────┬───────────────────────────────────────┘
+                                       │ HTTPS (TLS 1.3) — JWT Bearer
+              ┌────────────────────────┼────────────────────────┐
+              ▼                        ▼                        ▼
+   ┌──────────────────────┐  ┌─────────────────────┐  ┌──────────────────────┐
+   │  VERCEL EDGE         │  │  RENDER (Oregon)    │  │  SUPABASE (us-east)  │
+   │  poweria.cognitex.app│  │  Fastify 4.x API    │  │  Postgres 17 + RPC   │
+   │  Next.js SSR + CDN   │  │  Node 20 LTS        │  │  Storage (S3)        │
+   └──────────────────────┘  └──────────┬──────────┘  │  Auth (JWT/OAuth)    │
+                                        │              └──────────────────────┘
+                                        │
+                ┌───────────────────────┼───────────────────────┐
+                ▼                       ▼                       ▼
+       ┌─────────────────┐    ┌─────────────────┐     ┌──────────────────┐
+       │ Anthropic API   │    │ OpenAI API      │     │ Redis Cloud      │
+       │ Claude Opus 4.7 │    │ text-embedding  │     │ Cache + Rate     │
+       │ (1M context)    │    │ -3-small        │     │ Limit + BullMQ   │
+       └─────────────────┘    └─────────────────┘     └──────────────────┘
+</div>
+
+<h3>Flujo típico — Subida de documento</h3>
+<ol>
+  <li><strong>Drag-and-drop</strong> en <code>CaseAIChat</code> o <code>DocumentUploadProgress</code>.</li>
+  <li>POST multipart <code>/api/v1/documents/upload</code> → Fastify recibe, extrae texto (pdf-parse, Tesseract Vision, mammoth, xlsx).</li>
+  <li>Insert en <code>documents</code> con <code>kind='uploaded'</code> y trigger <code>set_country_code</code>.</li>
+  <li>Upload binario a Supabase Storage bucket <code>legal-documents</code>.</li>
+  <li>Chunking 1000 chars con overlap 200 → embeddings OpenAI batch 50 → INSERT en <code>document_chunks</code> (vector + FTS).</li>
+  <li>SSE <code>brain.refresh</code> regenera el "cerebro" del caso (síntesis multi-doc).</li>
+  <li>Cliente abre <code>PostUploadAnalysisDialog</code> → SSE a <code>/cases/:id/documents/:docId/post-upload-analysis</code> con Claude Opus 4.7.</li>
+  <li>Análisis estructurado JSON → persistido como <code>kind='ai_analysis'</code> linkeado al original.</li>
+</ol>
+
+<!-- ─── 03 ─── -->
+<h2 id="stack"><span class="section-num">03</span>Stack tecnológico</h2>
+
+<table>
+  <tr><th>Capa</th><th>Tecnología</th><th>Versión</th><th>Notas</th></tr>
+  <tr><td>Frontend framework</td><td>Next.js</td><td>14.x (App Router)</td><td>SSR + static + edge runtime</td></tr>
+  <tr><td>UI</td><td>React + Tailwind CSS + shadcn/ui</td><td>18.2 / 3.4</td><td>componentes primitivos accesibles</td></tr>
+  <tr><td>State</td><td>Context + Hooks</td><td>—</td><td>sin Redux ni Zustand: estado local + URL state</td></tr>
+  <tr><td>Iconografía</td><td>lucide-react</td><td>0.4xx</td><td>1.300+ íconos tree-shakeable</td></tr>
+  <tr><td>Backend</td><td>Fastify</td><td>4.26.x</td><td>HTTP/2, plugins, hooks</td></tr>
+  <tr><td>ORM</td><td>Prisma</td><td>5.22</td><td>97 models, $queryRawUnsafe para SQL avanzado</td></tr>
+  <tr><td>DB</td><td>PostgreSQL</td><td>17.x (Supabase)</td><td>+ pgvector, pg_trgm, FTS spanish</td></tr>
+  <tr><td>Cache</td><td>Redis</td><td>7.x (Redis Cloud)</td><td>multi-tier + BullMQ</td></tr>
+  <tr><td>Auth</td><td>Supabase Auth + JWT</td><td>@supabase/ssr 0.5</td><td>OAuth Google + email/password</td></tr>
+  <tr><td>IA LLM</td><td>Anthropic Claude Opus 4.7</td><td>claude-opus-4-7</td><td>1M context · no temperature param</td></tr>
+  <tr><td>IA Embeddings</td><td>OpenAI text-embedding-3-small</td><td>—</td><td>1536 dim · batch 50</td></tr>
+  <tr><td>IA Vision</td><td>Claude / GPT-4o</td><td>—</td><td>OCR de escaneos legales</td></tr>
+  <tr><td>Storage</td><td>Supabase Storage (S3)</td><td>—</td><td>bucket <code>legal-documents</code></td></tr>
+  <tr><td>Validación</td><td>Zod</td><td>3.22</td><td>schemas runtime + types</td></tr>
+  <tr><td>Observability</td><td>OpenTelemetry + Prometheus</td><td>—</td><td>traces + métricas</td></tr>
+  <tr><td>CI/CD</td><td>Vercel auto-deploy + Render auto-deploy</td><td>—</td><td>push to main → producción</td></tr>
+  <tr><td>PDF / OCR</td><td>pdf-parse, mammoth, xlsx, tesseract</td><td>—</td><td>multi-formato</td></tr>
+</table>
+
+<!-- ─── 04 ─── -->
+<h2 id="frontend"><span class="section-num">04</span>Frontend Next.js</h2>
+
+<h3>4.1 Estructura de páginas (46 rutas)</h3>
+<p>App Router 100% — sin Pages Router legacy. Layout compartido <code>app/layout.tsx</code> con ErrorBoundary global, TourProvider y CommandPalette (Cmd+K).</p>
+
+<table>
+  <tr><th>Categoría</th><th>Rutas</th></tr>
+  <tr><td><strong>Públicas</strong></td><td><code>/</code> · <code>/login</code> · <code>/register</code> · <code>/pricing</code> · <code>/terms</code> · <code>/privacy</code> · <code>/lopdp</code> · <code>/help</code> · <code>/feedback</code></td></tr>
+  <tr><td><strong>Dashboard</strong></td><td><code>/dashboard</code> · <code>/dashboard/cases/[id]</code> · <code>/dashboard/cases/[id]/litigation</code> · <code>/dashboard/calendar</code> · <code>/dashboard/tasks</code> · <code>/dashboard/finance</code> · <code>/dashboard/settings/*</code></td></tr>
+  <tr><td><strong>Productividad</strong></td><td><code>/ai-assistant</code> · <code>/analytics</code> · <code>/search</code> · <code>/notifications</code> · <code>/usage</code> · <code>/summarization*</code></td></tr>
+  <tr><td><strong>Admin</strong></td><td><code>/admin/users</code> · <code>/admin/specialties</code> · <code>/admin/auth-events</code> · <code>/admin/audit</code> · <code>/admin/backups</code> · <code>/admin/embeddings</code> · <code>/admin/payments</code></td></tr>
+  <tr><td><strong>Cuenta</strong></td><td><code>/account/*</code> · <code>/payment/[id]</code></td></tr>
+</table>
+
+<h3>4.2 Página crítica: <code>cases/[id]/page.tsx</code></h3>
+<p>La vista de detalle de caso es la pieza más densa del producto. Contiene 15 features integradas en un layout de 3 columnas:</p>
+
+<table>
+  <tr><th>Columna izquierda</th><th>Columna central</th><th>Columna derecha</th></tr>
+  <tr>
+    <td>
+      • EnhancedCaseHeader<br>
+      • Coherence Check IA<br>
+      • Secciones colapsables (Metadatos · Partes · Finanzas)<br>
+      • ProcessPipeline con "Re-evaluar IA"
+    </td>
+    <td>
+      • SpecializedPrompts (8 categorías + IA avanzado por categoría)<br>
+      • CaseAIChat (Claude Opus con expediente)<br>
+      • Listado de Documents con badges de kind<br>
+      • Dialog "Marcar como presentado"
+    </td>
+    <td>
+      • LegalReferences (clickeable → análisis IA)<br>
+      • LegalDocGen launcher (12 tipos)<br>
+      • DeepAnalysis Dialog<br>
+      • CaseActivityDrawer (audit)
+    </td>
+  </tr>
+</table>
+
+<h3>4.3 Componentes destacados</h3>
+
+<h4>SpecializedPrompts.tsx</h4>
+<p>Renderiza prompts contextuales por categoría con dos modos: <strong>estáticos</strong> (cargados según <code>legalType</code> del caso) y <strong>IA avanzado</strong> (generados en SSE con Claude Opus 4.7). Cada categoría tiene su propio botón Brain que dispara <code>POST /cases/:id/suggested-prompts?category=&lt;cat&gt;</code> con barra de progreso inline.</p>
+
+<h4>LegalReferenceDialog.tsx</h4>
+<p>Dialog que se abre al hacer click en una card de Referencias Legales. Llama <code>POST /legal-reference/expand</code> (SSE) con mini-timeline de 6 hitos (Contexto → Embedding → RAG → Análisis IA → Estrategia → Listo). Muestra texto literal del artículo recuperado del corpus, análisis jurídico, importancia para el caso, jurisprudencia, estrategia táctica y defensas comunes.</p>
+
+<h4>PostUploadAnalysisDialog.tsx</h4>
+<p>Se dispara automáticamente al terminar cualquier upload. SSE con 11 secciones colapsables coloreadas por urgencia. Persiste el resultado como Document <code>kind='ai_analysis'</code> con <code>ai_generation_meta.generator='post_upload_analysis'</code> y <code>sourceDocumentId</code>.</p>
+
+<h4>ErrorBoundary.tsx (auto-recover)</h4>
+<p>Detecta <code>ChunkLoadError</code> tras un deploy. Cuando ocurre: purga toda la <code>caches</code> entries + unregister de todos los SW + <code>window.location.reload()</code>. <code>sessionStorage</code> flag con timestamp evita loop infinito.</p>
+
+<pre><span class="lang-tag">tsx</span>
+<span class="c">// ErrorBoundary.tsx — detección + recovery</span>
+<span class="k">const</span> isChunkError =
+  error?.name === <span class="s">'ChunkLoadError'</span> ||
+  <span class="f">/Loading chunk \d+ failed/i</span>.<span class="f">test</span>(error?.message);
+
+<span class="k">if</span> (isChunkError) {
+  <span class="k">const</span> last = sessionStorage.<span class="f">getItem</span>(RELOAD_FLAG);
+  <span class="k">if</span> (!last || <span class="f">Date</span>.<span class="f">now</span>() - <span class="f">Number</span>(last) > 30000) {
+    <span class="f">await</span> <span class="f">Promise</span>.<span class="f">all</span>((<span class="f">await</span> caches.<span class="f">keys</span>()).<span class="f">map</span>(k =&gt; caches.<span class="f">delete</span>(k)));
+    <span class="k">const</span> regs = <span class="f">await</span> navigator.serviceWorker.<span class="f">getRegistrations</span>();
+    <span class="f">await</span> <span class="f">Promise</span>.<span class="f">all</span>(regs.<span class="f">map</span>(r =&gt; r.<span class="f">unregister</span>()));
+    window.location.<span class="f">reload</span>();
+  }
+}</pre>
+
+<!-- ─── 05 ─── -->
+<h2 id="backend"><span class="section-num">05</span>Backend Fastify</h2>
+
+<h3>5.1 Plugins y middleware</h3>
+<table>
+  <tr><th>Plugin</th><th>Configuración</th><th>Propósito</th></tr>
+  <tr><td><code>@fastify/cors</code></td><td>origin = función validadora · credentials true</td><td>Multi-origen (Vercel + custom domain)</td></tr>
+  <tr><td><code>@fastify/jwt</code></td><td><code>JWT_SECRET</code> · fallback Supabase</td><td>Autenticación bearer</td></tr>
+  <tr><td><code>@fastify/multipart</code></td><td>limit 50 MB</td><td>Upload de documentos</td></tr>
+  <tr><td><code>@fastify/rate-limit</code></td><td>Redis si <code>REDIS_URL</code></td><td>Horizontal scaling rate-limit</td></tr>
+  <tr><td>OpenTelemetry</td><td>traces HTTP/Fastify + Prometheus</td><td>Observabilidad</td></tr>
+</table>
+
+<h3>5.2 CORS multi-origen</h3>
+<pre><span class="lang-tag">ts</span>
+<span class="k">await</span> app.<span class="f">register</span>(cors, {
+  origin: (origin, cb) =&gt; {
+    <span class="k">if</span> (!origin) <span class="k">return</span> <span class="f">cb</span>(<span class="k">null</span>, <span class="k">true</span>);
+    <span class="k">if</span> (isWildcard) <span class="k">return</span> <span class="f">cb</span>(<span class="k">null</span>, <span class="k">true</span>);
+    <span class="k">if</span> (CORS_ALLOWLIST.<span class="f">includes</span>(origin)) <span class="k">return</span> <span class="f">cb</span>(<span class="k">null</span>, <span class="k">true</span>);
+    <span class="c">// Auto-allow Vercel preview deploys</span>
+    <span class="k">if</span> (<span class="f">/^https:\/\/poweria-legal-[a-z0-9]+-benitos-projects-eadee50c\.vercel\.app$/</span>.<span class="f">test</span>(origin))
+      <span class="k">return</span> <span class="f">cb</span>(<span class="k">null</span>, <span class="k">true</span>);
+    <span class="k">return</span> <span class="f">cb</span>(<span class="k">new</span> <span class="f">Error</span>(<span class="s">`CORS: origin '${origin}' not allowed`</span>), <span class="k">false</span>);
+  },
+  credentials: <span class="k">true</span>,
+});</pre>
+
+<h3>5.3 Cliente IA unificado</h3>
+<p>Factory <code>getAiClient()</code> que elige provider/modelo desde tabla <code>ai_settings</code> (cache 30s). Wrapper Anthropic mimetiza la API de OpenAI para que el resto del código no necesite distinguir entre providers.</p>
+
+<pre><span class="lang-tag">ts</span>
+<span class="c">// ai-client.ts (simplificado)</span>
+<span class="k">const</span> NO_TEMPERATURE_MODELS = <span class="k">new</span> <span class="f">Set</span>([<span class="s">'claude-opus-4-7'</span>]);
+
+<span class="k">export async function</span> <span class="f">getAiClient</span>() {
+  <span class="k">const</span> settings = <span class="k">await</span> <span class="f">loadAiSettings</span>();
+  <span class="k">if</span> (settings.provider === <span class="s">'anthropic'</span>) {
+    <span class="k">return</span> <span class="f">buildAnthropicWrapper</span>(settings);  <span class="c">// → OpenAI-shape chunks</span>
+  }
+  <span class="k">return</span> <span class="k">new</span> <span class="f">OpenAI</span>({ apiKey: settings.apiKey });
+}</pre>
+
+<!-- ─── 06 ─── -->
+<h2 id="data-model"><span class="section-num">06</span>Modelo de datos</h2>
+
+<p>97 models en Prisma. Agrupados por sub-sistema:</p>
+
+<h3>6.1 Núcleo de litigación</h3>
+<table>
+  <tr><th>Model</th><th>Campos clave</th><th>Notas</th></tr>
+  <tr><td><code>User</code></td><td>id (text), email, role, plan, country_code</td><td>Roles: user · admin · superadmin</td></tr>
+  <tr><td><code>Case</code></td><td>id, user_id, title, description, <strong>legal_matter</strong>, <strong>procedural_stage</strong>, case_number, court_name, judge_name, prosecutor_name, opposing_party, related_laws[], amount_claimed, currency, filed_at, next_hearing_at, key_dates (jsonb), facts_summary, metadata (jsonb)</td><td>Nota: la columna es <code>legal_matter</code> NO <code>legal_type</code>; el frontend deriva <code>legalType</code> ('penal'/'civil'/'laboral'/etc.) por keyword matching.</td></tr>
+  <tr><td><code>Document</code></td><td>id, case_id, user_id, title, content, mime_type, <strong>kind</strong>, <strong>replaces_document_id</strong>, <strong>replaced_at</strong>, <strong>presented_to</strong>, <strong>presented_at</strong>, <strong>ai_generation_meta</strong> (jsonb), storage_bucket, storage_key, file_size_bytes, metadata (jsonb)</td><td>kind ∈ uploaded · ai_generated · ai_analysis · court_filed</td></tr>
+  <tr><td><code>DocumentChunk</code></td><td>id, document_id, content, chunk_index, embedding (vector 1536), ts (tsvector)</td><td>HNSW index + FTS spanish</td></tr>
+</table>
+
+<h3>6.2 Trigger de reemplazo</h3>
+<p>Cuando se inserta un Document con <code>replaces_document_id != null</code>, un trigger setea <code>replaced_at = now()</code> en el documento original. Esto preserva la historia sin perder relaciones:</p>
+
+<pre><span class="lang-tag">sql</span>
+<span class="k">CREATE OR REPLACE FUNCTION</span> mark_replaced_document() <span class="k">RETURNS TRIGGER AS</span> $$
+<span class="k">BEGIN</span>
+  <span class="k">IF</span> NEW.replaces_document_id <span class="k">IS NOT NULL THEN</span>
+    <span class="k">UPDATE</span> documents
+    <span class="k">SET</span> replaced_at = <span class="f">now</span>()
+    <span class="k">WHERE</span> id = NEW.replaces_document_id;
+  <span class="k">END IF</span>;
+  <span class="k">RETURN</span> NEW;
+<span class="k">END</span>;
+$$ <span class="k">LANGUAGE</span> plpgsql;</pre>
+
+<h3>6.3 RAG corpus</h3>
+<table>
+  <tr><th>Tabla</th><th>Filas (mayo 2026)</th><th>Propósito</th></tr>
+  <tr><td><code>legal_documents</code></td><td>138</td><td>Cuerpos normativos (Constitución, COIP, COGEP, leyes orgánicas, etc.)</td></tr>
+  <tr><td><code>legal_document_chunks</code></td><td>36 704</td><td>Chunks ~1000 chars con embedding + FTS</td></tr>
+  <tr><td><code>document_chunks</code></td><td>variable</td><td>Chunks de documentos del caso (multi-tenant)</td></tr>
+</table>
+
+<h3>6.4 RPC <code>search_legal_chunks</code></h3>
+<p>Búsqueda híbrida sobre el corpus legal con scoring RRF (Reciprocal Rank Fusion) que combina similitud semántica (cosine sobre embedding) + BM25 (FTS español). Acepta filtros por <code>country_code</code>, <code>norm_type</code>, <code>jurisdiction</code>.</p>
+
+<!-- ─── 07 ─── -->
+<h2 id="api-reference"><span class="section-num">07</span>API Reference (selección)</h2>
+
+<h3>7.1 Endpoints de IA del expediente</h3>
+<table>
+  <tr><th>Endpoint</th><th>Método</th><th>Respuesta</th><th>Descripción</th></tr>
+  <tr><td><code>/cases/:id/deep-analysis</code></td><td>POST</td><td>SSE</td><td>Análisis profundo de estrategia, riesgos, recomendaciones</td></tr>
+  <tr><td><code>/cases/:caseId/documents/:docId/post-upload-analysis</code></td><td>POST</td><td>SSE</td><td>Análisis automático tras subir doc</td></tr>
+  <tr><td><code>/cases/:id/suggested-prompts</code></td><td>POST <code>?category=</code></td><td>SSE</td><td>Genera 6-14 prompts IA contextualizados</td></tr>
+  <tr><td><code>/cases/:id/infer-stage</code></td><td>POST</td><td>JSON</td><td>Infiere etapa procesal con rationale</td></tr>
+  <tr><td><code>/cases/:id/save-analysis</code></td><td>POST</td><td>JSON</td><td>Persiste análisis IA como doc ai_analysis</td></tr>
+  <tr><td><code>/documents/:id/mark-presented</code></td><td>POST</td><td>JSON</td><td>Marca como court_filed con venue + fecha</td></tr>
+  <tr><td><code>/cases/:id/brain</code></td><td>GET</td><td>JSON</td><td>Síntesis ejecutiva del expediente</td></tr>
+  <tr><td><code>/cases/:id/brain/refresh</code></td><td>POST</td><td>JSON</td><td>Regenera el "cerebro" con todos los docs</td></tr>
+  <tr><td><code>/cases/:id/chat</code></td><td>POST</td><td>SSE</td><td>Chat conversacional con expediente cargado</td></tr>
+  <tr><td><code>/cases/:id/validate-coherence</code></td><td>POST</td><td>JSON</td><td>Auto-detecta campos incompletos</td></tr>
+  <tr><td><code>/cases/:id/generate-document</code></td><td>POST</td><td>SSE</td><td>Genera escrito legal (12 tipos)</td></tr>
+  <tr><td><code>/legal-reference/expand</code></td><td>POST</td><td>SSE</td><td>Análisis profundo de norma + RAG</td></tr>
+</table>
+
+<h3>7.2 Estructura SSE estándar</h3>
+<pre><span class="lang-tag">http</span>
+<span class="c"># Request</span>
+POST /api/v1/legal-reference/expand HTTP/1.1
+Authorization: Bearer eyJhbG...
+Content-Type: application/json
+
+{"norm":"COIP - Peculado","article":"Art. 278","caseId":"b064c849..."}
+
+<span class="c"># Response</span>
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache, no-transform
+X-Accel-Buffering: no
+
+: <span class="c"># 4KB de preámbulo para defeat buffering en proxies</span>
+
+event: phase
+data: {"phase":"starting","label":"Iniciando análisis…","pct":2}
+
+event: phase
+data: {"phase":"rag","label":"Buscando en corpus legal","pct":28}
+
+event: token
+data: {"delta":"{"}
+
+event: structured
+data: {"analysis":{...},"sources":[...],"model":"claude-opus-4-7"}
+
+event: phase
+data: {"phase":"done","label":"Listo","pct":100}
+
+event: done
+data: {"generatedAt":"2026-05-13T07:30:00Z"}</pre>
+
+<!-- ─── 08 ─── -->
+<h2 id="ai-pipeline"><span class="section-num">08</span>Pipeline de IA</h2>
+
+<h3>8.1 Modelo principal</h3>
+<p><strong>Claude Opus 4.7</strong> es el modelo de razonamiento default. Contexto de 1M tokens permite cargar expedientes completos (cientos de páginas) sin truncar. Características operacionales:</p>
+<ul>
+  <li>No acepta parámetro <code>temperature</code> (omitido por <code>NO_TEMPERATURE_MODELS</code> set).</li>
+  <li>Streaming nativo via Anthropic SSE → traducido a chunks OpenAI-shape por el wrapper interno.</li>
+  <li>Max tokens default por endpoint: 4000 (analysis) — 8000 (prompts generators).</li>
+  <li>System prompts versionados en cada route; usuarios siempre españoles ecuatorianos profesionales.</li>
+</ul>
+
+<h3>8.2 Anti-alucinación</h3>
+<p>El sistema implementa varias capas para evitar invención de citas:</p>
+<ol>
+  <li><strong>RAG obligatorio</strong> en generación de documentos: el prompt incluye los chunks recuperados como "MARCO NORMATIVO" y se instruye al modelo a citar solo de allí.</li>
+  <li><strong>Marcador <code>[CITA POR VERIFICAR]</code></strong>: si el modelo no tiene certeza absoluta sobre un artículo, debe escribir literalmente ese marcador en lugar de inventar.</li>
+  <li><strong>Estado de los documentos</strong>: en los prompts de análisis se indica explícitamente el <code>kind</code> de cada documento del expediente para que la IA priorice <code>court_filed</code> sobre borradores.</li>
+</ol>
+
+<h3>8.3 Parser tolerante a truncamiento</h3>
+<p>Cuando el modelo devuelve JSON y se corta por <code>max_tokens</code>, en lugar de fallar usamos <code>repairTruncatedPromptsJson()</code> que escanea carácter a carácter respetando strings/escapes, encuentra el último <code>}</code> cerrado dentro del array <code>prompts</code> y rearma manualmente cerrando <code>]}</code>:</p>
+
+<pre><span class="lang-tag">ts</span>
+<span class="k">function</span> <span class="f">repairTruncatedPromptsJson</span>(s: string): <span class="k">any</span> | <span class="k">null</span> {
+  <span class="k">let</span> depthBrace = 0, inString = <span class="k">false</span>, escape = <span class="k">false</span>;
+  <span class="k">let</span> lastSafePromptEnd = -1;
+  <span class="k">let</span> arrayStarted = <span class="k">false</span>;
+  <span class="k">for</span> (<span class="k">let</span> i = 0; i &lt; s.length; i++) {
+    <span class="k">const</span> ch = s[i];
+    <span class="k">if</span> (escape) { escape = <span class="k">false</span>; <span class="k">continue</span>; }
+    <span class="k">if</span> (ch === <span class="s">'\\'</span>) { escape = <span class="k">true</span>; <span class="k">continue</span>; }
+    <span class="k">if</span> (ch === <span class="s">'"'</span>) { inString = !inString; <span class="k">continue</span>; }
+    <span class="k">if</span> (inString) <span class="k">continue</span>;
+    <span class="k">if</span> (ch === <span class="s">'{'</span>) depthBrace++;
+    <span class="k">else if</span> (ch === <span class="s">'}'</span>) {
+      depthBrace--;
+      <span class="k">if</span> (arrayStarted &amp;&amp; depthBrace === 1) lastSafePromptEnd = i;
+    }
+    <span class="k">else if</span> (ch === <span class="s">'['</span> &amp;&amp; !arrayStarted) arrayStarted = <span class="k">true</span>;
+  }
+  <span class="k">if</span> (lastSafePromptEnd &lt; 0) <span class="k">return</span> <span class="k">null</span>;
+  <span class="k">return</span> <span class="f">JSON</span>.<span class="f">parse</span>(s.<span class="f">slice</span>(0, lastSafePromptEnd + 1) + <span class="s">']}'</span>);
+}</pre>
+
+<!-- ─── 09 ─── -->
+<h2 id="rag"><span class="section-num">09</span>RAG y embeddings</h2>
+
+<h3>9.1 Corpus legal vectorizado</h3>
+<p>138 cuerpos normativos ecuatorianos pre-procesados:</p>
+<ul>
+  <li><strong>Constitución de la República del Ecuador</strong> (2008, reformas vigentes)</li>
+  <li><strong>Código Orgánico Integral Penal (COIP)</strong></li>
+  <li><strong>Código Orgánico General de Procesos (COGEP)</strong></li>
+  <li><strong>Código Civil, Código del Trabajo, Código Tributario</strong></li>
+  <li><strong>LOSEP</strong> (servicio público), <strong>LOSNCP</strong> (contratación pública), <strong>LOEI</strong> (educación intercultural)</li>
+  <li>Ley Orgánica de Garantías Jurisdiccionales, Ley de Compañías, etc.</li>
+  <li>Reglamentos, resoluciones de la Corte Constitucional y Corte Nacional</li>
+</ul>
+
+<h3>9.2 Pipeline de chunking</h3>
+<ol>
+  <li><strong>Extracción</strong>: PDFs procesados con pdf-parse + Vision IA para escaneos.</li>
+  <li><strong>Chunking</strong>: ~1000 chars con overlap 200, respeta límites de oración cuando es posible.</li>
+  <li><strong>Embedding</strong>: OpenAI <code>text-embedding-3-small</code>, 1536 dimensiones, batch size 50.</li>
+  <li><strong>Indexación</strong>: pgvector con índice HNSW (m=16, ef_construction=64) + tsvector spanish para BM25.</li>
+  <li><strong>Metadata</strong>: <code>norm_type</code>, <code>jurisdiction</code>, <code>country_code</code>, <code>article_number</code>, <code>section</code>.</li>
+</ol>
+
+<h3>9.3 Búsqueda híbrida (RRF)</h3>
+<p>El RPC <code>search_legal_chunks(query_embedding, query_text, match_count, semantic_weight, keyword_weight, filter_*)</code> ejecuta dos consultas en paralelo y las fusiona con Reciprocal Rank Fusion:</p>
+
+<pre><span class="lang-tag">sql</span>
+<span class="k">WITH</span> semantic <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, embedding &lt;=&gt; query_embedding <span class="k">AS</span> distance
+  <span class="k">FROM</span> legal_document_chunks
+  <span class="k">ORDER BY</span> distance <span class="k">LIMIT</span> 30
+), keyword <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, <span class="f">ts_rank</span>(ts, <span class="f">plainto_tsquery</span>(<span class="s">'spanish'</span>, query_text)) <span class="k">AS</span> rank
+  <span class="k">FROM</span> legal_document_chunks
+  <span class="k">WHERE</span> ts @@ <span class="f">plainto_tsquery</span>(<span class="s">'spanish'</span>, query_text)
+  <span class="k">ORDER BY</span> rank <span class="k">DESC LIMIT</span> 30
+)
+<span class="k">SELECT</span> id,
+  (semantic_weight / (60 + s.row_num) + keyword_weight / (60 + k.row_num)) <span class="k">AS</span> rrf_score
+<span class="k">FROM</span> semantic s <span class="k">FULL JOIN</span> keyword k <span class="k">USING</span> (id)
+<span class="k">ORDER BY</span> rrf_score <span class="k">DESC LIMIT</span> match_count;</pre>
+
+<!-- ─── 10 ─── -->
+<h2 id="document-lifecycle"><span class="section-num">10</span>Ciclo de vida documental</h2>
+
+<p>Cada documento del expediente atraviesa un ciclo de 4 estados que la IA usa como heurística de priorización en cualquier razonamiento legal:</p>
+
+<table>
+  <tr><th>kind</th><th>Origen</th><th>Vectorización</th><th>Prioridad IA</th><th>UI</th></tr>
+  <tr><td><code>uploaded</code></td><td>Subido por el usuario</td><td>Sí</td><td>Alta</td><td><span class="pill indigo">indigo</span> 📄 FileText</td></tr>
+  <tr><td><code>ai_generated</code></td><td>Generador de documentos IA</td><td>Sí</td><td>Media</td><td><span class="pill purple">purple</span> ✨ Sparkles</td></tr>
+  <tr><td><code>ai_analysis</code></td><td>Análisis IA (deep/post-upload/legal-ref)</td><td><strong>No</strong> (no contamina RAG)</td><td>Baja (contexto)</td><td><span class="pill fuchsia">fuchsia</span> ✨ Sparkles</td></tr>
+  <tr><td><code>court_filed</code></td><td>Documento ya presentado</td><td>Sí</td><td><strong>Máxima</strong> (verdad oficial)</td><td><span class="pill emerald">emerald</span> ⚖️ Gavel</td></tr>
+</table>
+
+<h3>10.1 Ordenación en queries de IA</h3>
+<p>Al cargar el expediente para razonar, los documentos se ordenan por prioridad de <code>kind</code>:</p>
+
+<pre><span class="lang-tag">sql</span>
+<span class="k">SELECT</span> ... <span class="k">FROM</span> documents
+<span class="k">WHERE</span> case_id = $1 <span class="k">AND</span> replaced_at <span class="k">IS NULL</span>
+<span class="k">ORDER BY</span>
+  <span class="k">CASE COALESCE</span>(kind, <span class="s">'uploaded'</span>)
+    <span class="k">WHEN</span> <span class="s">'court_filed'</span>  <span class="k">THEN</span> 0
+    <span class="k">WHEN</span> <span class="s">'uploaded'</span>     <span class="k">THEN</span> 1
+    <span class="k">WHEN</span> <span class="s">'ai_generated'</span> <span class="k">THEN</span> 2
+    <span class="k">WHEN</span> <span class="s">'ai_analysis'</span>  <span class="k">THEN</span> 3
+    <span class="k">ELSE</span> 4
+  <span class="k">END</span>,
+  created_at <span class="k">DESC</span>;</pre>
+
+<h3>10.2 Metadata persistida</h3>
+<p>Campo <code>ai_generation_meta</code> (jsonb) preserva trazabilidad de cada generación IA:</p>
+<pre><span class="lang-tag">json</span>
+{
+  <span class="s">"generator"</span>: <span class="s">"post_upload_analysis"</span>,
+  <span class="s">"sourceDocumentId"</span>: <span class="s">"d8a7b6c5..."</span>,
+  <span class="s">"sourceDocumentTitle"</span>: <span class="s">"Contrato de servicios profesionales.pdf"</span>,
+  <span class="s">"model"</span>: <span class="s">"claude-opus-4-7"</span>,
+  <span class="s">"confidence"</span>: 0.87,
+  <span class="s">"generatedAt"</span>: <span class="s">"2026-05-13T07:35:21Z"</span>
+}</pre>
+
+<!-- ─── 11 ─── -->
+<h2 id="sse"><span class="section-num">11</span>Server-Sent Events</h2>
+
+<p>Todos los endpoints de IA del producto usan SSE para entregar progreso en tiempo real. La implementación está endurecida contra los problemas típicos de proxies (Render + Cloudflare):</p>
+
+<h3>11.1 Helper <code>setSseHeaders</code></h3>
+<pre><span class="lang-tag">ts</span>
+<span class="k">export function</span> <span class="f">setSseHeaders</span>(req: FastifyRequest, reply: FastifyReply): <span class="k">void</span> {
+  <span class="k">const</span> origin = req.headers.origin;
+  <span class="k">if</span> (origin &amp;&amp; <span class="f">isOriginAllowed</span>(origin)) {
+    reply.raw.<span class="f">setHeader</span>(<span class="s">'Access-Control-Allow-Origin'</span>, origin);
+    reply.raw.<span class="f">setHeader</span>(<span class="s">'Access-Control-Allow-Credentials'</span>, <span class="s">'true'</span>);
+    reply.raw.<span class="f">setHeader</span>(<span class="s">'Vary'</span>, <span class="s">'Origin'</span>);
+  }
+  reply.raw.<span class="f">setHeader</span>(<span class="s">'Content-Type'</span>, <span class="s">'text/event-stream'</span>);
+  reply.raw.<span class="f">setHeader</span>(<span class="s">'Cache-Control'</span>, <span class="s">'no-cache, no-transform'</span>);
+  reply.raw.<span class="f">setHeader</span>(<span class="s">'Connection'</span>, <span class="s">'keep-alive'</span>);
+  reply.raw.<span class="f">setHeader</span>(<span class="s">'X-Accel-Buffering'</span>, <span class="s">'no'</span>);
+  reply.raw.<span class="f">flushHeaders</span>?.();
+
+  <span class="c">// 1) Disable Nagle — TCP_NODELAY para chunks pequeños</span>
+  (reply.raw.socket <span class="k">as any</span>)?.<span class="f">setNoDelay</span>?.(<span class="k">true</span>);
+
+  <span class="c">// 2) Preámbulo 4KB para forzar a proxies a desbufferar</span>
+  reply.raw.<span class="f">write</span>(<span class="s">`: ${'#'.repeat(4096)}\n\n`</span>);
+}</pre>
+
+<h3>11.2 Keepalive 1s</h3>
+<p>Para evitar idle timeout y "stalled" del browser durante operaciones largas (RAG + IA puede tardar 30-60s), todos los endpoints SSE arrancan un intervalo:</p>
+
+<pre><span class="lang-tag">ts</span>
+<span class="k">export function</span> <span class="f">startSseKeepalive</span>(reply: FastifyReply, ms = 1000): () =&gt; <span class="k">void</span> {
+  <span class="k">const</span> handle = <span class="f">setInterval</span>(() =&gt; {
+    <span class="k">try</span> { reply.raw.<span class="f">write</span>(<span class="s">`: ka ${Date.now()}\n\n`</span>); }
+    <span class="k">catch</span> { <span class="f">clearInterval</span>(handle); }
+  }, ms);
+  <span class="k">return</span> () =&gt; <span class="f">clearInterval</span>(handle);
+}</pre>
+
+<div class="callout warn">
+  <div class="title">Lección aprendida</div>
+  TCP_NODELAY + preámbulo + keepalive son requisito obligatorio para SSE en Render. Sin esto, el cliente ve la barra de progreso colgada en 0% indefinidamente porque los proxies acumulan 4KB antes de iniciar la entrega.
+</div>
+
+<h3>11.3 Cliente — parser SSE robusto</h3>
+<p>El frontend filtra líneas de comentario <code>:</code> (no-op por spec), implementa fallback content-type (si no es <code>text/event-stream</code> parsea como JSON legacy) y watchdog 90s de inactividad:</p>
+
+<pre><span class="lang-tag">ts</span>
+<span class="k">while</span> (<span class="k">true</span>) {
+  <span class="k">const</span> { done, value } = <span class="k">await</span> reader.<span class="f">read</span>();
+  <span class="k">if</span> (done) <span class="k">break</span>;
+  <span class="f">bumpActivity</span>();
+  buffer += decoder.<span class="f">decode</span>(value, { stream: <span class="k">true</span> });
+  <span class="k">let</span> idx;
+  <span class="k">while</span> ((idx = buffer.<span class="f">indexOf</span>(<span class="s">'\n\n'</span>)) &gt;= 0) {
+    <span class="k">const</span> chunk = buffer.<span class="f">slice</span>(0, idx);
+    buffer = buffer.<span class="f">slice</span>(idx + 2);
+    <span class="c">// Ignorar comentarios SSE (preámbulo keepalive)</span>
+    <span class="k">const</span> lines = chunk.<span class="f">split</span>(<span class="s">'\n'</span>).<span class="f">filter</span>((l) =&gt; !l.<span class="f">startsWith</span>(<span class="s">':'</span>));
+    <span class="k">const</span> evLine = lines.<span class="f">find</span>((l) =&gt; l.<span class="f">startsWith</span>(<span class="s">'event:'</span>));
+    <span class="k">const</span> dataLine = lines.<span class="f">find</span>((l) =&gt; l.<span class="f">startsWith</span>(<span class="s">'data:'</span>));
+    <span class="k">if</span> (!dataLine) <span class="k">continue</span>;
+    <span class="k">const</span> event = evLine?.<span class="f">slice</span>(6).<span class="f">trim</span>() ?? <span class="s">'message'</span>;
+    <span class="k">const</span> payload = <span class="f">JSON</span>.<span class="f">parse</span>(dataLine.<span class="f">slice</span>(5).<span class="f">trim</span>());
+    <span class="f">handle</span>(event, payload);
+  }
+}</pre>
+
+<!-- ─── 12 ─── -->
+<h2 id="pwa"><span class="section-num">12</span>PWA y Service Worker</h2>
+
+<h3>12.1 Estrategia de caching (v11)</h3>
+<table>
+  <tr><th>Tipo de recurso</th><th>Estrategia</th><th>Notas</th></tr>
+  <tr><td>HTML / navigate</td><td><strong>Network-only</strong></td><td>Jamás cachear — previene ChunkLoadError tras deploys</td></tr>
+  <tr><td><code>/_next/*</code> (chunks)</td><td>Bypass total</td><td>Vercel sirve con <code>immutable</code> Cache-Control</td></tr>
+  <tr><td>Imágenes / fonts</td><td>Cache-first</td><td>Hashed, seguro</td></tr>
+  <tr><td>API JSON</td><td>Network-first con cache fallback</td><td>Para soporte offline básico</td></tr>
+  <tr><td>API SSE (lista bypass)</td><td><strong>Bypass total</strong></td><td>cache.put() en clone() bloquea streams largos</td></tr>
+</table>
+
+<h3>12.2 Rutas SSE en bypass list</h3>
+<p>El SW v11 detecta estos paths y los deja pasar directo al browser sin tocarlos:</p>
+<ul>
+  <li><code>/deep-analysis$</code></li>
+  <li><code>/upload-stream$</code></li>
+  <li><code>/chat$</code></li>
+  <li><code>/generate-document$</code></li>
+  <li><code>/summarization/stream</code></li>
+  <li><code>/post-upload-analysis$</code></li>
+  <li><code>/legal-reference/(expand|analyze)$</code></li>
+  <li><code>/suggested-prompts$</code></li>
+</ul>
+
+<h3>12.3 Auto-recovery de ChunkLoadError</h3>
+<p>Cuando un deploy de Vercel purga chunks viejos, el HTML cached del SW antiguo apunta a archivos inexistentes. El <code>ErrorBoundary</code> de la app detecta esto y se auto-recupera (ver §4.3). Esta es defensa en profundidad: el SW v11 ya no cachea HTML, pero usuarios con SW v8/v9 obsoleto se benefician igual.</p>
+
+<!-- ─── 13 ─── -->
+<h2 id="auth"><span class="section-num">13</span>Autenticación y autorización</h2>
+
+<h3>13.1 Dual-backend</h3>
+<p>El sistema soporta dos backends de auth controlados por la env var <code>AUTH_BACKEND</code>:</p>
+<ul>
+  <li><code>supabase</code> — recomendado. JWTs firmados por Supabase, OAuth Google, magic links, recovery.</li>
+  <li><code>jwt</code> — legacy. Bcrypt local + <code>@fastify/jwt</code>.</li>
+</ul>
+
+<h3>13.2 Roles y permisos</h3>
+<ul>
+  <li><strong>user</strong> — acceso a propios casos y documentos. Limitado por <code>plan_tier</code>.</li>
+  <li><strong>admin</strong> — panel <code>/admin/*</code>. Puede ver auth-events, audit, backups, pagos.</li>
+  <li><strong>superadmin</strong> — gestión de planes, especialidades, embeddings reindex.</li>
+</ul>
+
+<h3>13.3 Multi-tenancy</h3>
+<p>Aislamiento estricto por <code>user_id</code> en cada query. Backend valida ownership antes de cualquier mutación. Compartir caso entre usuarios del mismo Studio se hace vía tabla <code>case_collaborators</code> (planes Studio+ únicamente).</p>
+
+<!-- ─── 14 ─── -->
+<h2 id="observability"><span class="section-num">14</span>Observabilidad</h2>
+
+<h3>14.1 OpenTelemetry</h3>
+<ul>
+  <li><strong>Traces</strong> auto-instrumentados de HTTP, Fastify routes, Prisma queries.</li>
+  <li><strong>Métricas Prometheus</strong> en <code>/metrics</code>: request count, duration, error rate por endpoint.</li>
+  <li><strong>Logs estructurados</strong> Pino con <code>trace_id</code> + <code>span_id</code> correlacionables.</li>
+</ul>
+
+<h3>14.2 Audit log</h3>
+<p>Tabla <code>audit_log</code> con acciones críticas:</p>
+<table>
+  <tr><th>Acción</th><th>Cuándo</th></tr>
+  <tr><td><code>CASE_CREATED</code> / <code>CASE_UPDATED</code> / <code>CASE_DELETED</code></td><td>CRUD de casos</td></tr>
+  <tr><td><code>DOCUMENT_UPLOADED</code> / <code>DOCUMENT_DELETED</code> / <code>DOCUMENT_VIEWED</code> / <code>DOCUMENT_DOWNLOADED</code></td><td>Eventos de documento</td></tr>
+  <tr><td><code>DOC_GEN_REQUESTED</code> / <code>DOC_GEN_COMPLETED</code> / <code>DOC_GEN_SAVED</code></td><td>Generación de docs IA</td></tr>
+  <tr><td><code>DEEP_ANALYSIS_REQUESTED</code> / <code>DEEP_ANALYSIS_COMPLETED</code></td><td>Análisis profundo</td></tr>
+  <tr><td><code>BRAIN_REFRESHED</code></td><td>Síntesis del expediente</td></tr>
+  <tr><td><code>POST_UPLOAD_ANALYSIS</code></td><td>Análisis automático tras upload</td></tr>
+  <tr><td><code>CHAT_QUERY</code></td><td>Cada turno del chat IA</td></tr>
+</table>
+
+<h3>14.3 Auth Events</h3>
+<p>Tabla específica <code>auth_events</code> (16 tipos: signup_attempt/success/error, login_*, oauth_*, password_reset_*, magic_link_*, session_*). Panel <code>/admin/auth-events</code> con auto-refresh 15s, filtros por tipo/email, modal de detalle con user-agent, IP, callback URL y metadata. Diseñado para diagnosticar problemas de login en tiempo real sin pedir screenshots al usuario.</p>
+
+<!-- ─── 15 ─── -->
+<h2 id="deployment"><span class="section-num">15</span>Deployment</h2>
+
+<h3>15.1 Infraestructura</h3>
+<table>
+  <tr><th>Servicio</th><th>Provider</th><th>Region</th><th>Tier</th></tr>
+  <tr><td>Frontend</td><td>Vercel</td><td>iad1 (Washington)</td><td>Pro</td></tr>
+  <tr><td>Dominio custom</td><td>Cloudflare DNS</td><td>—</td><td>—</td></tr>
+  <tr><td>Backend API</td><td>Render Web Service</td><td>Oregon (us-west-2)</td><td>Starter</td></tr>
+  <tr><td>Postgres + Storage</td><td>Supabase</td><td>us-east-1</td><td>Pro</td></tr>
+  <tr><td>Redis</td><td>Redis Cloud</td><td>—</td><td>Free 30MB</td></tr>
+  <tr><td>Anthropic API</td><td>Anthropic</td><td>—</td><td>Pay-per-use</td></tr>
+  <tr><td>OpenAI API</td><td>OpenAI</td><td>—</td><td>Pay-per-use (embeddings)</td></tr>
+</table>
+
+<h3>15.2 CI/CD</h3>
+<p>Auto-deploy en cada push a <code>main</code>:</p>
+<ul>
+  <li><strong>Vercel</strong> detecta cambios en <code>frontend/**</code> y rebuilda Next.js. Deploy promedio: 90s.</li>
+  <li><strong>Render</strong> detecta cualquier push, ejecuta <code>npm install --include=dev &amp;&amp; npx prisma generate &amp;&amp; npm run build</code>. Deploy promedio: 3-4 min con cold start.</li>
+</ul>
+
+<h3>15.3 Variables de entorno críticas</h3>
+<table>
+  <tr><th>Variable</th><th>Servicio</th><th>Notas</th></tr>
+  <tr><td><code>JWT_SECRET</code></td><td>Backend</td><td>Requerido. Fail-fast si missing.</td></tr>
+  <tr><td><code>DATABASE_URL</code></td><td>Backend</td><td>Postgres connection string (pooler)</td></tr>
+  <tr><td><code>REDIS_URL</code></td><td>Backend</td><td>Habilita rate-limit + cache distribuido</td></tr>
+  <tr><td><code>AUTH_BACKEND</code></td><td>Backend</td><td>"supabase" o "jwt"</td></tr>
+  <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Backend</td><td>Claude Opus 4.7</td></tr>
+  <tr><td><code>OPENAI_API_KEY</code></td><td>Backend</td><td>Embeddings + Vision</td></tr>
+  <tr><td><code>SUPABASE_URL</code> + <code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Backend</td><td>Cliente service role para Storage + RPC</td></tr>
+  <tr><td><code>CORS_ORIGIN</code></td><td>Backend</td><td>CSV de dominios permitidos</td></tr>
+  <tr><td><code>STORAGE_BUCKET_DOCUMENTS</code></td><td>Backend</td><td>Bucket de Supabase Storage</td></tr>
+  <tr><td><code>NEXT_PUBLIC_API_URL</code></td><td>Frontend</td><td>URL del backend Render</td></tr>
+  <tr><td><code>NEXT_PUBLIC_AUTH_BACKEND</code></td><td>Frontend</td><td>"supabase" para activar cliente Supabase</td></tr>
+  <tr><td><code>NEXT_PUBLIC_GIT_SHA</code></td><td>Frontend</td><td>Inyectado por Vercel build</td></tr>
+</table>
+
+<!-- ─── 16 ─── -->
+<h2 id="help-system"><span class="section-num">16</span>Sistema de ayuda</h2>
+
+<h3>16.1 Centro de ayuda</h3>
+<p>Ruta <code>/help</code> con búsqueda full-text del lado del cliente. Contenido en <code>frontend/src/lib/help-content.ts</code> (37 artículos en 9 categorías). Cada artículo soporta markdown ligero compatible con el renderizador del chat.</p>
+
+<table>
+  <tr><th>Categoría</th><th>Emoji</th><th>Color</th><th>Cobertura</th></tr>
+  <tr><td>Empezar</td><td>🚀</td><td>violet-700</td><td>Qué es, planes, login, primer caso</td></tr>
+  <tr><td>Casos</td><td>📁</td><td>indigo-700</td><td>Crear, subir docs, lifecycle, análisis IA post-upload</td></tr>
+  <tr><td>Litigación</td><td>⚖️</td><td>fuchsia-700</td><td>Sala de litigación, prompts IA, referencias legales, generador</td></tr>
+  <tr><td>Productividad</td><td>🗓️</td><td>sky-700</td><td>Calendario, tareas, convocatoria auto</td></tr>
+  <tr><td>Finanzas</td><td>💼</td><td>emerald-700</td><td>CFO virtual, aging, facturación</td></tr>
+  <tr><td>Cuenta</td><td>🔐</td><td>slate-700</td><td>Privacidad, LOPDP, derechos</td></tr>
+  <tr><td>Administración</td><td>🛠️</td><td>rose-700</td><td>Usuarios, especialidades, auth-events</td></tr>
+  <tr><td>Troubleshooting</td><td>🆘</td><td>orange-700</td><td>Login fallido, ChunkLoadError, PWA</td></tr>
+  <tr><td>Avanzado</td><td>✨</td><td>amber-700</td><td>Atajos, Cmd+K, integraciones</td></tr>
+</table>
+
+<h3>16.2 Tours interactivos</h3>
+<p>13 tours definidos en <code>TourProvider.tsx</code>:</p>
+<ul>
+  <li><code>dashboard-welcome</code> — onboarding general</li>
+  <li><code>case-detail</code> — anatomía del expediente</li>
+  <li><code>documents-lifecycle</code> — kinds + marca-presentado</li>
+  <li><code>specialized-prompts-ia</code> — botón IA por categoría</li>
+  <li><code>legal-reference-dialog</code> — análisis profundo de normas</li>
+  <li><code>doc-gen</code> — generador de escritos (12 tipos)</li>
+  <li><code>litigation-room</code> — sala de litigación fullscreen</li>
+  <li><code>calendar</code> · <code>tasks</code> · <code>finance</code></li>
+  <li><code>admin-overview</code> · <code>admin-auth-events</code> · <code>admin-users</code></li>
+</ul>
+
+<p>El tour activo se persiste en <code>localStorage</code> (<code>poweria-tours-completed</code>) para que no se repita automáticamente. Cada tour se puede re-disparar desde Cmd+K → "Iniciar tour de esta página" o desde el FAB de ayuda flotante (botón <code>?</code> esquina inferior derecha).</p>
+
+<!-- ─── 17 ─── -->
+<h2 id="security"><span class="section-num">17</span>Seguridad y compliance</h2>
+
+<h3>17.1 Cifrado</h3>
+<ul>
+  <li><strong>TLS 1.3</strong> en todas las conexiones (Vercel + Render + Supabase tienen HTTPS-only).</li>
+  <li><strong>At-rest</strong>: Supabase Postgres AES-256, Storage S3 SSE-S3.</li>
+  <li><strong>Application-level</strong>: campos sensibles (tokens, claves API) cifrados con <code>field-encryption.service</code>.</li>
+</ul>
+
+<h3>17.2 LOPDP Ecuador</h3>
+<p>Sección <code>/lopdp</code> declara:</p>
+<ul>
+  <li>Datos del cliente NUNCA entrenan modelos de IA (cláusula contractual con Anthropic/OpenAI).</li>
+  <li>Derecho de acceso, rectificación, cancelación y oposición (ARCO).</li>
+  <li>DPO (Data Protection Officer) designado en COGNITEX.</li>
+  <li>Plazos de retención: documentos del caso mantenidos por la duración de la suscripción + 60 días gracia.</li>
+  <li>Notificación de brechas en 72h.</li>
+</ul>
+
+<h3>17.3 Defensas técnicas</h3>
+<ul>
+  <li>Helmet headers (X-Content-Type-Options, Referrer-Policy, Permissions-Policy).</li>
+  <li>Validación Zod en todo input externo.</li>
+  <li>Rate limiting Redis-backed.</li>
+  <li>SQL injection prevenido por Prisma + parameterized queries.</li>
+  <li>XSS: React escape por defecto + sanitización de markdown.</li>
+  <li>CSRF: Bearer tokens + SameSite cookies.</li>
+</ul>
+
+<!-- ─── 18 ─── -->
+<h2 id="roadmap"><span class="section-num">18</span>Roadmap técnico</h2>
+
+<h3>Q3 2026 — Q4 2026</h3>
+<ul>
+  <li><strong>Multi-país</strong>: corpus vectorizado para Colombia (CGP), Perú (NCPP) y Chile (CPC). Filtros automáticos por jurisdicción del usuario.</li>
+  <li><strong>Voice mode</strong>: dictado de hechos del caso vía Whisper + transcripción + auto-fill de campos.</li>
+  <li><strong>Vínculos jurisprudenciales</strong>: extractor automático de citas en escritos del usuario que linkea a la base de jurisprudencia.</li>
+  <li><strong>White-label</strong>: customización de colores/logo para firmas que compren plan Institucional.</li>
+  <li><strong>SSO/SAML</strong>: integración con identity providers corporativos.</li>
+  <li><strong>API pública</strong>: endpoints versionados v2 con rate-limit por API key para integraciones de terceros (LegalTech ecosystem).</li>
+  <li><strong>Predicción de outcome</strong>: ML model entrenado con jurisprudencia para estimar probabilidad de éxito del caso.</li>
+  <li><strong>Mobile app</strong>: React Native con login biométrico, push notifications y modo offline.</li>
+</ul>
+
+<h3>Optimizaciones en curso</h3>
+<ul>
+  <li>Migración progresiva de Prisma a Kysely para queries complejas (mejor performance + type-safety en SQL crudo).</li>
+  <li>Bundle size reduction: code-splitting agresivo + dynamic imports de componentes pesados (charts, PDF viewer).</li>
+  <li>Server Components donde no se requiere interactividad (landing, marketing pages).</li>
+  <li>Streaming SSR de las páginas de dashboard.</li>
+</ul>
+
+<div class="footer">
+  © 2026 COGNITEX · Poweria Legal · Generado automáticamente · Versión 2026-05-13 03:49 UTC<br>
+  Contacto técnico: benitocabrerar@gmail.com — Contacto comercial: Ing. Francisco Jacome (+593 98 396 4333)
+</div>
+
+</div>
+</body>
+</html>

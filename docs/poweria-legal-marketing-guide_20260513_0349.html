@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Poweria Legal — Guía completa del producto · COGNITEX</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  :root {
+    --ink: #0b1224;
+    --ink-2: #1e293b;
+    --muted: #475569;
+    --muted-soft: #94a3b8;
+    --line: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --indigo: #4338ca;
+    --indigo-2: #6366f1;
+    --indigo-soft: #eef2ff;
+    --fuchsia: #c026d3;
+    --fuchsia-soft: #fdf4ff;
+    --emerald: #059669;
+    --emerald-soft: #ecfdf5;
+    --amber: #d97706;
+    --amber-soft: #fffbeb;
+    --rose: #e11d48;
+    --gradient-1: linear-gradient(135deg, #4338ca 0%, #c026d3 50%, #ec4899 100%);
+    --gradient-2: linear-gradient(135deg, #6366f1, #8b5cf6);
+  }
+
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 11.5pt;
+    line-height: 1.55;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 22mm 20mm;
+    position: relative;
+    page-break-after: always;
+    background: white;
+  }
+  .page:last-child { page-break-after: auto; }
+  .page-footer {
+    position: absolute;
+    bottom: 10mm;
+    left: 20mm;
+    right: 20mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8.5pt;
+    color: var(--muted-soft);
+    border-top: 1px solid var(--line);
+    padding-top: 6mm;
+  }
+
+  /* ─── COVER ─── */
+  .cover {
+    background: var(--gradient-1);
+    color: white;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover .cover-inner {
+    padding: 40mm 20mm 30mm;
+    position: relative;
+    z-index: 2;
+    height: calc(297mm - 0mm);
+    display: flex;
+    flex-direction: column;
+  }
+  .cover .brand {
+    font-size: 14pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.92;
+    margin-bottom: 6mm;
+  }
+  .cover h1 {
+    font-size: 56pt;
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin: 0 0 6mm;
+  }
+  .cover .tagline {
+    font-size: 16pt;
+    font-weight: 400;
+    line-height: 1.4;
+    opacity: 0.92;
+    max-width: 155mm;
+    margin-bottom: 14mm;
+  }
+  .cover .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8mm;
+    margin-top: auto;
+    margin-bottom: 14mm;
+  }
+  .cover .pillar {
+    background: rgba(255,255,255,0.13);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 4mm;
+    padding: 5mm 6mm;
+  }
+  .cover .pillar .num {
+    font-size: 24pt;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .cover .pillar .label {
+    font-size: 9pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+    margin-top: 2mm;
+  }
+  .cover .footer {
+    border-top: 1px solid rgba(255,255,255,0.25);
+    padding-top: 6mm;
+    font-size: 9pt;
+    display: flex;
+    justify-content: space-between;
+    opacity: 0.85;
+  }
+  .cover-blob {
+    position: absolute;
+    width: 280mm;
+    height: 280mm;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    top: -120mm;
+    right: -120mm;
+    z-index: 1;
+  }
+
+  /* ─── HEADINGS ─── */
+  h2 {
+    font-size: 26pt;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 4mm;
+    color: var(--ink);
+  }
+  h2 .accent {
+    background: var(--gradient-2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  h3 {
+    font-size: 16pt;
+    font-weight: 800;
+    margin: 8mm 0 3mm;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  h4 {
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 5mm 0 2mm;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  p { margin: 0 0 3mm; color: var(--ink-2); }
+  .lead {
+    font-size: 13pt;
+    line-height: 1.55;
+    color: var(--ink-2);
+    margin: 0 0 8mm;
+    max-width: 155mm;
+  }
+  ul, ol { padding-left: 6mm; margin: 2mm 0 5mm; }
+  li { margin-bottom: 1.5mm; color: var(--ink-2); }
+  strong { color: var(--ink); font-weight: 700; }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--indigo);
+    background: var(--indigo-soft);
+    padding: 1.5mm 4mm;
+    border-radius: 100px;
+    margin-bottom: 3mm;
+  }
+
+  /* ─── GRID FEATURES ─── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5mm;
+    margin: 5mm 0;
+  }
+  .feature {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 4mm;
+    padding: 6mm;
+    page-break-inside: avoid;
+  }
+  .feature .icon {
+    width: 11mm;
+    height: 11mm;
+    border-radius: 3mm;
+    background: var(--gradient-2);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16pt;
+    font-weight: 900;
+    margin-bottom: 3mm;
+  }
+  .feature h4 {
+    margin: 0 0 2mm;
+    font-size: 13pt;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .feature p {
+    margin: 0;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  /* ─── STATS BAR ─── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4mm;
+    margin: 6mm 0 10mm;
+  }
+  .stat {
+    background: var(--bg-soft);
+    border-radius: 3mm;
+    padding: 5mm;
+    text-align: center;
+    border-top: 3px solid var(--indigo);
+  }
+  .stat .value {
+    font-size: 28pt;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--indigo);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .label {
+    font-size: 9pt;
+    color: var(--muted);
+    margin-top: 2mm;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  /* ─── QUOTE / TESTIMONIAL ─── */
+  .quote {
+    background: var(--indigo-soft);
+    border-left: 4px solid var(--indigo);
+    padding: 6mm 8mm;
+    border-radius: 0 3mm 3mm 0;
+    margin: 5mm 0;
+    font-style: italic;
+    font-size: 11.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .quote::before {
+    content: "“";
+    font-size: 36pt;
+    font-style: normal;
+    color: var(--indigo-2);
+    line-height: 0.6;
+    margin-right: 2mm;
+    vertical-align: -6mm;
+  }
+  .quote .attribution {
+    font-style: normal;
+    font-size: 9.5pt;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 3mm;
+  }
+
+  /* ─── JOURNEY STEPS ─── */
+  .journey {
+    margin: 6mm 0;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 14mm 1fr;
+    gap: 5mm;
+    margin-bottom: 6mm;
+    page-break-inside: avoid;
+  }
+  .step .num {
+    width: 14mm;
+    height: 14mm;
+    border-radius: 50%;
+    background: var(--gradient-2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17pt;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+  .step .body h4 {
+    margin: 1mm 0 1mm;
+    font-size: 13pt;
+    text-transform: none;
+    letter-spacing: -0.01em;
+  }
+  .step .body p {
+    margin: 0 0 1.5mm;
+    font-size: 10pt;
+    line-height: 1.55;
+  }
+  .step .tip {
+    background: var(--emerald-soft);
+    border-left: 3px solid var(--emerald);
+    padding: 2mm 4mm;
+    border-radius: 0 2mm 2mm 0;
+    font-size: 9.5pt;
+    color: #064e3b;
+    margin-top: 2mm;
+  }
+
+  /* ─── PRICING ─── */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+    margin: 5mm 0;
+  }
+  .plan {
+    border: 1px solid var(--line);
+    border-radius: 4mm;
+    padding: 6mm;
+    background: white;
+    page-break-inside: avoid;
+  }
+  .plan.featured {
+    background: var(--gradient-2);
+    color: white;
+    border: none;
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(99,102,241,0.3);
+  }
+  .plan .name {
+    font-size: 11pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 3mm;
+  }
+  .plan .price {
+    font-size: 32pt;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 1mm;
+  }
+  .plan .price small {
+    font-size: 11pt;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+  .plan ul {
+    list-style: none;
+    padding: 0;
+    margin: 4mm 0 0;
+    font-size: 9.5pt;
+    line-height: 1.6;
+  }
+  .plan ul li {
+    padding-left: 5mm;
+    position: relative;
+    margin-bottom: 1.5mm;
+  }
+  .plan ul li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--emerald);
+    font-weight: 900;
+  }
+  .plan.featured ul li::before { color: #a7f3d0; }
+
+  /* ─── CTA ─── */
+  .cta-block {
+    background: var(--gradient-1);
+    color: white;
+    border-radius: 5mm;
+    padding: 10mm 12mm;
+    text-align: center;
+    margin: 6mm 0;
+  }
+  .cta-block h3 {
+    color: white;
+    font-size: 22pt;
+    margin: 0 0 3mm;
+    letter-spacing: -0.02em;
+  }
+  .cta-block p {
+    color: rgba(255,255,255,0.92);
+    font-size: 11.5pt;
+    margin-bottom: 5mm;
+  }
+  .cta-button {
+    display: inline-block;
+    background: white;
+    color: var(--indigo);
+    font-weight: 800;
+    font-size: 11pt;
+    padding: 4mm 10mm;
+    border-radius: 100px;
+    text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  .cta-secondary {
+    margin-top: 3mm;
+    font-size: 10pt;
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* ─── SCREEN MOCK ─── */
+  .mock {
+    border: 1px solid var(--line);
+    border-radius: 4mm;
+    overflow: hidden;
+    margin: 4mm 0;
+    background: white;
+  }
+  .mock-bar {
+    background: #f1f5f9;
+    padding: 3mm 4mm;
+    display: flex;
+    gap: 2mm;
+    border-bottom: 1px solid var(--line);
+  }
+  .mock-bar .dot {
+    width: 3mm;
+    height: 3mm;
+    border-radius: 50%;
+    background: #cbd5e1;
+  }
+  .mock-bar .dot.r { background: #ef4444; }
+  .mock-bar .dot.y { background: #f59e0b; }
+  .mock-bar .dot.g { background: #10b981; }
+  .mock-content {
+    padding: 6mm;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 9pt;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+
+  /* ─── TIMELINE ─── */
+  .timeline {
+    margin: 5mm 0;
+  }
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 22mm 1fr;
+    gap: 4mm;
+    padding: 3mm 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .timeline-row .when {
+    font-weight: 800;
+    color: var(--indigo);
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .timeline-row .what {
+    font-size: 10.5pt;
+    color: var(--ink-2);
+  }
+
+  /* ─── BADGE ─── */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2mm;
+    margin: 3mm 0;
+  }
+  .badge {
+    display: inline-block;
+    padding: 1.5mm 4mm;
+    border-radius: 100px;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .badge.indigo  { background: var(--indigo-soft); color: var(--indigo); }
+  .badge.fuchsia { background: var(--fuchsia-soft); color: var(--fuchsia); }
+  .badge.emerald { background: var(--emerald-soft); color: var(--emerald); }
+  .badge.amber   { background: var(--amber-soft); color: var(--amber); }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 7mm 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════ COVER ════════════════════════ -->
+<section class="page cover">
+  <div class="cover-blob"></div>
+  <div class="cover-inner">
+    <div class="brand">COGNITEX · 2026</div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+      <h1>Poweria<br>Legal</h1>
+      <p class="tagline">El sistema operativo de los abogados que ganan casos. IA jurídica entrenada con tu expediente, no con datos genéricos.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar"><div class="num">10×</div><div class="label">Velocidad redactando escritos</div></div>
+      <div class="pillar"><div class="num">138</div><div class="label">Leyes ecuatorianas vectorizadas</div></div>
+      <div class="pillar"><div class="num">0%</div><div class="label">Tu información entrena modelos</div></div>
+    </div>
+    <div class="footer">
+      <div>Guía completa del producto — Mayo 2026</div>
+      <div>poweria.cognitex.app · +593 98 396 4333</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 2 — POR QUÉ ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">El problema</span>
+  <h2>Litigar en Ecuador es <span class="accent">una carrera contra el tiempo</span>.</h2>
+  <p class="lead">El abogado promedio dedica el 60% de su semana a tareas que la IA puede acelerar: leer expedientes, buscar artículos, redactar borradores, controlar plazos, generar facturas. El otro 40% — la estrategia, las audiencias, el cliente — es donde realmente se gana o se pierde el caso.</p>
+
+  <h3>Lo que falla en las herramientas actuales</h3>
+  <ul>
+    <li><strong>ChatGPT genérico no conoce el COIP ni el COGEP</strong>. Inventa artículos. Cita doctrina argentina o mexicana. Te hace perder credibilidad ante el juzgado.</li>
+    <li><strong>Word + carpetas en Drive</strong> no escalan. Cada caso son docenas de archivos sueltos. Encontrar la providencia del 12 de marzo te toma 15 minutos.</li>
+    <li><strong>Los sistemas legales tradicionales</strong> son CRMs disfrazados. Te listan casos pero no te ayudan a ganarlos.</li>
+    <li><strong>Las herramientas en inglés</strong> (Casetext, Harvey) están entrenadas con jurisprudencia anglosajona. No sirven en Quito ni Guayaquil.</li>
+  </ul>
+
+  <div class="stats">
+    <div class="stat"><div class="value">60%</div><div class="label">Tiempo en tareas mecánicas</div></div>
+    <div class="stat"><div class="value">15min</div><div class="label">Para encontrar un documento</div></div>
+    <div class="stat"><div class="value">3-4h</div><div class="label">Para redactar un escrito típico</div></div>
+    <div class="stat"><div class="value">~24%</div><div class="label">Errores en citas legales con IA genérica</div></div>
+  </div>
+
+  <div class="quote">
+    Después de mi tercer caso de peculado, me di cuenta de que el 80% del trabajo es buscar y citar. El resto es donde realmente uso mi cerebro. Necesitaba alguien — o algo — que hiciera lo primero por mí.
+    <div class="attribution">— Abogado litigante, Quito (cliente piloto)</div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>02</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 3 — LA SOLUCIÓN ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">La solución</span>
+  <h2>Una plataforma. <span class="accent">Toda tu práctica jurídica.</span></h2>
+  <p class="lead">Poweria Legal no es otra herramienta más. Es el centro de operaciones donde vivís tu día: tus casos, tus documentos, tus audiencias, tu cobranza, tu equipo. Todo conectado, todo asistido por IA que entiende derecho ecuatoriano.</p>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="icon">⚖️</div>
+      <h4>Sala de Litigación</h4>
+      <p>Pantalla completa para audiencias: cronómetro, brief, cronología, tarjetas argumentales generadas por IA en streaming. Apertura, hechos, fundamento, prueba, refutación y cierre — todo escrito a partir de tu expediente real.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🧠</div>
+      <h4>Asistente Claude Opus 4.7</h4>
+      <p>El modelo de razonamiento más potente del mercado, con 1 millón de tokens de contexto, pre-cargado con tu expediente. Te responde con citas verificables — si duda, marca <em>[CITA POR VERIFICAR]</em> antes de inventar.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📑</div>
+      <h4>12 tipos de escrito legal</h4>
+      <p>Demanda, contestación, apelación, casación, alegato, contrato, transaccional, informe, carta, notificación, poder, escrito general. Generación asistida con verificación de datos faltantes y .docx forense forensemente formateado.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📚</div>
+      <h4>138 leyes vectorizadas</h4>
+      <p>Constitución, COIP, COGEP, Código Civil, Código del Trabajo, LOSEP, LOSNCP, jurisprudencia de la Corte Constitucional y Nacional. Búsqueda híbrida semántica + keyword. <strong>Cita "Art. 76 Const." y ves el texto en menos de un segundo.</strong></p>
+    </div>
+    <div class="feature">
+      <div class="icon">🗓️</div>
+      <h4>Calendario + Tareas + Convocatoria</h4>
+      <p>Subís el PDF de la providencia, la IA extrae fecha, hora, link de Zoom y juzgado. Se crea el evento automáticamente. Kanban de tareas con plantillas legales y subtareas sugeridas por IA.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💼</div>
+      <h4>CFO virtual</h4>
+      <p>Aging de cobranza, forecast 4 semanas, factura desde tareas en un click, PDF al vuelo. La IA detecta clientes morosos y te sugiere a quién llamar primero esta semana.</p>
+    </div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>03</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 4 — UN DÍA TÍPICO ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">User journey</span>
+  <h2>Un día normal con <span class="accent">Poweria Legal</span></h2>
+  <p class="lead">Así trabaja un abogado litigante penal el martes que tiene audiencia preparatoria a las 10:00. Tiempo real, tareas reales.</p>
+
+  <div class="timeline">
+    <div class="timeline-row"><div class="when">07:30</div><div class="what">Abre Poweria en el celular durante el café. El dashboard muestra <strong>3 audiencias esta semana</strong>, <strong>2 plazos vencen hoy</strong>, <strong>USD 4.200 facturados por cobrar</strong>.</div></div>
+    <div class="timeline-row"><div class="when">08:00</div><div class="what">Llega a la oficina. Abre el caso de las 10:00 y entra en <strong>Sala de Litigación</strong>: pantalla completa con cronómetro, brief, tarjetas argumentales ya generadas (apertura, prueba ofrecida, refutación a la defensa de "ausencia de dolo").</div></div>
+    <div class="timeline-row"><div class="when">08:30</div><div class="what">Recibe una notificación: la contraparte presentó <strong>nuevo escrito</strong>. Arrastra el PDF al chat del caso. En 25 segundos: <strong>análisis IA automático</strong> con conclusión clave, acciones urgentes y normas aplicables.</div></div>
+    <div class="timeline-row"><div class="when">08:45</div><div class="what">Click en una card de <strong>Referencias Legales</strong>: "Art. 317 COIP — Lavado de activos". Se abre dialog con el texto literal del artículo, importancia para el caso, jurisprudencia de la Corte Nacional, defensas comunes y red flags.</div></div>
+    <div class="timeline-row"><div class="when">09:15</div><div class="what">Genera el <strong>escrito de contestación</strong> con el generador de docs IA. El sistema detecta dos datos faltantes (cuantía actualizada, juzgado destinatario), le ofrece <em>"Sugerir con IA"</em>. Acepta. Stream del documento en vivo. Click en <strong>Descargar .docx</strong>.</div></div>
+    <div class="timeline-row"><div class="when">09:50</div><div class="what">Audiencia en Zoom. En la sala el cronómetro corre. Tarjeta "Refutación" abierta a un lado. Una nota libre se transcribe del dictado de voz.</div></div>
+    <div class="timeline-row"><div class="when">12:30</div><div class="what">Vuelve a la oficina. Marca el escrito presentado oficialmente: badge <strong>"court_filed"</strong> + fecha + tribunal. El cerebro del caso se recalcula.</div></div>
+    <div class="timeline-row"><div class="when">15:00</div><div class="what">Revisa el panel de <strong>Finanzas</strong>: aging de cobranza muestra que el cliente del caso laboral lleva 28 días sin pagar. Cmd+K → "Generar factura desde tareas del caso 2026-0143" → PDF en 3 segundos.</div></div>
+    <div class="timeline-row"><div class="when">17:30</div><div class="what">Cierra el día con el botón <strong>"Re-evaluar IA"</strong> en el pipeline procesal. La IA confirma: el caso pasa de "Instrucción Fiscal" a "Evaluación y Preparatoria". Calendario y tareas se actualizan solos.</div></div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>04</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 5 — SALA DE LITIGACIÓN ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">Característica destacada</span>
+  <h2>Sala de Litigación: <span class="accent">audiencias con copilot</span></h2>
+  <p class="lead">Una pantalla pensada para los 90 minutos más importantes de tu semana. Sin clutter, sin pestañas, sin perder la mirada del juez.</p>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="icon">⏱️</div>
+      <h4>Cronómetro y brief</h4>
+      <p>Tiempo de audiencia visible al instante. Brief de 4 puntos cargado desde el cerebro del caso: tesis, hechos clave, pretensiones, próximo paso procesal.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🃏</div>
+      <h4>Tarjetas argumentales</h4>
+      <p>7 tipos: <em>apertura, hechos, fundamento, prueba, refutación, réplica, cierre</em>. Generadas en streaming desde tu expediente real con Claude Opus 4.7. Atajos 1-4 + ← → para navegar. Espacio para marcar "expuesta".</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📝</div>
+      <h4>Notas en vivo</h4>
+      <p>Panel lateral con teclado o dictado. Las notas quedan vinculadas al caso. Útil para anotar admisiones de la contraparte o promesas del juzgado en sala.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔎</div>
+      <h4>Buscador de artículos</h4>
+      <p>⌘ / activa foco directo. Escribís "278 COIP" y aparece el texto del artículo. Tres segundos. Sin abandonar la audiencia.</p>
+    </div>
+  </div>
+
+  <h3>Modo Presentador</h3>
+  <p>Tecla <code>P</code> activa modo presentador: tipografía grande, alto contraste, layout simplificado. Pensado para compartir pantalla en audiencias virtuales (Zoom/Teams/Meet) o conectar a proyector en sala física. Los íconos de admin desaparecen — solo tarjetas y notas.</p>
+
+  <div class="quote">
+    Antes llegaba a audiencia con 3 pestañas de Chrome, un PDF imprimido y notas a mano. Ahora abro la Sala, leo la tarjeta de fundamento y el juez ni nota que tengo todo en una pantalla.
+    <div class="attribution">— Abogada de constitucional, Cuenca</div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>05</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 6 — IA QUE ENTIENDE TU CASO ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">El motor</span>
+  <h2>IA que <span class="accent">conoce TU expediente</span></h2>
+  <p class="lead">No es ChatGPT. No es una API genérica. Es Claude Opus 4.7 pre-cargado con el contexto completo de tu caso, las leyes ecuatorianas y la jurisprudencia relevante. Cada respuesta cita fuente.</p>
+
+  <h3>1. Análisis automático al subir un documento</h3>
+  <p>Apenas subís un nuevo escrito, providencia o evidencia, la IA produce automáticamente:</p>
+  <ul>
+    <li><strong>Conclusión clave</strong> en 1 línea</li>
+    <li><strong>Qué aporta al expediente</strong> (2-4 oraciones)</li>
+    <li><strong>Acciones urgentes</strong> con plazo legal y prioridad</li>
+    <li><strong>Plan de trabajo</strong> con owner sugerido (vos, cliente, fiscal, juez)</li>
+    <li><strong>Tareas a crear</strong> con un click de aceptación</li>
+    <li><strong>Documentos a generar</strong> en respuesta y a qué juzgado</li>
+    <li><strong>Riesgos detectados</strong> con mitigación propuesta</li>
+    <li><strong>Normas aplicables</strong> con artículos del COIP/COGEP/CRE</li>
+    <li><strong>Información faltante</strong> (gaps que la IA no pudo resolver)</li>
+    <li><strong>Nivel de confianza</strong> del modelo (0-100%)</li>
+  </ul>
+
+  <h3>2. Prompts especializados — Generación IA por categoría</h3>
+  <p>Ocho categorías: <em>Análisis Legal, Redacción, Investigación, Estrategia, Cumplimiento, Búsqueda, Documentos, Citas Legales</em>. Cada una con un botón "IA avanzado" que genera 6 a 10 prompts <strong>específicos para tu caso real</strong>:</p>
+
+  <div class="mock">
+    <div class="mock-bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+    <div class="mock-content"><strong>Ejemplo de prompt generado para caso real de peculado:</strong><br><br>
+    "Analizá si la transferencia de USD 1.8M de las cuentas del Estado a la cuenta de la cónyuge del procesado (Verónica Cevallos Toro, Banco Pichincha 22-04-2022) configura el elemento objetivo del Art. 278 COIP, considerando que la defensa alega herencia familiar declarada en 2017. Citá COIP, jurisprudencia de la Corte Nacional y argumentá fortalezas y debilidades de cada postura."<br><br>
+    <em style="color:#94a3b8">— por qué importa AHORA: caso en Instrucción Fiscal, audiencia preparatoria en 6 días, la trazabilidad del flujo es el punto débil de la defensa.</em></div>
+  </div>
+
+  <h3>3. Análisis profundo de cualquier norma</h3>
+  <p>Click en cualquier card de Referencias Legales y la IA genera análisis completo: texto literal recuperado del corpus, análisis jurídico (bien protegido, sujetos, elementos), importancia para tu caso, penas/efectos, requisitos, normas relacionadas, jurisprudencia clave, estrategia táctica, defensas comunes, errores a evitar.</p>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>06</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 7 — DOCUMENTOS VIVOS ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">Diferenciador</span>
+  <h2>Documentos con <span class="accent">ciclo de vida verificable</span></h2>
+  <p class="lead">No todos los documentos pesan igual. Un borrador es un borrador. Un escrito presentado al juzgado es verdad oficial. Poweria distingue los 4 estados — y la IA los respeta al razonar.</p>
+
+  <div class="badge-row">
+    <span class="badge indigo">📄 uploaded — Subido por vos</span>
+    <span class="badge fuchsia">✨ ai_generated — Borrador IA</span>
+    <span class="badge fuchsia">✨ ai_analysis — Análisis IA</span>
+    <span class="badge emerald">⚖️ court_filed — Presentado oficialmente</span>
+  </div>
+
+  <h3>Cómo funciona</h3>
+  <div class="step">
+    <div class="num">1</div>
+    <div class="body">
+      <h4>Subís un PDF → kind <span class="badge indigo" style="font-size:9pt">uploaded</span></h4>
+      <p>Lo trata como fuente de verdad. OCR Vision si es escaneo. Texto extraído, vectorizado e indexado.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="num">2</div>
+    <div class="body">
+      <h4>Generás un escrito con IA → kind <span class="badge fuchsia" style="font-size:9pt">ai_generated</span></h4>
+      <p>Borrador para revisión. La IA y demás del estudio saben que aún no es oficial. Si modificás, queda otra versión.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <div class="body">
+      <h4>Presentás el escrito al juzgado → kind <span class="badge emerald" style="font-size:9pt">court_filed</span></h4>
+      <p>Click en el ícono ⚖️ a la derecha del documento. Indicás juzgado y fecha. La IA recalcula el cerebro del caso y prioriza ese documento sobre cualquier borrador anterior al razonar.</p>
+      <div class="tip"><strong>Por qué importa:</strong> cuando le preguntás algo del caso a la IA, distingue entre "esto es lo que propusiste presentar" vs "esto es lo que efectivamente se presentó". Sin esa distinción, podría darte estrategia obsoleta.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="num">4</div>
+    <div class="body">
+      <h4>Cada análisis IA queda guardado → kind <span class="badge fuchsia" style="font-size:9pt">ai_analysis</span></h4>
+      <p>Dictámenes y análisis profundos quedan en el expediente para volver a consultarlos sin regenerar. <strong>No se vectorizan</strong> — no contaminan la búsqueda RAG con conclusiones propias.</p>
+    </div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>07</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 8 — PRODUCTIVIDAD ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">Productividad</span>
+  <h2>Calendario, tareas y <span class="accent">cobranza inteligente</span></h2>
+  <p class="lead">Todo lo que rodea al litigio — agenda, deadlines, billing — integrado con la IA. Una sola fuente de verdad.</p>
+
+  <h3>Convocatoria automática a audiencias</h3>
+  <p>Subís el PDF de la providencia que convoca a audiencia. En 8-12 segundos, la IA extrae:</p>
+  <ul>
+    <li><strong>Fecha y hora</strong> exacta de la audiencia</li>
+    <li><strong>Tipo</strong> de audiencia (preparatoria, evaluación, juzgamiento, etc.)</li>
+    <li><strong>Link de Zoom / Teams / Meet</strong> con código de acceso</li>
+    <li><strong>Juzgado</strong> y juez asignado</li>
+    <li><strong>Caso</strong> al que pertenece (matched automáticamente)</li>
+  </ul>
+  <p>Se crea el evento en tu calendario con todos los campos. Si la audiencia es presencial, se incluye la dirección. Si es por video, basta un click el día indicado.</p>
+
+  <h3>Kanban de tareas con plantillas legales</h3>
+  <p>Cuatro columnas (Pendiente, En curso, En revisión, Hecho) con drag-and-drop fluido. <strong>Aplicar plantilla</strong> en Cmd+K dispara un wizard con plantillas pre-armadas:</p>
+  <ul>
+    <li><em>Inicio de causa penal</em>: 8 subtareas con plazos automáticos (denuncia, asignación fiscal, audiencia formulación, etc.)</li>
+    <li><em>Despido intempestivo</em>: 6 subtareas (cálculo liquidación, demanda, mediación, audiencia única, sentencia, ejecución).</li>
+    <li><em>Cobro indebido bancario</em>, <em>Divorcio de mutuo acuerdo</em>, <em>Acción de protección</em>, y 12 plantillas más.</li>
+  </ul>
+  <p>Cada subtarea tiene un botón <em>"Sugerir subtareas con IA"</em> que descompone aún más.</p>
+
+  <h3>CFO virtual</h3>
+  <p>El módulo de Finanzas no es solo facturación — es un copiloto de gestión:</p>
+  <ul>
+    <li><strong>Aging de cobranza</strong>: 0-30, 31-60, 61-90, 90+ días. Click en cualquier rango → lista de facturas en ese estado.</li>
+    <li><strong>Forecast 4 semanas</strong>: la IA proyecta ingresos basándose en histórico + tareas facturables pendientes.</li>
+    <li><strong>Factura desde tareas</strong>: marcás tareas como facturables, Cmd+K → "Facturar tareas seleccionadas" → PDF generado en 3 segundos.</li>
+    <li><strong>Detección de clientes morosos</strong>: la IA te sugiere a quién llamar primero esta semana con un breve memorando.</li>
+  </ul>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>08</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 9 — PRIVACIDAD ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">Datos y privacidad</span>
+  <h2>Tu información, <span class="accent">tu propiedad. Siempre.</span></h2>
+  <p class="lead">Trabajamos con secretos profesionales. Construimos Poweria asumiendo esa responsabilidad como pilar — no como cláusula legal.</p>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="icon">🔒</div>
+      <h4>Cifrado de extremo a extremo</h4>
+      <p>TLS 1.3 en cada conexión. AES-256 en reposo (Supabase + S3). Datos sensibles cifrados a nivel aplicación.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🚫</div>
+      <h4>Cero entrenamiento de modelos</h4>
+      <p>Cláusula contractual explícita con Anthropic y OpenAI: tu información NUNCA se usa para entrenar IA. Ni para nosotros, ni para ellos.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📜</div>
+      <h4>LOPDP Ecuador</h4>
+      <p>Cumplimiento total de la Ley Orgánica de Protección de Datos. Derechos ARCO accesibles desde /lopdp. DPO designado.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📊</div>
+      <h4>Audit log granular</h4>
+      <p>Cada acción crítica queda registrada con timestamp, usuario, IP y contexto. Disponible para revisión interna o entrega a autoridades si se requiere.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🗑️</div>
+      <h4>Eliminación garantizada</h4>
+      <p>Pedís borrar tu cuenta y eliminamos todo en 30 días. Sin tarjetas escondidas, sin "soft delete" eterno. Confirmación por email.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🌎</div>
+      <h4>Soberanía de datos</h4>
+      <p>Infraestructura en regiones con regulaciones equivalentes o superiores a Ecuador (US-East, EU). Sin servidores en jurisdicciones de riesgo.</p>
+    </div>
+  </div>
+
+  <div class="quote">
+    Probé otras herramientas. Todas decían "los datos no se usan para entrenar" — pero ninguna lo ponía por escrito en el contrato. Cognitex me mandó el adendum firmado el mismo día que pregunté.
+    <div class="attribution">— Socio principal, firma boutique, Quito</div>
+  </div>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>09</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 10 — PRECIOS ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">Planes</span>
+  <h2>Empezá <span class="accent">gratis</span>. Escalá cuando lo necesites.</h2>
+  <p class="lead">Sin tarjeta de crédito para empezar. Cambia de plan en cualquier momento. Anual = 2 meses gratis.</p>
+
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="name">Gratis</div>
+      <div class="price">$0<small>/mes</small></div>
+      <ul>
+        <li>1 caso activo</li>
+        <li>30 consultas IA/mes</li>
+        <li>Búsqueda jurídica básica</li>
+        <li>Calendario + tareas</li>
+        <li>Sin tarjeta requerida</li>
+      </ul>
+    </div>
+    <div class="plan featured">
+      <div class="name">Pro ⭐</div>
+      <div class="price">$49<small>/mes</small></div>
+      <ul>
+        <li>50 casos activos</li>
+        <li>600 consultas IA/mes</li>
+        <li>Sala de Litigación</li>
+        <li>Tarjetas argumentales</li>
+        <li>Generador de documentos</li>
+        <li>CFO virtual completo</li>
+        <li>OCR Vision (PDF escaneados)</li>
+        <li>Soporte prioritario</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="name">Studio</div>
+      <div class="price">$249<small>/mes</small></div>
+      <ul>
+        <li>5 usuarios</li>
+        <li>100 casos compartidos</li>
+        <li>Roles y permisos</li>
+        <li>Colaboración multi-abogado</li>
+        <li>Branding del estudio</li>
+        <li>Onboarding personalizado</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="pricing-grid" style="margin-top: 4mm;">
+    <div class="plan">
+      <div class="name">Starter</div>
+      <div class="price">$19<small>/mes</small></div>
+      <ul>
+        <li>10 casos</li>
+        <li>150 consultas IA</li>
+        <li>OCR Vision 10 págs/mes</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="name">Pro Max</div>
+      <div class="price">$99<small>/mes</small></div>
+      <ul>
+        <li>200 casos</li>
+        <li>1.200 consultas IA</li>
+        <li>API access</li>
+        <li>Prioridad en cola IA</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="name">Institucional</div>
+      <div class="price" style="font-size:18pt; padding-top:6mm;">A medida</div>
+      <ul>
+        <li>SSO / SAML</li>
+        <li>White-label completo</li>
+        <li>Despliegue privado</li>
+        <li>SLA dedicado</li>
+      </ul>
+    </div>
+  </div>
+
+  <p style="margin-top: 5mm; font-size: 9.5pt; color: var(--muted); text-align: center;">
+    💳 Pago con PayPal o transferencia bancaria (Banco del Pichincha, cuenta corporativa COGNITEX) · Activación en &lt;24h · WhatsApp del Ing. Francisco Jacome: <strong>+593 98 396 4333</strong>
+  </p>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>10</div></div>
+</section>
+
+<!-- ════════════════════════ PÁGINA 11 — CTA FINAL ════════════════════════ -->
+<section class="page">
+  <span class="eyebrow">El siguiente paso</span>
+  <h2>Probalo <span class="accent">esta semana</span>.</h2>
+  <p class="lead">No hace falta migrar nada, no hace falta capacitar al equipo, no hace falta tarjeta. Creás tu primer caso en 90 segundos.</p>
+
+  <div class="cta-block">
+    <h3>Empezá gratis en poweria.cognitex.app</h3>
+    <p>1 caso activo · 30 consultas IA · Sala de Litigación de muestra · Calendario y tareas completos. Sin trial, sin tarjeta.</p>
+    <a href="#" class="cta-button">Crear cuenta gratis →</a>
+    <div class="cta-secondary">o agendá una demo de 20 min con un especialista</div>
+  </div>
+
+  <h3>Contacto comercial</h3>
+  <p>Para planes Studio, Institucional o demos personalizadas:</p>
+  <div style="background: var(--bg-soft); border-radius: 4mm; padding: 6mm; margin: 3mm 0;">
+    <p style="font-size: 13pt; font-weight: 800; margin: 0 0 2mm; color: var(--ink);">Ing. Francisco Jacome</p>
+    <p style="margin: 0 0 1mm; color: var(--muted);">Gerente Comercial · COGNITEX</p>
+    <p style="margin: 1mm 0; font-size: 12pt;">📱 <strong>+593 98 396 4333</strong> (WhatsApp)</p>
+    <p style="margin: 1mm 0; font-size: 12pt;">✉️ <strong>francisecuador1@gmail.com</strong></p>
+  </div>
+
+  <h3>Soporte técnico</h3>
+  <p>Centro de ayuda completo en <strong>poweria.cognitex.app/help</strong> · 37 artículos · 13 tours interactivos · Cmd+K en cualquier pantalla para encontrar lo que necesitás.</p>
+
+  <h3>Comunidad y novedades</h3>
+  <p>Estamos construyendo este producto con abogados ecuatorianos reales. Tus sugerencias en <strong>poweria.cognitex.app/feedback</strong> llegan directo al roadmap.</p>
+
+  <div class="divider"></div>
+
+  <p style="font-size: 9.5pt; color: var(--muted); text-align: center; margin-top: 8mm;">
+    Poweria Legal es un producto de <strong>COGNITEX</strong> · 2026 · Hecho con ❤️ en Ecuador<br>
+    Esta guía fue generada el <strong>13 de mayo de 2026 a las 03:49 UTC</strong> · Versión del producto: integral · Modelo IA: Claude Opus 4.7
+  </p>
+
+  <div class="page-footer"><div>POWERIA LEGAL · Guía del producto</div><div>11</div></div>
+</section>
+
+</body>
+</html>
