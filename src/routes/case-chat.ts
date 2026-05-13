@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
 import { getUserCountryContext } from '../lib/country-context.js';
+import { setSseHeaders } from '../lib/sse-cors.js';
 
 interface ChatTurn { role: 'user' | 'assistant'; content: string }
 
@@ -235,12 +236,7 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
         timeline || '(sin eventos)',
       ].filter(Boolean).join('\n');
 
-      reply
-        .raw.setHeader('Content-Type', 'text/event-stream')
-        .setHeader('Cache-Control', 'no-cache, no-transform')
-        .setHeader('Connection', 'keep-alive')
-        .setHeader('X-Accel-Buffering', 'no');
-      reply.raw.flushHeaders?.();
+      setSseHeaders(request, reply);
       const send = (event: string, data: any) => {
         reply.raw.write(`event: ${event}\n`);
         reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);

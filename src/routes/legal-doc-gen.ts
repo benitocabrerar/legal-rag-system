@@ -31,6 +31,7 @@ import {
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
 import { serviceRoleClient } from '../lib/supabase.js';
+import { setSseHeaders } from '../lib/sse-cors.js';
 import { getUserCountryContext, type CountryContext } from '../lib/country-context.js';
 
 // ─── RAG retrieval contra el corpus legal vectorizado ───────────
@@ -563,12 +564,7 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         `Genera el documento "${DOC_LABELS[body.docType]}" con el nivel de extensión, profundidad y formalidad descritos en las reglas del sistema. No omitas secciones. Desarrolla cada fundamento de derecho con subsunción al caso.`,
       ].filter(Boolean).join('\n');
 
-      reply
-        .raw.setHeader('Content-Type', 'text/event-stream')
-        .setHeader('Cache-Control', 'no-cache, no-transform')
-        .setHeader('Connection', 'keep-alive')
-        .setHeader('X-Accel-Buffering', 'no');
-      reply.raw.flushHeaders?.();
+      setSseHeaders(request, reply);
 
       const send = (event: string, data: any) => {
         reply.raw.write(`event: ${event}\n`);
@@ -810,12 +806,7 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
       ].filter(Boolean).join('\n');
 
       // Headers SSE
-      reply
-        .raw.setHeader('Content-Type', 'text/event-stream')
-        .setHeader('Cache-Control', 'no-cache, no-transform')
-        .setHeader('Connection', 'keep-alive')
-        .setHeader('X-Accel-Buffering', 'no');
-      reply.raw.flushHeaders?.();
+      setSseHeaders(request, reply);
 
       const send = (event: string, data: any) => {
         reply.raw.write(`event: ${event}\n`);

@@ -6,6 +6,7 @@ import { getAiClient } from '../lib/ai-client.js';
 import { extractText } from '../lib/extract-text.js';
 import { serviceRoleClient } from '../lib/supabase.js';
 import { logActivityAsync, listCaseActivity } from '../lib/audit.js';
+import { setSseHeaders } from '../lib/sse-cors.js';
 
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_DOCUMENTS || 'legal-documents';
 const CHUNK_SIZE = 1000;
@@ -573,13 +574,8 @@ export async function documentRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     const userId = (request.user as any).id;
 
-    // Headers SSE
-    reply
-      .raw.setHeader('Content-Type', 'text/event-stream')
-      .setHeader('Cache-Control', 'no-cache, no-transform')
-      .setHeader('Connection', 'keep-alive')
-      .setHeader('X-Accel-Buffering', 'no');
-    reply.raw.flushHeaders?.();
+    // Headers SSE + CORS (manuales porque @fastify/cors no intercepta SSE)
+    setSseHeaders(request, reply);
 
     const send = (event: string, data: any) => {
       reply.raw.write(`event: ${event}\n`);
