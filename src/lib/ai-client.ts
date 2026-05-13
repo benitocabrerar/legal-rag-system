@@ -333,6 +333,16 @@ function buildAnthropicClient(s: AiSettings): AiClient {
   const fallbackOpenAiKey = process.env.OPENAI_API_KEY;
   const oaForEmbed = fallbackOpenAiKey ? new OpenAI({ apiKey: fallbackOpenAiKey }) : null;
 
+  /** Modelos de Anthropic que YA NO aceptan `temperature` ni `top_p`.
+   *  Claude Opus 4.7 (y posteriores) deprecaron estos parámetros — pasarlos
+   *  devuelve 400 "`temperature` is deprecated for this model".
+   *  Mantengo la lista explícita para no asumir; si algún día un modelo
+   *  nuevo vuelve a aceptarlos, no caemos mal. */
+  const NO_TEMPERATURE_MODELS = new Set([
+    'claude-opus-4-7',
+    'claude-opus-4-7-1m',
+  ]);
+
   /** Helper interno que arma el body + headers para llamadas a Anthropic. */
   const buildAnthropicCall = (req: ChatCompletionRequest, stream: boolean) => {
     const sysMessages = req.messages
@@ -350,14 +360,18 @@ function buildAnthropicClient(s: AiSettings): AiClient {
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role, content: toAnthropicContent(m.content) }));
 
-    const body = {
-      model: resolveModel('anthropic', req.model, s.model),
+    const resolvedModel = resolveModel('anthropic', req.model, s.model);
+    const body: Record<string, unknown> = {
+      model: resolvedModel,
       max_tokens: req.max_tokens ?? s.max_tokens,
-      temperature: req.temperature ?? s.temperature,
       system: sysMessages || undefined,
       messages: otherMessages,
       stream,
     };
+    // Solo agregamos temperature si el modelo lo soporta. Opus 4.7 lo rechaza.
+    if (!NO_TEMPERATURE_MODELS.has(resolvedModel)) {
+      body.temperature = req.temperature ?? s.temperature;
+    }
 
     const headers: Record<string, string> = {
       'x-api-key': apiKey,
@@ -415,7 +429,7 @@ function buildAnthropicClient(s: AiSettings): AiClient {
         const err = await r.text();
         throw new Error(`Anthropic ${r.status}: ${err.slice(0, 300)}`);
       }
-      return anthropicStreamToOpenAiChunks(r, body.model);
+      return anthropicStreamToOpenAiChunks(r, String(body.model));
     },
     embeddings: {
       create: async (req) => {
