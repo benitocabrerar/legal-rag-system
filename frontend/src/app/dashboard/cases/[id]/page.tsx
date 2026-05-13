@@ -294,6 +294,16 @@ export default function CaseDetailPage() {
       else if (matter.includes('constituc')) legalType = 'constitucional';
       else if (matter.includes('tránsi') || matter.includes('transi')) legalType = 'transito';
       else if (matter.includes('administr')) legalType = 'administrativo';
+      else if (matter.includes('tributar') || matter.includes('fiscal') || matter.includes('sri') || matter.includes('aduane')) legalType = 'tributario';
+      else if (matter.includes('mercant') || matter.includes('comerc')) legalType = 'mercantil';
+      else if (matter.includes('famili') || matter.includes('niñez') || matter.includes('adolesc') || matter.includes('divorc') || matter.includes('aliment')) legalType = 'familia';
+      else if (matter.includes('inquilin') || matter.includes('arrend')) legalType = 'inquilinato';
+      else if (matter.includes('ambien') || matter.includes('ecolog')) legalType = 'ambiental';
+      else if (matter.includes('propiedad intelect') || matter.includes('marca') || matter.includes('patent') || matter.includes('autor')) legalType = 'propiedad_intelectual';
+      else if (matter.includes('societ') || matter.includes('compañ') || matter.includes('empresar')) legalType = 'societario';
+      else if (matter.includes('notari')) legalType = 'notarial';
+      else if (matter.includes('agrar') || matter.includes('rural') || matter.includes('agríc')) legalType = 'agrario';
+      else if (matter.includes('internac') || matter.includes('migrat') || matter.includes('extranj')) legalType = 'internacional';
       else if (matter.includes('civil')) legalType = 'civil';
 
       const enhancedData = {

@@ -43,6 +43,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Gestión de documentos legales base',
     },
     {
+      name: 'Registro Oficial · Ecuador',
+      href: '/admin/registro-oficial',
+      icon: '📜',
+      description: 'Scraper diario de nuevas leyes publicadas oficialmente con análisis IA',
+    },
+    {
       name: 'Carga Masiva',
       href: '/admin/bulk-upload',
       icon: '📤',

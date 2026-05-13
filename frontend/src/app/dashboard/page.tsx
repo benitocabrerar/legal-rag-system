@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { casesAPI } from '@/lib/api';
-import { LegalType } from '@/lib/design-tokens';
+import { LegalType, legalTypeConfig } from '@/lib/design-tokens';
 import { QuickStatsCards } from '@/components/dashboard/QuickStatsCards';
 import { AIInsightsPanel } from '@/components/dashboard/AIInsightsPanel';
 import { LegalTypeFilterTabs } from '@/components/dashboard/LegalTypeFilterTabs';
@@ -293,11 +293,21 @@ export default function DashboardPage() {
                       const ex = data.extracted || {};
                       const lm = String(ex.legal_matter || '').toLowerCase();
                       const inferLegalType = lm.includes('penal') ? 'penal'
-                        : lm.includes('civil') ? 'civil'
                         : lm.includes('laboral') ? 'laboral'
                         : lm.includes('constituc') ? 'constitucional'
-                        : lm.includes('tránsi') || lm.includes('transi') ? 'transito'
+                        : (lm.includes('tránsi') || lm.includes('transi')) ? 'transito'
                         : lm.includes('admin') ? 'administrativo'
+                        : (lm.includes('tributar') || lm.includes('fiscal') || lm.includes('sri') || lm.includes('aduane')) ? 'tributario'
+                        : (lm.includes('mercant') || lm.includes('comerc')) ? 'mercantil'
+                        : (lm.includes('famili') || lm.includes('niñez') || lm.includes('adolesc') || lm.includes('divorc') || lm.includes('aliment')) ? 'familia'
+                        : (lm.includes('inquilin') || lm.includes('arrend')) ? 'inquilinato'
+                        : (lm.includes('ambien') || lm.includes('ecolog')) ? 'ambiental'
+                        : (lm.includes('propiedad intelect') || lm.includes('marca') || lm.includes('patent') || lm.includes('autor')) ? 'propiedad_intelectual'
+                        : (lm.includes('societ') || lm.includes('compañ') || lm.includes('empresar')) ? 'societario'
+                        : lm.includes('notari') ? 'notarial'
+                        : (lm.includes('agrar') || lm.includes('rural') || lm.includes('agríc')) ? 'agrario'
+                        : (lm.includes('internac') || lm.includes('migrat') || lm.includes('extranj')) ? 'internacional'
+                        : lm.includes('civil') ? 'civil'
                         : null;
                       setNewCase((prev: any) => ({
                         ...prev,
@@ -346,46 +356,31 @@ export default function DashboardPage() {
             </div>
 
             <form onSubmit={handleCreateCase} className="space-y-6">
-              {/* Legal Type Selector */}
+              {/* Legal Type Selector — dinámico desde legalTypeConfig */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Tipo de Caso *</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['penal', 'civil', 'constitucional', 'transito', 'administrativo', 'laboral'] as LegalType[]).map(
-                    (type) => {
-                      const icons = {
-                        penal: '⚖️',
-                        civil: '🏛️',
-                        constitucional: '📜',
-                        transito: '🚗',
-                        administrativo: '🏢',
-                        laboral: '💼',
-                      };
-                      const labels = {
-                        penal: 'Penal',
-                        civil: 'Civil',
-                        constitucional: 'Constitucional',
-                        transito: 'Tránsito',
-                        administrativo: 'Administrativo',
-                        laboral: 'Laboral',
-                      };
-
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
+                  {(Object.keys(legalTypeConfig) as Array<keyof typeof legalTypeConfig>)
+                    .filter((k) => k !== 'todos')
+                    .map((type) => {
+                      const cfg = legalTypeConfig[type];
                       return (
                         <button
                           key={type}
                           type="button"
-                          onClick={() => setNewCase({ ...newCase, legalType: type })}
-                          className={`p-4 border-2 rounded-lg transition-all ${
+                          onClick={() => setNewCase({ ...newCase, legalType: type as LegalType })}
+                          className={`p-3 border-2 rounded-lg transition-all text-center ${
                             newCase.legalType === type
                               ? 'border-indigo-600 bg-indigo-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
+                          title={cfg.label}
                         >
-                          <div className="text-3xl mb-2">{icons[type]}</div>
-                          <div className="text-sm font-medium">{labels[type]}</div>
+                          <div className="text-2xl mb-1.5">{cfg.icon}</div>
+                          <div className="text-[11px] font-semibold leading-tight">{cfg.label}</div>
                         </button>
                       );
-                    }
-                  )}
+                    })}
                 </div>
               </div>
 

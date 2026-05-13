@@ -175,9 +175,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Right cluster */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Reloj con nombre + fecha + hora — siempre visible en desktop */}
-              <UserClock userName={user?.name || user?.email} />
-
               {/* Cmd+K trigger */}
               <button
                 data-tour="cmdk-trigger"
@@ -371,7 +368,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Cmd+K command palette — global */}
       <CommandPaletteProvider />
 
-      {/* Deploy info badge — esquina inferior izquierda */}
+      {/* Reloj + saludo flotante (esquina inferior izquierda, colapsable) */}
+      <UserClock userName={user?.name || user?.email} />
+
+      {/* Deploy info badge — esquina inferior izquierda más abajo */}
       <DeployBadge />
     </div>
   );

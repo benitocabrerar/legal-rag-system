@@ -14,7 +14,7 @@ export interface PromptTemplate {
   icon: string;
 }
 
-export const legalPromptsByType: Record<LegalType, PromptTemplate[]> = {
+export const legalPromptsByType: Partial<Record<LegalType, PromptTemplate[]>> = {
   civil: [
     {
       id: 'civil-analyze',

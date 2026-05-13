@@ -22,7 +22,7 @@ interface ProcessPipelineProps {
   onStageInferred?: (stageIndex: number, stageLabel: string, rationale: string) => void;
 }
 
-const defaultStagesByType: Record<LegalType, string[]> = {
+const defaultStagesByType: Partial<Record<LegalType, string[]>> = {
   penal: ['Denuncia', 'Instrucción Fiscal', 'Evaluación', 'Juicio', 'Sentencia', 'Ejecución'],
   civil: ['Demanda', 'Contestación', 'Pruebas', 'Audiencia', 'Sentencia', 'Apelación'],
   constitucional: ['Admisión', 'Análisis', 'Audiencia', 'Deliberación', 'Sentencia'],
@@ -33,7 +33,8 @@ const defaultStagesByType: Record<LegalType, string[]> = {
 
 export function ProcessPipeline({ legalType, currentStage, stages, caseId, onStageInferred }: ProcessPipelineProps) {
   const config = legalTypeConfig[legalType];
-  const stageLabels = defaultStagesByType[legalType];
+  // Fallback genérico para tipos legales sin pipeline específico definido
+  const stageLabels = defaultStagesByType[legalType] || ['Inicio', 'Trámite', 'Audiencia', 'Resolución', 'Firme'];
   const [inferring, setInferring] = useState(false);
   const [inferError, setInferError] = useState<string | null>(null);
   const [lastRationale, setLastRationale] = useState<string | null>(null);

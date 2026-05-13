@@ -71,7 +71,7 @@ export default function DeployBadge() {
         onClick={() => setOpen(true)}
         title="Información del deploy actual"
         className="
-          fixed bottom-3 left-3 z-40
+          fixed bottom-20 left-4 z-30
           inline-flex items-center gap-1.5 px-2.5 py-1.5
           rounded-full bg-slate-900/85 hover:bg-slate-900 backdrop-blur-sm
           text-[11px] font-mono text-slate-200 shadow-lg
@@ -93,7 +93,7 @@ export default function DeployBadge() {
   return (
     <div
       className="
-        fixed bottom-3 left-3 z-40
+        fixed bottom-20 left-4 z-30
         w-[300px] rounded-xl bg-slate-900 text-slate-100 shadow-2xl
         ring-1 ring-white/10 overflow-hidden
         animate-in fade-in slide-in-from-bottom-2 duration-200

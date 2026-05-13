@@ -347,6 +347,28 @@ await app.register(trendsRoutes, { prefix: '/api/v1/trends' });
 await app.register(summarizationRoutes, { prefix: '/api/v1/summarization' });
 await app.register(summarizationStreamingRoutes, { prefix: '/api/v1/summarization' });
 
+// Admin: Registro Oficial scraper
+await app.register((await import('./routes/admin/registro-oficial.routes.js')).registroOficialAdminRoutes, { prefix: '/api/v1' });
+
+// Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
+// Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
+if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {
+  try {
+    const cron = (await import('node-cron')).default;
+    const { runScan } = await import('./services/registro-oficial.service.js');
+    // '0 7 * * *' = 07:00 UTC todos los días = 02:00 Ecuador
+    cron.schedule('0 7 * * *', () => {
+      app.log.info('🌙 [cron] Disparando scan diario Registro Oficial Ecuador');
+      void runScan({ triggeredBy: 'cron-daily-2am-ec' })
+        .then((r) => app.log.info({ scan: r }, '✓ [cron] Scan RO completado'))
+        .catch((e) => app.log.error({ err: e?.message }, '✗ [cron] Scan RO falló'));
+    }, { timezone: 'UTC' });
+    app.log.info('📅 Cron Registro Oficial registrado para 02:00 hora Ecuador diariamente');
+  } catch (e: any) {
+    app.log.warn({ err: e?.message }, 'No se pudo registrar cron Registro Oficial');
+  }
+}
+
 // Start server
 const start = async () => {
   try {

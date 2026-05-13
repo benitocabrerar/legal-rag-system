@@ -1,0 +1,420 @@
+/**
+ * Servicio scraper del Registro Oficial del Ecuador.
+ *
+ * Estrategia:
+ *  1) Descarga el listado HTML del año actual desde registroficial.gob.ec
+ *  2) Extrae ediciones nuevas (compara contra registry_publications.edition_number)
+ *  3) Para cada edición nueva: descarga el PDF, extrae texto con pdf-parse
+ *  4) Parsea el TOC (índice) del PDF para identificar instrumentos individuales
+ *  5) Para cada instrumento: clasifica con IA (tipo, materia legal, relevancia)
+ *  6) Persiste en registry_publications con status 'analyzed'
+ *  7) El admin revisa, aprueba/rechaza, y los aprobados se ingestan al corpus legal
+ *
+ * Tiempo total por edición: ~30-90s dependiendo del tamaño del PDF.
+ * El cron diario procesa máx 5 ediciones nuevas por corrida para no saturar IA.
+ */
+import { prisma } from '../lib/prisma.js';
+import { getAiClient } from '../lib/ai-client.js';
+// @ts-ignore - pdf-parse no tiene types pero funciona
+import pdfParse from 'pdf-parse';
+
+const RO_BASE = 'https://www.registroficial.gob.ec';
+const USER_AGENT = 'Mozilla/5.0 (compatible; PoweriaLegalBot/1.0; +https://poweria.cognitex.app/contact)';
+const REQUEST_TIMEOUT_MS = 30000;
+const MAX_EDITIONS_PER_RUN = 5;
+const MAX_PUBLICATIONS_PER_EDITION = 30;
+
+interface ScrapedEdition {
+  number: string;
+  date: Date | null;
+  pageUrl: string;
+  pdfUrl: string | null;
+}
+
+interface ParsedPublication {
+  type: string;
+  number: string | null;
+  title: string;
+  issuingEntity: string | null;
+  textExcerpt: string;
+}
+
+/**
+ * Entrypoint principal. Crea un scan, scrapea, persiste publicaciones,
+ * y cierra el scan. Llamado por el cron diario o manualmente desde admin.
+ */
+export async function runScan(opts: { triggeredBy?: string; year?: number } = {}): Promise<{
+  scanId: string;
+  editionsFound: number;
+  publicationsFound: number;
+  errors: string[];
+}> {
+  const triggeredBy = opts.triggeredBy ?? 'cron';
+  const year = opts.year ?? new Date().getFullYear();
+
+  // Crear scan record
+  const scan = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+    `INSERT INTO public.registry_scans (country_code, source, status, triggered_by, metadata)
+     VALUES ($1, $2, 'running', $3, $4::jsonb)
+     RETURNING id`,
+    'EC', 'registro_oficial_ec', triggeredBy, JSON.stringify({ year }),
+  );
+  const scanId = scan[0].id;
+  const errors: string[] = [];
+  let editionsFound = 0;
+  let publicationsFound = 0;
+
+  try {
+    // 1) Listar ediciones del año
+    const editions = await listEditionsForYear(year);
+    editionsFound = editions.length;
+
+    // 2) Filtrar las que NO existen ya en registry_publications
+    const existing = await prisma.$queryRawUnsafe<Array<{ edition_number: string }>>(
+      `SELECT DISTINCT edition_number FROM public.registry_publications
+        WHERE source = 'registro_oficial_ec' AND edition_number IS NOT NULL`,
+    );
+    const knownEditions = new Set(existing.map((r) => r.edition_number));
+    const newEditions = editions.filter((e) => !knownEditions.has(e.number)).slice(0, MAX_EDITIONS_PER_RUN);
+
+    // 3) Procesar cada edición nueva
+    for (const ed of newEditions) {
+      try {
+        if (!ed.pdfUrl) {
+          errors.push(`Edición ${ed.number}: sin URL de PDF`);
+          continue;
+        }
+        const text = await downloadAndExtractPdf(ed.pdfUrl);
+        if (!text || text.length < 500) {
+          errors.push(`Edición ${ed.number}: PDF vacío o muy corto`);
+          continue;
+        }
+
+        const publications = parsePublicationsFromText(text).slice(0, MAX_PUBLICATIONS_PER_EDITION);
+        for (const pub of publications) {
+          try {
+            // Insertar publicación detectada (UPSERT por UNIQUE constraint)
+            const aiAnalysis = await analyzePublicationWithAI(pub);
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO public.registry_publications (
+                scan_id, country_code, source, edition_number, edition_date,
+                edition_url, edition_pdf_url, publication_type, publication_number,
+                title, issuing_entity, coverage_scope, raw_text_excerpt, raw_text_length,
+                ai_summary, ai_classification, ai_relevance_score, ai_keywords,
+                ai_analysis_meta, status
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::text[], $19::jsonb, 'analyzed')
+              ON CONFLICT (source, edition_number, publication_number, title) DO NOTHING`,
+              scanId, 'EC', 'registro_oficial_ec',
+              ed.number, ed.date, ed.pageUrl, ed.pdfUrl,
+              pub.type, pub.number, pub.title, pub.issuingEntity, 'national',
+              pub.textExcerpt.slice(0, 8000), pub.textExcerpt.length,
+              aiAnalysis.summary, aiAnalysis.classification, aiAnalysis.relevanceScore,
+              aiAnalysis.keywords,
+              JSON.stringify(aiAnalysis.meta),
+            );
+            publicationsFound++;
+          } catch (e: any) {
+            errors.push(`Pub "${pub.title.slice(0, 60)}": ${e?.message || 'error'}`);
+          }
+        }
+      } catch (e: any) {
+        errors.push(`Edición ${ed.number}: ${e?.message || 'error'}`);
+      }
+    }
+  } catch (e: any) {
+    errors.push(`Scan: ${e?.message || 'fatal error'}`);
+  }
+
+  // Cerrar scan
+  await prisma.$executeRawUnsafe(
+    `UPDATE public.registry_scans
+     SET completed_at = now(),
+         status = $2,
+         editions_found = $3,
+         publications_found = $4,
+         errors = $5::jsonb
+     WHERE id = $1`,
+    scanId,
+    errors.length > 0 && publicationsFound === 0 ? 'failed' : 'completed',
+    editionsFound, publicationsFound, JSON.stringify(errors),
+  );
+
+  return { scanId, editionsFound, publicationsFound, errors };
+}
+
+/**
+ * Lista las ediciones del Registro Oficial publicadas en un año.
+ *
+ * El sitio es Joomla. La URL base tiene listados por categoría que vamos
+ * a scrapear con regex simple — no se justifica traer cheerio por una
+ * página tan estable.
+ */
+async function listEditionsForYear(year: number): Promise<ScrapedEdition[]> {
+  // URL del listado del Registro Oficial
+  const url = `${RO_BASE}/index.php/registro-oficial-web/publicaciones/registro-oficial.html?year=${year}`;
+  const html = await fetchText(url);
+  if (!html) return [];
+
+  // Regex para extraer items de edición.
+  // Patrón observado: <a href="...item/NNNN-registro-oficial-no-NNNN.html">...</a>
+  const editionRegex = /href="([^"]*item\/\d+-registro-oficial-no-(\d+)[^"]*)"[^>]*>[^<]*?(\d{1,2})[\/\-\s](?:de\s+)?(\w+|\d{1,2})[\/\-\s]?(?:de\s+)?(\d{4})/gi;
+  const found = new Map<string, ScrapedEdition>();
+  let m: RegExpExecArray | null;
+  while ((m = editionRegex.exec(html))) {
+    const pageUrl = m[1].startsWith('http') ? m[1] : `${RO_BASE}${m[1].startsWith('/') ? '' : '/'}${m[1]}`;
+    const number = m[2];
+    if (found.has(number)) continue;
+    found.set(number, {
+      number,
+      date: parseSpanishDate(m[3], m[4], m[5]),
+      pageUrl,
+      pdfUrl: null,  // se resuelve más adelante
+    });
+  }
+
+  // Para cada edición, resolver la URL del PDF (otra request por edición)
+  const results: ScrapedEdition[] = [];
+  for (const ed of Array.from(found.values()).sort((a, b) => Number(b.number) - Number(a.number))) {
+    try {
+      const detailHtml = await fetchText(ed.pageUrl);
+      if (!detailHtml) continue;
+      // Pattern: /index.php/productos/productos/[tipo]/item/download/[ID]_[hash]
+      const pdfMatch = detailHtml.match(/href="([^"]*\/productos\/productos\/[^"]*\/item\/download\/[^"]*\.pdf)"/i) ||
+                       detailHtml.match(/href="([^"]*\.pdf)"/i);
+      if (pdfMatch) {
+        ed.pdfUrl = pdfMatch[1].startsWith('http') ? pdfMatch[1] : `${RO_BASE}${pdfMatch[1].startsWith('/') ? '' : '/'}${pdfMatch[1]}`;
+      }
+      results.push(ed);
+    } catch { /* skip */ }
+    // Cortesía: 1.5s entre requests al sitio gubernamental
+    await sleep(1500);
+  }
+  return results;
+}
+
+async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
+  try {
+    const ac = new AbortController();
+    const timeout = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    const r = await fetch(pdfUrl, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: ac.signal,
+    });
+    clearTimeout(timeout);
+    if (!r.ok) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    const parsed = await pdfParse(buf);
+    return parsed.text || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parsea el texto del PDF y extrae publicaciones individuales (leyes,
+ * decretos, acuerdos, etc.) usando heurísticas sobre patrones recurrentes
+ * en el formato del Registro Oficial.
+ *
+ * Estrategia: el RO típicamente tiene secciones separadas por encabezados
+ * en MAYÚSCULAS con el nombre del instrumento. Buscamos esos delimitadores
+ * y extraemos el texto entre uno y el siguiente.
+ */
+function parsePublicationsFromText(text: string): ParsedPublication[] {
+  const publications: ParsedPublication[] = [];
+
+  // Patrones de inicio de instrumento (orden de prioridad)
+  const PATTERNS = [
+    { type: 'ley_organica',       regex: /^\s*LEY\s+ORG[ÁA]NICA\s+(?:DE\s+|REFORMATORIA\s+|N[ºO\.]*\s*\d+\s+)?/im },
+    { type: 'ley_ordinaria',      regex: /^\s*LEY\s+(?:DE\s+|REFORMATORIA\s+|N[ºO\.]*\s*\d+\s+|\w)/im },
+    { type: 'decreto_ejecutivo',  regex: /^\s*DECRETO\s+(?:EJECUTIVO\s+)?N[ºO\.]*\s*(\d+)/im },
+    { type: 'acuerdo_ministerial',regex: /^\s*ACUERDO\s+(?:MINISTERIAL\s+)?(?:N[ºO\.]*\s*([\w\-]+))/im },
+    { type: 'resolucion',         regex: /^\s*RESOLUCI[ÓO]N\s+(?:N[ºO\.]*\s*([\w\-]+))/im },
+    { type: 'reglamento',         regex: /^\s*REGLAMENTO\s+(?:GENERAL\s+|DE\s+|PARA\s+|A\s+)/im },
+    { type: 'ordenanza',          regex: /^\s*ORDENANZA\s+(?:N[ºO\.]*\s*([\w\-]+))/im },
+  ];
+
+  // Dividir el texto en bloques de aprox. cada documento
+  // Aplicamos un split por líneas en mayúsculas que parezcan headers
+  const lines = text.split(/\r?\n/);
+  let currentBlock: { type: string; number: string | null; title: string; lines: string[] } | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.length < 4) continue;
+
+    let matchedPattern: { type: string; numberMatch: RegExpMatchArray | null } | null = null;
+    for (const p of PATTERNS) {
+      const m = line.match(p.regex);
+      if (m) {
+        matchedPattern = { type: p.type, numberMatch: m };
+        break;
+      }
+    }
+
+    if (matchedPattern) {
+      // Cerrar el bloque anterior
+      if (currentBlock && currentBlock.lines.length > 5) {
+        publications.push({
+          type: currentBlock.type,
+          number: currentBlock.number,
+          title: currentBlock.title.slice(0, 280),
+          issuingEntity: detectIssuingEntity(currentBlock.lines.slice(0, 30).join(' ')),
+          textExcerpt: currentBlock.lines.slice(0, 200).join('\n').slice(0, 8000),
+        });
+      }
+      currentBlock = {
+        type: matchedPattern.type,
+        number: matchedPattern.numberMatch?.[1] ?? null,
+        title: line,
+        lines: [line],
+      };
+    } else if (currentBlock) {
+      currentBlock.lines.push(line);
+      // Extender el título si las primeras líneas son cortas (continuación)
+      if (currentBlock.lines.length < 4 && line.length < 120) {
+        currentBlock.title = (currentBlock.title + ' ' + line).slice(0, 280);
+      }
+    }
+  }
+
+  // Cerrar último bloque
+  if (currentBlock && currentBlock.lines.length > 5) {
+    publications.push({
+      type: currentBlock.type,
+      number: currentBlock.number,
+      title: currentBlock.title.slice(0, 280),
+      issuingEntity: detectIssuingEntity(currentBlock.lines.slice(0, 30).join(' ')),
+      textExcerpt: currentBlock.lines.slice(0, 200).join('\n').slice(0, 8000),
+    });
+  }
+
+  return publications;
+}
+
+function detectIssuingEntity(text: string): string | null {
+  const PATTERNS = [
+    /Presidencia\s+de\s+la\s+Rep[úu]blica/i,
+    /Asamblea\s+Nacional/i,
+    /Ministerio\s+(?:del?|de la)\s+([A-Z][A-Za-z\s,]+)/i,
+    /Servicio\s+de\s+Rentas\s+Internas/i,
+    /Superintendencia\s+(?:de|del)\s+([A-Z][\wáéíóúñ\s]+)/i,
+    /Corte\s+Constitucional/i,
+    /Corte\s+Nacional\s+de\s+Justicia/i,
+    /Consejo\s+(?:de\s+la\s+Judicatura|Nacional\s+Electoral)/i,
+    /Procuradur[íi]a\s+General/i,
+    /Contralor[íi]a\s+General/i,
+    /Banco\s+Central\s+del\s+Ecuador/i,
+  ];
+  for (const p of PATTERNS) {
+    const m = text.match(p);
+    if (m) return m[0].slice(0, 120);
+  }
+  return null;
+}
+
+interface AIAnalysis {
+  summary: string;
+  classification: string;
+  relevanceScore: number;
+  keywords: string[];
+  meta: any;
+}
+
+async function analyzePublicationWithAI(pub: ParsedPublication): Promise<AIAnalysis> {
+  // Fallback si IA falla — no debemos romper el scrape entero
+  const FALLBACK: AIAnalysis = {
+    summary: pub.title.slice(0, 240),
+    classification: 'general',
+    relevanceScore: 0.5,
+    keywords: [],
+    meta: { fallback: true },
+  };
+
+  try {
+    const ai = await getAiClient();
+    const prompt = `Eres un(a) abogado(a) ecuatoriano(a) clasificando una publicación del Registro Oficial.
+
+Devuelve EXCLUSIVAMENTE un objeto JSON con estos campos (primer carácter '{', último '}'):
+{
+  "summary": "<2-4 oraciones explicando qué establece esta norma>",
+  "classification": "<una de: penal, civil, laboral, constitucional, transito, administrativo, tributario, mercantil, familia, inquilinato, ambiental, propiedad_intelectual, societario, notarial, agrario, internacional, general>",
+  "relevanceScore": <número 0..1 indicando qué tan importante es para vectorizar en el corpus legal>,
+  "keywords": ["palabra clave 1", "palabra clave 2", "..."]
+}
+
+PUBLICACIÓN:
+Tipo: ${pub.type}
+${pub.number ? `Número: ${pub.number}` : ''}
+${pub.issuingEntity ? `Entidad: ${pub.issuingEntity}` : ''}
+Título: ${pub.title}
+
+Extracto:
+${pub.textExcerpt.slice(0, 4000)}`;
+
+    const r: any = await ai.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 800,
+    });
+    const raw = (r.choices?.[0]?.message?.content || '').trim();
+    const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    const start = fenced.indexOf('{');
+    const end = fenced.lastIndexOf('}');
+    if (start < 0 || end < start) return FALLBACK;
+    const parsed = JSON.parse(fenced.slice(start, end + 1));
+    return {
+      summary: String(parsed.summary || pub.title).slice(0, 800),
+      classification: String(parsed.classification || 'general').toLowerCase().slice(0, 40),
+      relevanceScore: Math.max(0, Math.min(1, Number(parsed.relevanceScore) || 0.5)),
+      keywords: Array.isArray(parsed.keywords)
+        ? parsed.keywords.slice(0, 12).map((k: any) => String(k).slice(0, 80))
+        : [],
+      meta: { model: ai.model, generatedAt: new Date().toISOString() },
+    };
+  } catch (e: any) {
+    return { ...FALLBACK, meta: { fallback: true, error: e?.message?.slice(0, 200) } };
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────
+
+async function fetchText(url: string): Promise<string | null> {
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    const r = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT, 'Accept': 'text/html,application/xhtml+xml' },
+      signal: ac.signal,
+    });
+    clearTimeout(t);
+    if (!r.ok) return null;
+    return await r.text();
+  } catch {
+    return null;
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
+function parseSpanishDate(d1: string, d2: string, d3: string): Date | null {
+  const MESES: Record<string, number> = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+    julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+  };
+  try {
+    const day = parseInt(d1, 10);
+    const year = parseInt(d3, 10);
+    let month: number;
+    const monthKey = d2.toLowerCase().trim();
+    if (MESES[monthKey] !== undefined) {
+      month = MESES[monthKey];
+    } else {
+      month = parseInt(d2, 10) - 1;
+    }
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    return new Date(Date.UTC(year, month, day));
+  } catch {
+    return null;
+  }
+}
