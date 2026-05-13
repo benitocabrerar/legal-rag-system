@@ -54,16 +54,22 @@ async function retrieveLegalContext(
 ): Promise<LegalSource[]> {
   try {
     const ai = await getAiClient();
-    const embedResp = await ai.embeddings.create({ input: query, dimensions: 1536 });
+    const embedResp: any = await ai.embeddings.create({ input: query, dimensions: 1536 });
     const embedding = embedResp.data?.[0]?.embedding;
-    if (!embedding) return [];
+    if (!embedding || embedding.length !== 1536) {
+      console.warn('[retrieveLegalContext] embedding inválido', {
+        hasData: !!embedResp?.data,
+        len: embedding?.length,
+      });
+      return [];
+    }
 
     const sb = serviceRoleClient();
     const { data, error } = await sb.rpc('search_legal_chunks', {
       query_embedding: `[${embedding.join(',')}]`,
       query_text: query.slice(0, 500),
       match_count: matchCount,
-      semantic_weight: 1.2,    // privilegia semántica para que captures conceptos
+      semantic_weight: 1.2,
       keyword_weight: 0.8,
       filter_doc_id: null,
       filter_norm_type: null,
@@ -71,10 +77,25 @@ async function retrieveLegalContext(
       filter_country_code: filterCountryCode || null,
     });
 
-    if (error || !data) return [];
+    if (error) {
+      console.error('[retrieveLegalContext] RPC error', {
+        msg: error.message,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        filterCountryCode,
+      });
+      return [];
+    }
+    if (!Array.isArray(data) || data.length === 0) {
+      console.warn('[retrieveLegalContext] RPC devolvió 0 resultados', {
+        queryPreview: query.slice(0, 150),
+        filterCountryCode,
+      });
+      return [];
+    }
 
-    // Dedup: si dos chunks vienen del mismo doc legal, quedarnos con el mejor
-    // y mantener variedad de fuentes (mejor para no sesgar al modelo).
+    // Dedup por doc para variedad de fuentes
     const seen = new Set<string>();
     const out: LegalSource[] = [];
     for (const row of data as any[]) {
@@ -88,9 +109,17 @@ async function retrieveLegalContext(
       });
       if (out.length >= matchCount) break;
     }
+    console.log('[retrieveLegalContext] OK', {
+      requested: matchCount,
+      rpcReturned: data.length,
+      afterDedup: out.length,
+    });
     return out;
-  } catch {
-    // RAG es additive: si falla, generamos sin él (no rompemos el documento).
+  } catch (e: any) {
+    console.error('[retrieveLegalContext] excepción', {
+      msg: e?.message,
+      stack: e?.stack?.split('\n').slice(0, 3),
+    });
     return [];
   }
 }

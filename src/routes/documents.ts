@@ -942,7 +942,11 @@ ESQUEMA:
   const aiClient = await getAiClient();
   const completion = await aiClient.chat.completions.create({
     messages: [
-      { role: 'system', content: systemPrompt },
+      {
+        role: 'system',
+        content: systemPrompt +
+          '\n\nRECORDATORIO CRÍTICO: tu respuesta entera DEBE empezar con "{" y terminar con "}". Sin "Aquí está…", sin "```json", sin comentarios. SOLO el objeto JSON.',
+      },
       { role: 'user', content: userPrompt },
     ],
     temperature: 0.2,
@@ -950,26 +954,76 @@ ESQUEMA:
   });
   const raw = (completion.choices?.[0]?.message?.content || '').trim();
 
-  // Parse robusto (mismo helper que preview)
-  const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-  let parsed: any;
-  try { parsed = JSON.parse(fenced); } catch {
-    // intentar primer objeto balanceado
-    const start = fenced.indexOf('{');
-    if (start >= 0) {
-      let depth = 0, inString = false, escape = false;
-      for (let i = start; i < fenced.length; i++) {
-        const ch = fenced[i];
-        if (escape) { escape = false; continue; }
-        if (ch === '\\') { escape = true; continue; }
-        if (ch === '"') { inString = !inString; continue; }
-        if (inString) continue;
-        if (ch === '{') depth++;
-        else if (ch === '}') { depth--; if (depth === 0) { try { parsed = JSON.parse(fenced.slice(start, i + 1)); } catch {} break; } }
+  // Parser tolerante: maneja respuestas con prosa pre/post, fences markdown,
+  // y comas finales (trailing commas que el JSON estricto rechaza).
+  const parsed = tryParseJsonObject(raw);
+  if (!parsed) {
+    // Último intento: pedirle al modelo que repare su propio output.
+    try {
+      const repair = await aiClient.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: 'Eres un convertidor estricto. Te paso un texto que debería ser JSON. Devuelve EXCLUSIVAMENTE el objeto JSON válido (un solo objeto, primer carácter "{", último "}"). Si hay errores de sintaxis, corrígelos preservando los datos. Nunca pongas prosa.',
+          },
+          { role: 'user', content: raw.slice(0, 12000) },
+        ],
+        max_tokens: 4500,
+      });
+      const repaired = (repair.choices?.[0]?.message?.content || '').trim();
+      const reparsed = tryParseJsonObject(repaired);
+      if (reparsed) {
+        console.warn('[synthesizeCaseBrain] JSON reparado con segunda llamada');
+        Object.assign({}, reparsed); // referencia
+        return finalizeBrain(reparsed, caseId, docs.length, aiClient.model);
+      }
+    } catch (e: any) {
+      console.error('[synthesizeCaseBrain] repair attempt failed', { err: e?.message });
+    }
+    console.error('[synthesizeCaseBrain] raw output:', raw.slice(0, 500));
+    throw new Error('Brain: AI no devolvió JSON válido');
+  }
+  return finalizeBrain(parsed, caseId, docs.length, aiClient.model);
+}
+
+/** Intenta parsear un JSON object tolerando prosa pre/post, fences y trailing commas. */
+function tryParseJsonObject(raw: string): any | null {
+  const trimmed = raw.trim();
+  // 1) Parseo directo
+  try { return JSON.parse(trimmed); } catch {}
+  // 2) Quitar fences markdown
+  const fenced = trimmed.replace(/^```(?:json|JSON)?\s*/, '').replace(/\s*```\s*$/, '').trim();
+  try { return JSON.parse(fenced); } catch {}
+  // 3) Extraer primer objeto JSON balanceado
+  const start = fenced.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inString = false, escape = false;
+  for (let i = start; i < fenced.length; i++) {
+    const ch = fenced[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        const candidate = fenced.slice(start, i + 1);
+        try { return JSON.parse(candidate); } catch {}
+        // 4) Quitar trailing commas y reintentar
+        try {
+          const noTrailing = candidate.replace(/,(\s*[}\]])/g, '$1');
+          return JSON.parse(noTrailing);
+        } catch {}
+        return null;
       }
     }
   }
-  if (!parsed) throw new Error('Brain: AI no devolvió JSON válido');
+  return null;
+}
+
+/** Construye el objeto CaseBrain a partir del JSON parseado y lo persiste. */
+async function finalizeBrain(parsed: any, caseId: string, docsCount: number, model: string): Promise<CaseBrain> {
 
   const brain: CaseBrain = {
     summary: String(parsed.summary || '').slice(0, 4000),
@@ -1004,9 +1058,9 @@ ESQUEMA:
     })) : [],
     riskLevel: (['low', 'medium', 'high'] as const).includes(parsed.riskLevel) ? parsed.riskLevel : 'medium',
     riskReasoning: String(parsed.riskReasoning || '').slice(0, 800),
-    documentCount: docs.length,
+    documentCount: docsCount,
     generatedAt: new Date().toISOString(),
-    model: aiClient.model,
+    model,
   };
 
   // Persistir en cases.metadata.brain (jsonb merge)
