@@ -1500,68 +1500,95 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         description: z.string().max(800).optional().nullable(),
       }).parse(request.body);
 
-      // 1) Contexto del caso si lo pasaron
-      let caseCtx: { title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null } | null = null;
-      if (body.caseId) {
-        const rows = await prisma.$queryRawUnsafe<Array<{
-          title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null;
-        }>>(
-          `SELECT title, legal_matter, procedural_stage, description
-             FROM public.cases
-            WHERE id = $1 AND user_id = $2
-            LIMIT 1`,
-          body.caseId, userId,
-        );
-        caseCtx = rows[0] || null;
-      }
+      // SSE — el cliente recibe eventos:
+      //   phase     { phase, label, pct }       progreso categorizado
+      //   token     { delta }                   chunks del modelo
+      //   structured{ analysis, sources, model } resultado final parseado
+      //   error     { error }
+      //   done      { generatedAt }
+      setSseHeaders(request, reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+      const phase = (phaseKey: string, label: string, pct: number) =>
+        write('phase', { phase: phaseKey, label, pct });
 
-      // 2) RAG retrieval — query combina norma + artículo + descripción del caso
-      const ragQuery = [body.norm, body.article || '', body.description || ''].filter(Boolean).join(' ');
-
-      let countryContext: any = null;
       try {
-        const { getUserCountryContext } = await import('../lib/country-context.js');
-        countryContext = await getUserCountryContext(userId);
-      } catch { /* fallback null */ }
+        phase('starting', 'Iniciando análisis…', 2);
 
-      // Retrieval inline (mismo patrón que legal-doc-gen)
-      const sources: Array<{ legalDocumentId: string; normTitle: string; content: string; score: number }> = [];
-      try {
-        const ai = await getAiClient();
-        const embedResp: any = await ai.embeddings.create({ input: ragQuery, dimensions: 1536 });
-        const embedding = embedResp.data?.[0]?.embedding;
+        // 1) Contexto del caso (si pasaron caseId)
+        phase('context', 'Cargando contexto del caso…', 8);
+        let caseCtx: { title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null } | null = null;
+        if (body.caseId) {
+          const rows = await prisma.$queryRawUnsafe<Array<{
+            title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null;
+          }>>(
+            `SELECT title, legal_matter, procedural_stage, description
+               FROM public.cases
+              WHERE id = $1 AND user_id = $2
+              LIMIT 1`,
+            body.caseId, userId,
+          );
+          caseCtx = rows[0] || null;
+        }
+
+        // 2) RAG retrieval
+        const ragQuery = [body.norm, body.article || '', body.description || ''].filter(Boolean).join(' ');
+
+        phase('country', 'Detectando jurisdicción…', 12);
+        let countryContext: any = null;
+        try {
+          const { getUserCountryContext } = await import('../lib/country-context.js');
+          countryContext = await getUserCountryContext(userId);
+        } catch { /* fallback null */ }
+
+        phase('embedding', 'Calculando embeddings semánticos…', 18);
+        const aiClient = await getAiClient();
+        let embedding: number[] | null = null;
+        try {
+          const embedResp: any = await aiClient.embeddings.create({ input: ragQuery, dimensions: 1536 });
+          embedding = embedResp.data?.[0]?.embedding || null;
+        } catch (e: any) {
+          fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: embedding failed');
+        }
+
+        phase('rag', 'Buscando en el corpus legal vectorizado…', 28);
+        const sources: Array<{ legalDocumentId: string; normTitle: string; content: string; score: number }> = [];
         if (embedding && embedding.length === 1536) {
-          const sb = serviceRoleClient();
-          const { data, error } = await sb.rpc('search_legal_chunks', {
-            query_embedding: `[${embedding.join(',')}]`,
-            query_text: ragQuery.slice(0, 500),
-            match_count: 5,
-            semantic_weight: 1.2,
-            keyword_weight: 0.8,
-            filter_doc_id: null,
-            filter_norm_type: null,
-            filter_jurisdiction: null,
-            filter_country_code: countryContext?.code || 'EC',
-          });
-          if (!error && Array.isArray(data)) {
-            const seen = new Set<string>();
-            for (const row of data as any[]) {
-              if (seen.has(row.legal_document_id)) continue;
-              seen.add(row.legal_document_id);
-              sources.push({
-                legalDocumentId: row.legal_document_id,
-                normTitle: String(row.norm_title || '').trim() || 'Sin título',
-                content: String(row.content || '').trim(),
-                score: Number(row.rrf_score ?? 0),
-              });
+          try {
+            const sb = serviceRoleClient();
+            const { data, error } = await sb.rpc('search_legal_chunks', {
+              query_embedding: `[${embedding.join(',')}]`,
+              query_text: ragQuery.slice(0, 500),
+              match_count: 5,
+              semantic_weight: 1.2,
+              keyword_weight: 0.8,
+              filter_doc_id: null,
+              filter_norm_type: null,
+              filter_jurisdiction: null,
+              filter_country_code: countryContext?.code || 'EC',
+            });
+            if (!error && Array.isArray(data)) {
+              const seen = new Set<string>();
+              for (const row of data as any[]) {
+                if (seen.has(row.legal_document_id)) continue;
+                seen.add(row.legal_document_id);
+                sources.push({
+                  legalDocumentId: row.legal_document_id,
+                  normTitle: String(row.norm_title || '').trim() || 'Sin título',
+                  content: String(row.content || '').trim(),
+                  score: Number(row.rrf_score ?? 0),
+                });
+              }
             }
+          } catch (e: any) {
+            fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: RAG retrieval failed');
           }
         }
-      } catch (e: any) {
-        fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: RAG retrieval failed');
-      }
-
-      const aiClient = await getAiClient();
+        phase('rag-done', `${sources.length} fuentes recuperadas del corpus`, 34);
 
       const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior. Vas a darle al usuario un
 ANÁLISIS JURÍDICO COMPLETO de una norma legal específica.
@@ -1620,12 +1647,55 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           : sources.map((s, i) => `[Fuente ${i + 1}] ${s.normTitle}\n${s.content.slice(0, 1200)}`).join('\n\n'),
       ].filter(Boolean).join('\n');
 
-      try {
-        const completion = await aiClient.chat.completions.create({
+        phase('ai-start', 'Claude Opus 4.7 analizando la norma…', 38);
+
+        // Streaming del modelo — mapeamos progreso por sección detectada en
+        // el texto generado. Las claves aparecen en orden aproximado en el
+        // prompt, así que detectarlas funciona como hint de progreso.
+        const SECTION_HINTS: Array<{ key: string; label: string; pct: number }> = [
+          { key: '"literalText"',       label: 'Transcribiendo texto literal…',     pct: 45 },
+          { key: '"summary"',           label: 'Resumiendo norma…',                 pct: 52 },
+          { key: '"legalAnalysis"',     label: 'Análisis jurídico profundo…',       pct: 60 },
+          { key: '"importanceForCase"', label: 'Conectando con el caso…',           pct: 68 },
+          { key: '"penaltiesOrEffects"',label: 'Identificando penas/efectos…',      pct: 73 },
+          { key: '"requirements"',      label: 'Listando requisitos…',              pct: 77 },
+          { key: '"relatedNorms"',      label: 'Cruzando normas relacionadas…',     pct: 81 },
+          { key: '"jurisprudence"',     label: 'Buscando jurisprudencia clave…',    pct: 84 },
+          { key: '"strategyForCase"',   label: 'Diseñando estrategia táctica…',     pct: 87 },
+          { key: '"commonDefenses"',    label: 'Anotando defensas comunes…',        pct: 90 },
+          { key: '"redFlags"',          label: 'Detectando errores comunes…',       pct: 92 },
+          { key: '"notes"',             label: 'Notas finales…',                    pct: 94 },
+        ];
+        const seenSection = new Set<string>();
+        let lastPct = 38;
+        let fullText = '';
+
+        const stream: any = await (aiClient as any).chat.completions.create({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctxBlock }],
-          max_tokens: 4000,
+          max_tokens: 4500,
+          stream: true,
         });
-        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+
+        for await (const chunk of stream) {
+          const delta = chunk?.choices?.[0]?.delta?.content;
+          if (!delta) continue;
+          fullText += delta;
+          write('token', { delta });
+          // Detectar secciones recién aparecidas para actualizar progreso
+          for (const hint of SECTION_HINTS) {
+            if (!seenSection.has(hint.key) && fullText.includes(hint.key)) {
+              seenSection.add(hint.key);
+              if (hint.pct > lastPct) {
+                lastPct = hint.pct;
+                phase(hint.key.replace(/"/g, ''), hint.label, hint.pct);
+              }
+            }
+          }
+        }
+
+        phase('parsing', 'Estructurando respuesta…', 96);
+
+        const raw = fullText.trim();
         const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
         const start = fenced.indexOf('{');
         const end = fenced.lastIndexOf('}');
@@ -1640,9 +1710,12 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           }
         }
         if (!parsed || typeof parsed !== 'object') {
-          return reply.code(502).send({ error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          write('error', { error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+          reply.raw.end();
+          return;
         }
-        return reply.send({
+
+        write('structured', {
           analysis: parsed,
           sources: sources.map((s) => ({
             normTitle: s.normTitle,
@@ -1650,11 +1723,14 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
             score: s.score,
           })),
           model: aiClient.model,
-          generatedAt: new Date().toISOString(),
         });
+        phase('done', 'Listo', 100);
+        write('done', { generatedAt: new Date().toISOString() });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'legal-reference/analyze failed');
-        return reply.code(500).send({ error: e?.message || 'AI failed' });
+        write('error', { error: e?.message || 'AI failed' });
+      } finally {
+        try { reply.raw.end(); } catch { /* ignore */ }
       }
     },
   );
