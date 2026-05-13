@@ -1870,6 +1870,63 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           };
         }
 
+        let analysisDocumentId: string | null = null;
+        if (body.caseId && caseCtx) {
+          try {
+            analysisDocumentId = randomUUID();
+            const title = `Analisis IA referencia legal - ${body.norm}${body.article ? ` ${body.article}` : ''}`.slice(0, 180);
+            const content = buildLegalReferenceAnalysisMarkdown({
+              analysis: parsed,
+              sources,
+              model: aiClient.model,
+              generatedAt: new Date().toISOString(),
+              caseTitle: caseCtx.title,
+              input: {
+                norm: body.norm,
+                article: body.article || null,
+                description: body.description || null,
+              },
+            });
+
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO public.documents
+                 (id, case_id, user_id, title, content, mime_type, kind, ai_generation_meta, metadata, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, 'ai_analysis', $7::jsonb, $8::jsonb, now(), now())`,
+              analysisDocumentId,
+              body.caseId,
+              userId,
+              title,
+              content,
+              'text/markdown',
+              JSON.stringify({
+                generator: 'legal_reference_expand',
+                model: aiClient.model,
+                norm: body.norm,
+                article: body.article || null,
+                generatedAt: new Date().toISOString(),
+              }),
+              JSON.stringify({
+                aiGenerated: true,
+                kind: 'ai_analysis',
+                legalReference: true,
+                generator: 'legal_reference_expand',
+                norm: body.norm,
+                article: body.article || null,
+              }),
+            );
+
+            logActivityAsync(userId, 'POST_UPLOAD_ANALYSIS', 'document', analysisDocumentId, {
+              caseId: body.caseId,
+              generator: 'legal_reference_expand',
+              norm: body.norm,
+              article: body.article || null,
+            });
+          } catch (e: any) {
+            analysisDocumentId = null;
+            fastify.log.warn({ err: e?.message }, 'legal-reference/expand: failed to persist analysis document');
+          }
+        }
+
         write('structured', {
           analysis: parsed,
           sources: sources.map((s) => ({
@@ -1878,9 +1935,10 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
             score: s.score,
           })),
           model: aiClient.model,
+          analysisDocumentId,
         });
         phase('done', 'Listo', 100);
-        write('done', { generatedAt: new Date().toISOString() });
+        write('done', { generatedAt: new Date().toISOString(), analysisDocumentId });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'legal-reference/expand failed');
         write('error', { error: e?.message || 'AI failed' });
@@ -2103,6 +2161,95 @@ function tryParseJsonObject(raw: string): any | null {
     }
   }
   return null;
+}
+
+function buildLegalReferenceAnalysisMarkdown(args: {
+  analysis: any;
+  sources: Array<{ normTitle: string; content: string; score: number }>;
+  model: string;
+  generatedAt: string;
+  caseTitle: string;
+  input: { norm: string; article: string | null; description: string | null };
+}): string {
+  const a = args.analysis || {};
+  const list = (items: any[] | undefined) =>
+    Array.isArray(items) && items.length > 0
+      ? items.map((item) => `- ${typeof item === 'string' ? item : JSON.stringify(item)}`).join('\n')
+      : '- Sin datos estructurados.';
+  const related = Array.isArray(a.relatedNorms) && a.relatedNorms.length > 0
+    ? a.relatedNorms.map((n: any) => `- ${n?.norm || 'Norma'}${n?.relation ? `: ${n.relation}` : ''}`).join('\n')
+    : '- Sin datos estructurados.';
+  const jurisprudence = Array.isArray(a.jurisprudence) && a.jurisprudence.length > 0
+    ? a.jurisprudence.map((j: any) => `- ${j?.reference || 'Referencia'}${j?.relevance ? `: ${j.relevance}` : ''}`).join('\n')
+    : '- Sin datos estructurados.';
+  const penalties = Array.isArray(a.penaltiesOrEffects) && a.penaltiesOrEffects.length > 0
+    ? a.penaltiesOrEffects.map((p: any) => `- ${p?.type ? `${p.type}: ` : ''}${p?.detail || JSON.stringify(p)}`).join('\n')
+    : '- Sin datos estructurados.';
+  const sources = args.sources.length > 0
+    ? args.sources.map((s, i) => [
+        `### Fuente ${i + 1}: ${s.normTitle}`,
+        `Score: ${Number(s.score || 0).toFixed(3)}`,
+        '',
+        s.content.slice(0, 1200),
+      ].join('\n')).join('\n\n')
+    : 'Sin fuentes recuperadas del corpus legal.';
+
+  return [
+    `# Analisis IA de referencia legal`,
+    '',
+    `> Documento generado automaticamente por IA para el caso "${args.caseTitle}". Debe ser revisado por un profesional antes de presentarse o citarse.`,
+    '',
+    `- Generador: legal_reference_expand`,
+    `- Modelo: ${args.model}`,
+    `- Fecha de generacion: ${args.generatedAt}`,
+    `- Norma solicitada: ${args.input.norm}`,
+    `- Articulo solicitado: ${args.input.article || 'No especificado'}`,
+    args.input.description ? `- Descripcion de la tarjeta: ${args.input.description}` : '',
+    '',
+    `## Resumen`,
+    String(a.summary || 'Sin resumen estructurado.'),
+    '',
+    `## Texto literal recuperado`,
+    a.literalText ? String(a.literalText) : 'No se recupero texto literal desde el corpus.',
+    '',
+    `## Analisis juridico`,
+    String(a.legalAnalysis || 'Sin analisis estructurado.'),
+    '',
+    `## Importancia para este caso`,
+    String(a.importanceForCase || 'Sin importancia especifica estructurada.'),
+    '',
+    `## Penas o efectos`,
+    penalties,
+    '',
+    `## Requisitos`,
+    list(a.requirements),
+    '',
+    `## Normas relacionadas`,
+    related,
+    '',
+    `## Jurisprudencia`,
+    jurisprudence,
+    '',
+    `## Estrategia para el caso`,
+    list(a.strategyForCase),
+    '',
+    `## Defensas comunes`,
+    list(a.commonDefenses),
+    '',
+    `## Alertas y errores comunes`,
+    list(a.redFlags),
+    '',
+    `## Notas`,
+    String(a.notes || 'Sin notas adicionales.'),
+    '',
+    `## Fuentes recuperadas del corpus`,
+    sources,
+    '',
+    `## JSON estructurado generado por IA`,
+    '```json',
+    JSON.stringify(a, null, 2),
+    '```',
+  ].filter(Boolean).join('\n');
 }
 
 /** Construye el objeto CaseBrain a partir del JSON parseado y lo persiste. */
