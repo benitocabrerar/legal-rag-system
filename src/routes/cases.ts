@@ -441,52 +441,18 @@ export async function caseRoutes(fastify: FastifyInstance) {
       if (!buffer) return reply.code(400).send({ error: 'archivo requerido' });
 
       const ext = await extractText(buffer, mimeType, filename);
-      const text = (ext.text || '').slice(0, 12000);
+      const text = (ext.text || '').slice(0, 15000);
       if (text.length < 50) {
         return reply.code(400).send({ error: 'No se pudo extraer suficiente texto del archivo' });
       }
 
       const aiClient = await getAiClient();
-      const completion = await aiClient.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `Eres un asistente legal ecuatoriano. Devuelve solo JSON con esta forma:
-{
-  "title": "título 8-15 palabras",
-  "clientName": "cliente o null",
-  "legal_matter": "Penal | Civil | Laboral | Tributario | Constitucional | Administrativo | Familia | Niñez | Tránsito | Mercantil | Otro",
-  "action_type": "Demanda | Denuncia | Querella | etc o null",
-  "jurisdiction": "provincia o null",
-  "judicial_process_number": "nº juicio o null",
-  "court_name": "tribunal o null",
-  "judge_name": "juez o null",
-  "prosecutor_name": "fiscal o null",
-  "opposing_party": "contraparte o null",
-  "related_laws": ["Art. X de la Y", "..."],
-  "amount_claimed": numérico o null,
-  "filed_at": "YYYY-MM-DD o null",
-  "procedural_stage": "etapa o null",
-  "facts_summary": "2-3 oraciones",
-  "priority": "low | medium | high",
-  "description": "descripción larga"
-}`,
-          },
-          { role: 'user', content: `# Documento (${filename})\n\n${text}\n\nGenera el JSON.` },
-        ],
-        temperature: 0.1,
-        max_tokens: 2500,
-      });
-      const raw = completion.choices?.[0]?.message?.content || '';
-      let parsed;
-      try {
-        const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-        parsed = JSON.parse(cleaned);
-      } catch {
-        return reply.code(500).send({ error: 'IA no devolvió JSON válido', raw: raw.slice(0, 500) });
+      const { extracted, raw, parseError } = await extractCasePreview(aiClient, text, filename);
+      if (!extracted && parseError) {
+        return reply.code(502).send({ error: parseError, raw: raw.slice(0, 500) });
       }
       return reply.send({
-        extracted: parsed,
+        extracted,
         extractionMethod: ext.method,
         textChars: text.length,
         filename,
@@ -511,46 +477,11 @@ export async function caseRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: 'Texto demasiado corto para análisis' });
       }
       const aiClient = await getAiClient();
-      const completion = await aiClient.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: `Eres un asistente legal experto en derecho ecuatoriano. Analiza el texto proporcionado y devuelve EXCLUSIVAMENTE un JSON con esta forma exacta. Si un campo no aparece, usa null.
-
-{
-  "title": "título sintético del caso (8-15 palabras)",
-  "clientName": "nombre del cliente principal o null",
-  "legal_matter": "Penal | Civil | Laboral | Tributario | Constitucional | Administrativo | Familia | Niñez | Tránsito | Mercantil | Otro",
-  "action_type": "Demanda | Denuncia | Querella | Acción de protección | Hábeas corpus | Recurso | Reclamo | Otro",
-  "jurisdiction": "Provincia (ej: Pichincha)",
-  "judicial_process_number": "Nº juicio o null",
-  "court_name": "Tribunal/Juzgado o null",
-  "judge_name": "Juez o null",
-  "prosecutor_name": "Fiscal o null",
-  "opposing_party": "Parte contraria o null",
-  "related_laws": ["Art. 278 COIP", "..."],
-  "amount_claimed": "monto numérico o null",
-  "filed_at": "YYYY-MM-DD o null",
-  "procedural_stage": "Etapa procesal o null",
-  "facts_summary": "resumen ejecutivo de hechos en 2-3 oraciones",
-  "priority": "low | medium | high",
-  "description": "descripción larga estructurada del caso"
-}`,
-          },
-          { role: 'user', content: `# Texto a analizar\n\n${text.slice(0, 12000)}\n\nGenera el JSON.` },
-        ],
-        temperature: 0.1,
-        max_tokens: 2500,
-      });
-      const raw = completion.choices?.[0]?.message?.content || '';
-      let parsed;
-      try {
-        const cleaned = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-        parsed = JSON.parse(cleaned);
-      } catch {
-        return reply.code(500).send({ error: 'IA no devolvió JSON válido', raw: raw.slice(0, 500) });
+      const { extracted, raw, parseError } = await extractCasePreview(aiClient, text.slice(0, 15000), 'texto');
+      if (!extracted && parseError) {
+        return reply.code(502).send({ error: parseError, raw: raw.slice(0, 500) });
       }
-      return reply.send({ extracted: parsed, model: aiClient.model });
+      return reply.send({ extracted, model: aiClient.model });
     } catch (e: any) {
       fastify.log.error(e);
       return reply.code(500).send({ error: e.message });
@@ -879,4 +810,187 @@ Genera el super-resumen en JSON.`;
       return reply.code(500).send({ error: 'Internal server error' });
     }
   });
+}
+
+// ============================================================================
+// Helper: extracción de metadata de caso desde texto usando IA
+// ============================================================================
+//
+// Reusado por /cases/preview-from-file y /cases/preview-from-text. Devuelve
+// un JSON con TODOS los campos que el modal "Nuevo Caso" puede pre-llenar
+// (incluye campos avanzados: court_unit, currency, key_dates, etc.).
+//
+// Capas de robustez:
+//  1) Prompt detallado con ejemplos.
+//  2) Validación Zod sobre el JSON parseado.
+//  3) Fallback graceful: si el JSON viene roto, intenta extraer el primer
+//     objeto JSON balanceado del texto crudo.
+//  4) Si la validación falla, mantenemos los campos válidos y descartamos
+//     los inválidos (graceful degradation — mejor algunos campos que ninguno).
+
+const previewExtractedSchema = z.object({
+  title: z.string().min(1).max(300).optional().nullable(),
+  clientName: z.string().max(300).optional().nullable(),
+  legal_matter: z.string().max(80).optional().nullable(),
+  action_type: z.string().max(120).optional().nullable(),
+  jurisdiction: z.string().max(120).optional().nullable(),
+  judicial_process_number: z.string().max(80).optional().nullable(),
+  court_name: z.string().max(300).optional().nullable(),
+  court_unit: z.string().max(200).optional().nullable(),
+  judge_name: z.string().max(200).optional().nullable(),
+  prosecutor_name: z.string().max(200).optional().nullable(),
+  opposing_party: z.string().max(500).optional().nullable(),
+  related_laws: z.array(z.string().max(200)).max(20).optional().nullable(),
+  amount_claimed: z.union([z.number(), z.string()]).optional().nullable(),
+  currency: z.string().max(10).optional().nullable(),
+  filed_at: z.string().max(40).optional().nullable(),
+  next_hearing_at: z.string().max(40).optional().nullable(),
+  procedural_stage: z.string().max(120).optional().nullable(),
+  key_dates: z.array(z.object({
+    label: z.string().max(120),
+    date: z.string().max(40),
+    description: z.string().max(400).optional().nullable(),
+  })).max(20).optional().nullable(),
+  co_demandados: z.array(z.string().max(300)).max(20).optional().nullable(),
+  tags: z.array(z.string().max(60)).max(20).optional().nullable(),
+  facts_summary: z.string().max(2000).optional().nullable(),
+  priority: z.enum(['low', 'medium', 'high']).optional().nullable(),
+  description: z.string().max(4000).optional().nullable(),
+}).passthrough();
+
+type PreviewExtracted = z.infer<typeof previewExtractedSchema>;
+
+const PREVIEW_SYSTEM_PROMPT = `Eres un(a) abogado(a) asistente senior especializado en derecho ecuatoriano LATAM. Tu trabajo es leer un documento legal (denuncia, demanda, oficio, sentencia, contrato, providencia, escrito o evidencia) y extraer un perfil estructurado del caso para pre-llenar el formulario del expediente del abogado.
+
+REGLAS:
+- Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin code-fences, sin prosa antes ni después). El primer carácter de tu respuesta es "{" y el último "}".
+- Cada campo es OPCIONAL: si la información no aparece en el documento, usa null. No inventes nombres, montos, números de juicio ni fechas.
+- "amount_claimed" debe ser un NÚMERO (sin comillas) si lo identificas (ej. 12500.50). Si solo aparece como texto ambiguo, usa null.
+- "filed_at", "next_hearing_at" y key_dates[].date en formato ISO YYYY-MM-DD cuando sea posible.
+- "related_laws": cita literal de las normas o artículos invocados en el documento ("Art. 278 COIP", "Art. 76 numeral 7 CRE"). Solo aquellas que aparecen explícitamente; NO sugieras leyes adicionales.
+- "key_dates": fechas clave detectadas (audiencias, plazos, prescripciones, notificaciones), con un label corto y una descripción de 1 oración.
+- "co_demandados": si hay múltiples demandados/imputados, lista TODOS además del principal en opposing_party.
+- "tags": 3-6 etiquetas conceptuales en minúsculas (ej. "despido-intempestivo", "robo-agravado", "pensión-alimenticia") útiles para clasificar el caso.
+- "title": síntesis de 8-15 palabras en estilo forense — ej. "Demanda laboral por despido intempestivo contra Empresa XYZ S.A.".
+- "description": 3-6 oraciones de descripción ejecutiva — partes, acción, hechos esenciales, etapa actual, jurisdicción.
+- "priority": "high" si hay urgencia evidente (plazo procesal por vencer, libertad personal, medidas cautelares); "medium" por defecto; "low" si es trámite ordinario sin presión.
+
+ESQUEMA EXACTO:
+{
+  "title": "string|null",
+  "clientName": "string|null",
+  "legal_matter": "Penal|Civil|Laboral|Tributario|Constitucional|Administrativo|Familia|Niñez|Tránsito|Mercantil|Otro|null",
+  "action_type": "Demanda|Denuncia|Querella|Acción de protección|Hábeas corpus|Recurso de apelación|Recurso de casación|Reclamo|Solicitud|Contrato|Otro|null",
+  "jurisdiction": "string|null",
+  "judicial_process_number": "string|null",
+  "court_name": "string|null",
+  "court_unit": "string|null",
+  "judge_name": "string|null",
+  "prosecutor_name": "string|null",
+  "opposing_party": "string|null",
+  "related_laws": ["string", "..."],
+  "amount_claimed": number|null,
+  "currency": "USD|EUR|...|null",
+  "filed_at": "YYYY-MM-DD|null",
+  "next_hearing_at": "YYYY-MM-DD|null",
+  "procedural_stage": "string|null",
+  "key_dates": [{"label":"string","date":"YYYY-MM-DD","description":"string"}],
+  "co_demandados": ["string", "..."],
+  "tags": ["string", "..."],
+  "facts_summary": "string|null",
+  "priority": "low|medium|high",
+  "description": "string|null"
+}`;
+
+/** Extrae el primer objeto JSON balanceado del texto. Útil cuando la IA
+ *  ignora la instrucción "solo JSON" y devuelve prosa antes/después. */
+function extractFirstJsonObject(raw: string): string | null {
+  const start = raw.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+async function extractCasePreview(
+  aiClient: Awaited<ReturnType<typeof getAiClient>>,
+  text: string,
+  sourceLabel: string,
+): Promise<{ extracted: PreviewExtracted | null; raw: string; parseError: string | null }> {
+  const completion = await aiClient.chat.completions.create({
+    messages: [
+      { role: 'system', content: PREVIEW_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content:
+          `# Documento (${sourceLabel})\n\n${text}\n\n` +
+          'Devuelve el JSON ahora, sin prosa adicional.',
+      },
+    ],
+    temperature: 0.1,
+    max_tokens: 3500,
+  });
+  const raw = (completion.choices?.[0]?.message?.content || '').trim();
+
+  // Capa 1: parse directo
+  const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(fenced);
+  } catch {
+    // Capa 2: extraer primer objeto JSON balanceado
+    const balanced = extractFirstJsonObject(fenced) ?? extractFirstJsonObject(raw);
+    if (balanced) {
+      try { parsed = JSON.parse(balanced); } catch { /* ignore */ }
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return { extracted: null, raw, parseError: 'IA no devolvió JSON válido' };
+  }
+
+  // Normalizaciones suaves: amount_claimed como número, related_laws como array
+  if (typeof parsed.amount_claimed === 'string') {
+    const n = parseFloat(parsed.amount_claimed.replace(/[^0-9.\-]/g, ''));
+    parsed.amount_claimed = Number.isFinite(n) ? n : null;
+  }
+  if (parsed.related_laws && !Array.isArray(parsed.related_laws)) {
+    parsed.related_laws = String(parsed.related_laws).split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+  }
+  if (parsed.tags && !Array.isArray(parsed.tags)) {
+    parsed.tags = String(parsed.tags).split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+  }
+  if (parsed.co_demandados && !Array.isArray(parsed.co_demandados)) {
+    parsed.co_demandados = String(parsed.co_demandados).split(/[;|]/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  // Validación Zod — si falla, devolvemos lo válido y descartamos lo inválido.
+  const validation = previewExtractedSchema.safeParse(parsed);
+  if (validation.success) {
+    return { extracted: validation.data, raw, parseError: null };
+  }
+  // Graceful degradation: drop invalid fields, keep valid ones.
+  const partial: Record<string, unknown> = {};
+  for (const k of Object.keys(parsed)) {
+    const singleFieldShape = z.object({ [k]: (previewExtractedSchema.shape as any)[k] ?? z.any() });
+    const single = singleFieldShape.safeParse({ [k]: parsed[k] });
+    if (single.success) partial[k] = parsed[k];
+  }
+  return {
+    extracted: partial as PreviewExtracted,
+    raw,
+    parseError: null,
+  };
 }

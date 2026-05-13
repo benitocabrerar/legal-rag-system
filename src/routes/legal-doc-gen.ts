@@ -30,7 +30,81 @@ import {
 } from 'docx';
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
+import { serviceRoleClient } from '../lib/supabase.js';
 import { getUserCountryContext, type CountryContext } from '../lib/country-context.js';
+
+// ─── RAG retrieval contra el corpus legal vectorizado ───────────
+//
+// Inyecta MARCO NORMATIVO real (extractos vectorizados de leyes/códigos/
+// reglamentos del país) al prompt de generación. Sin esto, la IA puede
+// alucinar artículos. Con esto, la IA solo cita fuentes presentes en el
+// bloque retrieved.
+interface LegalSource {
+  legalDocumentId: string;
+  normTitle: string;
+  content: string;
+  score: number;
+}
+
+async function retrieveLegalContext(
+  query: string,
+  matchCount: number,
+  filterCountryCode?: string,
+): Promise<LegalSource[]> {
+  try {
+    const ai = await getAiClient();
+    const embedResp = await ai.embeddings.create({ input: query, dimensions: 1536 });
+    const embedding = embedResp.data?.[0]?.embedding;
+    if (!embedding) return [];
+
+    const sb = serviceRoleClient();
+    const { data, error } = await sb.rpc('search_legal_chunks', {
+      query_embedding: `[${embedding.join(',')}]`,
+      query_text: query.slice(0, 500),
+      match_count: matchCount,
+      semantic_weight: 1.2,    // privilegia semántica para que captures conceptos
+      keyword_weight: 0.8,
+      filter_doc_id: null,
+      filter_norm_type: null,
+      filter_jurisdiction: null,
+      filter_country_code: filterCountryCode || null,
+    });
+
+    if (error || !data) return [];
+
+    // Dedup: si dos chunks vienen del mismo doc legal, quedarnos con el mejor
+    // y mantener variedad de fuentes (mejor para no sesgar al modelo).
+    const seen = new Set<string>();
+    const out: LegalSource[] = [];
+    for (const row of data as any[]) {
+      if (seen.has(row.legal_document_id)) continue;
+      seen.add(row.legal_document_id);
+      out.push({
+        legalDocumentId: row.legal_document_id,
+        normTitle: (row.norm_title || 'Sin título').trim(),
+        content: (row.content || '').trim(),
+        score: Number(row.rrf_score ?? 0),
+      });
+      if (out.length >= matchCount) break;
+    }
+    return out;
+  } catch {
+    // RAG es additive: si falla, generamos sin él (no rompemos el documento).
+    return [];
+  }
+}
+
+function formatLegalSources(sources: LegalSource[]): string {
+  if (sources.length === 0) {
+    return '(no se encontraron fuentes en el corpus vectorizado — el abogado debe verificar todas las citas)';
+  }
+  return sources
+    .map((s, i) => {
+      const excerpt = s.content.replace(/\s+/g, ' ').trim().slice(0, 900);
+      return `[Fuente ${i + 1}] ${s.normTitle}\n${excerpt}`;
+    })
+    .join('\n\n');
+}
 
 // ─── Document type catalog ──────────────────────────────────
 
@@ -211,22 +285,35 @@ function expertSystemPrompt(opts: {
     : 'Identifica la rama del derecho aplicable y aplica sus principios con precisión.';
 
   return [
-    `Eres un abogado(a) ecuatoriano LATAM senior que ejerce en ${country.nameEs} bajo el sistema ${country.legalSystem === 'common_law' ? 'common law' : 'civil law'}.`,
-    `Tienes 25 años de experiencia litigando y redactando documentos forenses; te respetan jueces y pares.`,
+    `Eres un(a) abogado(a) senior que ejerce en ${country.nameEs} bajo el sistema ${country.legalSystem === 'common_law' ? 'common law' : 'civil law'}.`,
+    `Tienes 25+ años de experiencia litigando y redactando documentos forenses; te respetan jueces y pares.`,
     specialtyLine,
     '',
-    `TAREA: redactar un(a) "${docLabel}" listo(a) para presentar / firmar, con calidad de un(a) socio(a) senior.`,
+    `TAREA: redactar un(a) "${docLabel}" listo(a) para presentar/firmar, con la calidad de un(a) socio(a) senior de una firma de prestigio mundial. Extensión esperada: documento completo, exhaustivo, profesional — sin atajos.`,
     '',
     'REGLAS DE REDACCIÓN (no negociables):',
-    '1) ESTRUCTURA PROFESIONAL clásica del documento, con secciones tituladas y numeradas en mayúsculas (## I. SUMILLA, ## II. ANTECEDENTES, ## III. FUNDAMENTOS DE HECHO, ## IV. FUNDAMENTOS DE DERECHO, ## V. PRUEBAS, ## VI. PETICIÓN, ## VII. NOTIFICACIONES, etc. — adapta a este tipo de doc).',
-    `2) CITAS LEGALES EXACTAS al ordenamiento jurídico de ${country.nameEs}: cuando invoques un artículo, escribe número, norma y, si lo recuerdas, fecha de promulgación. Ejemplo: "Art. 76, numeral 7, literal l) de la Constitución de la República del Ecuador" o "Art. 234 del COIP". `,
-    '3) JAMÁS inventes leyes, fallos ni doctrina. Si no estás 100% seguro de un número de artículo, jurisprudencia o doctrina, escribe explícitamente "[CITA POR VERIFICAR]" en lugar de inventar. Es preferible un placeholder honesto a una fuente falsa.',
-    '4) JAMÁS uses "NN", "N.N.", "N/N", "Sr. NN", "[NOMBRE]" ni placeholders genéricos. Usa los datos reales del caso que se te entregan en el bloque CONTEXTO. Si un dato falta, MARCA "[DATO REQUERIDO: <descripción exacta del dato>]" para que el abogado humano lo complete.',
-    '5) Lenguaje forense formal, en español jurídico de la jurisdicción, con párrafos numerados cuando aplique, signos de puntuación correctos y trato protocolar al juzgador (Señor Juez/a, Honorable Tribunal, según corresponda).',
-    '6) NO añadas comentarios meta-textuales (no escribas "Aquí está el documento", "Espero que sea útil"). El primer carácter de tu salida es la primera palabra del documento mismo.',
-    '7) Cuando cites pruebas, refiérete a documentos reales del caso (los listados en CONTEXTO). No inventes documentos.',
     '',
-    'FORMATO DE SALIDA: Markdown ligero — usa "## Título" para secciones principales, "### Sub-título" para sub-secciones, **negrita** para énfasis, listas con "- " cuando ayuden a la legibilidad. Sin frontmatter, sin code-fences.',
+    '1) ESTRUCTURA PROFESIONAL EXTENSA Y NUMERADA. Cada sección lleva título en mayúsculas con romano (## I. SUMILLA / ENCABEZAMIENTO, ## II. IDENTIFICACIÓN DE LAS PARTES, ## III. ANTECEDENTES DE HECHO (cronológicos, numerados 3.1, 3.2…), ## IV. FUNDAMENTOS DE DERECHO (separa por norma invocada y desarrolla su aplicación al caso), ## V. PRUEBAS QUE SE ANUNCIAN / PRACTICAN (numeradas 5.1, 5.2…), ## VI. PETICIÓN / PETITORIO (numerada), ## VII. CUANTÍA / TRÁMITE, ## VIII. NOTIFICACIONES / CASILLERO, ## IX. PROCURACIÓN JUDICIAL / AUTORIZACIÓN, ## X. FIRMA). Adapta los títulos al tipo de documento — pero EXIGE igual nivel de detalle y formalidad. Nunca devuelvas un texto corto o "esquemático"; redacta como abogado(a) cuyo trabajo se va a presentar mañana en un juzgado.',
+    '',
+    '2) MARCO NORMATIVO (REGLA CRÍTICA — ANTI-ALUCINACIÓN). Junto con el caso te entrego un bloque "=== MARCO NORMATIVO ===" con extractos REALES del ordenamiento jurídico de ' + country.nameEs + ', recuperados por búsqueda vectorial del corpus oficial cargado en este sistema. CUANDO CITES un artículo o pasaje legal:',
+    '   a) Si la cita aparece literalmente en MARCO NORMATIVO → cita con precisión (número, norma, párrafo) y, si suma, reproduce un extracto breve entre comillas con atribución a la "Fuente N" del bloque.',
+    '   b) Si NO está en MARCO NORMATIVO pero es una norma muy general que conoces con plena certeza (ej. Art. 76 CRE, Art. 1 COIP) → puedes citarla, pero NO pongas extractos textuales que no aparezcan en MARCO.',
+    '   c) Si no estás 100% seguro del número, fecha o redacción → escribe "[CITA POR VERIFICAR: <descripción honesta de lo que querías invocar>]". Preferible siempre un placeholder honesto a una fuente fabricada.',
+    '   PROHIBIDO inventar números de artículo, fechas de promulgación, registros oficiales, sentencias o doctrina que no aparezcan en MARCO ni sean de conocimiento universal verificable.',
+    '',
+    '3) JAMÁS uses "NN", "N.N.", "N/N", "Sr. NN", "[NOMBRE]" ni placeholders genéricos para nombres, montos, fechas o tribunales. Usa SIEMPRE los datos reales del caso (sección CONTEXTO y DATOS PARA EL DOCUMENTO). Si un dato falta, marca explícitamente "[DATO REQUERIDO: <descripción exacta del dato faltante>]" para que el abogado humano lo complete antes de firmar.',
+    '',
+    '4) DESARROLLA cada FUNDAMENTO DE DERECHO con esta estructura: enunciado de la norma → contenido relevante → SUBSUNCIÓN al caso concreto (cómo los hechos encajan en el supuesto) → conclusión jurídica. No basta con citar la norma; debes argumentar.',
+    '',
+    '5) Lenguaje forense formal y preciso, en español jurídico de ' + country.nameEs + '. Tratamiento protocolar al juzgador ("Señor/a Juez/a", "Honorable Tribunal"). Párrafos numerados donde aplique. Puntuación impecable, sin redundancias ni muletillas.',
+    '',
+    '6) RECOMENDACIONES y ESTRATEGIA (si aplica al tipo de documento, ej. INFORME_LEGAL, ALEGATO, CARTA_LEGAL): cada recomendación debe estar sustentada en una norma o principio CITADO previamente. No emitas opinión sin respaldo legal.',
+    '',
+    '7) PRUEBAS: cuando las anuncies, refiérete a documentos REALES del caso (los listados en DOCUMENTOS DEL EXPEDIENTE). No inventes documentos. Si una prueba que el abogado debería tener no está, indícalo: "[PRUEBA POR APORTAR: <qué se necesita>]".',
+    '',
+    '8) NO comentarios meta-textuales. El primer carácter de tu salida es la primera palabra del documento mismo. Sin "Aquí está…", sin "Espero que…", sin notas al final que rompan formalidad.',
+    '',
+    'FORMATO DE SALIDA: Markdown profesional — "## TÍTULO DE SECCIÓN" (romanos en mayúsculas), "### Subtítulo" para subsecciones, **negrita** para énfasis sobrio, listas numeradas o con "- " cuando ayuden a la legibilidad. Sin frontmatter, sin code-fences, sin "```markdown".',
   ].join('\n');
 }
 
@@ -436,6 +523,22 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         })
         .join('\n');
 
+      // === RAG: recuperar MARCO NORMATIVO real desde el corpus vectorizado ===
+      //
+      // Construimos un query enriquecido con tipo de documento, materia, partes
+      // y hechos del caso. La IA luego DEBE citar SOLO desde estas fuentes
+      // (regla 2 del system prompt). Sin esto, los artículos se alucinan.
+      const ragQueryParts = [
+        DOC_LABELS[body.docType],
+        body.specialty || '',
+        c.title,
+        c.description || '',
+        merged.hechos || merged.consulta || merged.asunto || '',
+        merged.pretension || merged.tesis || '',
+      ].filter((s) => s && String(s).trim().length > 0);
+      const ragQuery = ragQueryParts.join(' \n ').slice(0, 1500);
+      const legalSources = await retrieveLegalContext(ragQuery, 15, c.country.code);
+
       const userPrompt = [
         `=== CONTEXTO DEL CASO ===`,
         `Caso: ${c.title}`,
@@ -450,9 +553,14 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         '',
         `=== CRONOLOGÍA ===`,
         eventContext || '(sin eventos)',
+        '',
+        `=== MARCO NORMATIVO (extractos REALES del ordenamiento de ${c.country.nameEs}, recuperados del corpus oficial vectorizado de este sistema) ===`,
+        formatLegalSources(legalSources),
+        '',
+        `IMPORTANTE: cuando cites artículos legales en tu documento, prefiere fuentes presentes en MARCO NORMATIVO arriba. Si necesitas una norma que no aparece, no la inventes — usa "[CITA POR VERIFICAR: ...]" según la regla 2 del sistema.`,
         body.customInstructions ? `\n=== INSTRUCCIONES ADICIONALES ===\n${body.customInstructions}` : '',
         '',
-        `Genera el documento "${DOC_LABELS[body.docType]}" siguiendo estrictamente las reglas del sistema.`,
+        `Genera el documento "${DOC_LABELS[body.docType]}" con el nivel de extensión, profundidad y formalidad descritos en las reglas del sistema. No omitas secciones. Desarrolla cada fundamento de derecho con subsunción al caso.`,
       ].filter(Boolean).join('\n');
 
       reply
@@ -474,39 +582,33 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
           country: c.country.code,
           model: aiClient.model,
           provider: aiClient.provider,
+          legalSourcesUsed: legalSources.length,
         });
 
-        if (aiClient.provider === 'openai') {
-          const stream: any = await aiClient.chat.completions.create({
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user',   content: userPrompt },
-            ],
-            temperature: 0.2,
-            max_tokens: 6000,
-            stream: true,
+        // Emitir metadata RAG para que el frontend pueda mostrar "X fuentes legales usadas"
+        if (legalSources.length > 0) {
+          send('legal-sources', {
+            count: legalSources.length,
+            titles: legalSources.map((s) => s.normTitle).slice(0, 10),
           });
-          for await (const chunk of stream) {
-            const delta = chunk?.choices?.[0]?.delta?.content;
-            if (delta) send('chunk', { content: delta });
-          }
-        } else {
-          const completion = await aiClient.chat.completions.create({
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user',   content: userPrompt },
-            ],
-            temperature: 0.2,
-            max_tokens: 6000,
-          });
-          const text = completion.choices?.[0]?.message?.content ?? '';
-          // Anthropic vía nuestro wrapper devuelve un solo bloque. Lo
-          // troceamos en líneas para que la UI lo pinte gradual.
-          for (const line of text.split('\n')) {
-            send('chunk', { content: line + '\n' });
-          }
         }
-        send('done', { ok: true });
+
+        // Streaming unificado: el wrapper traduce SSE de Anthropic a chunks
+        // con shape OpenAI, así que el loop es idéntico para ambos providers.
+        const stream = await aiClient.streamChat({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user',   content: userPrompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 16000,  // documentos extensos: demanda, recurso, informe legal
+        });
+        for await (const chunk of stream) {
+          const delta = chunk?.choices?.[0]?.delta?.content;
+          if (delta) send('chunk', { content: delta });
+        }
+
+        send('done', { ok: true, legalSourcesUsed: legalSources.length });
       } catch (err: any) {
         request.log.error({ err }, 'legal-doc-gen failed');
         send('error', { message: err?.message ?? 'AI error' });

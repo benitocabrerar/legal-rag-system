@@ -15,6 +15,7 @@ import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts'
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
 import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
 import { CaseAIChat } from '@/components/case-detail/CaseAIChat';
+import DocumentUploadProgress from '@/components/case-detail/DocumentUploadProgress';
 import { CollapsibleSection, SectionsToolbar, type CompletionState } from '@/components/case-detail/CollapsibleSection';
 import { Briefcase as BriefcaseIcon, Users, Scale as ScaleIcon, DollarSign as DollarSignIcon, FileWarning } from 'lucide-react';
 import {
@@ -98,6 +99,9 @@ export default function CaseDetailPage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  // Modal de progreso del upload + cerebro (SSE)
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
@@ -317,7 +321,7 @@ export default function CaseDetailPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -328,23 +332,11 @@ export default function CaseDetailPage() {
       return;
     }
 
-    setUploading(true);
-    try {
-      // Usar el nombre del archivo (sin extensión) como título
-      const title = file.name.replace(/\.[^.]+$/, '');
-      const res = await documentsAPI.upload(caseId, file, title);
-      loadDocuments();
-      const chunks = res?.document?.chunksCount ?? 0;
-      if (chunks > 0) {
-        console.log(`Documento vectorizado: ${chunks} chunks generados`);
-      }
-    } catch (error: any) {
-      console.error('Error uploading file:', error);
-      alert(error?.response?.data?.error || 'Error al subir archivo');
-    } finally {
-      setUploading(false);
-      e.target.value = ''; // permitir re-subir mismo archivo
-    }
+    // Abre el modal moderno con progreso SSE + síntesis de cerebro del caso.
+    // El upload se ejecuta dentro del componente DocumentUploadProgress.
+    setUploadFile(file);
+    setUploadDialogOpen(true);
+    e.target.value = ''; // permitir re-subir mismo archivo
   };
 
   const handleQuery = async (e: React.FormEvent) => {
@@ -1262,6 +1254,20 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
         isOpen={showLegalDocGen}
         onClose={() => setShowLegalDocGen(false)}
         caseId={caseId}
+      />
+
+      <DocumentUploadProgress
+        caseId={caseId}
+        file={uploadFile}
+        open={uploadDialogOpen}
+        onClose={() => {
+          setUploadDialogOpen(false);
+          setUploadFile(null);
+        }}
+        onComplete={() => {
+          // Refrescar la lista de documentos del expediente
+          loadDocuments();
+        }}
       />
     </div>
   );
