@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_V2_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v2`
-  : 'https://legal-rag-api-qnew.onrender.com/api/v2';
+  : 'https://poweria-legal-api.onrender.com/api/v2';
 
 export const apiV2 = axios.create({
   baseURL: API_V2_URL,

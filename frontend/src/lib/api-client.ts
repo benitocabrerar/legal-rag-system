@@ -7,7 +7,7 @@ import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } fro
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
-  : 'https://legal-rag-api-qnew.onrender.com/api/v1';
+  : 'https://poweria-legal-api.onrender.com/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_URL,

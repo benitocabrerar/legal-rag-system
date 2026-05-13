@@ -237,7 +237,7 @@ export default function LegalDocumentUploadForm({
       setUploadProgress(60);
 
       // Make API request
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://poweria-legal-api.onrender.com';
       const response = await fetch(`${apiUrl}/api/v2/legal-documents`, {
         method: 'POST',
         headers: {

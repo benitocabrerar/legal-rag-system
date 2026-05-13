@@ -164,7 +164,7 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => {
-              window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://legal-rag-api-qnew.onrender.com'}/api/v1/auth/google`;
+              window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'https://poweria-legal-api.onrender.com'}/api/v1/auth/google`;
             }}
             className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all"
           >

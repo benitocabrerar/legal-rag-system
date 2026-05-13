@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
-  : 'https://legal-rag-api-qnew.onrender.com/api/v1';
+  : 'https://poweria-legal-api.onrender.com/api/v1';
 
 // Helper function to safely handle API errors
 export const parseApiError = (error: any): string => {
