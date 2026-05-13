@@ -180,25 +180,38 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
                         pub.publication_type === 'reglamento' ? 'Reglamento' :
                         'Norma'} ${pub.publication_number ? `Nº ${pub.publication_number}` : ''} — ${pub.title}`.slice(0, 500);
 
+        // Schema real de legal_documents: id, title, content, norm_type,
+        // norm_title, publication_type, publication_number, publication_date,
+        // jurisdiction, country_code, category, uploaded_by, metadata.
+        // NO existen: source_url, published_at. La URL del PDF y otros
+        // datos van adentro de metadata.
         await prisma.$executeRawUnsafe(
           `INSERT INTO public.legal_documents
-             (id, title, content, norm_type, jurisdiction, country_code,
-              source_url, published_at, metadata, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now(), now())`,
+             (id, title, norm_title, content, norm_type, publication_type,
+              publication_number, publication_date, jurisdiction, country_code,
+              category, uploaded_by, is_active, metadata, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $13::jsonb, now(), now())`,
           docId,
           title.trim(),
+          (pub.title || '').slice(0, 500),
           pub.raw_text_excerpt,
+          pub.publication_type || 'general',
           pub.publication_type,
+          pub.publication_number,
+          pub.edition_date,
           'national',
           'EC',
-          pub.edition_pdf_url || pub.edition_url,
-          pub.edition_date,
+          pub.ai_classification || 'general',
+          userId,
           JSON.stringify({
             source: 'registro_oficial_ec',
             editionNumber: pub.edition_number,
+            editionUrl: pub.edition_url,
+            editionPdfUrl: pub.edition_pdf_url,
             issuingEntity: pub.issuing_entity,
             aiClassification: pub.ai_classification,
             aiKeywords: pub.ai_keywords,
+            aiSummary: pub.ai_summary,
             registryPublicationId: pub.id,
             approvedBy: userId,
             approvedAt: new Date().toISOString(),
@@ -278,7 +291,7 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
         legal_doc_title: string | null;
         legal_doc_norm_type: string | null;
         legal_doc_jurisdiction: string | null;
-        published_at: Date | null;
+        publication_date: Date | null;
         edition_number: string | null;
         edition_date: Date | null;
         edition_pdf_url: string | null;
@@ -305,7 +318,7 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
             ld.title AS legal_doc_title,
             ld.norm_type AS legal_doc_norm_type,
             ld.jurisdiction AS legal_doc_jurisdiction,
-            ld.published_at,
+            ld.publication_date,
             rp.edition_number,
             rp.edition_date,
             rp.edition_pdf_url,
@@ -372,7 +385,7 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
           legalDocTitle: r.legal_doc_title,
           normType: r.legal_doc_norm_type,
           jurisdiction: r.legal_doc_jurisdiction,
-          publishedAt: r.published_at?.toISOString() ?? null,
+          publishedAt: r.publication_date?.toISOString() ?? null,
           editionNumber: r.edition_number,
           editionDate: r.edition_date?.toISOString() ?? null,
           editionPdfUrl: r.edition_pdf_url,

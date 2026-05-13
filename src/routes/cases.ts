@@ -793,20 +793,25 @@ Genera el super-resumen en JSON.`;
           ),
           prisma.document.count({ where: { caseId: id } }),
           prisma.documentChunk.count({ where: { document: { caseId: id } } }).catch(() => 0),
+          // case_parties no existe en la DB — devolvemos 0 hardcoded
+          Promise.resolve(0),
+          // calendar_events → tabla real es 'events'
           prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
-            `SELECT COUNT(*)::bigint AS n FROM public.case_parties WHERE case_id = $1`, id
-          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
-          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
-            `SELECT COUNT(*)::bigint AS n FROM public.calendar_events WHERE case_id = $1`, id
+            `SELECT COUNT(*)::bigint AS n FROM public.events WHERE case_id = $1`, id
           ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
           prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
             `SELECT COUNT(*)::bigint AS n FROM public.tasks WHERE case_id = $1`, id
           ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          // notifications → tabla real es 'case_notifications'
           prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
-            `SELECT COUNT(*)::bigint AS n FROM public.notifications WHERE case_id = $1`, id
+            `SELECT COUNT(*)::bigint AS n FROM public.case_notifications WHERE case_id = $1`, id
           ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          // financial_records → finance_invoices + finance_payments
           prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
-            `SELECT COUNT(*)::bigint AS n FROM public.financial_records WHERE case_id = $1`, id
+            `SELECT (
+              (SELECT COUNT(*) FROM public.finance_invoices WHERE case_id = $1)
+              + (SELECT COUNT(*) FROM public.finance_payments WHERE case_id = $1)
+            )::bigint AS n`, id
           ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
         ]);
 

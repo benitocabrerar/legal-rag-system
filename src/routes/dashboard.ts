@@ -78,13 +78,13 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           userId,
         ).catch(() => []),
 
-        // 3) Próximas audiencias (30 días)
+        // 3) Próximas audiencias (30 días) — tabla real es `events`
         prisma.$queryRawUnsafe<Array<{
           id: string; case_id: string; case_title: string;
           title: string; start_time: Date; type: string | null;
         }>>(
           `SELECT e.id, e.case_id, c.title AS case_title, e.title, e.start_time, e.type
-             FROM public.calendar_events e
+             FROM public.events e
              JOIN public.cases c ON c.id = e.case_id
             WHERE c.user_id = $1
               AND e.start_time >= $2
@@ -94,25 +94,31 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           userId, now, in30,
         ).catch(() => []),
 
-        // 4) Tareas urgentes — vencidas + esta semana
+        // 4) Tareas urgentes — tasks no tiene user_id, joinear vía cases o
+        // usar assigned_to/created_by. Mostramos todas las tasks del bufete
+        // (cases del usuario) que estén pendientes.
         prisma.$queryRawUnsafe<Array<{
           id: string; case_id: string | null; case_title: string | null;
           title: string; due_date: Date | null; priority: string | null;
           is_overdue: boolean;
         }>>(
-          `SELECT t.id, t.case_id, c.title AS case_title, t.title, t.due_date, t.priority,
+          `SELECT t.id, t.case_id, c.title AS case_title, t.title, t.due_date, t.priority::text,
                   (t.due_date IS NOT NULL AND t.due_date < $2) AS is_overdue
              FROM public.tasks t
              LEFT JOIN public.cases c ON c.id = t.case_id
-            WHERE t.user_id = $1
+            WHERE (
+                c.user_id = $1
+                OR t.assigned_to = $1
+                OR t.created_by = $1
+              )
               AND t.completed_at IS NULL
               AND (
                 (t.due_date IS NOT NULL AND t.due_date <= $3)
-                OR t.priority = 'high'
+                OR t.priority::text = 'high'
               )
             ORDER BY
               CASE WHEN t.due_date < $2 THEN 0 ELSE 1 END,
-              CASE t.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+              CASE t.priority::text WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
               t.due_date NULLS LAST
             LIMIT 12`,
           userId, now, in7,
@@ -160,41 +166,37 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           userId, ago14,
         ).catch(() => []),
 
-        // 8) Finanzas globales — facturado, cobrado, saldo
+        // 8) Finanzas globales — usa finance_invoices/payments reales
         prisma.$queryRawUnsafe<Array<{
           total_billed: number; total_paid: number; outstanding: number;
         }>>(
           `SELECT
-              COALESCE(SUM(amount) FILTER (WHERE type IN ('invoice','factura','fee')), 0)::float AS total_billed,
-              COALESCE(SUM(amount) FILTER (WHERE type IN ('payment','pago','cobro')), 0)::float AS total_paid,
-              GREATEST(
-                COALESCE(SUM(amount) FILTER (WHERE type IN ('invoice','factura','fee')), 0)
-                - COALESCE(SUM(amount) FILTER (WHERE type IN ('payment','pago','cobro')), 0)
-                , 0
-              )::float AS outstanding
-             FROM public.financial_records f
-             JOIN public.cases c ON c.id = f.case_id
+              COALESCE(SUM(i.total_amount), 0)::float AS total_billed,
+              COALESCE(SUM(i.paid_amount), 0)::float AS total_paid,
+              COALESCE(SUM(i.balance_due), 0)::float AS outstanding
+             FROM public.finance_invoices i
+             JOIN public.cases c ON c.id = i.case_id
             WHERE c.user_id = $1`,
           userId,
         ).then(r => r[0] || { total_billed: 0, total_paid: 0, outstanding: 0 }).catch(() => ({ total_billed: 0, total_paid: 0, outstanding: 0 })),
 
         // 9) Aging de cobranza — buckets 0-30, 31-60, 61-90, 90+
+        // basado en issue_date y solo facturas con balance_due > 0
         prisma.$queryRawUnsafe<Array<{
           bucket: string; total: number;
         }>>(
           `SELECT
               CASE
-                WHEN (now() - f.created_at) < interval '30 days' THEN '0-30'
-                WHEN (now() - f.created_at) < interval '60 days' THEN '31-60'
-                WHEN (now() - f.created_at) < interval '90 days' THEN '61-90'
+                WHEN (now() - i.issue_date) < interval '30 days' THEN '0-30'
+                WHEN (now() - i.issue_date) < interval '60 days' THEN '31-60'
+                WHEN (now() - i.issue_date) < interval '90 days' THEN '61-90'
                 ELSE '90+'
               END AS bucket,
-              COALESCE(SUM(amount), 0)::float AS total
-             FROM public.financial_records f
-             JOIN public.cases c ON c.id = f.case_id
+              COALESCE(SUM(i.balance_due), 0)::float AS total
+             FROM public.finance_invoices i
+             JOIN public.cases c ON c.id = i.case_id
             WHERE c.user_id = $1
-              AND f.type IN ('invoice','factura','fee')
-              AND (f.paid_at IS NULL)
+              AND i.balance_due > 0
             GROUP BY 1`,
           userId,
         ).catch(() => []),
