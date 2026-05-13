@@ -135,13 +135,13 @@ async function ingestFile(client, filePath, filename, uploadedBy) {
   // Idempotente: hash del filename como id estable
   const docId = crypto.createHash('md5').update(filename).digest('hex');
 
-  // Skip si ya tiene chunks vectorizados con embedding_v
+  // Skip si ya tiene chunks vectorizados con embedding_v (re-run del mismo file)
   const existing = await client.query(
     `SELECT COUNT(*)::int AS n FROM public.legal_document_chunks WHERE legal_document_id=$1 AND embedding_v IS NOT NULL`,
     [docId]
   );
   if (existing.rows[0].n > 0) {
-    return { filename, status: 'skipped', reason: 'already vectorized', chunks: existing.rows[0].n, ms: 0 };
+    return { filename, status: 'skipped', reason: 'already vectorized (same filename)', chunks: existing.rows[0].n, ms: 0 };
   }
 
   // Extraer texto + objeto completo de pdf-parse
@@ -161,6 +161,31 @@ async function ingestFile(client, filePath, filename, uploadedBy) {
 
   if (!extracted.text || extracted.text.trim().length < 100) {
     return { filename, status: 'fail', stage: 'extract', error: 'texto vacío o demasiado corto', source: extracted._source };
+  }
+
+  // DEDUP POR CONTENT-HASH: si ya existe un doc con el mismo prefijo de 20k chars
+  // (después de normalizar whitespace), es el mismo documento legal aunque
+  // tenga otro filename. Skip para no duplicar.
+  // CRÍTICO: el orden de operaciones DEBE coincidir con la SQL del WHERE:
+  // primero slice(0, 100000) (como se guarda), luego LEFT(.., 20000), luego normalize.
+  const storedSlice = extracted.text.slice(0, 100000);
+  const hashSource = storedSlice.slice(0, 20000).replace(/\s+/g, ' ');
+  const contentHash = crypto.createHash('md5').update(hashSource).digest('hex');
+  const dup = await client.query(
+    `SELECT id, norm_title FROM public.legal_documents
+     WHERE id <> $1
+       AND is_active = true
+       AND MD5(REGEXP_REPLACE(LEFT(content, 20000), '\s+', ' ', 'g')) = $2
+     LIMIT 1`,
+    [docId, contentHash]
+  );
+  if (dup.rows[0]) {
+    return {
+      filename,
+      status: 'skipped',
+      reason: `duplicate content of existing doc ${dup.rows[0].id} ("${(dup.rows[0].norm_title || '').slice(0, 60)}")`,
+      ms: Date.now() - startedAt,
+    };
   }
 
   // Construir metadata completa (nativa PDF + heurística del contenido)
