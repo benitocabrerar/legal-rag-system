@@ -131,6 +131,21 @@ function formatRelativeTime(iso: string): string {
 
 type Tab = 'publications' | 'ingestion-log';
 
+interface ScanProgress {
+  pct: number;
+  label: string;
+  phase: string;
+  startedAt?: string;
+  publicationsLog: Array<{ type: string; title: string; classification: string; edition: string }>;
+  editionsLog: Array<{ number: string; status: string; publicationsCount?: number }>;
+  finished?: {
+    editionsFound: number;
+    publicationsFound: number;
+    errors: string[];
+  };
+  error?: string;
+}
+
 export default function RegistroOficialAdminPage() {
   const [tab, setTab] = useState<Tab>('publications');
   const [stats, setStats] = useState<Stats | null>(null);
@@ -139,6 +154,7 @@ export default function RegistroOficialAdminPage() {
   const [logQuery, setLogQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('analyzed');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [q, setQ] = useState('');
@@ -182,26 +198,107 @@ export default function RegistroOficialAdminPage() {
 
   const triggerScan = async () => {
     setScanning(true);
+    setScanProgress({
+      pct: 0,
+      label: 'Conectando…',
+      phase: 'connecting',
+      publicationsLog: [],
+      editionsLog: [],
+    });
     try {
-      await api.post('/admin/registro-oficial/scan-now', {});
-      // Poll cada 5s hasta que termine
-      let tries = 0;
-      const poll = async () => {
-        tries++;
-        const r = await api.get('/admin/registro-oficial/stats');
-        setStats(r.data);
-        if (r.data.lastScan?.status === 'running' && tries < 60) {
-          setTimeout(poll, 5000);
-        } else {
-          setScanning(false);
-          void load();
+      const { getAuthToken } = await import('@/lib/get-auth-token');
+      const token = await getAuthToken();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const r = await fetch(`${API_URL}/api/v1/admin/registro-oficial/scan-now`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
+          const evLine = lines.find((l) => l.startsWith('event:'));
+          const dataLine = lines.find((l) => l.startsWith('data:'));
+          if (!dataLine) continue;
+          const event = evLine ? evLine.slice(6).trim() : 'message';
+          let payload: any = null;
+          try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { /* ignore */ }
+          if (!payload) continue;
+
+          if (event === 'connected') {
+            setScanProgress((s) => s ? { ...s, startedAt: payload.startedAt } : s);
+          } else if (event === 'phase') {
+            setScanProgress((s) => s ? {
+              ...s,
+              pct: payload.pct,
+              label: payload.label,
+              phase: payload.phase,
+            } : s);
+          } else if (event === 'edition') {
+            setScanProgress((s) => s ? {
+              ...s,
+              editionsLog: [...s.editionsLog, { number: payload.number, status: payload.status }],
+            } : s);
+          } else if (event === 'edition-done') {
+            setScanProgress((s) => s ? {
+              ...s,
+              editionsLog: s.editionsLog.map((e) =>
+                e.number === payload.number
+                  ? { ...e, status: 'done', publicationsCount: payload.publicationsCount }
+                  : e
+              ),
+            } : s);
+          } else if (event === 'publication') {
+            setScanProgress((s) => s ? {
+              ...s,
+              publicationsLog: [...s.publicationsLog, {
+                type: payload.type,
+                title: payload.title,
+                classification: payload.classification,
+                edition: payload.edition,
+              }].slice(-20),  // últimas 20 visibles
+            } : s);
+          } else if (event === 'done') {
+            setScanProgress((s) => s ? {
+              ...s,
+              pct: 100,
+              label: 'Completado',
+              phase: 'done',
+              finished: {
+                editionsFound: payload.editionsFound,
+                publicationsFound: payload.publicationsFound,
+                errors: payload.errors || [],
+              },
+            } : s);
+          } else if (event === 'error') {
+            setScanProgress((s) => s ? { ...s, error: payload.error } : s);
+          }
         }
-      };
-      setTimeout(poll, 3000);
+      }
+      await load();
     } catch (e: any) {
-      setError(e?.response?.data?.error || 'No se pudo disparar el scan');
+      setScanProgress((s) => s ? { ...s, error: e?.message || 'Error en scan' } : s);
+    } finally {
       setScanning(false);
     }
+  };
+
+  const closeScanModal = () => {
+    setScanProgress(null);
   };
 
   const approve = async (id: string) => {
@@ -397,6 +494,234 @@ export default function RegistroOficialAdminPage() {
 
       {/* Panel explicativo del proceso (siempre visible) */}
       <ScraperProcessExplainer />
+
+      {/* Modal SSE de progreso del scan manual */}
+      {scanProgress && (
+        <ScanProgressModal progress={scanProgress} onClose={closeScanModal} scanning={scanning} />
+      )}
+    </div>
+  );
+}
+
+// ─── SCAN PROGRESS MODAL ───────────────────────────────────────
+
+function ScanProgressModal({ progress, onClose, scanning }: {
+  progress: ScanProgress;
+  onClose: () => void;
+  scanning: boolean;
+}) {
+  const elapsed = progress.startedAt
+    ? Math.round((Date.now() - new Date(progress.startedAt).getTime()) / 1000)
+    : 0;
+
+  const isFinished = progress.finished !== undefined;
+  const hasError = progress.error !== undefined;
+  const canClose = !scanning || isFinished || hasError;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => e.target === e.currentTarget && canClose && onClose()}
+    >
+      <div className="relative w-full max-w-2xl bg-gradient-to-br from-slate-950 via-violet-950/80 to-slate-950 rounded-2xl shadow-2xl shadow-violet-500/20 border border-violet-500/30 overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Top gradient accent */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
+
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white shadow-lg shrink-0 ${
+              isFinished && !hasError ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/30' :
+              hasError ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30' :
+              'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-violet-500/30 animate-pulse'
+            }`}>
+              {isFinished && !hasError ? <CheckCircle2 className="w-6 h-6" /> :
+               hasError ? <AlertTriangle className="w-6 h-6" /> :
+               <ScrollText className="w-6 h-6" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                Scan del Registro Oficial Ecuador
+                {!isFinished && !hasError && (
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
+                )}
+              </h2>
+              <p className="text-xs text-violet-300/80 mt-0.5">
+                {progress.label}
+              </p>
+            </div>
+            {canClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition shrink-0"
+                aria-label="Cerrar"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Big percentage display */}
+          <div className="mt-5 flex items-baseline gap-3">
+            <span className={`font-mono text-6xl font-black tabular-nums leading-none ${
+              isFinished && !hasError ? 'text-emerald-300' :
+              hasError ? 'text-rose-300' :
+              'text-transparent bg-clip-text bg-gradient-to-br from-violet-300 via-fuchsia-300 to-pink-300'
+            }`}>
+              {Math.round(progress.pct)}
+            </span>
+            <span className="text-2xl font-bold text-slate-500">%</span>
+            <span className="ml-auto text-xs font-mono text-slate-500 tabular-nums">
+              {elapsed}s transcurridos
+            </span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="relative mt-3 h-2 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+            <div
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out ${
+                isFinished && !hasError ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                hasError ? 'bg-rose-500' :
+                'bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500'
+              }`}
+              style={{ width: `${Math.max(2, Math.min(100, progress.pct))}%` }}
+            />
+            {!isFinished && !hasError && (
+              <div
+                className="absolute inset-y-0 w-12 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse rounded-full pointer-events-none"
+                style={{ left: `${Math.max(0, Math.min(85, progress.pct - 6))}%` }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Phase checklist */}
+        <div className="px-6 pb-3">
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { id: 'starting',     label: '🔌 Conectando',           threshold: 5 },
+              { id: 'listing-done', label: '🗂️ Listando ediciones',   threshold: 18 },
+              { id: 'diff-done',    label: '🔍 Detectando nuevas',    threshold: 28 },
+              { id: 'downloading',  label: '⬇️ Descargando PDFs',     threshold: 30 },
+              { id: 'analyzing',   label: '🧠 IA analizando',       threshold: 60 },
+              { id: 'summary',     label: '✨ Generando resumen',   threshold: 96 },
+            ].map((p) => {
+              const done = progress.pct >= p.threshold;
+              const active = !done && progress.pct >= (p.threshold - 10);
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-all ${
+                    done ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' :
+                    active ? 'bg-violet-500/15 text-violet-100 border border-violet-500/30' :
+                    'bg-slate-800/40 text-slate-500 border border-slate-700/40'
+                  }`}
+                >
+                  {done ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> :
+                   active ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> :
+                   <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-600 shrink-0" />}
+                  <span className="font-bold truncate">{p.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Live feed: publicaciones detectadas */}
+        {progress.publicationsLog.length > 0 && (
+          <div className="px-6 pb-3">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-violet-300/80 mb-1.5 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Publicaciones detectadas en vivo ({progress.publicationsLog.length})
+            </div>
+            <div className="rounded-lg border border-violet-500/20 bg-slate-950/50 max-h-32 overflow-y-auto">
+              {progress.publicationsLog.slice().reverse().map((pub, i) => {
+                const typeMeta = TYPE_LABEL[pub.type] || { icon: '📄', label: 'Norma', color: 'gray' };
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-2.5 py-1.5 border-b border-slate-800/60 last:border-0 hover:bg-violet-500/5"
+                  >
+                    <span className="text-sm shrink-0">{typeMeta.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] text-violet-100 truncate font-semibold">{pub.title}</div>
+                      <div className="text-[9px] text-slate-500">RO {pub.edition}</div>
+                    </div>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0 bg-${typeMeta.color}-500/20 text-${typeMeta.color}-300`}>
+                      {pub.classification}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Final summary */}
+        {isFinished && progress.finished && !hasError && (
+          <div className="px-6 pb-5">
+            <div className="rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border-2 border-emerald-500/40 p-4">
+              <div className="text-xs uppercase tracking-wider font-bold text-emerald-300 mb-2 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                ✨ Scan completado en {elapsed}s
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-3xl font-black tabular-nums text-emerald-200">
+                    {progress.finished.editionsFound}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-300/70 font-bold">
+                    Ediciones encontradas en {new Date().getFullYear()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-3xl font-black tabular-nums text-emerald-200">
+                    {progress.finished.publicationsFound}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-300/70 font-bold">
+                    Normas nuevas analizadas con IA
+                  </div>
+                </div>
+              </div>
+              {progress.finished.errors.length > 0 && (
+                <div className="mt-3 text-[11px] text-amber-300 leading-relaxed">
+                  ⚠ {progress.finished.errors.length} advertencias durante el scan:
+                  <ul className="mt-1 space-y-0.5">
+                    {progress.finished.errors.slice(0, 3).map((err, i) => (
+                      <li key={i} className="text-amber-200/80 text-[10px]">• {err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="mt-4 w-full px-4 py-2 rounded-lg text-sm font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 shadow-lg shadow-emerald-500/30 transition"
+              >
+                Ver publicaciones detectadas →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error display */}
+        {hasError && (
+          <div className="px-6 pb-5">
+            <div className="rounded-xl bg-rose-500/20 border-2 border-rose-500/40 p-4">
+              <div className="text-xs uppercase tracking-wider font-bold text-rose-300 mb-1.5 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" />
+                Error durante el scan
+              </div>
+              <p className="text-sm text-rose-100">{progress.error}</p>
+              <button
+                onClick={onClose}
+                className="mt-3 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-100 bg-rose-500/30 hover:bg-rose-500/50 transition"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

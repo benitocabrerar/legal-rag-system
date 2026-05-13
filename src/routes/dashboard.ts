@@ -45,6 +45,8 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
         agedReceivables,
         casesWithBrain,
         recentBrainRefreshes,
+        upcomingMilestones,
+        activeAgreements,
       ] = await Promise.all([
         // 1) Casos: total, activos, nuevos esta semana, sin etapa procesal, por tipo legal
         prisma.$queryRawUnsafe<Array<{
@@ -166,38 +168,75 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           userId, ago14,
         ).catch(() => []),
 
-        // 8) Finanzas globales — usa finance_invoices/payments reales
+        // 8) Finanzas globales — UNIÓN de:
+        //   case_finances (resumen por caso) + finance_invoices (facturas formales)
+        //   case_payment_milestones tomamos hitos pendientes con due_date para el
+        //   "Por cobrar" más realista de bufetes que manejan acuerdos por hitos.
         prisma.$queryRawUnsafe<Array<{
           total_billed: number; total_paid: number; outstanding: number;
         }>>(
-          `SELECT
-              COALESCE(SUM(i.total_amount), 0)::float AS total_billed,
-              COALESCE(SUM(i.paid_amount), 0)::float AS total_paid,
-              COALESCE(SUM(i.balance_due), 0)::float AS outstanding
-             FROM public.finance_invoices i
-             JOIN public.cases c ON c.id = i.case_id
-            WHERE c.user_id = $1`,
+          `WITH cf AS (
+              SELECT
+                COALESCE(SUM(cf.total_billed), 0)::float AS total_billed,
+                COALESCE(SUM(cf.total_paid),   0)::float AS total_paid,
+                COALESCE(SUM(cf.total_outstanding), 0)::float AS outstanding
+              FROM public.case_finances cf
+              JOIN public.cases c ON c.id = cf.case_id
+              WHERE c.user_id = $1
+           ),
+           fi AS (
+              SELECT
+                COALESCE(SUM(i.total_amount), 0)::float AS total_billed,
+                COALESCE(SUM(i.paid_amount),  0)::float AS total_paid,
+                COALESCE(SUM(i.balance_due),  0)::float AS outstanding
+              FROM public.finance_invoices i
+              JOIN public.cases c ON c.id = i.case_id
+              WHERE c.user_id = $1
+           )
+           SELECT
+             GREATEST(cf.total_billed, fi.total_billed) AS total_billed,
+             GREATEST(cf.total_paid,   fi.total_paid)   AS total_paid,
+             GREATEST(cf.outstanding,  fi.outstanding)  AS outstanding
+           FROM cf, fi`,
           userId,
         ).then(r => r[0] || { total_billed: 0, total_paid: 0, outstanding: 0 }).catch(() => ({ total_billed: 0, total_paid: 0, outstanding: 0 })),
 
-        // 9) Aging de cobranza — buckets 0-30, 31-60, 61-90, 90+
-        // basado en issue_date y solo facturas con balance_due > 0
+        // 9) Aging de cobranza — combinando facturas con balance_due > 0
+        // y milestones pendientes con due_date pasado o próximo.
         prisma.$queryRawUnsafe<Array<{
           bucket: string; total: number;
         }>>(
-          `SELECT
-              CASE
-                WHEN (now() - i.issue_date) < interval '30 days' THEN '0-30'
-                WHEN (now() - i.issue_date) < interval '60 days' THEN '31-60'
-                WHEN (now() - i.issue_date) < interval '90 days' THEN '61-90'
-                ELSE '90+'
-              END AS bucket,
-              COALESCE(SUM(i.balance_due), 0)::float AS total
-             FROM public.finance_invoices i
-             JOIN public.cases c ON c.id = i.case_id
-            WHERE c.user_id = $1
-              AND i.balance_due > 0
-            GROUP BY 1`,
+          `SELECT bucket, SUM(total)::float AS total FROM (
+              -- Aging de facturas con balance pendiente (basado en issue_date)
+              SELECT
+                CASE
+                  WHEN (now() - i.issue_date) < interval '30 days' THEN '0-30'
+                  WHEN (now() - i.issue_date) < interval '60 days' THEN '31-60'
+                  WHEN (now() - i.issue_date) < interval '90 days' THEN '61-90'
+                  ELSE '90+'
+                END AS bucket,
+                i.balance_due::float AS total
+              FROM public.finance_invoices i
+              JOIN public.cases c ON c.id = i.case_id
+              WHERE c.user_id = $1 AND i.balance_due > 0
+              UNION ALL
+              -- Aging de milestones pendientes (basado en due_date)
+              SELECT
+                CASE
+                  WHEN m.due_date IS NULL OR m.due_date >= now()::date THEN '0-30'
+                  WHEN (now()::date - m.due_date) <= 30 THEN '0-30'
+                  WHEN (now()::date - m.due_date) <= 60 THEN '31-60'
+                  WHEN (now()::date - m.due_date) <= 90 THEN '61-90'
+                  ELSE '90+'
+                END AS bucket,
+                (m.amount - COALESCE(m.paid_amount, 0))::float AS total
+              FROM public.case_payment_milestones m
+              JOIN public.cases c ON c.id = m.case_id
+              WHERE c.user_id = $1
+                AND m.status != 'paid'
+                AND (m.amount - COALESCE(m.paid_amount, 0)) > 0
+           ) AS combined
+           GROUP BY bucket`,
           userId,
         ).catch(() => []),
 
@@ -225,7 +264,42 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
             LIMIT 5`,
           userId,
         ).catch(() => []),
+
+        // 12) Próximos hitos de pago pendientes (case_payment_milestones)
+        prisma.$queryRawUnsafe<Array<{
+          id: string; case_id: string; case_title: string;
+          label: string; amount: number; paid_amount: number;
+          due_date: Date | null; status: string;
+        }>>(
+          `SELECT m.id, m.case_id, c.title AS case_title, m.label,
+                  m.amount::float AS amount, COALESCE(m.paid_amount, 0)::float AS paid_amount,
+                  m.due_date, m.status
+             FROM public.case_payment_milestones m
+             JOIN public.cases c ON c.id = m.case_id
+            WHERE c.user_id = $1
+              AND m.status != 'paid'
+              AND (m.amount - COALESCE(m.paid_amount, 0)) > 0
+            ORDER BY m.due_date NULLS LAST, m.sort_order
+            LIMIT 8`,
+          userId,
+        ).catch(() => []),
+
+        // 13) Acuerdos de honorarios activos por caso
+        prisma.$queryRawUnsafe<Array<{
+          case_id: string; case_title: string;
+          total_amount: number; payment_type: string; signed_at: Date | null;
+        }>>(
+          `SELECT a.case_id, c.title AS case_title,
+                  a.total_amount::float, a.payment_type, a.signed_at
+             FROM public.case_fee_agreements a
+             JOIN public.cases c ON c.id = a.case_id
+            WHERE c.user_id = $1 AND a.status = 'ACTIVE'
+            ORDER BY a.signed_at DESC NULLS LAST
+            LIMIT 5`,
+          userId,
+        ).catch(() => []),
       ]);
+
 
       // ─── Procesar agregados de cerebros ───────────────────────────────
       const highRiskCases: Array<{ id: string; title: string; reasoning: string }> = [];
@@ -378,6 +452,26 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
             caseTitle: r.title,
             generatedAt: r.generated_at,
           })),
+        // Próximos hitos de pago pendientes (case_payment_milestones)
+        upcomingPaymentMilestones: upcomingMilestones.map((m) => ({
+          id: m.id,
+          caseId: m.case_id,
+          caseTitle: m.case_title,
+          label: m.label,
+          amount: m.amount,
+          paidAmount: m.paid_amount,
+          remaining: m.amount - m.paid_amount,
+          dueDate: m.due_date ? new Date(m.due_date).toISOString() : null,
+          status: m.status,
+        })),
+        // Acuerdos de honorarios activos por caso
+        activeAgreements: activeAgreements.map((a) => ({
+          caseId: a.case_id,
+          caseTitle: a.case_title,
+          totalAmount: a.total_amount,
+          paymentType: a.payment_type,
+          signedAt: a.signed_at ? new Date(a.signed_at).toISOString() : null,
+        })),
         changesSince,
       });
     } catch (error: any) {

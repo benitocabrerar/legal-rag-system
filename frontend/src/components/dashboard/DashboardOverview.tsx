@@ -54,6 +54,25 @@ interface RecentAnalysis {
   title: string; generator: string | null; createdAt: string;
 }
 
+interface PaymentMilestone {
+  id: string;
+  caseId: string;
+  caseTitle: string;
+  label: string;
+  amount: number;
+  paidAmount: number;
+  remaining: number;
+  dueDate: string | null;
+  status: string;
+}
+interface ActiveAgreement {
+  caseId: string;
+  caseTitle: string;
+  totalAmount: number;
+  paymentType: string;
+  signedAt: string | null;
+}
+
 interface Overview {
   generatedAt: string;
   kpis: KPIs;
@@ -75,6 +94,8 @@ interface Overview {
     aging: Record<string, number>;
   };
   recentBrainRefreshes: Array<{ caseId: string; caseTitle: string; generatedAt: string }>;
+  upcomingPaymentMilestones?: PaymentMilestone[];
+  activeAgreements?: ActiveAgreement[];
   changesSince: { newDocs: number; newAnalyses: number; brainsRefreshed: number } | null;
 }
 
@@ -363,6 +384,93 @@ export function DashboardOverview() {
             </SectionCard>
           )}
         </div>
+      )}
+
+      {/* ─── Próximos pagos (cuando hay milestones) ─── */}
+      {data.upcomingPaymentMilestones && data.upcomingPaymentMilestones.length > 0 && (
+        <SectionCard
+          icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
+          title="Próximos pagos del expediente"
+          subtitle={`${data.upcomingPaymentMilestones.length} hitos pendientes en acuerdos de honorarios`}
+          accent="emerald"
+        >
+          <ul className="space-y-2">
+            {data.upcomingPaymentMilestones.slice(0, 6).map((m) => {
+              const due = m.dueDate ? new Date(m.dueDate) : null;
+              const daysToDue = due ? Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+              const isOverdue = daysToDue != null && daysToDue < 0;
+              const isSoon = daysToDue != null && daysToDue >= 0 && daysToDue <= 14;
+              return (
+                <li key={m.id}>
+                  <Link
+                    href={`/dashboard/cases/${m.caseId}`}
+                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 group transition"
+                  >
+                    <div className={`w-12 h-12 rounded-lg grid place-items-center text-white shrink-0 font-black ${
+                      isOverdue ? 'bg-gradient-to-br from-rose-500 to-red-600' :
+                      isSoon ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+                      'bg-gradient-to-br from-emerald-500 to-teal-600'
+                    }`}>
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-gray-900 truncate group-hover:text-emerald-700">
+                        {m.label}
+                      </div>
+                      <div className="text-xs text-gray-600 truncate">{m.caseTitle}</div>
+                      <div className="text-[11px] mt-0.5 flex items-center gap-2">
+                        {due && (
+                          <span className={`font-bold ${
+                            isOverdue ? 'text-rose-700' : isSoon ? 'text-amber-700' : 'text-emerald-700'
+                          }`}>
+                            <Calendar className="w-3 h-3 inline mr-0.5" />
+                            {due.toLocaleDateString('es-EC', { day: 'numeric', month: 'short' })}
+                            {daysToDue != null && (
+                              daysToDue < 0 ? ` · vencido hace ${-daysToDue}d` :
+                              daysToDue === 0 ? ' · HOY' :
+                              daysToDue === 1 ? ' · mañana' :
+                              ` · en ${daysToDue}d`
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-base font-black text-gray-900 tabular-nums">
+                        ${m.remaining.toLocaleString('es-EC', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </div>
+                      {m.paidAmount > 0 && (
+                        <div className="text-[10px] text-emerald-700">
+                          ${m.paidAmount.toLocaleString('es-EC', { maximumFractionDigits: 0 })} pagado
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 shrink-0" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          {data.activeAgreements && data.activeAgreements.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-1.5">
+                Acuerdos de honorarios activos
+              </div>
+              <ul className="space-y-1">
+                {data.activeAgreements.slice(0, 3).map((a) => (
+                  <li key={a.caseId} className="flex items-center justify-between text-xs">
+                    <Link href={`/dashboard/cases/${a.caseId}`} className="text-gray-700 hover:text-emerald-700 truncate flex-1">
+                      💼 {a.caseTitle} · <span className="text-gray-500">{a.paymentType}</span>
+                    </Link>
+                    <span className="font-bold text-emerald-700 tabular-nums shrink-0 ml-2">
+                      ${a.totalAmount.toLocaleString('es-EC', { maximumFractionDigits: 0 })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </SectionCard>
       )}
 
       {/* ─── Documentos por kind + Actividad reciente ─── */}

@@ -43,11 +43,23 @@ interface ParsedPublication {
   textExcerpt: string;
 }
 
+export type ScanProgressCallback = (event: string, data: any) => void;
+
 /**
  * Entrypoint principal. Crea un scan, scrapea, persiste publicaciones,
  * y cierra el scan. Llamado por el cron diario o manualmente desde admin.
+ *
+ * Si se pasa `onProgress`, el servicio emite eventos en cada fase:
+ *   phase  { phase, label, pct }
+ *   edition { number, title }
+ *   publication { type, title, classification }
+ *   summary { editionsFound, publicationsFound, errors }
  */
-export async function runScan(opts: { triggeredBy?: string; year?: number } = {}): Promise<{
+export async function runScan(opts: {
+  triggeredBy?: string;
+  year?: number;
+  onProgress?: ScanProgressCallback;
+} = {}): Promise<{
   scanId: string;
   editionsFound: number;
   publicationsFound: number;
@@ -55,6 +67,7 @@ export async function runScan(opts: { triggeredBy?: string; year?: number } = {}
 }> {
   const triggeredBy = opts.triggeredBy ?? 'cron';
   const year = opts.year ?? new Date().getFullYear();
+  const emit: ScanProgressCallback = opts.onProgress || (() => {});
 
   // Crear scan record
   const scan = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
@@ -69,33 +82,84 @@ export async function runScan(opts: { triggeredBy?: string; year?: number } = {}
   let publicationsFound = 0;
 
   try {
+    emit('phase', { phase: 'starting', label: 'Conectando con Registro Oficial Ecuador…', pct: 3 });
+
     // 1) Listar ediciones del año
+    emit('phase', { phase: 'listing', label: `Buscando ediciones publicadas en ${year}…`, pct: 8 });
     const editions = await listEditionsForYear(year);
     editionsFound = editions.length;
+    emit('phase', { phase: 'listing-done', label: `${editionsFound} ediciones del año detectadas`, pct: 18 });
 
     // 2) Filtrar las que NO existen ya en registry_publications
+    emit('phase', { phase: 'diff', label: 'Comparando con base local — detectando ediciones nuevas…', pct: 22 });
     const existing = await prisma.$queryRawUnsafe<Array<{ edition_number: string }>>(
       `SELECT DISTINCT edition_number FROM public.registry_publications
         WHERE source = 'registro_oficial_ec' AND edition_number IS NOT NULL`,
     );
     const knownEditions = new Set(existing.map((r) => r.edition_number));
     const newEditions = editions.filter((e) => !knownEditions.has(e.number)).slice(0, MAX_EDITIONS_PER_RUN);
+    emit('phase', {
+      phase: 'diff-done',
+      label: newEditions.length === 0
+        ? `Todas las ${editionsFound} ediciones ya están procesadas — no hay nada nuevo`
+        : `${newEditions.length} ediciones NUEVAS — empezando descarga`,
+      pct: 28,
+      total: newEditions.length,
+    });
+
+    if (newEditions.length === 0) {
+      emit('phase', { phase: 'no-new', label: 'Sin ediciones nuevas que procesar', pct: 95 });
+    }
 
     // 3) Procesar cada edición nueva
+    const totalEditions = newEditions.length || 1;
+    let editionIndex = 0;
     for (const ed of newEditions) {
+      editionIndex++;
+      // Rango de pct para esta edición: 28% → 92% repartido proporcional
+      const baseProg = 28 + ((editionIndex - 1) / totalEditions) * 64;
+      const nextProg = 28 + (editionIndex / totalEditions) * 64;
+
       try {
         if (!ed.pdfUrl) {
           errors.push(`Edición ${ed.number}: sin URL de PDF`);
           continue;
         }
+
+        emit('phase', {
+          phase: 'downloading',
+          label: `Descargando RO ${ed.number} (${editionIndex}/${totalEditions})…`,
+          pct: Math.round(baseProg),
+          edition: ed.number,
+        });
+        emit('edition', { number: ed.number, title: `Registro Oficial ${ed.number}`, status: 'downloading' });
+
         const text = await downloadAndExtractPdf(ed.pdfUrl);
         if (!text || text.length < 500) {
           errors.push(`Edición ${ed.number}: PDF vacío o muy corto`);
           continue;
         }
 
+        emit('phase', {
+          phase: 'parsing',
+          label: `Parseando texto del PDF (${(text.length / 1024).toFixed(0)} KB)…`,
+          pct: Math.round(baseProg + (nextProg - baseProg) * 0.3),
+          edition: ed.number,
+        });
+
         const publications = parsePublicationsFromText(text).slice(0, MAX_PUBLICATIONS_PER_EDITION);
+
+        emit('phase', {
+          phase: 'analyzing',
+          label: `Analizando ${publications.length} instrumentos legales con IA…`,
+          pct: Math.round(baseProg + (nextProg - baseProg) * 0.5),
+          edition: ed.number,
+          publications: publications.length,
+        });
+
+        let pubIdx = 0;
         for (const pub of publications) {
+          pubIdx++;
           try {
             // Insertar publicación detectada (UPSERT por UNIQUE constraint)
             const aiAnalysis = await analyzePublicationWithAI(pub);
@@ -117,17 +181,39 @@ export async function runScan(opts: { triggeredBy?: string; year?: number } = {}
               JSON.stringify(aiAnalysis.meta),
             );
             publicationsFound++;
+            emit('publication', {
+              type: pub.type,
+              title: pub.title.slice(0, 100),
+              classification: aiAnalysis.classification,
+              edition: ed.number,
+              index: pubIdx,
+              total: publications.length,
+            });
           } catch (e: any) {
             errors.push(`Pub "${pub.title.slice(0, 60)}": ${e?.message || 'error'}`);
           }
         }
+
+        emit('edition-done', {
+          number: ed.number,
+          publicationsCount: publications.length,
+        });
       } catch (e: any) {
         errors.push(`Edición ${ed.number}: ${e?.message || 'error'}`);
       }
     }
+
+    emit('phase', {
+      phase: 'summary',
+      label: `Procesadas ${publicationsFound} normas de ${newEditions.length} ediciones nuevas`,
+      pct: 96,
+    });
   } catch (e: any) {
     errors.push(`Scan: ${e?.message || 'fatal error'}`);
+    emit('error', { error: e?.message || 'fatal error' });
   }
+
+  emit('summary', { editionsFound, publicationsFound, errors });
 
   // Cerrar scan
   await prisma.$executeRawUnsafe(

@@ -14,6 +14,7 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
 import { runScan } from '../../services/registro-oficial.service.js';
+import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 import { randomUUID } from 'crypto';
 
 export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
@@ -411,7 +412,9 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
   );
 
   // ─── POST /admin/registro-oficial/scan-now ─────────────────────────────
-  // Dispara un scan manual de forma asíncrona
+  // SSE con progreso en tiempo real del scan manual. El admin ve cada fase
+  // como va ocurriendo: listing → diff → descarga → parse → análisis IA →
+  // resumen. Cada publicación individual emite un evento `publication`.
   fastify.post<{ Body: { year?: number } }>(
     '/admin/registro-oficial/scan-now',
     { onRequest: [fastify.authenticate] },
@@ -420,11 +423,38 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
       const userId = (request.user as any).id;
       const year = request.body?.year;
 
-      // No esperamos a que termine — corre en background
-      void runScan({ triggeredBy: `manual:${userId}`, year })
-        .catch((e) => fastify.log.error({ err: e?.message }, 'manual scan failed'));
+      setSseHeaders(request, reply);
+      const stopKeepalive = startSseKeepalive(reply, 1000);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
 
-      return reply.send({ ok: true, message: 'Scan disparado en background — ver /scans en 1-3 minutos' });
+      write('connected', { startedAt: new Date().toISOString() });
+
+      try {
+        const result = await runScan({
+          triggeredBy: `manual:${userId}`,
+          year,
+          onProgress: (event, data) => write(event, data),
+        });
+        write('done', {
+          scanId: result.scanId,
+          editionsFound: result.editionsFound,
+          publicationsFound: result.publicationsFound,
+          errors: result.errors,
+          finishedAt: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'manual scan failed');
+        write('error', { error: e?.message || 'Scan failed' });
+      } finally {
+        stopKeepalive();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
+      return reply;
     },
   );
 }
