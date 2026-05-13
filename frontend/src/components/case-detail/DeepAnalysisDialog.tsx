@@ -44,15 +44,19 @@ interface Props {
   caseId: string;
   open: boolean;
   onClose: () => void;
+  onSaved?: () => void;
 }
 
-export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
+export default function DeepAnalysisDialog({ caseId, open, onClose, onSaved }: Props) {
   const [content, setContent] = useState('');
   const [meta, setMeta] = useState<StartPayload | null>(null);
   const [sourceTitles, setSourceTitles] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [duration, setDuration] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const abortRef = useRef<AbortController | null>(null);
   const contentEndRef = useRef<HTMLDivElement | null>(null);
@@ -112,6 +116,7 @@ export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
               setContent((prev) => prev + payload.content);
             } else if (name === 'done') {
               setDone(true);
+              if (typeof payload?.durationMs === 'number') setDuration(payload.durationMs);
             } else if (name === 'error') {
               setError(payload?.message || 'Error en el análisis');
               setDone(true);
@@ -170,6 +175,36 @@ export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const onSaveToCase = async () => {
+    if (!content || saving || saved) return;
+    setSaving(true);
+    try {
+      const token = await getAuthToken();
+      const title = `Dictamen IA — ${new Date().toLocaleString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+      const r = await fetch(`${API_URL}/api/v1/cases/${caseId}/save-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          model: meta?.model,
+          sourcesUsed: meta?.legalSourcesUsed,
+          durationMs: duration,
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setSaved(true);
+      onSaved?.();
+    } catch {
+      // si falla, dejamos el botón disponible para reintentar
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!open) return null;
@@ -310,6 +345,19 @@ export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
               >
                 <Download className="w-3.5 h-3.5" />
                 Descargar .md
+              </button>
+              <button
+                onClick={onSaveToCase}
+                disabled={saving || saved}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm
+                  ${saved
+                    ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700'}
+                  ${saving ? 'opacity-60 cursor-wait' : ''}`}
+                title="Guarda este dictamen como documento del caso (kind=ai_analysis) para que la IA lo use como referencia interna en futuros análisis"
+              >
+                {saved ? <Check className="w-3.5 h-3.5" /> : <FileSignature className="w-3.5 h-3.5" />}
+                {saved ? 'Guardado al expediente' : saving ? 'Guardando…' : 'Guardar al expediente'}
               </button>
               <button
                 onClick={onClose}

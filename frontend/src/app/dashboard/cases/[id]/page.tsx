@@ -19,7 +19,8 @@ import DocumentUploadProgress from '@/components/case-detail/DocumentUploadProgr
 import DeleteDocumentConfirm from '@/components/case-detail/DeleteDocumentConfirm';
 import DeepAnalysisDialog from '@/components/case-detail/DeepAnalysisDialog';
 import CaseActivityDrawer from '@/components/case-detail/CaseActivityDrawer';
-import { History as HistoryIcon } from 'lucide-react';
+import MarkAsPresentedDialog from '@/components/case-detail/MarkAsPresentedDialog';
+import { History as HistoryIcon, Gavel as GavelIcon, Sparkles as SparklesIcon, FileSignature as FileSignatureIcon } from 'lucide-react';
 import { CollapsibleSection, SectionsToolbar, type CompletionState } from '@/components/case-detail/CollapsibleSection';
 import { Briefcase as BriefcaseIcon, Users, Scale as ScaleIcon, DollarSign as DollarSignIcon, FileWarning } from 'lucide-react';
 import {
@@ -35,6 +36,8 @@ import {
   FolderOpen,
 } from 'lucide-react';
 
+type DocKind = 'uploaded' | 'ai_generated' | 'ai_analysis' | 'court_filed';
+
 interface Document {
   id: string;
   filename?: string;
@@ -46,6 +49,9 @@ interface Document {
   isImage?: boolean;
   isOffice?: boolean;
   createdAt: string;
+  kind?: DocKind;
+  presentedTo?: string | null;
+  presentedAt?: string | null;
 }
 
 interface Message {
@@ -112,6 +118,8 @@ export default function CaseDetailPage() {
   const [deepAnalysisOpen, setDeepAnalysisOpen] = useState(false);
   // Drawer de actividad/audit log
   const [activityOpen, setActivityOpen] = useState(false);
+  // Modal "Marcar como presentado"
+  const [docToMark, setDocToMark] = useState<Document | null>(null);
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
@@ -762,23 +770,55 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                   <p className="text-sm">No hay documentos en esta categoría</p>
                 </div>
               ) : (
-                filteredDocuments.map((doc) => (
+                filteredDocuments.map((doc) => {
+                  const kind = doc.kind || 'uploaded';
+                  const kindStyle = {
+                    uploaded:     { bg: 'bg-indigo-100', icon: 'text-indigo-600', badge: '', badgeStyle: '' },
+                    ai_generated: { bg: 'bg-purple-100', icon: 'text-purple-600', badge: 'Borrador IA', badgeStyle: 'bg-purple-100 text-purple-700 border-purple-200' },
+                    ai_analysis:  { bg: 'bg-fuchsia-100', icon: 'text-fuchsia-600', badge: 'Análisis IA', badgeStyle: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200' },
+                    court_filed:  { bg: 'bg-emerald-100', icon: 'text-emerald-600', badge: 'Presentado', badgeStyle: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                  }[kind];
+                  const KindIcon = kind === 'ai_generated' || kind === 'ai_analysis' ? SparklesIcon : kind === 'court_filed' ? GavelIcon : FileText;
+                  return (
                   <div key={doc.id} className="p-3 hover:bg-gray-50 transition-colors group">
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-indigo-600" />
+                      <div className={`flex-shrink-0 w-10 h-10 ${kindStyle.bg} rounded-lg flex items-center justify-center`}>
+                        <KindIcon className={`w-5 h-5 ${kindStyle.icon}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 truncate">{doc.filename || doc.title || 'Sin título'}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium text-sm text-gray-900 truncate">{doc.filename || doc.title || 'Sin título'}</p>
+                          {kindStyle.badge && (
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${kindStyle.badgeStyle}`}>
+                              {kindStyle.badge}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           {typeof doc.size === 'number' && doc.size > 0
                             ? `${(doc.size / 1024).toFixed(1)} KB`
                             : '—'}
                           {' • '}
                           {formatDate(doc.createdAt)}
+                          {doc.presentedTo && (
+                            <span className="block text-emerald-700 font-medium truncate" title={doc.presentedTo}>
+                              🏛️ {doc.presentedTo}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        {(kind === 'ai_generated' || kind === 'uploaded') && (
+                          <button
+                            type="button"
+                            onClick={() => setDocToMark(doc)}
+                            className="p-1.5 hover:bg-emerald-100 rounded transition-colors"
+                            title="Marcar como presentado en juzgado/fiscalía"
+                            aria-label="Marcar como presentado"
+                          >
+                            <GavelIcon className="w-4 h-4 text-emerald-600 hover:text-emerald-700" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleViewDocument(doc)}
@@ -809,13 +849,20 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
 
           {/* Process Pipeline */}
           <ProcessPipeline
+            caseId={caseId}
+            onStageInferred={(_idx, stageLabel) => {
+              if (stageLabel) {
+                setCaseData((prev: any) => ({ ...prev, proceduralStage: stageLabel }));
+              }
+            }}
             legalType={legalType}
             currentStage={(() => {
               const stage = caseData.proceduralStage || '';
@@ -1314,12 +1361,21 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
         caseId={caseId}
         open={deepAnalysisOpen}
         onClose={() => setDeepAnalysisOpen(false)}
+        onSaved={() => loadDocuments()}
       />
 
       <CaseActivityDrawer
         caseId={caseId}
         open={activityOpen}
         onClose={() => setActivityOpen(false)}
+      />
+
+      <MarkAsPresentedDialog
+        open={!!docToMark}
+        documentId={docToMark?.id ?? null}
+        documentTitle={docToMark?.title || docToMark?.filename || 'Documento'}
+        onClose={() => setDocToMark(null)}
+        onMarked={() => loadDocuments()}
       />
     </div>
   );

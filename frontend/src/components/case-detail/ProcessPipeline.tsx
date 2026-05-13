@@ -1,8 +1,11 @@
 'use client';
 
-import React from 'react';
-import { Check, Circle, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Circle, Clock, RefreshCw, Sparkles } from 'lucide-react';
 import { legalTypeConfig, LegalType } from '@/lib/design-tokens';
+import { getAuthToken } from '@/lib/get-auth-token';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface PipelineStage {
   id: string;
@@ -15,6 +18,8 @@ interface ProcessPipelineProps {
   legalType: LegalType;
   currentStage: number;
   stages?: PipelineStage[];
+  caseId?: string;
+  onStageInferred?: (stageIndex: number, stageLabel: string, rationale: string) => void;
 }
 
 const defaultStagesByType: Record<LegalType, string[]> = {
@@ -26,9 +31,12 @@ const defaultStagesByType: Record<LegalType, string[]> = {
   laboral: ['Demanda', 'Mediación', 'Contestación', 'Audiencia', 'Sentencia', 'Ejecución'],
 };
 
-export function ProcessPipeline({ legalType, currentStage, stages }: ProcessPipelineProps) {
+export function ProcessPipeline({ legalType, currentStage, stages, caseId, onStageInferred }: ProcessPipelineProps) {
   const config = legalTypeConfig[legalType];
   const stageLabels = defaultStagesByType[legalType];
+  const [inferring, setInferring] = useState(false);
+  const [inferError, setInferError] = useState<string | null>(null);
+  const [lastRationale, setLastRationale] = useState<string | null>(null);
 
   const pipelineStages: PipelineStage[] = stages || stageLabels.map((label, index) => ({
     id: `stage-${index}`,
@@ -36,17 +44,86 @@ export function ProcessPipeline({ legalType, currentStage, stages }: ProcessPipe
     status: index < currentStage ? 'completed' : index === currentStage ? 'current' : 'pending',
   }));
 
+  const inferStage = async () => {
+    if (!caseId) return;
+    setInferring(true);
+    setInferError(null);
+    try {
+      const token = await getAuthToken();
+      const r = await fetch(`${API_URL}/api/v1/cases/${caseId}/infer-stage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '');
+        throw new Error(`HTTP ${r.status}: ${txt.slice(0, 160)}`);
+      }
+      const data = await r.json();
+      const idx = typeof data?.stageIndex === 'number' ? data.stageIndex : null;
+      const label = typeof data?.stageLabel === 'string' ? data.stageLabel : '';
+      const rationale = typeof data?.rationale === 'string' ? data.rationale : '';
+      if (idx !== null && idx >= 0) {
+        setLastRationale(rationale || null);
+        onStageInferred?.(idx, label, rationale);
+      } else {
+        setInferError('La IA no devolvió un índice de etapa válido');
+      }
+    } catch (e: any) {
+      setInferError(e?.message || 'No se pudo inferir la etapa');
+    } finally {
+      setInferring(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="text-2xl">{config.icon}</div>
-        <div>
-          <h3 className="text-lg font-bold text-gray-900">Proceso {config.label}</h3>
-          <p className="text-sm text-gray-500">
-            Etapa {currentStage + 1} de {pipelineStages.length}
-          </p>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <div className="text-2xl">{config.icon}</div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Proceso {config.label}</h3>
+            <p className="text-sm text-gray-500">
+              Etapa {currentStage + 1} de {pipelineStages.length}
+            </p>
+          </div>
         </div>
+        {caseId && onStageInferred && (
+          <button
+            onClick={inferStage}
+            disabled={inferring}
+            title="Re-evaluar etapa con IA según documentos del caso"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {inferring ? (
+              <>
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-300 border-t-indigo-700 animate-spin" />
+                Analizando…
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5" />
+                Re-evaluar IA
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {(inferError || lastRationale) && (
+        <div className="mb-4 p-2.5 rounded-lg border text-xs leading-relaxed"
+          style={inferError
+            ? { borderColor: '#fecaca', backgroundColor: '#fef2f2', color: '#991b1b' }
+            : { borderColor: '#c7d2fe', backgroundColor: '#eef2ff', color: '#3730a3' }}
+        >
+          {inferError ? inferError : (
+            <span><strong>IA:</strong> {lastRationale}</span>
+          )}
+        </div>
+      )}
 
       {/* Progress Bar */}
       <div className="mb-6">

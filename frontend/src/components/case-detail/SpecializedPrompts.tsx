@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { legalPromptsByType, LegalType, PromptCategory } from '@/lib/legal-prompts';
 import { legalTypeConfig } from '@/lib/design-tokens';
 
 interface SpecializedPromptsProps {
   legalType: LegalType;
   onPromptSelect: (prompt: string) => void;
+  onRefresh?: () => void | Promise<void>;
 }
 
 const categoryLabels: Record<PromptCategory, string> = {
@@ -21,21 +22,43 @@ const categoryLabels: Record<PromptCategory, string> = {
   citation: 'Citas Legales',
 };
 
-export function SpecializedPrompts({ legalType, onPromptSelect }: SpecializedPromptsProps) {
+export function SpecializedPrompts({ legalType, onPromptSelect, onRefresh }: SpecializedPromptsProps) {
   const [expandedCategory, setExpandedCategory] = useState<PromptCategory | null>('analysis');
+  const [seed, setSeed] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const config = legalTypeConfig[legalType];
   const prompts = legalPromptsByType[legalType] || [];
 
-  // Group prompts by category
-  const promptsByCategory = prompts.reduce((acc, prompt) => {
-    if (!acc[prompt.category]) {
-      acc[prompt.category] = [];
+  // Group prompts by category, with optional re-shuffle on refresh
+  const promptsByCategory = useMemo(() => {
+    const grouped = prompts.reduce((acc, prompt) => {
+      if (!acc[prompt.category]) acc[prompt.category] = [];
+      acc[prompt.category].push(prompt);
+      return acc;
+    }, {} as Record<PromptCategory, typeof prompts>);
+
+    if (seed > 0) {
+      // Deterministic shuffle per seed: rotate each category list
+      for (const cat of Object.keys(grouped) as PromptCategory[]) {
+        const arr = grouped[cat];
+        const rot = seed % Math.max(1, arr.length);
+        grouped[cat] = [...arr.slice(rot), ...arr.slice(0, rot)];
+      }
     }
-    acc[prompt.category].push(prompt);
-    return acc;
-  }, {} as Record<PromptCategory, typeof prompts>);
+    return grouped;
+  }, [prompts, seed]);
 
   const categories = Object.keys(promptsByCategory) as PromptCategory[];
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (onRefresh) await onRefresh();
+      setSeed((s) => s + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -46,9 +69,20 @@ export function SpecializedPrompts({ legalType, onPromptSelect }: SpecializedPro
           background: `linear-gradient(135deg, ${config.color}08 0%, ${config.color}15 100%)`,
         }}
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5" style={{ color: config.color }} />
-          <h3 className="font-bold text-gray-900">Prompts Especializados - {config.label}</h3>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" style={{ color: config.color }} />
+            <h3 className="font-bold text-gray-900">Prompts Especializados - {config.label}</h3>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Reorganizar sugerencias"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-700 bg-white/60 hover:bg-white border border-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Cargando…' : 'Refrescar'}
+          </button>
         </div>
         <p className="text-sm text-gray-600 mt-1">Acciones rápidas con IA para este tipo de caso</p>
       </div>

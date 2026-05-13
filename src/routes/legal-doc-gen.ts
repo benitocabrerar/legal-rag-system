@@ -20,6 +20,7 @@
  */
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import * as crypto from 'crypto';
 import {
   Document as DocxDocument,
   Packer,
@@ -251,54 +252,102 @@ function isMissing(value: unknown): boolean {
   return false;
 }
 
+type DocKind = 'uploaded' | 'ai_generated' | 'ai_analysis' | 'court_filed';
+
 interface CaseSummary {
   id: string;
   title: string;
   description: string | null;
   clientName: string | null;
   caseNumber: string | null;
-  documents: Array<{ id: string; title: string; excerpt: string }>;
+  documents: Array<{ id: string; title: string; excerpt: string; kind: DocKind; presentedTo?: string | null }>;
   events: Array<{ title: string; type: string; startTime: string; description: string | null }>;
   country: CountryContext;
 }
 
 async function loadCaseForGeneration(caseId: string, userId: string): Promise<CaseSummary | null> {
-  const c = await prisma.case.findFirst({
-    where: { id: caseId, userId },
-    include: {
-      documents: {
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-        select: { id: true, title: true, content: true },
-      },
-      events: {
-        orderBy: { startTime: 'desc' },
-        take: 12,
-        select: { title: true, type: true, startTime: true, description: true },
-      },
-    },
-  });
-  if (!c) return null;
+  const cases = await prisma.$queryRawUnsafe<Array<{
+    id: string; title: string; description: string | null; client_name: string | null; case_number: string | null;
+  }>>(
+    `SELECT id, title, description, client_name, case_number
+       FROM public.cases WHERE id = $1 AND user_id = $2 LIMIT 1`,
+    caseId, userId,
+  );
+  if (cases.length === 0) return null;
+  const c = cases[0];
+
+  // Documentos del expediente, con kind y filtrando reemplazados.
+  // Orden: court_filed > uploaded > ai_generated > ai_analysis para que la
+  // ventana de top-8 priorice la verdad oficial.
+  const docs = await prisma.$queryRawUnsafe<Array<{
+    id: string; title: string; content: string; kind: DocKind; presented_to: string | null;
+  }>>(
+    `SELECT id, title, COALESCE(content, '') AS content,
+            COALESCE(kind, 'uploaded') AS kind,
+            presented_to
+       FROM public.documents
+      WHERE case_id = $1 AND (replaced_at IS NULL)
+      ORDER BY
+        CASE COALESCE(kind, 'uploaded')
+          WHEN 'court_filed'  THEN 0
+          WHEN 'uploaded'     THEN 1
+          WHEN 'ai_generated' THEN 2
+          WHEN 'ai_analysis'  THEN 3
+          ELSE 4
+        END,
+        created_at DESC
+      LIMIT 12`,
+    caseId,
+  );
+
+  const events = await prisma.$queryRawUnsafe<Array<{
+    title: string; type: string; start_time: Date; description: string | null;
+  }>>(
+    `SELECT title, type, start_time, description
+       FROM public.events
+      WHERE case_id = $1
+      ORDER BY start_time DESC
+      LIMIT 12`,
+    caseId,
+  );
+
   const country = await getUserCountryContext(userId);
   return {
     id: c.id,
     title: c.title,
     description: c.description,
-    clientName: c.clientName,
-    caseNumber: c.caseNumber,
-    documents: c.documents.map((d) => ({
+    clientName: c.client_name,
+    caseNumber: c.case_number,
+    documents: docs.map((d) => ({
       id: d.id,
       title: d.title,
-      excerpt: d.content.replace(/\s+/g, ' ').trim().slice(0, 1500),
+      excerpt: (d.content || '').replace(/\s+/g, ' ').trim().slice(0, 1500),
+      kind: d.kind,
+      presentedTo: d.presented_to,
     })),
-    events: c.events.map((e) => ({
+    events: events.map((e) => ({
       title: e.title,
       type: e.type,
-      startTime: e.startTime.toISOString(),
+      startTime: e.start_time.toISOString(),
       description: e.description,
     })),
     country,
   };
+}
+
+/** Etiqueta visible que la IA verá para distinguir el "status legal" del doc. */
+function kindLabel(kind: DocKind, presentedTo?: string | null): string {
+  switch (kind) {
+    case 'court_filed':
+      return `🏛️ PRESENTADO OFICIALMENTE${presentedTo ? ` (${presentedTo})` : ''} — versión definitiva`;
+    case 'ai_generated':
+      return '✏️ BORRADOR GENERADO POR IA — NO presentado todavía, no tratar como evidencia ni acto procesal';
+    case 'ai_analysis':
+      return '🧠 DICTAMEN INTERNO IA — análisis de soporte, NO evidencia';
+    case 'uploaded':
+    default:
+      return '📎 SUBIDO POR EL ABOGADO — evidencia/material del expediente';
+  }
 }
 
 // ─── Expert system prompt builder ───────────────────────────
@@ -541,7 +590,7 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
       });
 
       const docContext = c.documents
-        .map((d, i) => `[Documento ${i + 1}] ${d.title}\n${d.excerpt}`)
+        .map((d, i) => `[Documento ${i + 1}] ${d.title}\nEstado: ${kindLabel(d.kind, d.presentedTo)}\n${d.excerpt}`)
         .join('\n\n');
       const eventContext = c.events
         .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}`)
@@ -669,16 +718,37 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
       const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
       const title = body.title?.trim() || `${DOC_LABELS[body.docType]} — ${c.title} (${stamp})`;
 
-      const doc = await prisma.document.create({
-        data: {
-          caseId: c.id,
-          userId,
-          title,
-          content: body.content,
-        },
-        select: { id: true, title: true, createdAt: true },
+      // Insertar como kind='ai_generated' con metadata IA — distinguir del
+      // resto de evidencia subida por el usuario. Usamos raw SQL porque kind
+      // y ai_generation_meta no están en el schema Prisma (sólo en la BD).
+      const documentId = crypto.randomUUID();
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO public.documents
+           (id, case_id, user_id, title, content, mime_type, kind, ai_generation_meta, metadata, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ai_generated', $7::jsonb, $8::jsonb, now(), now())`,
+        documentId, c.id, userId, title, body.content, 'text/markdown',
+        JSON.stringify({
+          docType: body.docType,
+          docLabel: DOC_LABELS[body.docType],
+          generator: 'legal-doc-gen',
+          generatedAt: new Date().toISOString(),
+        }),
+        JSON.stringify({
+          aiGenerated: true,
+          kind: 'ai_generated',
+          docType: body.docType,
+        }),
+      );
+      const { logActivityAsync } = await import('../lib/audit.js');
+      logActivityAsync(userId, 'DOC_GEN_SAVED', 'document', documentId, {
+        caseId: c.id,
+        title,
+        docType: body.docType,
+        kind: 'ai_generated',
       });
-      return reply.code(201).send({ document: doc });
+      return reply.code(201).send({
+        document: { id: documentId, title, createdAt: new Date(), kind: 'ai_generated' },
+      });
     },
   );
 
@@ -789,13 +859,19 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         '4) CITA con precisión los artículos legales — solo los confirmables — y marca "[CITA POR VERIFICAR]" si dudas.',
         '5) NO comentarios meta-textuales. El primer carácter es la primera palabra del dictamen.',
         '',
+        'STATUS DE LOS DOCUMENTOS (CRÍTICO para la calidad del dictamen):',
+        '- 🏛️ PRESENTADO OFICIALMENTE: versión definitiva sellada/firmada que fue presentada al juzgado, fiscalía o tribunal. PRIORIDAD MÁXIMA — esta es la verdad oficial del caso, citala como acto procesal vinculante.',
+        '- 📎 SUBIDO POR EL ABOGADO: evidencia o material del expediente (denuncia, contratos, oficios, peritajes, providencias recibidas). Citala como fuente fáctica del expediente.',
+        '- ✏️ BORRADOR GENERADO POR IA: documento que la IA redactó pero que el abogado NO ha presentado todavía. NO lo trates como acto procesal ni como evidencia. PUEDES usarlo como insumo de redacción, pero menciona que es un borrador pendiente de presentación. Si el caso depende de este borrador, RECOMIENDA en el dictamen que el abogado lo presente y suba la versión sellada.',
+        '- 🧠 DICTAMEN INTERNO IA: análisis previo generado por ti mismo. Solo úsalo como referencia interna, no lo cites como fuente externa.',
+        '',
         'FORMATO: Markdown profesional. "## Título" para secciones I-VIII, "### Subtítulo" para sub-secciones, **negrita** sobria, listas numeradas/bullets donde mejoren la legibilidad. Extensión esperada: 1500-3500 palabras — exhaustivo, no superficial.',
       ].join('\n');
 
       const docContext = c.documents
         .map((d, i) => {
           const excerpt = d.excerpt.slice(0, 2500);
-          return `[Documento ${i + 1}] ${d.title}\n${excerpt}`;
+          return `[Documento ${i + 1}] ${d.title}\nEstado: ${kindLabel(d.kind, d.presentedTo)}\n${excerpt}`;
         })
         .join('\n\n');
       const eventContext = c.events

@@ -808,6 +808,187 @@ export async function documentRoutes(fastify: FastifyInstance) {
       return reply.code(500).send({ error: e.message || 'Brain synthesis failed' });
     }
   });
+
+  // =========================================================================
+  // POST /cases/:id/save-analysis  —  Guarda dictamen IA como Document
+  //   body: { title, content, model?, sourcesUsed?, durationMs? }
+  //   crea fila en documents con kind='ai_analysis' (sin chunks porque el
+  //   dictamen NO se vectoriza para no contaminar la búsqueda — son
+  //   conclusiones de la IA, no evidencia)
+  // =========================================================================
+  fastify.post<{ Params: { id: string }; Body: any }>(
+    '/cases/:id/save-analysis',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const body = z.object({
+        title: z.string().min(1).max(300),
+        content: z.string().min(50),
+        model: z.string().max(80).optional(),
+        sourcesUsed: z.number().optional(),
+        durationMs: z.number().optional(),
+      }).parse(request.body);
+
+      // Verificar caso pertenece al usuario
+      const c = await prisma.case.findFirst({
+        where: { id: request.params.id, userId },
+        select: { id: true },
+      });
+      if (!c) return reply.code(404).send({ error: 'Case not found' });
+
+      const documentId = randomUUID();
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO public.documents
+          (id, case_id, user_id, title, content, mime_type, kind, ai_generation_meta, metadata, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ai_analysis', $7::jsonb, $8::jsonb, now(), now())`,
+        documentId,
+        request.params.id,
+        userId,
+        body.title,
+        body.content,
+        'text/markdown',
+        JSON.stringify({
+          model: body.model || null,
+          sourcesUsed: body.sourcesUsed ?? null,
+          durationMs: body.durationMs ?? null,
+          generator: 'deep-analysis',
+        }),
+        JSON.stringify({
+          aiGenerated: true,
+          kind: 'ai_analysis',
+          savedAt: new Date().toISOString(),
+        }),
+      );
+
+      logActivityAsync(userId, 'DOC_GEN_SAVED', 'document', documentId, {
+        caseId: request.params.id,
+        title: body.title,
+        kind: 'ai_analysis',
+        sourcesUsed: body.sourcesUsed,
+        model: body.model,
+      });
+
+      return reply.send({ ok: true, documentId, kind: 'ai_analysis' });
+    },
+  );
+
+  // =========================================================================
+  // POST /documents/:id/mark-presented  —  Marca un documento generado por
+  //   IA como "presentado oficialmente" o sube la versión definitiva sellada
+  //
+  //   body opcional: { presentedTo, presentedAt }
+  //   Si el usuario NO sube binario, solo etiqueta el actual como court_filed.
+  //   Si sí sube binario, el endpoint /documents/upload-stream-replacement
+  //   se usa en su lugar (más complejo, lo dejo para futura iteración).
+  // =========================================================================
+  fastify.post<{ Params: { id: string }; Body: any }>(
+    '/documents/:id/mark-presented',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const body = z.object({
+        presentedTo: z.string().min(1).max(300),
+        presentedAt: z.string().optional(), // ISO date
+      }).parse(request.body);
+
+      const rows = await prisma.$queryRawUnsafe<Array<{ id: string; case_id: string; title: string; kind: string }>>(
+        `SELECT id, case_id, title, kind FROM public.documents
+          WHERE id = $1 AND user_id = $2 LIMIT 1`,
+        request.params.id, userId,
+      );
+      if (rows.length === 0) return reply.code(404).send({ error: 'Document not found' });
+      const doc = rows[0];
+
+      const presentedAt = body.presentedAt ? new Date(body.presentedAt) : new Date();
+      await prisma.$executeRawUnsafe(
+        `UPDATE public.documents
+            SET kind = 'court_filed',
+                presented_to = $2,
+                presented_at = $3,
+                updated_at = now()
+          WHERE id = $1`,
+        request.params.id, body.presentedTo, presentedAt,
+      );
+
+      logActivityAsync(userId, 'DOC_GEN_SAVED', 'document', request.params.id, {
+        caseId: doc.case_id,
+        title: doc.title,
+        kind: 'court_filed',
+        presentedTo: body.presentedTo,
+        previousKind: doc.kind,
+      });
+
+      // Refrescar cerebro del caso (best-effort) porque la "verdad oficial" cambió
+      try { await synthesizeCaseBrain(doc.case_id); } catch {}
+
+      return reply.send({ ok: true, documentId: request.params.id, kind: 'court_filed', presentedTo: body.presentedTo });
+    },
+  );
+
+  // =========================================================================
+  // POST /cases/:id/infer-stage  —  IA infiere la etapa procesal actual
+  //   del caso a partir de descripción, documentos y eventos. Útil para el
+  //   botón "Actualizar" del ProcessPipeline.
+  // =========================================================================
+  fastify.post<{ Params: { id: string } }>(
+    '/cases/:id/infer-stage',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const own = await prisma.case.findFirst({ where: { id: request.params.id, userId }, select: { id: true, title: true, description: true } });
+      if (!own) return reply.code(404).send({ error: 'Case not found' });
+
+      const docs = await prisma.$queryRawUnsafe<Array<{ title: string; content: string; kind: string }>>(
+        `SELECT title, LEFT(COALESCE(content, ''), 1500) AS content, COALESCE(kind, 'uploaded') AS kind
+           FROM public.documents
+          WHERE case_id = $1 AND (replaced_at IS NULL)
+          ORDER BY created_at DESC LIMIT 6`,
+        request.params.id,
+      );
+
+      const aiClient = await getAiClient();
+      const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior. Analiza el caso y devuelve un JSON con la etapa procesal inferida.
+
+Devuelve EXCLUSIVAMENTE este JSON (primer carácter '{', último '}'):
+{
+  "stage": "<etapa exacta como aparece en el COIP/COGEP, ej: 'Instrucción Fiscal', 'Audiencia Preparatoria', 'Juicio', 'Sentencia', 'Ejecución'>",
+  "confidence": 0.0,
+  "reasoning": "<1-2 oraciones explicando por qué>",
+  "nextMilestone": "<próximo hito procesal esperado, ej: 'Audiencia preparatoria en X días'>"
+}`;
+
+      const user = [
+        `Caso: ${own.title}`,
+        own.description ? `Descripción: ${own.description}` : '',
+        '',
+        '=== DOCUMENTOS DEL EXPEDIENTE ===',
+        docs.length === 0 ? '(sin documentos)' : docs.map((d, i) => `[Doc ${i + 1} · ${d.kind}] ${d.title}\n${d.content}`).join('\n\n'),
+      ].filter(Boolean).join('\n');
+
+      try {
+        const completion = await aiClient.chat.completions.create({
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: user }],
+          max_tokens: 600,
+        });
+        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+        const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+        const start = fenced.indexOf('{');
+        const end = fenced.lastIndexOf('}');
+        const obj = start >= 0 && end > start ? JSON.parse(fenced.slice(start, end + 1)) : null;
+        if (!obj) return reply.code(502).send({ error: 'AI_INVALID_JSON', raw: raw.slice(0, 200) });
+        return reply.send({
+          stage: String(obj.stage || '').slice(0, 120),
+          confidence: Math.min(1, Math.max(0, Number(obj.confidence ?? 0.5))),
+          reasoning: String(obj.reasoning || '').slice(0, 400),
+          nextMilestone: String(obj.nextMilestone || '').slice(0, 200),
+          model: aiClient.model,
+        });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'infer-stage failed');
+        return reply.code(500).send({ error: e?.message || 'AI failed' });
+      }
+    },
+  );
 }
 
 // ============================================================================
