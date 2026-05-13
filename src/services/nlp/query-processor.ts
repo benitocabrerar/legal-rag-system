@@ -27,18 +27,9 @@ interface ProcessedQuery {
 }
 
 export class QueryProcessor {
-  private openai: OpenAI;
   private intentPatterns: Map<string, RegExp[]>;
 
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is required for NLP query processing');
-    }
-
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
     // Initialize regex patterns for quick intent classification
     this.intentPatterns = new Map([
       ['search', [
@@ -150,8 +141,9 @@ Formato de respuesta requerido:
 }`;
 
     try {
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const { getAiClient } = await import('../../lib/ai-client.js');
+      const ai = await getAiClient();
+      const completion = (await ai.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -159,11 +151,11 @@ Formato de respuesta requerido:
         temperature: 0.3,
         max_tokens: 500,
         response_format: { type: 'json_object' }
-      });
+      })) as any;
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
-        throw new Error('No response from OpenAI');
+        throw new Error('No response from AI client');
       }
 
       const analysis = JSON.parse(content);

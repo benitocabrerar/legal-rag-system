@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../lib/prisma.js';
-import { OpenAI } from 'openai';
 import { LegalDocumentService } from '../services/legal-document-service';
 import {
   CreateLegalDocumentSchema,
@@ -10,12 +9,10 @@ import {
   // CreateDocumentRevisionSchema, // DISABLED: Model does not exist in schema
 } from '../schemas/legal-document-schemas';
 import { PDFExtract } from 'pdf.js-extract';
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
 
 export async function legalDocumentRoutesV2(fastify: FastifyInstance) {
-  const documentService = new LegalDocumentService(prisma, openai);
+  // LegalDocumentService usa getAiClient() internamente (admin-configurable).
+  const documentService = new LegalDocumentService(prisma);
 
   // ============================================================================
   // CREATE LEGAL DOCUMENT

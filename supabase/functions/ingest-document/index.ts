@@ -19,7 +19,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;
-const EMBED_MODEL = 'text-embedding-3-small';
+const EMBED_MODEL_DEFAULT = 'text-embedding-3-small';
 const EMBED_BATCH = 100;
 
 interface IngestRequest {
@@ -73,7 +73,22 @@ serve(async (req: Request) => {
     docId = data.id;
   }
 
-  // 3. Embeddings en batches
+  // 3. Embeddings en batches.
+  // Anthropic no tiene embeddings nativos; siempre usamos OpenAI. El modelo
+  // sale de ai_settings.embedding_model (admin-configurable). Mismo modelo
+  // que usó la indexación inicial — cambiarlo requiere re-embedding.
+  let embedModel = EMBED_MODEL_DEFAULT;
+  try {
+    const { data: settings } = await supabase
+      .from('ai_settings')
+      .select('embedding_model')
+      .eq('id', 'default')
+      .single();
+    if (settings?.embedding_model) embedModel = settings.embedding_model as string;
+  } catch {
+    // usa default
+  }
+
   // @ts-ignore
   const openaiKey = Deno.env.get('OPENAI_API_KEY')!;
   const embeddings: number[][] = [];
@@ -85,7 +100,7 @@ serve(async (req: Request) => {
         Authorization: `Bearer ${openaiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model: EMBED_MODEL, input: batch, dimensions: 1536 }),
+      body: JSON.stringify({ model: embedModel, input: batch, dimensions: 1536 }),
     });
     if (!resp.ok) {
       return json({ error: `openai: ${resp.status} ${await resp.text()}` }, 502);

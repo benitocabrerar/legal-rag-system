@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, Jurisdiction } from '@prisma/client';
 import { OpenAI } from 'openai';
+import { getAiClient } from '../lib/ai-client.js';
 import {
   CreateLegalDocument,
   UpdateLegalDocument,
@@ -17,7 +18,9 @@ import { openAIConfig, isRetryableError, getRetryDelay } from '../config/openai.
 export class LegalDocumentService {
   constructor(
     private prisma: PrismaClient,
-    private openai: OpenAI
+    // Mantenido por compatibilidad con callers existentes; las llamadas a LLM
+    // ahora pasan por getAiClient() (admin-configurable). Pendiente: eliminar.
+    _openai?: OpenAI
   ) {}
 
   /**
@@ -474,10 +477,10 @@ export class LegalDocumentService {
       // Try to generate embedding with retries
       try {
         const embeddingResponse = await this.retryWithBackoff(
-          () => this.openai.embeddings.create({
-            model: 'text-embedding-ada-002',
-            input: chunk,
-          }),
+          async () => {
+            const ai = await getAiClient();
+            return ai.embeddings.create({ input: chunk });
+          },
           3, // max 3 retries
           1000 // 1 second base delay
         );
@@ -575,8 +578,8 @@ export class LegalDocumentService {
     limit: number = 10
   ): Promise<LegalDocumentResponse[]> {
     // Generate query embedding
-    const embeddingResponse = await this.openai.embeddings.create({
-      model: 'text-embedding-ada-002',
+    const ai = await getAiClient();
+    const embeddingResponse = await ai.embeddings.create({
       input: query,
     });
 
@@ -735,8 +738,8 @@ export class LegalDocumentService {
     // Retry with exponential backoff
     for (let attempt = 0; attempt < openAIConfig.maxRetries; attempt++) {
       try {
-        const completion = await this.openai.chat.completions.create({
-          model: openAIConfig.model,
+        const ai = await getAiClient();
+        const completion = (await ai.chat.completions.create({
           messages: [
             {
               role: 'system',
@@ -805,8 +808,7 @@ Extrae los metadatos del documento legal proporcionado. Responde en formato JSON
           response_format: { type: 'json_object' },
           temperature: openAIConfig.temperature,
           max_tokens: openAIConfig.maxTokens,
-          top_p: openAIConfig.topP,
-        });
+        })) as any;
 
         const result = completion.choices[0].message.content;
         if (!result) {

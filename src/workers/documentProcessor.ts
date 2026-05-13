@@ -8,7 +8,7 @@
 import Bull, { Job, Queue, Worker } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { Logger } from 'pino';
-import { OpenAI } from 'openai';
+import { getAiClient } from '../lib/ai-client.js';
 import { DocumentAnalyzer } from '../services/documentAnalyzer';
 import { DocumentEventBus, DocumentEventType } from '../events/documentEventBus';
 import { Redis } from 'ioredis';
@@ -50,7 +50,6 @@ export class DocumentProcessor {
   private eventBus: DocumentEventBus;
   private analyzer: DocumentAnalyzer;
   private redis: Redis;
-  private openai: OpenAI;
   private isRunning = false;
 
   constructor(
@@ -63,8 +62,8 @@ export class DocumentProcessor {
     this.logger = logger;
     this.eventBus = eventBus;
     this.redis = new Redis(redisConfig);
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    this.analyzer = new DocumentAnalyzer(prisma, this.openai);
+    // DocumentAnalyzer ahora obtiene su cliente IA vía getAiClient() (admin-config).
+    this.analyzer = new DocumentAnalyzer(prisma);
 
     // Initialize queue
     this.queue = new Queue<DocumentJob>('document-processing', {
@@ -549,8 +548,8 @@ export class DocumentProcessor {
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+      const ai = await getAiClient();
+      const response = await ai.embeddings.create({
         input: text.substring(0, 8000)
       });
 
@@ -566,8 +565,8 @@ export class DocumentProcessor {
    */
   private async generateSummary(content: string): Promise<string> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -580,7 +579,7 @@ export class DocumentProcessor {
         ],
         temperature: 0.3,
         max_tokens: 500
-      });
+      })) as any;
 
       return response.choices[0].message.content || '';
     } catch (error) {

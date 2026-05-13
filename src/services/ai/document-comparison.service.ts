@@ -11,7 +11,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { prisma as prismaClient } from '../../lib/prisma.js';
-import { OpenAI } from 'openai';
+import { getAiClient } from '../../lib/ai-client.js';
 import * as crypto from 'crypto';
 
 // Types
@@ -80,16 +80,9 @@ interface SimilarDocument {
 
 export class DocumentComparisonService {
   private prisma: PrismaClient;
-  private openai: OpenAI;
-  private embeddingModel = 'text-embedding-3-small';
 
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma || prismaClient;
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: parseInt(process.env.OPENAI_TIMEOUT || '60000'),
-      maxRetries: parseInt(process.env.OPENAI_RETRY_ATTEMPTS || '3'),
-    });
   }
 
   /**
@@ -470,12 +463,12 @@ export class DocumentComparisonService {
     `;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content: 'You are a legal document analyst. Provide clear, professional comparisons.'
+            content: 'You are a legal document analyst. Provide clear, professional comparisons. Respond ONLY with a valid JSON object — no prose, no markdown fences.'
           },
           {
             role: 'user',
@@ -485,9 +478,9 @@ export class DocumentComparisonService {
         temperature: 0.3,
         max_tokens: 1000,
         response_format: { type: 'json_object' }
-      });
+      })) as any;
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = JSON.parse(extractJson(response.choices[0].message.content || '{}'));
       return {
         summary: result.summary || 'Comparison completed.',
         detailedAnalysis: result.detailedAnalysis || 'No detailed analysis available.'
@@ -502,12 +495,12 @@ export class DocumentComparisonService {
   }
 
   /**
-   * Generate embedding for text
+   * Generate embedding usando el modelo configurado (default text-embedding-3-small)
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: this.embeddingModel,
+      const ai = await getAiClient();
+      const response = await ai.embeddings.create({
         input: text.substring(0, 8000),
         dimensions: 1536
       });
@@ -767,6 +760,17 @@ export class DocumentComparisonService {
       }
     });
   }
+}
+
+function extractJson(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) return fence[1].trim();
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+  return trimmed;
 }
 
 // Singleton instance

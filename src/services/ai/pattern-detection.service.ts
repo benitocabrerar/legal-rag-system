@@ -10,7 +10,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { prisma as prismaClient } from '../../lib/prisma.js';
-import { OpenAI } from 'openai';
+import { getAiClient } from '../../lib/ai-client.js';
 import * as crypto from 'crypto';
 
 // Types
@@ -102,7 +102,6 @@ interface PatternFrequency {
 
 export class PatternDetectionService {
   private prisma: PrismaClient;
-  private openai: OpenAI;
   private patternCache: Map<string, LegalPattern[]> = new Map();
 
   // Pre-defined legal patterns
@@ -198,11 +197,6 @@ export class PatternDetectionService {
 
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma || prismaClient;
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: parseInt(process.env.OPENAI_TIMEOUT || '60000'),
-      maxRetries: parseInt(process.env.OPENAI_RETRY_ATTEMPTS || '3'),
-    });
   }
 
   /**
@@ -395,12 +389,12 @@ export class PatternDetectionService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
-            content: 'You are a legal document analyst specializing in pattern detection and legal analysis.'
+            content: 'You are a legal document analyst specializing in pattern detection and legal analysis. Respond ONLY with a valid JSON object — no prose, no markdown fences.'
           },
           {
             role: 'user',
@@ -410,9 +404,9 @@ export class PatternDetectionService {
         temperature: 0.3,
         max_tokens: 2000,
         response_format: { type: 'json_object' }
-      });
+      })) as any;
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = JSON.parse(extractJson(response.choices[0].message.content || '{}'));
 
       const patterns: LegalPattern[] = (result.patterns || []).map((p: any) => ({
         id: crypto.randomUUID(),
@@ -759,6 +753,17 @@ export class PatternDetectionService {
 
     return typeMap[type.toLowerCase()] || 'clause';
   }
+}
+
+function extractJson(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) return fence[1].trim();
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+  return trimmed;
 }
 
 // Singleton instance

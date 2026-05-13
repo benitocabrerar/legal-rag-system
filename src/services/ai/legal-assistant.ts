@@ -1,4 +1,3 @@
-import { OpenAI } from 'openai';
 import { PrismaClient } from '@prisma/client';
 import { prisma as prismaClient } from '../../lib/prisma.js';
 import { getAiClient } from '../../lib/ai-client.js';
@@ -49,17 +48,11 @@ interface ConversationContext {
 }
 
 export class LegalAssistant {
-  private openai: OpenAI; // legacy, mantenido por compatibilidad
   private prisma: PrismaClient;
   private systemPrompt: string;
 
   constructor() {
-    // Mantenemos OpenAI para fallback / compat. La config dinámica vive en
-    // getAiClient() y se lee por petición (cache 30s).
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'placeholder',
-    });
-
+    // Toda llamada LLM pasa por getAiClient() (admin-configurable, cache 30s).
     this.prisma = prismaClient;
 
     // Default system prompt — Ecuador. Para multi-país, los callers usan
@@ -171,13 +164,13 @@ Formato de respuestas:
     const countryCtx = await getUserCountryContext(context.userId);
     const localizedSystemPrompt = this.buildSystemPromptForUser(countryCtx);
 
-    // Build messages for GPT-4
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    // Build messages
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: localizedSystemPrompt + documentContext },
       ...context.messages.map(m => ({
-        role: m.role,
+        role: m.role as 'system' | 'user' | 'assistant',
         content: m.content
-      } as OpenAI.Chat.ChatCompletionMessageParam)),
+      })),
       { role: 'user', content: userQuery }
     ];
 
@@ -304,13 +297,13 @@ Formato de respuestas:
     const countryCtx = await getUserCountryContext(context.userId);
     const localizedSystemPrompt = this.buildSystemPromptForUser(countryCtx);
 
-    // Build messages for GPT-4
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    // Build messages
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: localizedSystemPrompt + documentContext },
       ...context.messages.map(m => ({
-        role: m.role,
+        role: m.role as 'system' | 'user' | 'assistant',
         content: m.content
-      } as OpenAI.Chat.ChatCompletionMessageParam)),
+      })),
       { role: 'user', content: userQuery }
     ];
 

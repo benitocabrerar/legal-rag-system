@@ -3,8 +3,9 @@
  *
  * Detecta el mimetype y aplica el extractor correcto:
  *   - PDF nativo → pdf-parse
- *   - PDF escaneado / con poco texto → Vision IA (Claude Sonnet 4 si hay
- *     ANTHROPIC_API_KEY, si no GPT-4o multimodal)
+ *   - PDF escaneado / con poco texto → Vision IA (modelo configurado en
+ *     /admin/ai-settings: por default Claude Opus 4.7 — soporta PDFs nativos —;
+ *     si el provider es OpenAI, GPT-4o multimodal vía Files API)
  *   - DOCX → mammoth (preserva headings y tablas como markdown-ish)
  *   - DOC legacy (binary) → texto crudo (lossy) o degradación a Vision
  *   - XLSX / XLS → xlsx → CSV concatenado por sheet
@@ -16,6 +17,7 @@
 import OpenAI from 'openai';
 import { createRequire } from 'module';
 import * as XLSX from 'xlsx';
+import { getAiInfo } from './ai-client.js';
 
 const _require = createRequire(import.meta.url);
 const pdfParse: (data: Buffer) => Promise<{ text: string; numpages: number }> =
@@ -26,9 +28,6 @@ interface ExtractResult {
   method: string;
   metadata?: Record<string, unknown>;
 }
-
-const VISION_MODEL_OPENAI = 'gpt-4o';
-const VISION_MODEL_ANTHROPIC = 'claude-sonnet-4-6';
 
 function isImage(mime: string): boolean {
   return /^image\/(png|jpe?g|webp|gif|bmp)/i.test(mime);
@@ -128,20 +127,56 @@ function extractPlainText(buffer: Buffer): ExtractResult {
 
 /**
  * Vision IA — extrae texto de imágenes y PDFs escaneados.
- * Usa Claude Sonnet 4.6 si hay ANTHROPIC_API_KEY, si no GPT-4o.
+ * Respeta el provider configurado en /admin/ai-settings:
+ *   - Anthropic → usa el visionModel resuelto (default Opus 4.7) con soporte nativo de PDFs.
+ *   - OpenAI    → usa el visionModel resuelto (default gpt-4o) con Files API para PDFs.
+ *
+ * Si por cualquier razón el cliente no tiene credenciales para el provider
+ * activo, intenta el otro provider como fallback (de menor a mayor preferencia).
  */
 async function extractWithVision(
   buffer: Buffer,
   mimeType: string,
   filename: string
 ): Promise<ExtractResult> {
-  const anthKey = process.env.ANTHROPIC_API_KEY;
-  if (anthKey) {
-    return extractWithAnthropicVision(buffer, mimeType, filename, anthKey);
+  let info: { provider: 'openai' | 'anthropic'; visionModel: string } | null = null;
+  try {
+    info = await getAiInfo();
+  } catch {
+    info = null;
   }
+
+  const anthKey = process.env.ANTHROPIC_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
+
+  // Orden de preferencia: provider configurado por admin, luego el otro como fallback.
+  const tryAnthropicFirst = info?.provider === 'anthropic';
+  if (tryAnthropicFirst && anthKey) {
+    return extractWithAnthropicVision(
+      buffer,
+      mimeType,
+      filename,
+      anthKey,
+      info?.visionModel || 'claude-opus-4-7'
+    );
+  }
   if (openaiKey) {
-    return extractWithOpenAiVision(buffer, mimeType, filename, openaiKey);
+    return extractWithOpenAiVision(
+      buffer,
+      mimeType,
+      filename,
+      openaiKey,
+      info?.provider === 'openai' ? info.visionModel : 'gpt-4o'
+    );
+  }
+  if (anthKey) {
+    return extractWithAnthropicVision(
+      buffer,
+      mimeType,
+      filename,
+      anthKey,
+      info?.visionModel || 'claude-opus-4-7'
+    );
   }
   return { text: '', method: 'vision-no-key' };
 }
@@ -150,7 +185,8 @@ async function extractWithOpenAiVision(
   buffer: Buffer,
   mimeType: string,
   filename: string,
-  apiKey: string
+  apiKey: string,
+  model: string
 ): Promise<ExtractResult> {
   const oa = new OpenAI({ apiKey });
   // GPT-4o vision soporta imágenes; para PDFs hay que subirlos via Files API
@@ -168,7 +204,7 @@ async function extractWithOpenAiVision(
         purpose: 'user_data',
       });
       const completion = await oa.chat.completions.create({
-        model: VISION_MODEL_OPENAI,
+        model,
         messages: [
           {
             role: 'user',
@@ -189,7 +225,7 @@ async function extractWithOpenAiVision(
       return {
         text: typeof text === 'string' ? text : JSON.stringify(text),
         method: 'openai-vision-files',
-        metadata: { model: VISION_MODEL_OPENAI, openaiFileId: uploaded.id },
+        metadata: { model, openaiFileId: uploaded.id },
       };
     } catch (e: any) {
       return { text: '', method: 'openai-vision-pdf-fail', metadata: { error: e.message } };
@@ -199,7 +235,7 @@ async function extractWithOpenAiVision(
   // Imagen
   const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
   const completion = await oa.chat.completions.create({
-    model: VISION_MODEL_OPENAI,
+    model,
     messages: [
       {
         role: 'user',
@@ -220,7 +256,7 @@ async function extractWithOpenAiVision(
   return {
     text: typeof text === 'string' ? text : '',
     method: 'openai-vision-image',
-    metadata: { model: VISION_MODEL_OPENAI },
+    metadata: { model },
   };
 }
 
@@ -228,7 +264,8 @@ async function extractWithAnthropicVision(
   buffer: Buffer,
   mimeType: string,
   _filename: string,
-  apiKey: string
+  apiKey: string,
+  model: string
 ): Promise<ExtractResult> {
   const isPdfFile = /pdf/i.test(mimeType);
   const b64 = buffer.toString('base64');
@@ -258,7 +295,7 @@ async function extractWithAnthropicVision(
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: VISION_MODEL_ANTHROPIC,
+      model,
       max_tokens: 16000,
       messages: [{ role: 'user', content }],
     }),
@@ -268,7 +305,7 @@ async function extractWithAnthropicVision(
     return {
       text: '',
       method: 'anthropic-vision-fail',
-      metadata: { status: r.status, error: err.slice(0, 300) },
+      metadata: { status: r.status, error: err.slice(0, 300), model },
     };
   }
   const data = await r.json() as any;
@@ -276,7 +313,7 @@ async function extractWithAnthropicVision(
   return {
     text,
     method: 'anthropic-vision',
-    metadata: { model: VISION_MODEL_ANTHROPIC },
+    metadata: { model },
   };
 }
 

@@ -11,7 +11,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { prisma as prismaClient } from '../../lib/prisma.js';
-import { OpenAI } from 'openai';
+import { getAiClient } from '../../lib/ai-client.js';
 import * as crypto from 'crypto';
 
 // Types
@@ -112,8 +112,6 @@ interface StreamSummaryOptions extends SummaryOptions {
 
 export class DocumentSummarizationService {
   private prisma: PrismaClient;
-  private openai: OpenAI;
-
   private readonly defaultOptions: SummaryOptions = {
     level: 'standard',
     language: 'es',
@@ -124,11 +122,11 @@ export class DocumentSummarizationService {
 
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma || prismaClient;
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: parseInt(process.env.OPENAI_TIMEOUT || '60000'),
-      maxRetries: parseInt(process.env.OPENAI_RETRY_ATTEMPTS || '3'),
-    });
+  }
+
+  /** Helper para obtener el cliente IA configurado por el admin. */
+  private async ai() {
+    return getAiClient();
   }
 
   /**
@@ -279,7 +277,7 @@ export class DocumentSummarizationService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await (await this.ai()).chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -388,7 +386,7 @@ export class DocumentSummarizationService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await (await this.ai()).chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -567,7 +565,7 @@ export class DocumentSummarizationService {
         - Temporal aspects (dates, deadlines)
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await (await this.ai()).chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -829,8 +827,7 @@ export class DocumentSummarizationService {
       `;
 
       // Stream response from OpenAI
-      const stream = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const stream = await (await this.ai()).streamChat({
         messages: [
           {
             role: 'system',
@@ -843,7 +840,6 @@ export class DocumentSummarizationService {
         ],
         temperature: 0.3,
         max_tokens: 2500,
-        stream: true
       });
 
       for await (const chunk of stream) {
@@ -889,9 +885,8 @@ export class DocumentSummarizationService {
     try {
       const prompt = this.buildSummaryPrompt(document, options);
 
-      // Use OpenAI streaming
-      const stream = await this.openai.chat.completions.create({
-        model: options.level === 'brief' ? 'gpt-3.5-turbo' : 'gpt-4',
+      // Streaming provider-agnóstico vía wrapper
+      const stream = await (await this.ai()).streamChat({
         messages: [
           {
             role: 'system',
@@ -904,7 +899,6 @@ export class DocumentSummarizationService {
         ],
         temperature: 0.3,
         max_tokens: options.level === 'brief' ? 150 : options.level === 'detailed' ? 1500 : 800,
-        stream: true
       });
 
       let fullSummary = '';
@@ -915,7 +909,7 @@ export class DocumentSummarizationService {
 
         if (content) {
           fullSummary += content;
-          wordCount += content.split(/\s+/).filter(w => w.length > 0).length;
+          wordCount += content.split(/\s+/).filter((w: string) => w.length > 0).length;
 
           yield {
             type: 'text',
@@ -1026,7 +1020,7 @@ export class DocumentSummarizationService {
    */
   private async extractKeyPointsQuick(document: any): Promise<string[]> {
     try {
-      const response = await this.openai.chat.completions.create({
+      const response = await (await this.ai()).chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
           {
@@ -1073,7 +1067,7 @@ export class DocumentSummarizationService {
       Summary (1-2 sentences only):
     `;
 
-    const response = await this.openai.chat.completions.create({
+    const response = await (await this.ai()).chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -1116,7 +1110,7 @@ export class DocumentSummarizationService {
       }
     `;
 
-    const response = await this.openai.chat.completions.create({
+    const response = await (await this.ai()).chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
@@ -1174,7 +1168,7 @@ export class DocumentSummarizationService {
       }
     `;
 
-    const response = await this.openai.chat.completions.create({
+    const response = await (await this.ai()).chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
@@ -1204,7 +1198,7 @@ export class DocumentSummarizationService {
    * Generate quick summary for a text snippet
    */
   private async generateQuickSummary(content: string, title: string): Promise<string> {
-    const response = await this.openai.chat.completions.create({
+    const response = await (await this.ai()).chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -1227,7 +1221,7 @@ export class DocumentSummarizationService {
    * Summarize a content chunk
    */
   private async summarizeChunk(content: string, index: number): Promise<ChunkSummary> {
-    const response = await this.openai.chat.completions.create({
+    const response = await (await this.ai()).chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {

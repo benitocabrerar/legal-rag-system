@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
+import { getAiClient } from '../lib/ai-client.js';
 import * as crypto from 'crypto';
 
 interface DocumentStructure {
@@ -36,7 +37,10 @@ interface DocumentSummaries {
 export class DocumentAnalyzer {
   constructor(
     private prisma: PrismaClient,
-    private openai: OpenAI
+    // Mantenido por compatibilidad con call sites existentes; no se usa para LLM
+    // calls (ahora pasan por getAiClient — admin-configurable). Pendiente: eliminar
+    // este parámetro en una refactorización futura.
+    _openai?: OpenAI
   ) {}
 
   /**
@@ -335,12 +339,12 @@ export class DocumentAnalyzer {
 
     Resumen:`;
 
-    const executiveResponse = await this.openai.chat.completions.create({
-      model: 'gpt-4',
+    const ai = await getAiClient();
+    const executiveResponse = (await ai.chat.completions.create({
       messages: [{ role: 'user', content: executivePrompt }],
       temperature: 0.3,
       max_tokens: 500
-    });
+    })) as any;
 
     summaries.executive = executiveResponse.choices[0].message.content || '';
 
@@ -355,12 +359,11 @@ export class DocumentAnalyzer {
 
       Resumen:`;
 
-      const chapterResponse = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+      const chapterResponse = (await ai.chat.completions.create({
         messages: [{ role: 'user', content: chapterPrompt }],
         temperature: 0.3,
         max_tokens: 150
-      });
+      })) as any;
 
       summaries.chapters[chapter.number] =
         chapterResponse.choices[0].message.content || '';
@@ -677,8 +680,8 @@ export class DocumentAnalyzer {
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+      const ai = await getAiClient();
+      const response = await ai.embeddings.create({
         input: text.substring(0, 8000) // Limit to model's max tokens
       });
 

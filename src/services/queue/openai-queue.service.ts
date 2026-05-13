@@ -1,5 +1,6 @@
 import Bull, { Queue, Job } from 'bull';
 import { OpenAI } from 'openai';
+import { getAiClient } from '../../lib/ai-client.js';
 
 interface OpenAIJob {
   type: 'embedding' | 'chat' | 'extraction';
@@ -83,8 +84,8 @@ export class OpenAIQueueService {
 
   private async processEmbedding(payload: { text: string }): Promise<OpenAIJobResult> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: process.env.EMBEDDING_MODEL || 'text-embedding-ada-002',
+      const ai = await getAiClient();
+      const response = await ai.embeddings.create({
         input: payload.text,
       });
 
@@ -105,11 +106,11 @@ export class OpenAIQueueService {
     temperature?: number;
   }): Promise<OpenAIJobResult> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: payload.messages,
         temperature: payload.temperature || 0.7,
-      });
+      })) as any;
 
       return {
         success: true,

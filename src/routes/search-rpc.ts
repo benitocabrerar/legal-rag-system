@@ -15,7 +15,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import OpenAI from 'openai';
+import { getAiClient, getAiInfo } from '../lib/ai-client.js';
 import { userScopedClient } from '../lib/supabase.js';
 import { requireSupabaseAuth } from '../middleware/auth-supabase.js';
 
@@ -36,7 +36,6 @@ export async function searchRpcRoutes(fastify: FastifyInstance) {
     fastify.log.warn('OPENAI_API_KEY ausente — search-rpc deshabilitado');
     return;
   }
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   fastify.post(
     '/search/legal',
@@ -44,9 +43,11 @@ export async function searchRpcRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const body = searchSchema.parse(request.body);
 
-      // 1) Embedding del query con el modelo único post-migración
-      const embedResp = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
+      // 1) Embedding del query usando el modelo configurado por el admin.
+      //    CRÍTICO: debe coincidir con el modelo usado para indexar el corpus
+      //    (1536 dims). El admin panel advierte sobre re-embedding al cambiar.
+      const ai = await getAiClient();
+      const embedResp = await ai.embeddings.create({
         input: body.query,
         dimensions: 1536,
       });
@@ -74,11 +75,12 @@ export async function searchRpcRoutes(fastify: FastifyInstance) {
         return reply.code(500).send({ error: error.message });
       }
 
+      const info = await getAiInfo();
       return {
         query: body.query,
         results: data ?? [],
         engine: 'rpc-rrf-hnsw',
-        model: 'text-embedding-3-small',
+        model: info.embeddingModel,
       };
     }
   );

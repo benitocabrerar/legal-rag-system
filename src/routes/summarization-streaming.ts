@@ -18,7 +18,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { getDocumentSummarizationService } from '../services/ai/document-summarization.service.js';
-import { OpenAI } from 'openai';
+import { getAiClient, type ChatCompletionChunk } from '../lib/ai-client.js';
 
 // ============================================================================
 // Schema Validation
@@ -260,36 +260,31 @@ function stopHeartbeat(): void {
 }
 
 // ============================================================================
-// OpenAI Streaming Helper
+// Streaming Helper (provider-agnóstico vía ai-client)
 // ============================================================================
 
 /**
- * Stream OpenAI completion with progress updates
+ * Stream completion del provider configurado (OpenAI o Anthropic) con
+ * actualizaciones de progreso. Usa getAiClient() para respetar la config
+ * del admin panel — sin modelo hardcoded.
  */
-async function streamOpenAICompletion(
+async function streamAiCompletion(
   client: SSEClient,
   prompt: string,
-  systemPrompt: string,
-  model: string = 'gpt-4'
+  systemPrompt: string
 ): Promise<string> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: parseInt(process.env.OPENAI_TIMEOUT || '60000'),
-  });
-
+  const ai = await getAiClient();
   let fullContent = '';
   let chunkCount = 0;
 
   try {
-    const stream = await openai.chat.completions.create({
-      model,
+    const stream = await ai.streamChat({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,
       max_tokens: 2000,
-      stream: true
     });
 
     for await (const chunk of stream) {
@@ -325,7 +320,7 @@ async function streamOpenAICompletion(
 
     return fullContent;
   } catch (error) {
-    console.error('[SSE] OpenAI streaming error:', error);
+    console.error('[SSE] AI streaming error:', error);
     throw error;
   }
 }
@@ -538,12 +533,11 @@ Provide a comprehensive summary of 300-500 words covering all major aspects.`;
 
         let summary = '';
         if (options.streamChunks) {
-          // Stream the summary generation
-          summary = await streamOpenAICompletion(
+          // Stream del provider configurado (admin panel decide cuál).
+          summary = await streamAiCompletion(
             client,
             userPrompt,
-            systemPrompt,
-            options.level === 'brief' ? 'gpt-3.5-turbo' : 'gpt-4'
+            systemPrompt
           );
         } else {
           // Non-streaming fallback

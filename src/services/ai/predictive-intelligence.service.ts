@@ -2,12 +2,12 @@
  * Predictive Intelligence Service
  *
  * AI-powered predictions for case outcomes, document relevance, and timeline forecasting.
- * Uses OpenAI GPT-4 for analysis and text-embedding-3-small for semantic similarity.
+ * Usa el cliente IA global (configurable desde /admin/ai-settings) para chat y embeddings.
  */
 
 import { PrismaClient } from '@prisma/client';
 import { prisma as prismaClient } from '../../lib/prisma.js';
-import { OpenAI } from 'openai';
+import { getAiClient } from '../../lib/ai-client.js';
 import * as crypto from 'crypto';
 
 // Types for predictions
@@ -75,17 +75,9 @@ interface PredictionFeedback {
 
 export class PredictiveIntelligenceService {
   private prisma: PrismaClient;
-  private openai: OpenAI;
-  private embeddingModel = 'text-embedding-3-small';
-  private chatModel = 'gpt-4';
 
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma || prismaClient;
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: parseInt(process.env.OPENAI_TIMEOUT || '60000'),
-      maxRetries: parseInt(process.env.OPENAI_RETRY_ATTEMPTS || '3'),
-    });
   }
 
   /**
@@ -129,15 +121,15 @@ export class PredictiveIntelligenceService {
       // Generate prediction using GPT-4
       const predictionPrompt = this.buildOutcomePredictionPrompt(caseData, similarCases);
 
-      const response = await this.openai.chat.completions.create({
-        model: this.chatModel,
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
             content: `You are an expert legal analyst specializing in case outcome prediction.
             Analyze the provided case information and similar cases to predict the most likely outcome.
             Provide a structured analysis with confidence scores and key factors.
-            Always respond in JSON format.`
+            Always respond ONLY with a valid JSON object — no prose, no markdown fences.`
           },
           {
             role: 'user',
@@ -147,9 +139,9 @@ export class PredictiveIntelligenceService {
         temperature: 0.3,
         max_tokens: 2000,
         response_format: { type: 'json_object' }
-      });
+      })) as any;
 
-      const predictionResult = JSON.parse(response.choices[0].message.content || '{}');
+      const predictionResult = JSON.parse(extractJson(response.choices[0].message.content || '{}'));
 
       // Create prediction record
       const predictionId = crypto.randomUUID();
@@ -236,8 +228,8 @@ export class PredictiveIntelligenceService {
         Focus on legal concepts and practical applicability.
       `;
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
@@ -250,7 +242,7 @@ export class PredictiveIntelligenceService {
         ],
         temperature: 0.3,
         max_tokens: 300
-      });
+      })) as any;
 
       const explanation = response.choices[0].message.content || '';
 
@@ -356,14 +348,14 @@ export class PredictiveIntelligenceService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
-        model: this.chatModel,
+      const ai = await getAiClient();
+      const response = (await ai.chat.completions.create({
         messages: [
           {
             role: 'system',
             content: `You are an expert legal project manager specializing in case timeline prediction.
             Provide realistic timeline estimates based on typical legal workflows and case complexity.
-            Always respond in valid JSON format.`
+            Always respond ONLY with a valid JSON object — no prose, no markdown fences.`
           },
           {
             role: 'user',
@@ -373,9 +365,9 @@ export class PredictiveIntelligenceService {
         temperature: 0.4,
         max_tokens: 2000,
         response_format: { type: 'json_object' }
-      });
+      })) as any;
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = JSON.parse(extractJson(response.choices[0].message.content || '{}'));
 
       const predictionId = crypto.randomUUID();
       const prediction: TimelinePrediction = {
@@ -459,12 +451,12 @@ export class PredictiveIntelligenceService {
   // Private helper methods
 
   /**
-   * Generate embedding using text-embedding-3-small
+   * Generate embedding using el modelo configurado (default text-embedding-3-small)
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: this.embeddingModel,
+      const ai = await getAiClient();
+      const response = await ai.embeddings.create({
         input: text.substring(0, 8000),
         dimensions: 1536
       });
@@ -721,6 +713,25 @@ export class PredictiveIntelligenceService {
       }
     });
   }
+}
+
+/**
+ * Extrae el primer objeto JSON válido de un texto que puede venir
+ * envuelto en markdown fences o con prosa alrededor (Claude tiende a
+ * ignorar la instrucción "ONLY JSON" ocasionalmente).
+ */
+function extractJson(raw: string): string {
+  const trimmed = raw.trim();
+  // Caso simple: ya es JSON
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) return trimmed;
+  // Markdown fence ```json ... ```
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) return fence[1].trim();
+  // Primer { ... } balanceado
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+  return trimmed;
 }
 
 // Singleton instance

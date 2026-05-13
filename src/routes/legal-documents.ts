@@ -1,10 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
-import { OpenAI } from 'openai';
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getAiClient } from '../lib/ai-client.js';
 
 // Enum values matching Prisma schema
 const NormType = z.enum([
@@ -93,8 +90,8 @@ export async function legalDocumentRoutes(fastify: FastifyInstance) {
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
 
-        const embeddingResponse = await openai.embeddings.create({
-          model: 'text-embedding-ada-002',
+        const ai = await getAiClient();
+        const embeddingResponse = await ai.embeddings.create({
           input: chunk,
         });
 
