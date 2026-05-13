@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Scale, FileText, Search, RefreshCw, Sparkles, ExternalLink } from 'lucide-react';
+import { BookOpen, Scale, FileText, Search, RefreshCw, Sparkles, ExternalLink, Brain } from 'lucide-react';
 import { LegalType, legalTypeConfig } from '@/lib/design-tokens';
 import { getAuthToken } from '@/lib/get-auth-token';
+import LegalReferenceDialog from './LegalReferenceDialog';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -120,6 +121,7 @@ export function LegalReferences({ legalType, references, caseId }: LegalReferenc
   const [brainRefs, setBrainRefs] = useState<LegalReference[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [usingBrain, setUsingBrain] = useState(false);
+  const [selectedRef, setSelectedRef] = useState<LegalReference | null>(null);
   const config = legalTypeConfig[legalType];
 
   // Cargar referencias del cerebro del caso (si está disponible)
@@ -273,18 +275,37 @@ export function LegalReferences({ legalType, references, caseId }: LegalReferenc
           </div>
         ) : (
           filteredReferences.map((ref) => (
-            <div key={ref.id} className="p-4 hover:bg-gray-50 transition-colors">
+            <div
+              key={ref.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedRef(ref)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedRef(ref);
+                }
+              }}
+              className="p-4 hover:bg-indigo-50/50 transition-colors cursor-pointer group focus:outline-none focus:bg-indigo-50 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              title="Click para ver análisis IA completo de esta norma"
+            >
               {/* Type & Relevance */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-gray-600">
                   {getTypeIcon(ref.type)}
                   <span className="text-xs font-medium uppercase tracking-wide">{getTypeLabel(ref.type)}</span>
                 </div>
-                {getRelevanceBadge(ref.relevance)}
+                <div className="flex items-center gap-1.5">
+                  {getRelevanceBadge(ref.relevance)}
+                  <span className="opacity-0 group-hover:opacity-100 group-focus:opacity-100 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white transition-opacity">
+                    <Brain className="w-2.5 h-2.5" />
+                    Analizar
+                  </span>
+                </div>
               </div>
 
               {/* Title & Article */}
-              <h4 className="font-semibold text-gray-900 mb-1">
+              <h4 className="font-semibold text-gray-900 group-hover:text-indigo-700 mb-1 transition-colors">
                 {ref.title}
                 {ref.article && <span className="ml-2 text-indigo-600">{ref.article}</span>}
               </h4>
@@ -298,6 +319,7 @@ export function LegalReferences({ legalType, references, caseId }: LegalReferenc
                   href={ref.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   Ver documento completo
@@ -320,6 +342,15 @@ export function LegalReferences({ legalType, references, caseId }: LegalReferenc
           + Agregar nueva referencia legal
         </button>
       </div>
+
+      <LegalReferenceDialog
+        open={!!selectedRef}
+        norm={selectedRef?.title || ''}
+        article={selectedRef?.article}
+        description={selectedRef?.description}
+        caseId={caseId}
+        onClose={() => setSelectedRef(null)}
+      />
     </div>
   );
 }

@@ -1014,13 +1014,14 @@ Devuelve EXCLUSIVAMENTE este JSON (primer carácter '{', último '}'):
       const userId = (request.user as any).id;
       const { caseId, docId } = request.params;
 
-      // Verificar pertenencia + leer columnas legal_type/procedural_stage que
-      // no están mapeadas en Prisma.
+      // Verificar pertenencia + leer columnas legal_matter/procedural_stage
+      // que no están mapeadas en Prisma. La columna real en la tabla cases
+      // se llama `legal_matter` (NO `legal_type`).
       const ownRows = await prisma.$queryRawUnsafe<Array<{
         id: string; title: string; description: string | null;
-        legal_type: string | null; procedural_stage: string | null;
+        legal_matter: string | null; procedural_stage: string | null;
       }>>(
-        `SELECT id, title, description, legal_type, procedural_stage
+        `SELECT id, title, description, legal_matter, procedural_stage
            FROM public.cases
           WHERE id = $1 AND user_id = $2
           LIMIT 1`,
@@ -1119,7 +1120,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       const ctx = [
         `=== CASO ===`,
         `Título: ${own.title}`,
-        own.legal_type ? `Tipo: ${own.legal_type}` : '',
+        own.legal_matter ? `Materia: ${own.legal_matter}` : '',
         own.procedural_stage ? `Etapa procesal actual: ${own.procedural_stage}` : '',
         own.description ? `Descripción: ${own.description}` : '',
         '',
@@ -1250,10 +1251,10 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
 
       const ownRows = await prisma.$queryRawUnsafe<Array<{
         id: string; title: string; description: string | null;
-        legal_type: string | null; procedural_stage: string | null;
+        legal_matter: string | null; procedural_stage: string | null;
         metadata: any;
       }>>(
-        `SELECT id, title, description, legal_type, procedural_stage, metadata
+        `SELECT id, title, description, legal_matter, procedural_stage, metadata
            FROM public.cases
           WHERE id = $1 AND user_id = $2
           LIMIT 1`,
@@ -1347,7 +1348,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       const ctx = [
         '=== CASO ===',
         `Título: ${own.title}`,
-        own.legal_type ? `Tipo legal: ${own.legal_type}` : '',
+        own.legal_matter ? `Materia legal: ${own.legal_matter}` : '',
         own.procedural_stage ? `Etapa procesal: ${own.procedural_stage}` : '',
         own.description ? `Descripción: ${String(own.description).slice(0, 1500)}` : '',
         '',
@@ -1398,7 +1399,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           model: aiClient.model,
           generatedAt: new Date().toISOString(),
           context: {
-            legalType: own.legal_type,
+            legalMatter: own.legal_matter,
             proceduralStage: own.procedural_stage,
             documentCount: docs.length,
             hasBrain: !!brain,
@@ -1406,6 +1407,196 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'suggested-prompts failed');
+        return reply.code(500).send({ error: e?.message || 'AI failed' });
+      }
+    },
+  );
+
+  // =========================================================================
+  // POST /legal-reference/analyze  —  Análisis IA ampliado de una norma
+  //   específica con el texto literal recuperado del corpus vectorizado.
+  //
+  //   body: { norm: string, article?: string, caseId?: string, description?: string }
+  //
+  //   Hace:
+  //     1) RAG sobre legal_document_chunks para recuperar el texto literal
+  //        del artículo (la búsqueda combina título + número de artículo).
+  //     2) Si hay caseId, carga el contexto del caso (resumen + descripción).
+  //     3) Le pide a Claude Opus 4.7 que devuelva:
+  //        - texto literal (el chunk más relevante)
+  //        - análisis jurídico ampliado de la norma
+  //        - importancia para ESTE caso (si hay caseId)
+  //        - sanciones / pena / requisitos
+  //        - concordancias con otras normas
+  //        - jurisprudencia clave
+  //        - estrategia de aplicación (cómo usar la norma en este caso)
+  // =========================================================================
+  fastify.post<{ Body: any }>(
+    '/legal-reference/analyze',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const body = z.object({
+        norm: z.string().min(1).max(300),
+        article: z.string().max(80).optional().nullable(),
+        caseId: z.string().uuid().optional().nullable(),
+        description: z.string().max(800).optional().nullable(),
+      }).parse(request.body);
+
+      // 1) Contexto del caso si lo pasaron
+      let caseCtx: { title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null } | null = null;
+      if (body.caseId) {
+        const rows = await prisma.$queryRawUnsafe<Array<{
+          title: string; legal_matter: string | null; procedural_stage: string | null; description: string | null;
+        }>>(
+          `SELECT title, legal_matter, procedural_stage, description
+             FROM public.cases
+            WHERE id = $1 AND user_id = $2
+            LIMIT 1`,
+          body.caseId, userId,
+        );
+        caseCtx = rows[0] || null;
+      }
+
+      // 2) RAG retrieval — query combina norma + artículo + descripción del caso
+      const ragQuery = [body.norm, body.article || '', body.description || ''].filter(Boolean).join(' ');
+
+      let countryContext: any = null;
+      try {
+        const { getUserCountryContext } = await import('../lib/country-context.js');
+        countryContext = await getUserCountryContext(userId);
+      } catch { /* fallback null */ }
+
+      // Retrieval inline (mismo patrón que legal-doc-gen)
+      const sources: Array<{ legalDocumentId: string; normTitle: string; content: string; score: number }> = [];
+      try {
+        const ai = await getAiClient();
+        const embedResp: any = await ai.embeddings.create({ input: ragQuery, dimensions: 1536 });
+        const embedding = embedResp.data?.[0]?.embedding;
+        if (embedding && embedding.length === 1536) {
+          const sb = serviceRoleClient();
+          const { data, error } = await sb.rpc('search_legal_chunks', {
+            query_embedding: `[${embedding.join(',')}]`,
+            query_text: ragQuery.slice(0, 500),
+            match_count: 5,
+            semantic_weight: 1.2,
+            keyword_weight: 0.8,
+            filter_doc_id: null,
+            filter_norm_type: null,
+            filter_jurisdiction: null,
+            filter_country_code: countryContext?.code || 'EC',
+          });
+          if (!error && Array.isArray(data)) {
+            const seen = new Set<string>();
+            for (const row of data as any[]) {
+              if (seen.has(row.legal_document_id)) continue;
+              seen.add(row.legal_document_id);
+              sources.push({
+                legalDocumentId: row.legal_document_id,
+                normTitle: String(row.norm_title || '').trim() || 'Sin título',
+                content: String(row.content || '').trim(),
+                score: Number(row.rrf_score ?? 0),
+              });
+            }
+          }
+        }
+      } catch (e: any) {
+        fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: RAG retrieval failed');
+      }
+
+      const aiClient = await getAiClient();
+
+      const sys = `Eres un(a) abogado(a) ecuatoriano(a) senior. Vas a darle al usuario un
+ANÁLISIS JURÍDICO COMPLETO de una norma legal específica.
+
+REGLAS:
+- Si entre los EXTRACTOS RECUPERADOS aparece el texto literal del artículo
+  indicado, transcribilo EXACTO en literalText. No inventes texto.
+- Si NO aparece, devolvé literalText: null y aclará en notes que el texto
+  literal no fue recuperado.
+- Si hay caseContext, conectá el análisis a ese caso real (importancia,
+  cómo encaja en la estrategia, qué hacer ahora).
+- Citá artículos relacionados con nombre completo y número.
+- Mencioná jurisprudencia ecuatoriana (Corte Constitucional, Corte Nacional)
+  solo si estás seguro; en duda usá "verificar jurisprudencia reciente".
+- Español ecuatoriano profesional, sin relleno.
+
+SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
+{
+  "norm": "<eco de la norma analizada>",
+  "article": "<eco del artículo, o null>",
+  "literalText": "<transcripción literal del artículo si fue recuperado, sino null>",
+  "summary": "<3-5 oraciones explicando qué establece esta norma>",
+  "legalAnalysis": "<2-3 párrafos de análisis jurídico profundo: bien protegido, tipo penal/civil, sujetos, verbo rector, elementos>",
+  "importanceForCase": "<2-3 oraciones específicas sobre por qué importa para ESTE caso, o null si no hay caso>",
+  "penaltiesOrEffects": [
+    { "type": "<pena|nulidad|indemnización|otro>", "detail": "<descripción específica>" }
+  ],
+  "requirements": [ "<requisitos para que aplique esta norma>" ],
+  "relatedNorms": [
+    { "norm": "<ej. 'Art. 70 COIP'>", "relation": "<concordancia|excepción|complementaria|antecedente>" }
+  ],
+  "jurisprudence": [
+    { "reference": "<sentencia/caso>", "relevance": "<por qué importa>" }
+  ],
+  "strategyForCase": [ "<acciones tácticas concretas si aplica al caso, sino []>" ],
+  "commonDefenses": [ "<defensas comunes contra esta norma — útil si soy la defensa>" ],
+  "redFlags": [ "<advertencias / errores comunes al invocar esta norma>" ],
+  "notes": "<cualquier nota adicional importante o null>"
+}`;
+
+      const ctxBlock = [
+        `=== NORMA A ANALIZAR ===`,
+        `Norma: ${body.norm}`,
+        body.article ? `Artículo: ${body.article}` : '',
+        body.description ? `Descripción de la card: ${body.description}` : '',
+        '',
+        `=== CASO (si aplica) ===`,
+        caseCtx ? `Título: ${caseCtx.title}` : '(sin caso asociado)',
+        caseCtx?.legal_matter ? `Materia: ${caseCtx.legal_matter}` : '',
+        caseCtx?.procedural_stage ? `Etapa procesal: ${caseCtx.procedural_stage}` : '',
+        caseCtx?.description ? `Descripción: ${String(caseCtx.description).slice(0, 800)}` : '',
+        '',
+        `=== EXTRACTOS RECUPERADOS DEL CORPUS LEGAL (${sources.length}) ===`,
+        sources.length === 0
+          ? '(sin extractos — la IA debe ser explícita en notes si no pudo encontrar la norma)'
+          : sources.map((s, i) => `[Fuente ${i + 1}] ${s.normTitle}\n${s.content.slice(0, 1200)}`).join('\n\n'),
+      ].filter(Boolean).join('\n');
+
+      try {
+        const completion = await aiClient.chat.completions.create({
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: ctxBlock }],
+          max_tokens: 4000,
+        });
+        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+        const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+        const start = fenced.indexOf('{');
+        const end = fenced.lastIndexOf('}');
+        let parsed: any = null;
+        if (start >= 0 && end > start) {
+          try {
+            parsed = JSON.parse(fenced.slice(start, end + 1));
+          } catch {
+            try {
+              parsed = JSON.parse(fenced.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1'));
+            } catch { /* null */ }
+          }
+        }
+        if (!parsed || typeof parsed !== 'object') {
+          return reply.code(502).send({ error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
+        }
+        return reply.send({
+          analysis: parsed,
+          sources: sources.map((s) => ({
+            normTitle: s.normTitle,
+            excerpt: s.content.slice(0, 800),
+            score: s.score,
+          })),
+          model: aiClient.model,
+          generatedAt: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'legal-reference/analyze failed');
         return reply.code(500).send({ error: e?.message || 'AI failed' });
       }
     },
