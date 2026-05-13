@@ -53,6 +53,46 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
+    // Auto-recover de ChunkLoadError: ocurre cuando el HTML cacheado por el
+    // Service Worker apunta a chunks JS de un build viejo que Vercel ya
+    // purgó tras un nuevo deploy. La única salida limpia es recargar la
+    // página para que el SW (network-first) traiga el HTML fresh con los
+    // hashes nuevos. Usamos sessionStorage para evitar loops infinitos —
+    // si ya recargamos una vez por este motivo en esta sesión, dejamos
+    // que el usuario vea el fallback UI con un botón explícito.
+    const isChunkError =
+      error?.name === 'ChunkLoadError' ||
+      /Loading chunk \d+ failed/i.test(error?.message || '') ||
+      /Loading CSS chunk/i.test(error?.message || '') ||
+      /ChunkLoadError/i.test(error?.message || '');
+
+    if (isChunkError && typeof window !== 'undefined') {
+      const RELOAD_FLAG = 'chunk-error-reload-at';
+      const last = sessionStorage.getItem(RELOAD_FLAG);
+      const now = Date.now();
+      // Solo recargamos si no lo hicimos en los últimos 30s (evita loop).
+      if (!last || now - Number(last) > 30000) {
+        sessionStorage.setItem(RELOAD_FLAG, String(now));
+        // Forzar purga de SW + caches antes de reload — sin esto el SW
+        // viejo seguiría sirviendo el mismo HTML stale.
+        const purgeAndReload = async () => {
+          try {
+            if ('caches' in window) {
+              const keys = await caches.keys();
+              await Promise.all(keys.map((k) => caches.delete(k)));
+            }
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map((r) => r.unregister()));
+            }
+          } catch { /* ignore */ }
+          window.location.reload();
+        };
+        void purgeAndReload();
+        return;
+      }
+    }
+
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
   }

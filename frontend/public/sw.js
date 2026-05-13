@@ -17,7 +17,7 @@
  *   cache name not in the current set.
  */
 
-const VERSION = 'v10';
+const VERSION = 'v11';
 const STATIC_CACHE  = `legal-rag-static-${VERSION}`;
 const DYNAMIC_CACHE = `legal-rag-dynamic-${VERSION}`;
 const ALLOWLIST = [STATIC_CACHE, DYNAMIC_CACHE];
@@ -146,20 +146,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (HTML pages, manifest, etc.): network-first.
-  // We never serve stale HTML — that was the root cause of the
-  // ChunkLoadError loop. Cache only as offline fallback.
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone)).catch(() => {});
-        }
-        return response;
-      })
-      .catch(() => ensureResponse(caches.match(request)))
-  );
+  // HTML / navigation requests — NETWORK-ONLY, jamás cachear.
+  // El cache de HTML era la causa de ChunkLoadError: el HTML stale apuntaba
+  // a chunks JS de builds anteriores que Vercel ya purgó, generando 404 y
+  // rompiendo TODA la app. La única política segura es nunca cachear HTML.
+  // Si el usuario está offline y el HTML no se puede cargar, dejamos que el
+  // browser muestre su propio error de red — es mucho menos invasivo que
+  // servir una versión de la app que no funciona.
+  if (request.mode === 'navigate' ||
+      request.destination === 'document' ||
+      (request.headers.get('accept') || '').includes('text/html')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Otros recursos (manifest, etc.): network-only también, sin cache.
+  event.respondWith(fetch(request).catch(() => offlineResponse()));
 });
 
 // ─── Background sync (offline actions) ────────────────────────────────
