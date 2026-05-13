@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import { AlertTriangle, Trash2, X, Brain, Database, ScanLine } from 'lucide-react';
+import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -44,7 +45,7 @@ export default function DeleteDocumentConfirm({ open, document, onClose, onDelet
     setDeleting(true);
     setError(null);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const token = await getAuthToken();
       const r = await fetch(`${API_URL}/api/v1/documents/${document.id}?refreshBrain=true`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},

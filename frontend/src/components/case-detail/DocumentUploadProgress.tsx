@@ -19,6 +19,7 @@ import {
   X, CheckCircle2, AlertTriangle, Sparkles, FileText, Upload, Brain,
   Scissors, Database, ScanLine, ListChecks, AlertCircle,
 } from 'lucide-react';
+import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -104,7 +105,7 @@ export default function DocumentUploadProgress({ caseId, file, open, onClose, on
 
     const run = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const token = await getAuthToken();
         const fd = new FormData();
         fd.append('caseId', caseId);
         fd.append('title', file.name.replace(/\.[^.]+$/, ''));

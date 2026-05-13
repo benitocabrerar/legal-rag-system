@@ -16,6 +16,7 @@ import {
   ScanSearch, MessageCircle, Pencil, FilePlus, AlertCircle, ChevronDown,
   Filter,
 } from 'lucide-react';
+import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -74,7 +75,7 @@ export default function CaseActivityDrawer({ caseId, open, onClose }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const token = await getAuthToken();
       const r = await fetch(`${API_URL}/api/v1/cases/${caseId}/activity?limit=200`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

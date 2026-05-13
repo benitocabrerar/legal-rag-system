@@ -17,7 +17,7 @@
  *   cache name not in the current set.
  */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const STATIC_CACHE  = `legal-rag-static-${VERSION}`;
 const DYNAMIC_CACHE = `legal-rag-dynamic-${VERSION}`;
 const ALLOWLIST = [STATIC_CACHE, DYNAMIC_CACHE];
@@ -79,16 +79,30 @@ self.addEventListener('fetch', (event) => {
   // optimal — any caching here just gets in the way of fresh deploys.
   if (url.pathname.startsWith('/_next/')) return;
 
+  // Helper: garantizar SIEMPRE una Response válida. Si no hay cache, devolvemos
+  // una Response 503 sintética para evitar "Failed to convert value to Response".
+  const offlineResponse = (msg = 'offline') =>
+    new Response(msg, { status: 503, statusText: 'Service Unavailable', headers: { 'Content-Type': 'text/plain' } });
+
+  const ensureResponse = async (cachePromise) => {
+    const cached = await cachePromise;
+    return cached || offlineResponse();
+  };
+
   // API: network-first, fall back to cached response when offline.
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone));
+          // No cachear respuestas no-200 (ej. 401/500) para no servirlas como
+          // si fueran válidas offline.
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone)).catch(() => {});
+          }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => ensureResponse(caches.match(request)))
     );
     return;
   }
@@ -98,12 +112,16 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then((c) => c.put(request, clone));
-          return response;
-        }).catch(() => caches.match(request));
-      })
+        return fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(STATIC_CACHE).then((c) => c.put(request, clone)).catch(() => {});
+            }
+            return response;
+          })
+          .catch(() => offlineResponse('asset unavailable'));
+      }),
     );
     return;
   }
@@ -114,11 +132,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone));
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((c) => c.put(request, clone)).catch(() => {});
+        }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => ensureResponse(caches.match(request)))
   );
 });
 

@@ -18,6 +18,7 @@ import {
   Sparkles, X, Brain, Scale, Copy, Check, Download, ChevronDown, ChevronRight,
   Loader2, FileSignature, AlertCircle, BookOpen,
 } from 'lucide-react';
+import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -72,7 +73,7 @@ export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
 
     const run = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        const token = await getAuthToken();
         const res = await fetch(`${API_URL}/api/v1/cases/${caseId}/deep-analysis`, {
           method: 'POST',
           headers: {

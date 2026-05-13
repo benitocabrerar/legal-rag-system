@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { BookOpen, Scale, FileText, Search, RefreshCw, Sparkles, ExternalLink } from 'lucide-react';
 import { LegalType, legalTypeConfig } from '@/lib/design-tokens';
+import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -126,7 +127,7 @@ export function LegalReferences({ legalType, references, caseId }: LegalReferenc
     if (!caseId) return;
     setLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const token = await getAuthToken();
       const url = regenerate
         ? `${API_URL}/api/v1/cases/${caseId}/brain/refresh`
         : `${API_URL}/api/v1/cases/${caseId}/brain`;
