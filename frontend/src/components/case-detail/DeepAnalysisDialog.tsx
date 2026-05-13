@@ -16,7 +16,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Sparkles, X, Brain, Scale, Copy, Check, Download, ChevronDown, ChevronRight,
-  Loader2, FileSignature, AlertCircle, BookOpen,
+  Loader2, FileSignature, AlertCircle, BookOpen, FileText, Calendar, BookMarked,
+  Gavel, Target, AlertTriangle, Lightbulb, ListChecks, TrendingUp, TrendingDown,
+  ShieldAlert, ShieldCheck, Clock,
 } from 'lucide-react';
 import { getAuthToken } from '@/lib/get-auth-token';
 
@@ -277,35 +279,12 @@ export default function DeepAnalysisDialog({ caseId, open, onClose }: Props) {
           )}
 
           {done && !error && sections.length > 0 && (
-            <div className="space-y-3">
-              {sections.map((s, i) => {
-                const isCollapsed = !!collapsedSections[s.key];
-                return (
-                  <section
-                    key={s.key}
-                    className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
-                  >
-                    <button
-                      onClick={() => setCollapsedSections((prev) => ({ ...prev, [s.key]: !prev[s.key] }))}
-                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 grid place-items-center text-indigo-700 text-xs font-bold flex-shrink-0">
-                        {i + 1}
-                      </div>
-                      <h3 className="flex-1 text-sm font-bold text-gray-900">{s.title.replace(/^[IVX]+\.\s*/, '')}</h3>
-                      {isCollapsed
-                        ? <ChevronRight className="w-4 h-4 text-gray-400" />
-                        : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                    </button>
-                    {!isCollapsed && (
-                      <div className="px-4 pb-4 prose prose-sm max-w-none border-t border-gray-100 pt-3">
-                        <MarkdownLike content={s.body} />
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
+            <DictamenRenderer
+              sections={sections}
+              collapsed={collapsedSections}
+              onToggle={(k) => setCollapsedSections((prev) => ({ ...prev, [k]: !prev[k] }))}
+              meta={meta}
+            />
           )}
         </div>
 
@@ -433,4 +412,400 @@ function renderInline(text: string): React.ReactNode {
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
+}
+
+// =============================================================================
+// DictamenRenderer — visualización high-end por sección
+// =============================================================================
+//
+// Lugar de markdown plano cuando termina el stream. Detecta el tipo de cada
+// sección (I-VIII) y la renderiza con un layout específico:
+//   I.  Resumen     → card-portada con tipografía editorial
+//   II. Hechos      → timeline vertical con dots
+//   III. Marco norm.→ grid de citas como pills/cards
+//   IV. Análisis    → cards de subsunción
+//   V.  FODA        → grid 2x2 coloreado
+//   VI. Riesgos     → lista con badges de severidad
+//   VII. Estrategia → 3 columnas (corto/medio/largo)
+//   VIII. Acción    → checklist numerado con priority
+
+interface DictamenSection { title: string; body: string; key: string }
+
+interface DictamenRendererProps {
+  sections: DictamenSection[];
+  collapsed: Record<string, boolean>;
+  onToggle: (key: string) => void;
+  meta: any;
+}
+
+function DictamenRenderer({ sections, collapsed, onToggle, meta }: DictamenRendererProps) {
+  // Detectar nivel de riesgo desde sección VI (Riesgos)
+  const globalRisk = detectGlobalRisk(sections);
+
+  return (
+    <div className="space-y-4">
+      {/* Cover card */}
+      <CoverCard meta={meta} risk={globalRisk} sectionCount={sections.length} />
+
+      {/* Secciones temáticas */}
+      {sections.map((s, i) => {
+        const type = detectSectionType(s.title, i);
+        const isOpen = !collapsed[s.key];
+        return (
+          <SectionWrapper key={s.key} type={type} index={i} title={s.title} isOpen={isOpen} onToggle={() => onToggle(s.key)}>
+            {isOpen && <SectionBody type={type} body={s.body} />}
+          </SectionWrapper>
+        );
+      })}
+    </div>
+  );
+}
+
+type SectionType = 'summary' | 'facts' | 'norms' | 'analysis' | 'swot' | 'risks' | 'strategy' | 'actions' | 'generic';
+
+function detectSectionType(title: string, idx: number): SectionType {
+  const t = title.toLowerCase();
+  if (/resumen|ejecutivo|sumilla/.test(t)) return 'summary';
+  if (/hecho/.test(t)) return 'facts';
+  if (/marco|normativ|aplicabl/.test(t)) return 'norms';
+  if (/análisis|analisis|jurídic|juridic|subsunción|subsuncion/.test(t)) return 'analysis';
+  if (/foda|fortalez|debilidad|oportunidad|amenaza/.test(t)) return 'swot';
+  if (/riesgo|plazo/.test(t)) return 'risks';
+  if (/estrategia|recomendad/.test(t)) return 'strategy';
+  if (/acción|accion|plan/.test(t)) return 'actions';
+  // Fallback por orden
+  return (['summary','facts','norms','analysis','swot','risks','strategy','actions'][idx] as SectionType) || 'generic';
+}
+
+const SECTION_META: Record<SectionType, { Icon: React.ComponentType<{ className?: string }>; label: string; accent: string; bg: string; ring: string }> = {
+  summary:  { Icon: FileText,       label: 'Resumen ejecutivo',    accent: 'from-slate-700 to-slate-900',   bg: 'from-slate-50/60 to-blue-50/30',   ring: 'ring-slate-200' },
+  facts:    { Icon: Clock,          label: 'Hechos relevantes',     accent: 'from-blue-600 to-indigo-700',   bg: 'from-blue-50/40 to-white',         ring: 'ring-blue-200' },
+  norms:    { Icon: BookMarked,     label: 'Marco normativo',       accent: 'from-purple-600 to-indigo-700', bg: 'from-purple-50/40 to-white',       ring: 'ring-purple-200' },
+  analysis: { Icon: Gavel,          label: 'Análisis jurídico',     accent: 'from-indigo-600 to-purple-700', bg: 'from-indigo-50/40 to-white',       ring: 'ring-indigo-200' },
+  swot:     { Icon: Target,         label: 'FODA jurídico',         accent: 'from-emerald-600 to-cyan-700',  bg: 'from-emerald-50/40 to-white',      ring: 'ring-emerald-200' },
+  risks:    { Icon: AlertTriangle,  label: 'Riesgos y plazos',      accent: 'from-amber-600 to-red-700',     bg: 'from-amber-50/40 to-white',        ring: 'ring-amber-200' },
+  strategy: { Icon: Lightbulb,      label: 'Estrategia',            accent: 'from-violet-600 to-fuchsia-700',bg: 'from-violet-50/40 to-white',       ring: 'ring-violet-200' },
+  actions:  { Icon: ListChecks,     label: 'Plan de acción',        accent: 'from-rose-600 to-pink-700',     bg: 'from-rose-50/40 to-white',         ring: 'ring-rose-200' },
+  generic:  { Icon: FileText,       label: '',                      accent: 'from-gray-600 to-gray-800',     bg: 'from-gray-50 to-white',            ring: 'ring-gray-200' },
+};
+
+function SectionWrapper({
+  type, index, title, isOpen, onToggle, children,
+}: {
+  type: SectionType;
+  index: number;
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const m = SECTION_META[type];
+  const cleanTitle = title.replace(/^[IVX]+\.\s*/, '');
+  const romanNum = (title.match(/^([IVX]+)\./) || [, String(index + 1)])[1];
+  return (
+    <section className={`rounded-2xl border bg-gradient-to-br ${m.bg} shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden ${m.ring} ring-1`}>
+      <button onClick={onToggle} className="w-full px-5 py-4 flex items-center gap-4 text-left hover:bg-white/40 transition">
+        <div className="relative flex-shrink-0">
+          <div className={`absolute -inset-0.5 bg-gradient-to-br ${m.accent} rounded-xl blur opacity-25`} />
+          <div className={`relative w-11 h-11 rounded-xl bg-gradient-to-br ${m.accent} grid place-items-center text-white shadow-sm`}>
+            <m.Icon className="w-5 h-5" />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500">Sección {romanNum}</div>
+          <h3 className="text-base font-bold text-gray-900 tracking-tight">{cleanTitle}</h3>
+        </div>
+        {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+      </button>
+      {isOpen && <div className="px-5 pb-5 border-t border-white/60 pt-4">{children}</div>}
+    </section>
+  );
+}
+
+function SectionBody({ type, body }: { type: SectionType; body: string }) {
+  switch (type) {
+    case 'summary':  return <SummaryView body={body} />;
+    case 'facts':    return <FactsTimeline body={body} />;
+    case 'norms':    return <NormsCards body={body} />;
+    case 'swot':     return <SwotGrid body={body} />;
+    case 'risks':    return <RisksList body={body} />;
+    case 'strategy': return <StrategyColumns body={body} />;
+    case 'actions':  return <ActionsChecklist body={body} />;
+    case 'analysis':
+    case 'generic':
+    default:
+      return <div className="prose prose-sm max-w-none"><MarkdownLike content={body} /></div>;
+  }
+}
+
+// — Cover ——————————————————————————————————————————————————————————
+function CoverCard({ meta, risk, sectionCount }: { meta: any; risk: 'high' | 'medium' | 'low' | null; sectionCount: number }) {
+  const riskMeta = {
+    high:   { label: 'Riesgo Alto',   color: 'bg-red-100 text-red-800 ring-red-200',         Icon: ShieldAlert },
+    medium: { label: 'Riesgo Medio',  color: 'bg-amber-100 text-amber-800 ring-amber-200',   Icon: ShieldAlert },
+    low:    { label: 'Riesgo Bajo',   color: 'bg-emerald-100 text-emerald-800 ring-emerald-200', Icon: ShieldCheck },
+  };
+  const r = risk ? riskMeta[risk] : null;
+  return (
+    <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white p-6 shadow-xl">
+      <div className="absolute inset-0 opacity-30 pointer-events-none"
+           style={{ background: 'radial-gradient(circle at 80% 20%, rgba(168,85,247,0.3), transparent 50%), radial-gradient(circle at 20% 80%, rgba(59,130,246,0.25), transparent 50%)' }} />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300">Dictamen Interno · Análisis Profundo</div>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight">Estudio jurídico completo del caso</h2>
+            <p className="mt-1 text-sm text-indigo-200/80">Análisis estructurado en {sectionCount} secciones · generado por IA con corpus normativo vectorizado</p>
+          </div>
+          {r && (
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ring-1 ${r.color}`}>
+              <r.Icon className="w-3.5 h-3.5" />
+              {r.label}
+            </div>
+          )}
+        </div>
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <CoverStat label="Modelo IA" value={meta?.model || '—'} />
+          <CoverStat label="Documentos" value={meta?.documents ?? '—'} />
+          <CoverStat label="Eventos" value={meta?.events ?? '—'} />
+          <CoverStat label="Fuentes legales" value={meta?.legalSourcesUsed ?? 0} highlight={meta?.legalSourcesUsed > 0} />
+        </div>
+      </div>
+    </div>
+  );
+}
+function CoverStat({ label, value, highlight = false }: { label: string; value: any; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg backdrop-blur ${highlight ? 'bg-emerald-400/20 ring-1 ring-emerald-400/40' : 'bg-white/5 ring-1 ring-white/10'} px-3 py-2`}>
+      <div className="text-[9px] uppercase tracking-wider text-indigo-200/80 font-bold">{label}</div>
+      <div className="text-sm font-bold mt-0.5 truncate">{String(value)}</div>
+    </div>
+  );
+}
+
+// — Summary ————————————————————————————————————————————————————————
+function SummaryView({ body }: { body: string }) {
+  const paragraphs = body.split(/\n\n+/).filter((p) => p.trim());
+  return (
+    <div className="space-y-3 [&_p]:!leading-relaxed">
+      {paragraphs.map((p, i) => (
+        <p key={i} className={`text-sm text-gray-800 ${i === 0 ? 'text-base first-letter:text-3xl first-letter:font-bold first-letter:mr-1 first-letter:float-left first-letter:leading-none first-letter:text-slate-800' : ''}`}>
+          {renderInline(p.replace(/\n/g, ' '))}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// — Hechos: timeline ————————————————————————————————————————————————
+function FactsTimeline({ body }: { body: string }) {
+  // Detectar items: "3.1 — ..." o "1. ..." o "- ..."
+  const items = parseListItems(body);
+  if (items.length === 0) return <MarkdownLike content={body} />;
+  return (
+    <div className="relative pl-6">
+      <div className="absolute left-2 top-2 bottom-2 w-px bg-gradient-to-b from-blue-400 via-indigo-300 to-transparent" />
+      <ul className="space-y-3">
+        {items.map((it, i) => (
+          <li key={i} className="relative">
+            <span className="absolute -left-[18px] top-1 w-3 h-3 rounded-full bg-white border-2 border-blue-500 shadow" />
+            <p className="text-sm text-gray-800 leading-relaxed">{renderInline(it)}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// — Marco Normativo: pills/cards ——————————————————————————————————————
+function NormsCards({ body }: { body: string }) {
+  const items = parseListItems(body);
+  if (items.length === 0) return <MarkdownLike content={body} />;
+  return (
+    <div className="grid sm:grid-cols-2 gap-2.5">
+      {items.map((it, i) => {
+        // Detectar si tiene formato "Art. X — descripción"
+        const m = it.match(/^\*?\*?(Art\.?\s*\d+[\w.°º]*[^—:*]*?)[\*]?[—:](.+)$/i);
+        const title = m ? m[1].trim() : '';
+        const desc = m ? m[2].trim() : it;
+        const hasCitaPorVerificar = /\[CITA POR VERIFICAR/i.test(it);
+        return (
+          <div
+            key={i}
+            className={`rounded-lg p-3 bg-white border ${hasCitaPorVerificar ? 'border-amber-200' : 'border-purple-200/60'} shadow-sm hover:shadow transition`}
+          >
+            {title && (
+              <div className="inline-flex items-center gap-1 mb-1.5 px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-purple-100 text-purple-800">
+                <BookMarked className="w-3 h-3 opacity-70" />
+                {title}
+              </div>
+            )}
+            <div className="text-sm text-gray-800 leading-relaxed">{renderInline(desc)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// — FODA: grid 2x2 ——————————————————————————————————————————————————
+function SwotGrid({ body }: { body: string }) {
+  // Buscar sub-secciones ### Fortalezas / Debilidades / Oportunidades / Amenazas
+  const findSection = (re: RegExp): string[] => {
+    const m = body.match(new RegExp(`###\\s+${re.source}[\\s\\S]+?(?=###|$)`, 'i'));
+    if (!m) return [];
+    return parseListItems(m[0]);
+  };
+  const fortalezas = findSection(/fortalez/);
+  const debilidades = findSection(/debilidad/);
+  const oportunidades = findSection(/oportunidad/);
+  const amenazas = findSection(/amenaza/);
+  if (!fortalezas.length && !debilidades.length && !oportunidades.length && !amenazas.length) {
+    return <MarkdownLike content={body} />;
+  }
+  const Cell = ({ items, Icon, title, accent }: any) => (
+    <div className={`rounded-xl p-4 ${accent.bg} ${accent.border} border`}>
+      <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${accent.text} mb-2`}>
+        <Icon className="w-3.5 h-3.5" /> {title}
+      </div>
+      <ul className="space-y-1.5">
+        {items.length === 0 && <li className="text-xs text-gray-400 italic">—</li>}
+        {items.map((it: string, i: number) => (
+          <li key={i} className="text-xs text-gray-800 leading-relaxed flex gap-1.5">
+            <span className={`mt-1 flex-shrink-0 w-1 h-1 rounded-full ${accent.dot}`} />
+            <span>{renderInline(it)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      <Cell items={fortalezas}   Icon={TrendingUp}      title="Fortalezas"   accent={{ bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', dot: 'bg-emerald-500' }} />
+      <Cell items={oportunidades} Icon={Lightbulb}       title="Oportunidades" accent={{ bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-800',    dot: 'bg-blue-500' }} />
+      <Cell items={debilidades}  Icon={TrendingDown}    title="Debilidades"  accent={{ bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   dot: 'bg-amber-500' }} />
+      <Cell items={amenazas}     Icon={ShieldAlert}     title="Amenazas"     accent={{ bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-800',     dot: 'bg-red-500' }} />
+    </div>
+  );
+}
+
+// — Riesgos: lista con badges ——————————————————————————————————————
+function RisksList({ body }: { body: string }) {
+  const items = parseListItems(body);
+  if (items.length === 0) return <MarkdownLike content={body} />;
+  return (
+    <ul className="space-y-2.5">
+      {items.map((it, i) => {
+        const lower = it.toLowerCase();
+        const severity: 'high' | 'medium' | 'low' = /urgent|crític|vencid|inminente|prescripc|caducid/.test(lower) ? 'high'
+          : /próxim|plazo|cautelar/.test(lower) ? 'medium' : 'low';
+        const colors = severity === 'high' ? 'bg-red-50 border-red-200' : severity === 'medium' ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200';
+        const badge = severity === 'high' ? 'bg-red-100 text-red-800' : severity === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700';
+        return (
+          <li key={i} className={`rounded-lg border p-3 ${colors} flex gap-3`}>
+            <span className={`inline-flex items-center px-2 py-0.5 h-fit rounded-full text-[10px] font-bold uppercase ${badge}`}>
+              {severity === 'high' ? 'Alto' : severity === 'medium' ? 'Medio' : 'Bajo'}
+            </span>
+            <p className="text-sm text-gray-800 leading-relaxed flex-1">{renderInline(it)}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// — Estrategia: 3 columnas ————————————————————————————————————————
+function StrategyColumns({ body }: { body: string }) {
+  const findHorizon = (re: RegExp): string[] => {
+    const m = body.match(new RegExp(`###\\s+(?:[^\\n]*?${re.source})[\\s\\S]+?(?=###|$)`, 'i'));
+    if (!m) return [];
+    return parseListItems(m[0]);
+  };
+  const corto = findHorizon(/corto/);
+  const medio = findHorizon(/medio/);
+  const largo = findHorizon(/largo/);
+  if (!corto.length && !medio.length && !largo.length) {
+    return <MarkdownLike content={body} />;
+  }
+  const Col = ({ items, title, accent }: any) => (
+    <div className={`rounded-xl p-4 ${accent.bg} border ${accent.border}`}>
+      <div className={`text-[11px] font-bold uppercase tracking-wider ${accent.text} mb-2`}>{title}</div>
+      <ul className="space-y-1.5">
+        {items.length === 0 ? <li className="text-xs text-gray-400 italic">—</li> :
+          items.map((it: string, i: number) => (
+            <li key={i} className="text-xs text-gray-800 leading-relaxed flex gap-1.5">
+              <span className={`mt-1 flex-shrink-0 w-1 h-1 rounded-full ${accent.dot}`} />
+              <span>{renderInline(it)}</span>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+  return (
+    <div className="grid sm:grid-cols-3 gap-3">
+      <Col items={corto} title="Corto plazo (0-30 días)"   accent={{ bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',    dot: 'bg-rose-500' }} />
+      <Col items={medio} title="Mediano plazo (1-6 meses)" accent={{ bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-800',  dot: 'bg-violet-500' }} />
+      <Col items={largo} title="Largo plazo (>6 meses)"    accent={{ bg: 'bg-indigo-50',  border: 'border-indigo-200',  text: 'text-indigo-800',  dot: 'bg-indigo-500' }} />
+    </div>
+  );
+}
+
+// — Plan de acción: checklist numerado ———————————————————————————————
+function ActionsChecklist({ body }: { body: string }) {
+  const items = parseListItems(body);
+  if (items.length === 0) return <MarkdownLike content={body} />;
+  return (
+    <ol className="space-y-2.5">
+      {items.map((it, i) => {
+        const lower = it.toLowerCase();
+        const priority: 'high' | 'medium' | 'low' = /(alta|urgente|inmediat)/.test(lower) ? 'high'
+          : /(media|importante)/.test(lower) ? 'medium' : 'low';
+        const badge = priority === 'high' ? 'bg-red-100 text-red-700' : priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
+        return (
+          <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 flex gap-3 hover:shadow-sm transition">
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-rose-500 to-pink-600 text-white grid place-items-center text-xs font-bold shadow">
+              {i + 1}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-900 leading-snug">{renderInline(it)}</p>
+              <span className={`mt-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${badge}`}>
+                Prioridad {priority === 'high' ? 'Alta' : priority === 'medium' ? 'Media' : 'Baja'}
+              </span>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// — Helpers compartidos ——————————————————————————————————————————————
+function parseListItems(body: string): string[] {
+  const lines = body.split('\n');
+  const items: string[] = [];
+  let current = '';
+  const flush = () => { if (current.trim()) items.push(current.trim()); current = ''; };
+  for (const line of lines) {
+    if (/^\s*(?:[-*•]|\d+(?:\.\d+)*[.)\-])\s+/.test(line)) {
+      flush();
+      current = line.replace(/^\s*(?:[-*•]|\d+(?:\.\d+)*[.)\-])\s+/, '');
+    } else if (current && line.trim()) {
+      current += ' ' + line.trim();
+    } else if (!current && line.trim() && !line.startsWith('#')) {
+      // párrafo suelto, no es item de lista
+    }
+  }
+  flush();
+  return items.filter(Boolean);
+}
+
+function detectGlobalRisk(sections: DictamenSection[]): 'high' | 'medium' | 'low' | null {
+  const risksSection = sections.find((s) => /riesgo|plazo/i.test(s.title));
+  if (!risksSection) return null;
+  const body = risksSection.body.toLowerCase();
+  const highHits  = (body.match(/\b(alto|crítico|urgente|inminente|vencido|prescripción|caducidad)\b/g) || []).length;
+  const mediumHits = (body.match(/\b(medio|moderado|próximo)\b/g) || []).length;
+  if (highHits >= 2) return 'high';
+  if (highHits >= 1 || mediumHits >= 2) return 'medium';
+  return 'low';
 }
