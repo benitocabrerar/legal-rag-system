@@ -99,9 +99,11 @@ export default function LegalReferenceDialog({
   }>({});
   const abortRef = useRef<AbortController | null>(null);
 
-  const reset = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
+  const reset = ({ abort = true }: { abort?: boolean } = {}) => {
+    if (abort) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    }
     setAnalysis(null);
     setSources([]);
     setError(null);
@@ -133,7 +135,7 @@ export default function LegalReferenceDialog({
     const bumpActivity = () => { lastActivity = Date.now(); armWatchdog(); };
 
     const run = async () => {
-      reset();
+      reset({ abort: false });
       setLoading(true);
       armWatchdog();
       const startTs = Date.now();
