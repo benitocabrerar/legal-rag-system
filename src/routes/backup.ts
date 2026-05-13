@@ -89,6 +89,13 @@ export default async function backupRoutes(
   fastify: FastifyInstance,
   _options: Record<string, any> = {}
 ) {
+  // Auth global: TODAS las rutas de este router requieren un JWT válido y
+  // pueblan `request.user`. Sin esto, cada handler hacía
+  //   prisma.user.findUnique({ where: { id: (request as any).user?.id } })
+  // con id=undefined → PrismaClientValidationError → 500. Mover el guard
+  // a un hook centralizado evita repetir el patrón en cada endpoint.
+  fastify.addHook('onRequest', (fastify as any).authenticate);
+
   // prisma is imported from lib/prisma.js singleton
   // Initialize services
   const redis = new Redis({
