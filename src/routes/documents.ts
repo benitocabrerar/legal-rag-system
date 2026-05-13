@@ -19,6 +19,58 @@ const uploadJsonSchema = z.object({
   content: z.string().min(1),
 });
 
+/**
+ * Repara JSON truncado del shape { "prompts": [ {...}, {...}, <CORTE> ] }.
+ * Estrategia: avanzar carácter a carácter desde el primer `{` llevando
+ * contadores de braces/brackets y posición del último objeto bien cerrado.
+ * Cuando se acaba el texto, recortamos hasta el último objeto cerrado y
+ * cerramos manualmente el array y el objeto raíz.
+ */
+function repairTruncatedPromptsJson(s: string): any | null {
+  if (!s || s[0] !== '{') return null;
+  let depthBrace = 0;
+  let depthBracket = 0;
+  let inString = false;
+  let escape = false;
+  let lastSafePromptEnd = -1; // índice del último `}` dentro del array prompts
+  let arrayStarted = false;
+  let arrayDepthBracket = 0;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+
+    if (ch === '{') depthBrace++;
+    else if (ch === '}') {
+      depthBrace--;
+      // Estamos dentro del array prompts si el array ya empezó y la
+      // profundidad de corchetes mayor o igual a la del array
+      if (arrayStarted && depthBracket >= arrayDepthBracket && depthBrace === 1) {
+        lastSafePromptEnd = i;
+      }
+    }
+    else if (ch === '[') {
+      depthBracket++;
+      if (!arrayStarted) {
+        arrayStarted = true;
+        arrayDepthBracket = depthBracket;
+      }
+    }
+    else if (ch === ']') depthBracket--;
+  }
+
+  if (lastSafePromptEnd < 0) return null;
+  const closed = s.slice(0, lastSafePromptEnd + 1) + ']}';
+  try { return JSON.parse(closed); }
+  catch {
+    try { return JSON.parse(closed.replace(/,(\s*[}\]])/g, '$1')); }
+    catch { return null; }
+  }
+}
+
 function chunkText(text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): string[] {
   const cleaned = (text || '').replace(/\s+/g, ' ').trim();
   if (!cleaned) return [];
@@ -1146,7 +1198,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         // Streaming para feedback en vivo
         const stream: any = await (aiClient as any).chat.completions.create({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
-          max_tokens: 4000,
+          max_tokens: 8000,
           stream: true,
         });
 
@@ -1363,7 +1415,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       try {
         const completion = await aiClient.chat.completions.create({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
-          max_tokens: 3500,
+          max_tokens: 8000,
         });
         const raw = (completion.choices?.[0]?.message?.content || '').trim();
         const fenced = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -1378,6 +1430,11 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
               parsed = JSON.parse(fenced.slice(start, end + 1).replace(/,(\s*[}\]])/g, '$1'));
             } catch { /* null */ }
           }
+        }
+        // Fallback: el JSON se truncó por max_tokens. Recuperamos las entradas
+        // completas del array prompts cerrando manualmente el array y objeto.
+        if (!parsed && start >= 0) {
+          parsed = repairTruncatedPromptsJson(fenced.slice(start));
         }
         if (!parsed || !Array.isArray(parsed.prompts)) {
           return reply.code(502).send({ error: 'AI_INVALID_JSON', rawPreview: raw.slice(0, 300) });
