@@ -17,7 +17,7 @@
  *   cache name not in the current set.
  */
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const STATIC_CACHE  = `legal-rag-static-${VERSION}`;
 const DYNAMIC_CACHE = `legal-rag-dynamic-${VERSION}`;
 const ALLOWLIST = [STATIC_CACHE, DYNAMIC_CACHE];
@@ -90,7 +90,24 @@ self.addEventListener('fetch', (event) => {
   };
 
   // API: network-first, fall back to cached response when offline.
+  //
+  // CRÍTICO: bypass total para SSE/streaming. response.clone() mantiene dos
+  // ReadableStreams del mismo body. cache.put() consume uno mientras la app
+  // consume el otro — si los ritmos difieren (típico en SSE largos), AMBOS
+  // se bloquean y el streaming se "cuelga" sin error. Lista de paths que
+  // streamean (Anthropic chunks, upload progress, audit, etc.):
+  const isStreamingPath =
+    /\/deep-analysis$/.test(url.pathname) ||
+    /\/upload-stream$/.test(url.pathname) ||
+    /\/chat$/.test(url.pathname) ||
+    /\/generate-document$/.test(url.pathname) ||
+    /\/summarization\/stream/.test(url.pathname);
+
   if (url.pathname.startsWith('/api/')) {
+    if (isStreamingPath) {
+      // Bypass: dejar que el browser maneje el stream directo sin pasar por SW.
+      return;
+    }
     event.respondWith(
       fetch(request)
         .then((response) => {
