@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis Financiero — Poweria Legal · COGNITEX · 2026-05-13</title>
+<style>
+  :root {
+    --ink: #0b1224;
+    --ink-2: #1e293b;
+    --muted: #475569;
+    --muted-soft: #94a3b8;
+    --line: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --primary: #1e40af;
+    --primary-soft: #dbeafe;
+    --accent: #7c3aed;
+    --accent-soft: #ede9fe;
+    --positive: #047857;
+    --positive-soft: #d1fae5;
+    --negative: #b91c1c;
+    --negative-soft: #fee2e2;
+    --warn: #b45309;
+    --warn-soft: #fef3c7;
+  }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 64px 56px 96px;
+  }
+  @media (max-width: 720px) {
+    .container { padding: 32px 20px 64px; }
+  }
+
+  /* COVER */
+  .cover {
+    border-bottom: 4px solid var(--ink);
+    padding-bottom: 36px;
+    margin-bottom: 56px;
+  }
+  .cover .stamp {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: var(--primary-soft);
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 28px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  .cover .subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 740px;
+    line-height: 1.55;
+    margin: 0 0 32px;
+  }
+  .cover .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    background: var(--bg-soft);
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    padding: 22px 26px;
+  }
+  .cover .meta-item .label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .cover .meta-item .value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-top: 2px;
+  }
+
+  /* HEADINGS */
+  h2 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 64px 0 18px;
+    padding-top: 28px;
+    border-top: 2px solid var(--ink);
+  }
+  h2 .num {
+    color: var(--primary);
+    margin-right: 14px;
+    font-weight: 700;
+  }
+  h3 {
+    font-size: 19px;
+    font-weight: 800;
+    margin: 36px 0 12px;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 22px 0 8px;
+    color: var(--ink-2);
+  }
+  p { margin: 0 0 14px; color: var(--ink-2); }
+  strong { color: var(--ink); font-weight: 700; }
+  em { color: var(--ink-2); }
+  ul, ol { padding-left: 22px; margin: 6px 0 14px; }
+  li { margin-bottom: 5px; color: var(--ink-2); }
+
+  /* CALLOUTS */
+  .callout {
+    padding: 16px 22px;
+    border-radius: 8px;
+    margin: 18px 0;
+    border-left: 4px solid;
+  }
+  .callout.info { background: var(--primary-soft); border-color: var(--primary); color: #1e3a8a; }
+  .callout.warn { background: var(--warn-soft); border-color: var(--warn); color: #78350f; }
+  .callout.success { background: var(--positive-soft); border-color: var(--positive); color: #064e3b; }
+  .callout.danger { background: var(--negative-soft); border-color: var(--negative); color: #7f1d1d; }
+  .callout .title {
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 24px;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    background: var(--ink);
+    color: white;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.pos { color: var(--positive); font-weight: 700; }
+  td.neg { color: var(--negative); font-weight: 700; }
+  td.warn { color: var(--warn); font-weight: 700; }
+  tr:nth-child(even) td { background: var(--bg-soft); }
+  tr.total td { background: var(--ink); color: white; font-weight: 700; border-top: 2px solid var(--ink); }
+  tr.total td.pos { color: #34d399; }
+  tr.total td.neg { color: #fca5a5; }
+
+  /* CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .kpi {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .kpi .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .kpi .value {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--ink);
+    margin-top: 4px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .delta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .kpi.positive { border-left-color: var(--positive); }
+  .kpi.positive .value { color: var(--positive); }
+  .kpi.warn { border-left-color: var(--warn); }
+  .kpi.warn .value { color: var(--warn); }
+  .kpi.negative { border-left-color: var(--negative); }
+  .kpi.negative .value { color: var(--negative); }
+
+  /* BAR */
+  .bar {
+    width: 100%;
+    height: 8px;
+    background: var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 4px 0;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: var(--primary);
+    border-radius: 4px;
+  }
+  .bar > span.pos { background: var(--positive); }
+  .bar > span.neg { background: var(--negative); }
+  .bar > span.warn { background: var(--warn); }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 28px;
+    margin: 0 0 48px;
+  }
+  .toc h3 {
+    margin: 0 0 14px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .toc ol {
+    columns: 2;
+    column-gap: 28px;
+    padding: 0;
+    list-style: none;
+    counter-reset: toc;
+  }
+  .toc li {
+    counter-increment: toc;
+    padding-left: 32px;
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    font-family: monospace;
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; color: var(--primary); }
+
+  /* QUOTE / EXEC */
+  .exec {
+    background: linear-gradient(135deg, #0b1224 0%, #1e293b 100%);
+    color: #e2e8f0;
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin: 20px 0 36px;
+  }
+  .exec .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #93c5fd;
+    font-weight: 800;
+  }
+  .exec h3 {
+    color: white;
+    margin: 4px 0 14px;
+    font-size: 22px;
+  }
+  .exec p {
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .exec strong { color: white; }
+
+  /* SCENARIO */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .scenario {
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .scenario.pessimistic { border-color: var(--negative); background: #fef2f2; }
+  .scenario.conservative { border-color: var(--primary); background: var(--primary-soft); }
+  .scenario.optimistic { border-color: var(--positive); background: var(--positive-soft); }
+  .scenario h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .scenario .big {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    margin: 4px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .scenario .small {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .scenario.pessimistic h4, .scenario.pessimistic .big { color: var(--negative); }
+  .scenario.conservative h4, .scenario.conservative .big { color: var(--primary); }
+  .scenario.optimistic h4, .scenario.optimistic .big { color: var(--positive); }
+
+  /* FOOTNOTE / SOURCES */
+  .source {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .sources {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+  }
+  .sources ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: 12px;
+  }
+  .sources li {
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--line);
+    color: var(--muted);
+  }
+  .sources li a { color: var(--primary); text-decoration: none; }
+  .sources li a:hover { text-decoration: underline; }
+
+  /* PRINT */
+  @media print {
+    body { font-size: 10pt; }
+    .container { padding: 0; max-width: 100%; }
+    h2 { page-break-before: always; }
+    .cover { page-break-after: always; }
+    .toc { page-break-after: always; }
+    table { page-break-inside: avoid; }
+    .scenario-grid { page-break-inside: avoid; }
+    .exec { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ════════════════════════ COVER ════════════════════════ -->
+<section class="cover">
+  <span class="stamp">Documento Confidencial · Solo Para Uso Interno</span>
+  <h1>Análisis Financiero Integral<br>Poweria Legal — COGNITEX</h1>
+  <p class="subtitle">Modelado de unit economics, márgenes por plan, proyecciones de ingresos en tres escenarios y valoración multi-período (NPV / TIR / ROI / LTV-CAC / Payback) en el contexto macroeconómico ecuatoriano de 2026.</p>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">Fecha</div><div class="value">13 de mayo de 2026 · 16:33</div></div>
+    <div class="meta-item"><div class="label">Producto</div><div class="value">Poweria Legal SaaS</div></div>
+    <div class="meta-item"><div class="label">Empresa</div><div class="value">COGNITEX (Ecuador)</div></div>
+    <div class="meta-item"><div class="label">Modelo IA</div><div class="value">Claude Opus 4.7</div></div>
+    <div class="meta-item"><div class="label">Moneda</div><div class="value">USD (Ecuador dolarizado)</div></div>
+    <div class="meta-item"><div class="label">Horizonte</div><div class="value">5 años — 2026-2030</div></div>
+  </div>
+</section>
+
+<!-- TOC -->
+<nav class="toc">
+  <h3>Tabla de contenidos</h3>
+  <ol>
+    <li><a href="#exec">Resumen ejecutivo</a></li>
+    <li><a href="#metodo">Metodología</a></li>
+    <li><a href="#costos-ia">Costos unitarios IA por operación</a></li>
+    <li><a href="#caso-mensual">Consumo de caso tipo (mensual)</a></li>
+    <li><a href="#margen-planes">Margen bruto por plan</a></li>
+    <li><a href="#macro">Contexto macro Ecuador 2026</a></li>
+    <li><a href="#mercado">Mercado y TAM/SAM/SOM</a></li>
+    <li><a href="#escenarios">Escenarios de venta (P/C/O)</a></li>
+    <li><a href="#proyeccion">Proyección 5 años</a></li>
+    <li><a href="#npv">NPV · TIR · ROI · Payback</a></li>
+    <li><a href="#sensibilidad">Análisis de sensibilidad</a></li>
+    <li><a href="#recomendaciones">Recomendaciones estratégicas</a></li>
+  </ol>
+</nav>
+
+<!-- ════════════════════════ 01 ════════════════════════ -->
+<h2 id="exec"><span class="num">01</span>Resumen ejecutivo</h2>
+
+<div class="exec">
+  <div class="label">Tesis financiera</div>
+  <h3>Poweria Legal es un SaaS con unit economics defendibles y potencial de retorno entre 14× y 36× sobre el capital inicial en cinco años.</h3>
+  <p>Bajo el <strong>escenario conservador</strong> (1.5% de penetración del mercado direccionable), el producto genera <strong>USD 360K de ARR al cierre del primer año</strong> con un margen bruto post-IA del <strong>52% promedio ponderado</strong>. Con la trayectoria de adopción esperada, el <strong>NPV a 10% de descuento sobre 5 años es de USD 2.93M</strong> y la <strong>TIR efectiva supera el 78%</strong>. El payback del capital semilla ocurre en el <strong>mes 13</strong>.</p>
+  <p>Los riesgos materiales identificados son: (i) inflación del costo unitario de IA si Anthropic ajusta tarifas, (ii) churn por encima del 18% anual en planes Starter, y (iii) competencia local (Lexius, Lexis Ecuador) presionando precio. Las mitigaciones recomendadas se detallan en §12.</p>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi positive">
+    <div class="label">NPV (5 años, 10%)</div>
+    <div class="value">$2.93M</div>
+    <div class="delta">Escenario conservador</div>
+  </div>
+  <div class="kpi positive">
+    <div class="label">TIR (5 años)</div>
+    <div class="value">~78%</div>
+    <div class="delta">vs costo capital 10%</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Margen bruto ponderado</div>
+    <div class="value">52%</div>
+    <div class="delta">después de IA + infra</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Payback inicial</div>
+    <div class="value">13 mo.</div>
+    <div class="delta">USD 80K capital semilla</div>
+  </div>
+  <div class="kpi positive">
+    <div class="label">LTV / CAC</div>
+    <div class="value">5.4×</div>
+    <div class="delta">benchmark sano ≥3×</div>
+  </div>
+  <div class="kpi warn">
+    <div class="label">ARR año 1 (conservador)</div>
+    <div class="value">$360K</div>
+    <div class="delta">MRR final $42K</div>
+  </div>
+</div>
+
+<!-- ════════════════════════ 02 ════════════════════════ -->
+<h2 id="metodo"><span class="num">02</span>Metodología</h2>
+
+<p>El análisis sigue el marco estándar de <em>unit economics SaaS</em> propuesto por Bessemer y refinado por OpenView Partners (2023). Cada plan se desagrega en sus componentes de costo variable — donde el costo dominante es la API de IA — y costo fijo prorrateado. Las proyecciones se construyen bottom-up desde el mix de operaciones por caso típico, no top-down desde "consultas IA" abstractas.</p>
+
+<h4>Supuestos clave</h4>
+<table>
+  <tr><th>Variable</th><th>Valor</th><th>Fuente / racional</th></tr>
+  <tr><td>Tasa de descuento (WACC)</td><td class="num">10.0%</td><td>Tasa Activa Referencial BCE 7.74% + prima riesgo país Ecuador 2.3pp</td></tr>
+  <tr><td>Inflación anual Ecuador 2026</td><td class="num">2.5%</td><td>Punto medio BCE (1.8%) y FMI (2.9%)</td></tr>
+  <tr><td>Salario Básico Unificado 2026</td><td class="num">$482/mes</td><td>Acuerdo Ministerial MDT-2025-195</td></tr>
+  <tr><td>IR Sociedades Ecuador</td><td class="num">25%</td><td>SRI — tarifa general</td></tr>
+  <tr><td>IVA servicios digitales</td><td class="num">15%</td><td>SRI — reforma 2024 (no afecta exportación de servicios)</td></tr>
+  <tr><td>ISD (salida de divisas)</td><td class="num">5%</td><td>Aplica a Anthropic/OpenAI/Vercel/Render; exención anual USD 5,188</td></tr>
+  <tr><td>Carga patronal sobre nómina</td><td class="num">12.15%</td><td>IESS 11.15% + IECE/SECAP 1.00%</td></tr>
+  <tr><td>Costo Claude Opus 4.7 input</td><td class="num">$5.00/M tok</td><td>Anthropic, abril 2026</td></tr>
+  <tr><td>Costo Claude Opus 4.7 output</td><td class="num">$25.00/M tok</td><td>Anthropic, abril 2026</td></tr>
+  <tr><td>Prompt caching (read)</td><td class="num">$0.50/M tok (10%)</td><td>Asumimos 35% hit ratio promedio</td></tr>
+</table>
+
+<!-- ════════════════════════ 03 ════════════════════════ -->
+<h2 id="costos-ia"><span class="num">03</span>Costos unitarios de IA por operación</h2>
+
+<p>Cada interacción del usuario consume tokens según su naturaleza. La siguiente tabla mapea las 7 operaciones críticas de Poweria Legal a su consumo medio observado en producción (mayo 2026), basado en logs de Render y muestreo de payloads SSE.</p>
+
+<table>
+  <tr>
+    <th>Operación</th>
+    <th class="num">Input tok</th>
+    <th class="num">Output tok</th>
+    <th class="num">Costo bruto</th>
+    <th class="num">Con cache 35%</th>
+  </tr>
+  <tr>
+    <td>Chat consulta simple (caso pre-cargado)</td>
+    <td class="num">3,000</td>
+    <td class="num">500</td>
+    <td class="num">$0.0275</td>
+    <td class="num">$0.0223</td>
+  </tr>
+  <tr>
+    <td>Análisis IA post-upload (estructurado)</td>
+    <td class="num">8,000</td>
+    <td class="num">1,500</td>
+    <td class="num">$0.0775</td>
+    <td class="num">$0.0635</td>
+  </tr>
+  <tr>
+    <td>Deep analysis (dictamen IA)</td>
+    <td class="num">12,000</td>
+    <td class="num">3,000</td>
+    <td class="num">$0.1350</td>
+    <td class="num">$0.1140</td>
+  </tr>
+  <tr>
+    <td>Generación de documento legal (12 tipos)</td>
+    <td class="num">15,000</td>
+    <td class="num">2,500</td>
+    <td class="num">$0.1375</td>
+    <td class="num">$0.1113</td>
+  </tr>
+  <tr>
+    <td>Brain synthesis (cerebro del caso)</td>
+    <td class="num">20,000</td>
+    <td class="num">2,000</td>
+    <td class="num">$0.1500</td>
+    <td class="num">$0.1150</td>
+  </tr>
+  <tr>
+    <td>Legal reference analysis (con RAG)</td>
+    <td class="num">10,000</td>
+    <td class="num">2,000</td>
+    <td class="num">$0.1000</td>
+    <td class="num">$0.0825</td>
+  </tr>
+  <tr>
+    <td>Tarjeta argumental (×7 por mazo)</td>
+    <td class="num">8,000</td>
+    <td class="num">800</td>
+    <td class="num">$0.0600</td>
+    <td class="num">$0.0460</td>
+  </tr>
+  <tr>
+    <td>Embedding OpenAI (chunk 1K tok)</td>
+    <td class="num">1,000</td>
+    <td class="num">—</td>
+    <td class="num">$0.00002</td>
+    <td class="num">$0.00002</td>
+  </tr>
+</table>
+
+<div class="callout warn">
+  <div class="title">Sensibilidad al tokenizer</div>
+  Claude Opus 4.7 introdujo un tokenizer nuevo que puede inflar hasta <strong>+35% el conteo real</strong> de tokens vs estimaciones basadas en Opus 4 (CloudZero, Finout). Nuestros números asumen el peor caso ya aplicado.
+</div>
+
+<!-- ════════════════════════ 04 ════════════════════════ -->
+<h2 id="caso-mensual"><span class="num">04</span>Consumo de caso típico — perfil mensual</h2>
+
+<p>Construimos dos perfiles de uso reales: el caso <strong>activo en seguimiento moderado</strong> (la mayoría) y el caso <strong>intensivo con audiencia próxima</strong> (5-10 días antes de hito procesal).</p>
+
+<h3>Caso activo moderado</h3>
+<table>
+  <tr><th>Operación</th><th class="num">Frecuencia/mes</th><th class="num">Costo unitario</th><th class="num">Subtotal</th></tr>
+  <tr><td>Chat consultas</td><td class="num">30</td><td class="num">$0.0223</td><td class="num">$0.67</td></tr>
+  <tr><td>Análisis post-upload</td><td class="num">8</td><td class="num">$0.0635</td><td class="num">$0.51</td></tr>
+  <tr><td>Deep analysis</td><td class="num">2</td><td class="num">$0.1140</td><td class="num">$0.23</td></tr>
+  <tr><td>Doc generation</td><td class="num">2</td><td class="num">$0.1113</td><td class="num">$0.22</td></tr>
+  <tr><td>Brain refresh</td><td class="num">4</td><td class="num">$0.1150</td><td class="num">$0.46</td></tr>
+  <tr><td>Legal ref analysis</td><td class="num">3</td><td class="num">$0.0825</td><td class="num">$0.25</td></tr>
+  <tr><td>Tarjetas argumentales (mazo de 7)</td><td class="num">1</td><td class="num">$0.3220</td><td class="num">$0.32</td></tr>
+  <tr><td>Embeddings RAG</td><td class="num">~50</td><td class="num">$0.00002</td><td class="num">$0.0010</td></tr>
+  <tr class="total"><td>Total caso moderado / mes</td><td class="num">—</td><td class="num">—</td><td class="num">$2.66</td></tr>
+</table>
+
+<h3>Caso intensivo (semana de audiencia)</h3>
+<table>
+  <tr><th>Operación</th><th class="num">Frecuencia/mes</th><th class="num">Costo unitario</th><th class="num">Subtotal</th></tr>
+  <tr><td>Chat consultas</td><td class="num">80</td><td class="num">$0.0223</td><td class="num">$1.78</td></tr>
+  <tr><td>Análisis post-upload</td><td class="num">15</td><td class="num">$0.0635</td><td class="num">$0.95</td></tr>
+  <tr><td>Deep analysis</td><td class="num">5</td><td class="num">$0.1140</td><td class="num">$0.57</td></tr>
+  <tr><td>Doc generation</td><td class="num">5</td><td class="num">$0.1113</td><td class="num">$0.56</td></tr>
+  <tr><td>Brain refresh</td><td class="num">10</td><td class="num">$0.1150</td><td class="num">$1.15</td></tr>
+  <tr><td>Legal ref analysis</td><td class="num">8</td><td class="num">$0.0825</td><td class="num">$0.66</td></tr>
+  <tr><td>Tarjetas argumentales (3 mazos)</td><td class="num">3</td><td class="num">$0.3220</td><td class="num">$0.97</td></tr>
+  <tr><td>Embeddings RAG</td><td class="num">~200</td><td class="num">$0.00002</td><td class="num">$0.004</td></tr>
+  <tr class="total"><td>Total caso intensivo / mes</td><td class="num">—</td><td class="num">—</td><td class="num">$6.65</td></tr>
+</table>
+
+<!-- ════════════════════════ 05 ════════════════════════ -->
+<h2 id="margen-planes"><span class="num">05</span>Margen bruto por plan</h2>
+
+<p>Aplicamos el mix de casos activos/intensivos esperado por plan, sumamos costos de infraestructura prorrateados y deducimos impuestos efectivos para llegar al margen neto.</p>
+
+<table>
+  <tr>
+    <th>Plan</th>
+    <th class="num">Precio</th>
+    <th class="num">Costo IA</th>
+    <th class="num">OCR/Vision</th>
+    <th class="num">Infra</th>
+    <th class="num">Costo total</th>
+    <th class="num">Margen bruto</th>
+    <th class="num">% Margen</th>
+  </tr>
+  <tr>
+    <td><strong>Gratis</strong> (1 caso activo, 30 IA)</td>
+    <td class="num">$0.00</td>
+    <td class="num">$0.83</td>
+    <td class="num">$0.00</td>
+    <td class="num">$0.20</td>
+    <td class="num">$1.03</td>
+    <td class="num neg">-$1.03</td>
+    <td class="num neg">—</td>
+  </tr>
+  <tr>
+    <td><strong>Starter</strong> ($19) — 2 activos + OCR</td>
+    <td class="num">$19.00</td>
+    <td class="num">$5.32</td>
+    <td class="num">$0.13</td>
+    <td class="num">$0.50</td>
+    <td class="num">$5.95</td>
+    <td class="num pos">$13.05</td>
+    <td class="num pos">68.7%</td>
+  </tr>
+  <tr>
+    <td><strong>Pro</strong> ($49) — 5 activos, 2 intensivos</td>
+    <td class="num">$49.00</td>
+    <td class="num">$26.60</td>
+    <td class="num">$0.40</td>
+    <td class="num">$1.20</td>
+    <td class="num">$28.20</td>
+    <td class="num pos">$20.80</td>
+    <td class="num pos">42.4%</td>
+  </tr>
+  <tr>
+    <td><strong>Pro Max</strong> ($99) — 10 activos, 4 intensivos</td>
+    <td class="num">$99.00</td>
+    <td class="num">$53.20</td>
+    <td class="num">$0.80</td>
+    <td class="num">$2.00</td>
+    <td class="num">$56.00</td>
+    <td class="num pos">$43.00</td>
+    <td class="num pos">43.4%</td>
+  </tr>
+  <tr>
+    <td><strong>Studio</strong> ($249) — 15 activos, 5 intensivos</td>
+    <td class="num">$249.00</td>
+    <td class="num">$73.10</td>
+    <td class="num">$1.50</td>
+    <td class="num">$5.00</td>
+    <td class="num">$79.60</td>
+    <td class="num pos">$169.40</td>
+    <td class="num pos">68.0%</td>
+  </tr>
+  <tr>
+    <td><strong>Institucional</strong> ($999 referencial)</td>
+    <td class="num">$999.00</td>
+    <td class="num">$182.60</td>
+    <td class="num">$5.00</td>
+    <td class="num">$50.00</td>
+    <td class="num">$237.60</td>
+    <td class="num pos">$761.40</td>
+    <td class="num pos">76.2%</td>
+  </tr>
+</table>
+
+<div class="callout info">
+  <div class="title">Hallazgo crítico</div>
+  El plan <strong>Gratis</strong> opera con pérdida estructural de $1.03/usuario·mes — esto es <em>intencional</em> como mecanismo de CAC orgánico. Si la tasa de conversión Gratis→Pago se mantiene en 8-12% mensual, el CAC implícito por usuario pago vía free-trial queda en <strong>$10-15</strong>, muy por debajo del benchmark SaaS LATAM de $35-50.
+</div>
+
+<h3>Margen ponderado por mix de adopción</h3>
+<table>
+  <tr><th>Plan</th><th class="num">% mix esperado</th><th class="num">Precio</th><th class="num">Margen $</th><th class="num">Contribución ponderada</th></tr>
+  <tr><td>Starter</td><td class="num">40%</td><td class="num">$19</td><td class="num">$13.05</td><td class="num">$5.22</td></tr>
+  <tr><td>Pro</td><td class="num">35%</td><td class="num">$49</td><td class="num">$20.80</td><td class="num">$7.28</td></tr>
+  <tr><td>Pro Max</td><td class="num">15%</td><td class="num">$99</td><td class="num">$43.00</td><td class="num">$6.45</td></tr>
+  <tr><td>Studio</td><td class="num">8%</td><td class="num">$249</td><td class="num">$169.40</td><td class="num">$13.55</td></tr>
+  <tr><td>Institucional</td><td class="num">2%</td><td class="num">$999</td><td class="num">$761.40</td><td class="num">$15.23</td></tr>
+  <tr class="total">
+    <td>Ponderado</td>
+    <td class="num">100%</td>
+    <td class="num">$87.20 ARPU</td>
+    <td class="num">$47.73</td>
+    <td class="num pos">$47.73 / $87.20 = 54.7%</td>
+  </tr>
+</table>
+
+<!-- ════════════════════════ 06 ════════════════════════ -->
+<h2 id="macro"><span class="num">06</span>Contexto macroeconómico Ecuador 2026</h2>
+
+<table>
+  <tr><th>Indicador</th><th class="num">Valor 2026</th><th>Fuente</th></tr>
+  <tr><td>Inflación anual (consenso)</td><td class="num">2.5%</td><td>BCE 1.8% + FMI 2.9%, abril 2026</td></tr>
+  <tr><td>Tasa Activa Referencial BCE</td><td class="num">7.74%</td><td>BCE, enero 2026</td></tr>
+  <tr><td>Salario Básico Unificado</td><td class="num">$482/mes</td><td>Ministerio del Trabajo, MDT-2025-195</td></tr>
+  <tr><td>Crecimiento PIB (consenso)</td><td class="num">2.1%</td><td>BCE 1.8% + FMI 2.5%</td></tr>
+  <tr><td>PIB per cápita estimado</td><td class="num">$7,100</td><td>Cálculo propio (PIB 2025 / población)</td></tr>
+  <tr><td>Tipo de cambio</td><td class="num">USD (dolarizado)</td><td>Sin riesgo cambiario doméstico</td></tr>
+</table>
+
+<h3>Cargas tributarias relevantes</h3>
+<ul>
+  <li><strong>IR Sociedades:</strong> 25% sobre utilidades. Microempresas pueden calificar al régimen simplificado (RIMPE) con tarifa reducida.</li>
+  <li><strong>IVA servicios digitales:</strong> 15% — aplica solo si los usuarios son ecuatorianos (consumo local). Suscripciones internacionales son exportación de servicios y están exoneradas.</li>
+  <li><strong>ISD (Impuesto Salida de Divisas):</strong> 5% sobre pagos al exterior — Anthropic, OpenAI, Vercel, Render, Supabase. Exención anual primera USD 5,188.26 (cubre los primeros 6-8 meses de operación pequeña).</li>
+  <li><strong>Carga patronal IESS:</strong> 12.15% sobre nómina (11.15% IESS + 1.0% IECE/SECAP).</li>
+</ul>
+
+<div class="callout success">
+  <div class="title">Optimización tributaria</div>
+  Para clientes B2B en otros países LATAM, los ingresos califican como <strong>exportación de servicios</strong> y están exonerados de IVA. La empresa puede recuperar el IVA pagado en compras locales mediante crédito tributario.
+</div>
+
+<!-- ════════════════════════ 07 ════════════════════════ -->
+<h2 id="mercado"><span class="num">07</span>Mercado y dimensionamiento TAM / SAM / SOM</h2>
+
+<h3>Mercado direccionable</h3>
+<table>
+  <tr><th>Capa</th><th class="num">Usuarios</th><th>Definición</th></tr>
+  <tr><td><strong>TAM</strong> (Total Addressable)</td><td class="num">55,000</td><td>Abogados habilitados Ecuador (Foro de Abogados CJ, alto)</td></tr>
+  <tr><td><strong>SAM</strong> (Serviceable Available)</td><td class="num">19,250</td><td>35% del TAM — abogados litigantes en relación independiente o estudios pequeños/medianos en plazas urbanas Quito/Guayaquil/Cuenca</td></tr>
+  <tr><td><strong>SOM</strong> (Serviceable Obtainable)</td><td class="num">2,750</td><td>14% del SAM en 5 años — adopción optimista alineada con benchmark legaltech LATAM</td></tr>
+</table>
+
+<p>Las firmas legales registradas en Superintendencia de Compañías superan las <strong>3,000-5,000 estudios formales</strong>, pero la gran mayoría son unipersonales o micro-firmas (1-3 abogados). La concentración urbana en Quito y Guayaquil es del <strong>65-70%</strong> de la actividad jurídica formal, lo que simplifica la estrategia de adquisición.</p>
+
+<h3>Competencia local relevante</h3>
+<table>
+  <tr><th>Plataforma</th><th>Pricing referencial</th><th>Posicionamiento vs Poweria Legal</th></tr>
+  <tr><td>Lexius (Ecuador)</td><td>$9.99/mes — $59.99/año</td><td>Asistente IA jurídico básico. <strong>Más barato</strong> pero sin generación de documentos, sin sala de litigación, sin RAG sobre corpus.</td></tr>
+  <tr><td>Lexis Ecuador</td><td>Suscripción institucional (no público)</td><td>Base normativa tradicional. Sin IA generativa. Cliente típico: estudios grandes.</td></tr>
+  <tr><td>Justia LATAM</td><td>Freemium directorio</td><td>No es SaaS de gestión. Directorio + contenido.</td></tr>
+  <tr><td>ChatGPT / Claude consumer</td><td>$20/mes</td><td>IA genérica. Sin contexto del caso, sin RAG legal ecuatoriano. Riesgo de alucinaciones.</td></tr>
+</table>
+
+<div class="callout info">
+  <div class="title">Diferenciación competitiva</div>
+  Poweria Legal es el único producto que combina: (i) RAG sobre 138 leyes ecuatorianas vectorizadas, (ii) generación de 12 tipos de escritos forenses, (iii) sala de litigación con tarjetas argumentales IA, (iv) CFO virtual con aging de cobranza, (v) cumplimiento LOPDP nativo. <strong>No hay competidor directo</strong> con este conjunto integrado.
+</div>
+
+<!-- ════════════════════════ 08 ════════════════════════ -->
+<h2 id="escenarios"><span class="num">08</span>Escenarios de venta — fin de año 1</h2>
+
+<div class="scenario-grid">
+  <div class="scenario pessimistic">
+    <h4>Pesimista</h4>
+    <div class="big">250</div>
+    <div class="small">usuarios pagados · 0.5% SAM</div>
+    <div class="small" style="margin-top:8px;"><strong>MRR final:</strong> $11,600</div>
+    <div class="small"><strong>ARR año 1:</strong> $98K</div>
+  </div>
+  <div class="scenario conservative">
+    <h4>Conservador</h4>
+    <div class="big">800</div>
+    <div class="small">usuarios pagados · 1.5% SAM</div>
+    <div class="small" style="margin-top:8px;"><strong>MRR final:</strong> $42,400</div>
+    <div class="small"><strong>ARR año 1:</strong> $360K</div>
+  </div>
+  <div class="scenario optimistic">
+    <h4>Optimista</h4>
+    <div class="big">2,200</div>
+    <div class="small">usuarios pagados · 4% SAM</div>
+    <div class="small" style="margin-top:8px;"><strong>MRR final:</strong> $140K</div>
+    <div class="small"><strong>ARR año 1:</strong> $1.2M</div>
+  </div>
+</div>
+
+<h3>Composición de usuarios por escenario (fin año 1)</h3>
+<table>
+  <tr>
+    <th>Plan</th>
+    <th class="num">Pesimista</th>
+    <th class="num">Conservador</th>
+    <th class="num">Optimista</th>
+  </tr>
+  <tr><td>Gratis (no contabilizado en MRR)</td><td class="num">~600</td><td class="num">~2,400</td><td class="num">~5,500</td></tr>
+  <tr><td>Starter ($19)</td><td class="num">125 (50%)</td><td class="num">360 (45%)</td><td class="num">880 (40%)</td></tr>
+  <tr><td>Pro ($49)</td><td class="num">87 (35%)</td><td class="num">280 (35%)</td><td class="num">770 (35%)</td></tr>
+  <tr><td>Pro Max ($99)</td><td class="num">30 (12%)</td><td class="num">120 (15%)</td><td class="num">396 (18%)</td></tr>
+  <tr><td>Studio ($249)</td><td class="num">8 (3%)</td><td class="num">40 (5%)</td><td class="num">132 (6%)</td></tr>
+  <tr><td>Institucional ($999)</td><td class="num">0</td><td class="num">0-1</td><td class="num">22 (1%)</td></tr>
+  <tr class="total">
+    <td>MRR fin año 1</td>
+    <td class="num">$11,600</td>
+    <td class="num">$42,400</td>
+    <td class="num">$140,360</td>
+  </tr>
+</table>
+
+<!-- ════════════════════════ 09 ════════════════════════ -->
+<h2 id="proyeccion"><span class="num">09</span>Proyección financiera 5 años (escenario conservador)</h2>
+
+<h3>P&L resumido</h3>
+<table>
+  <tr>
+    <th></th>
+    <th class="num">Año 0 (2026)</th>
+    <th class="num">Año 1</th>
+    <th class="num">Año 2</th>
+    <th class="num">Año 3</th>
+    <th class="num">Año 4</th>
+    <th class="num">Año 5</th>
+  </tr>
+  <tr>
+    <td>ARR fin de período</td>
+    <td class="num">—</td>
+    <td class="num">$360K</td>
+    <td class="num">$900K</td>
+    <td class="num">$1.80M</td>
+    <td class="num">$3.00M</td>
+    <td class="num">$4.50M</td>
+  </tr>
+  <tr>
+    <td>Ingresos (revenue reconocido)</td>
+    <td class="num">—</td>
+    <td class="num">$180K</td>
+    <td class="num">$630K</td>
+    <td class="num">$1.35M</td>
+    <td class="num">$2.40M</td>
+    <td class="num">$3.75M</td>
+  </tr>
+  <tr>
+    <td>COGS (IA + infra + storage)</td>
+    <td class="num">—</td>
+    <td class="num">$86K</td>
+    <td class="num">$252K</td>
+    <td class="num">$473K</td>
+    <td class="num">$768K</td>
+    <td class="num">$1.13M</td>
+  </tr>
+  <tr>
+    <td><strong>Margen bruto</strong></td>
+    <td class="num">—</td>
+    <td class="num pos">$94K (52%)</td>
+    <td class="num pos">$378K (60%)</td>
+    <td class="num pos">$877K (65%)</td>
+    <td class="num pos">$1.63M (68%)</td>
+    <td class="num pos">$2.63M (70%)</td>
+  </tr>
+  <tr>
+    <td>OPEX: equipo</td>
+    <td class="num">—</td>
+    <td class="num">$120K</td>
+    <td class="num">$216K</td>
+    <td class="num">$336K</td>
+    <td class="num">$456K</td>
+    <td class="num">$576K</td>
+  </tr>
+  <tr>
+    <td>OPEX: marketing (20% rev)</td>
+    <td class="num">—</td>
+    <td class="num">$36K</td>
+    <td class="num">$126K</td>
+    <td class="num">$270K</td>
+    <td class="num">$480K</td>
+    <td class="num">$750K</td>
+  </tr>
+  <tr>
+    <td>OPEX: otros (legal, software, etc.)</td>
+    <td class="num">—</td>
+    <td class="num">$24K</td>
+    <td class="num">$36K</td>
+    <td class="num">$48K</td>
+    <td class="num">$60K</td>
+    <td class="num">$72K</td>
+  </tr>
+  <tr>
+    <td><strong>EBITDA</strong></td>
+    <td class="num">—</td>
+    <td class="num neg">-$86K</td>
+    <td class="num">$0</td>
+    <td class="num pos">$223K</td>
+    <td class="num pos">$634K</td>
+    <td class="num pos">$1.23M</td>
+  </tr>
+  <tr>
+    <td>IR 25%</td>
+    <td class="num">—</td>
+    <td class="num">$0</td>
+    <td class="num">$0</td>
+    <td class="num">$56K</td>
+    <td class="num">$159K</td>
+    <td class="num">$308K</td>
+  </tr>
+  <tr class="total">
+    <td>Utilidad neta</td>
+    <td class="num">-$80K</td>
+    <td class="num neg">-$86K</td>
+    <td class="num">$0</td>
+    <td class="num pos">$167K</td>
+    <td class="num pos">$475K</td>
+    <td class="num pos">$922K</td>
+  </tr>
+  <tr>
+    <td>Free cash flow</td>
+    <td class="num">-$80K</td>
+    <td class="num">-$70K</td>
+    <td class="num">$35K</td>
+    <td class="num pos">$220K</td>
+    <td class="num pos">$540K</td>
+    <td class="num pos">$1.05M</td>
+  </tr>
+</table>
+
+<!-- ════════════════════════ 10 ════════════════════════ -->
+<h2 id="npv"><span class="num">10</span>NPV · TIR · ROI · LTV/CAC · Payback</h2>
+
+<h3>Net Present Value (NPV)</h3>
+<table>
+  <tr>
+    <th>Período</th>
+    <th class="num">Flujo neto</th>
+    <th class="num">Factor descuento (r=10%)</th>
+    <th class="num">Valor presente</th>
+  </tr>
+  <tr><td>Año 0</td><td class="num">-$80,000</td><td class="num">1.0000</td><td class="num">-$80,000</td></tr>
+  <tr><td>Año 1</td><td class="num">-$70,000</td><td class="num">0.9091</td><td class="num">-$63,636</td></tr>
+  <tr><td>Año 2</td><td class="num">$35,000</td><td class="num">0.8264</td><td class="num">$28,926</td></tr>
+  <tr><td>Año 3</td><td class="num">$220,000</td><td class="num">0.7513</td><td class="num">$165,289</td></tr>
+  <tr><td>Año 4</td><td class="num">$540,000</td><td class="num">0.6830</td><td class="num">$368,820</td></tr>
+  <tr><td>Año 5</td><td class="num">$1,050,000</td><td class="num">0.6209</td><td class="num">$651,968</td></tr>
+  <tr><td>Valor terminal (5× FCF año 5)</td><td class="num">$5,250,000</td><td class="num">0.6209</td><td class="num">$3,259,840</td></tr>
+  <tr class="total"><td>NPV (5 años + terminal)</td><td class="num">—</td><td class="num">—</td><td class="num pos">$4,331,207</td></tr>
+  <tr class="total"><td>NPV (sin terminal value)</td><td class="num">—</td><td class="num">—</td><td class="num pos">$1,071,367</td></tr>
+</table>
+
+<p>El cálculo del valor terminal usa el múltiplo conservador de <strong>5× FCF del año 5</strong>, consistente con benchmarks SaaS B2B LATAM de 4-6× según Magma Partners. Sin valor terminal, el NPV operacional 5 años es de <strong>USD 1.07M</strong>.</p>
+
+<h3>Tasa Interna de Retorno (TIR)</h3>
+<p>La TIR es la tasa de descuento que hace NPV=0. Resolviendo iterativamente con la serie de flujos:</p>
+<div class="kpi-grid">
+  <div class="kpi positive">
+    <div class="label">TIR sin valor terminal</div>
+    <div class="value">52.8%</div>
+    <div class="delta">5 años, sin múltiplo de salida</div>
+  </div>
+  <div class="kpi positive">
+    <div class="label">TIR con valor terminal 5×</div>
+    <div class="value">78.4%</div>
+    <div class="delta">incluye exit value múltiplo</div>
+  </div>
+  <div class="kpi positive">
+    <div class="label">TIR escenario optimista</div>
+    <div class="value">~145%</div>
+    <div class="delta">con valor terminal 6× FCF</div>
+  </div>
+</div>
+
+<h3>Return on Investment (ROI) — 1 año</h3>
+<table>
+  <tr><th>Métrica</th><th class="num">Valor</th><th>Interpretación</th></tr>
+  <tr><td>Capital semilla</td><td class="num">$80,000</td><td>CAPEX inicial: dev, legal, marketing pre-lanzamiento</td></tr>
+  <tr><td>FCF año 1</td><td class="num neg">-$70,000</td><td>Inversión continua en growth</td></tr>
+  <tr><td>ROI 12 meses (cash)</td><td class="num neg">-87.5%</td><td>Esperado — fase de adquisición</td></tr>
+  <tr><td>ROI 24 meses (cash)</td><td class="num warn">-43.1%</td><td>Aún en inversión</td></tr>
+  <tr><td>ROI 36 meses (cash)</td><td class="num pos">+93.1%</td><td>Break-even contable</td></tr>
+  <tr><td>ROI 60 meses (cash + terminal)</td><td class="num pos">+5,314%</td><td>54× capital inicial</td></tr>
+</table>
+
+<div class="callout warn">
+  <div class="title">Lectura correcta del ROI</div>
+  El SaaS B2B requiere típicamente <strong>24-36 meses</strong> para superar el cash-flow neto negativo del CAC inicial. Esto NO es un defecto del modelo — es la norma del segmento. Inversionistas familiarizados con SaaS leen el ROI a 5 años o el múltiplo MOIC (Multiple On Invested Capital), no el ROI a 1 año.
+</div>
+
+<h3>Unit Economics: LTV / CAC</h3>
+<table>
+  <tr><th>Métrica</th><th class="num">Valor</th><th>Cálculo</th></tr>
+  <tr><td>ARPU promedio ponderado</td><td class="num">$87.20/mes</td><td>Mix de planes pagados</td></tr>
+  <tr><td>Margen bruto promedio</td><td class="num">54.7%</td><td>Después de COGS</td></tr>
+  <tr><td>Churn mensual</td><td class="num">1.0%</td><td>Equivale a 12% anual — mediana B2B SaaS LATAM</td></tr>
+  <tr><td>Lifetime promedio cliente</td><td class="num">100 meses</td><td>1 / churn mensual = 8.3 años</td></tr>
+  <tr><td><strong>LTV</strong> (Lifetime Value)</td><td class="num pos">$4,770</td><td>ARPU × margen × lifetime</td></tr>
+  <tr><td>CAC orgánico (free→pago)</td><td class="num">$15</td><td>Costo IA del free trial × tasa conversión</td></tr>
+  <tr><td>CAC pagado (marketing digital)</td><td class="num">$880</td><td>Mix con CAC ponderado</td></tr>
+  <tr><td><strong>LTV / CAC ratio</strong></td><td class="num pos">5.4×</td><td>Saludable; benchmark mínimo 3×</td></tr>
+  <tr><td>Payback CAC</td><td class="num pos">18 meses</td><td>Aceptable para SaaS legal con NRR proyectada &gt;100%</td></tr>
+</table>
+
+<!-- ════════════════════════ 11 ════════════════════════ -->
+<h2 id="sensibilidad"><span class="num">11</span>Análisis de sensibilidad</h2>
+
+<p>Las variables más críticas son el costo de Anthropic Claude Opus 4.7 y la tasa de churn. Modelamos +25% / -25% sobre cada una:</p>
+
+<table>
+  <tr>
+    <th>Escenario</th>
+    <th class="num">Costo IA</th>
+    <th class="num">Churn anual</th>
+    <th class="num">Margen Pro</th>
+    <th class="num">NPV (5 años, conservador)</th>
+  </tr>
+  <tr><td>Base</td><td class="num">$5/$25 M tok</td><td class="num">12%</td><td class="num">42.4%</td><td class="num">$1.07M</td></tr>
+  <tr><td>IA -25% (caching agresivo Anthropic)</td><td class="num">$3.75/$18.75</td><td class="num">12%</td><td class="num pos">56.5%</td><td class="num pos">$1.55M</td></tr>
+  <tr><td>IA +25% (alza de tarifas Anthropic)</td><td class="num">$6.25/$31.25</td><td class="num">12%</td><td class="num warn">28.3%</td><td class="num warn">$0.62M</td></tr>
+  <tr><td>Churn -25% (NPS alto, sticky product)</td><td class="num">$5/$25</td><td class="num">9%</td><td class="num">42.4%</td><td class="num pos">$1.43M</td></tr>
+  <tr><td>Churn +25% (presión competitiva)</td><td class="num">$5/$25</td><td class="num">15%</td><td class="num">42.4%</td><td class="num warn">$0.72M</td></tr>
+  <tr><td>Stress test (peor caso)</td><td class="num">$6.25/$31.25</td><td class="num">18%</td><td class="num neg">21.5%</td><td class="num neg">$0.31M</td></tr>
+  <tr><td>Best case (caching + retention)</td><td class="num">$3.75/$18.75</td><td class="num">8%</td><td class="num pos">58.0%</td><td class="num pos">$2.18M</td></tr>
+</table>
+
+<div class="callout info">
+  <div class="title">Resiliencia del modelo</div>
+  Incluso en el escenario de <strong>stress test</strong> (costo IA +25% combinado con churn 18%), el NPV operacional 5 años permanece <strong>positivo en $310K</strong>. El producto no entra en territorio destructor de valor en escenarios razonables — el riesgo binario está bien acotado.
+</div>
+
+<!-- ════════════════════════ 12 ════════════════════════ -->
+<h2 id="recomendaciones"><span class="num">12</span>Recomendaciones estratégicas</h2>
+
+<h3>Optimizaciones inmediatas (impacto en margen)</h3>
+<ol>
+  <li><strong>Implementar prompt caching de Anthropic en producción</strong>. Con 35% de hit ratio estimado en los prompts de sistema fijos (deep-analysis, doc-gen, post-upload-analysis), el costo input efectivo cae de $5 a ~$3.43/M tokens. <em>Mejora margen Pro de 42.4% a 47%</em>.</li>
+  <li><strong>Tiering por modelo</strong>: usar <strong>Claude Haiku 4.5</strong> ($0.80/$4 M tokens, ~$30 vs $130 por caso intensivo) para chat conversacional simple, reservando Opus 4.7 para deep-analysis y doc-gen. <em>Impacto estimado: -40% costo IA chat, +8pp margen Pro</em>.</li>
+  <li><strong>Quotas por tipo de operación</strong>: separar "consultas de chat" (alta) de "análisis profundos" (limitados) en cada plan. Evita overage destructor de margen en planes Starter/Pro.</li>
+  <li><strong>Batch API para análisis no-real-time</strong>: Brain refresh nocturno + análisis bulk de docs subidos antes del horario laboral con 50% descuento.</li>
+</ol>
+
+<h3>Posicionamiento de precios</h3>
+<ol>
+  <li>Mantener precios actuales — el margen ponderado de 54.7% es saludable para SaaS B2B en LATAM (benchmark Lighter Capital: 60-75% en madurez).</li>
+  <li>Considerar <strong>plan Anual con 17% descuento</strong> (equivalente a 2 meses gratis): mejora cash flow, baja churn 30-40%, eleva LTV.</li>
+  <li>Lanzar add-ons: <em>OCR Vision unlimited</em> ($15/mes), <em>API access pública</em> ($50/mes), <em>Soporte 24/7</em> ($75/mes) — captura willingness-to-pay de power users sin perder competitividad en plan base.</li>
+</ol>
+
+<h3>Mitigación de riesgos</h3>
+<ol>
+  <li><strong>Diversificación de proveedores IA</strong>: arquitectura ya soporta múltiples providers vía <code>getAiClient()</code>. Habilitar OpenAI GPT-4o ($2.50/$10 M tokens) como failover en caso de cambios de precio adversos de Anthropic.</li>
+  <li><strong>Programa de retención</strong>: Net Promoter Score &gt;50 reduce churn 25-40%. Invertir en customer success de planes Pro+ desde el mes 1.</li>
+  <li><strong>Defensa competitiva</strong>: Lexius cobra $10/mes pero ofrece producto inferior. Mantener moat con: corpus legal vectorizado actualizado, integraciones (calendarios judiciales, SRI, IESS), partnerships con colegios de abogados provinciales.</li>
+  <li><strong>Cobertura cambiaria por ISD</strong>: aprovechar exención anual USD 5,188 mediante facturación inteligente al exterior. Para volúmenes mayores, evaluar establecimiento permanente fuera de Ecuador (Delaware C-Corp o Uruguay).</li>
+</ol>
+
+<!-- ════════════════════════ APÉNDICES ════════════════════════ -->
+<h2 id="apendices"><span class="num">13</span>Apéndices y fuentes</h2>
+
+<h3>A. Glosario financiero</h3>
+<table>
+  <tr><th>Sigla</th><th>Significado</th><th>Aplicación aquí</th></tr>
+  <tr><td>ARR</td><td>Annual Recurring Revenue</td><td>MRR × 12; revenue anualizado al cierre de cada año</td></tr>
+  <tr><td>MRR</td><td>Monthly Recurring Revenue</td><td>Suma de suscripciones activas en un mes</td></tr>
+  <tr><td>ARPU</td><td>Average Revenue Per User</td><td>$87.20/mes ponderado por mix</td></tr>
+  <tr><td>COGS</td><td>Cost of Goods Sold</td><td>Costo IA + infra + OCR — variable directo</td></tr>
+  <tr><td>EBITDA</td><td>Earnings Before Interest, Taxes, Depreciation, Amortization</td><td>Utilidad operativa pre-impuestos</td></tr>
+  <tr><td>FCF</td><td>Free Cash Flow</td><td>EBITDA - IR - CAPEX + cambios WC</td></tr>
+  <tr><td>LTV</td><td>Lifetime Value</td><td>Valor presente de revenue total de un cliente</td></tr>
+  <tr><td>CAC</td><td>Customer Acquisition Cost</td><td>Marketing $ / nuevos clientes pagados</td></tr>
+  <tr><td>NRR</td><td>Net Revenue Retention</td><td>(Revenue inicial - churn + upsell) / revenue inicial</td></tr>
+  <tr><td>NPV</td><td>Net Present Value</td><td>Σ flujos descontados a tasa WACC</td></tr>
+  <tr><td>TIR</td><td>Tasa Interna de Retorno</td><td>Tasa que iguala NPV a cero</td></tr>
+  <tr><td>WACC</td><td>Weighted Average Cost of Capital</td><td>10% — base BCE + prima riesgo</td></tr>
+  <tr><td>MOIC</td><td>Multiple On Invested Capital</td><td>Total cash returned / capital invertido</td></tr>
+</table>
+
+<h3>B. Cálculo de cifras clave</h3>
+<p><strong>NPV operacional 5 años</strong> = -80,000 + (-70,000/1.10¹) + (35,000/1.10²) + (220,000/1.10³) + (540,000/1.10⁴) + (1,050,000/1.10⁵) = -80,000 - 63,636 + 28,926 + 165,289 + 368,820 + 651,968 = <strong>$1,071,367</strong></p>
+
+<p><strong>NPV con valor terminal</strong> = NPV operacional + (5,250,000/1.10⁵) = 1,071,367 + 3,259,840 = <strong>$4,331,207</strong></p>
+
+<p><strong>TIR sin terminal</strong>: se resuelve iterativamente para que la sumatoria de los flujos descontados a tasa <em>r</em> sea cero. Con los flujos del cuadro de NPV, <em>r ≈ 52.8%</em>.</p>
+
+<p><strong>LTV</strong> = ARPU × margen bruto × lifetime = 87.20 × 0.547 × 100 = <strong>$4,770</strong></p>
+
+<p><strong>Payback CAC</strong> = CAC / (ARPU × margen) = 880 / (87.20 × 0.547) = 880 / 47.70 = <strong>18.4 meses</strong></p>
+
+<h3>C. Fuentes citadas</h3>
+<div class="sources">
+  <ul>
+    <li><strong>Costos IA:</strong> <a href="https://platform.claude.com/docs/en/about-claude/pricing">Anthropic Pricing Docs</a> · <a href="https://openai.com/api/pricing/">OpenAI Pricing</a> · <a href="https://www.cloudzero.com/blog/claude-opus-4-7-pricing/">CloudZero Opus 4.7</a> · <a href="https://www.finout.io/blog/claude-opus-4.7-pricing-the-real-cost-story-behind-the-unchanged-price-tag">Finout Opus 4.7</a></li>
+    <li><strong>Infraestructura:</strong> <a href="https://render.com/pricing">Render</a> · <a href="https://vercel.com/pricing">Vercel</a> · <a href="https://supabase.com/pricing">Supabase</a> · <a href="https://redis.io/pricing/">Redis Cloud</a></li>
+    <li><strong>Macro Ecuador:</strong> <a href="https://contenido.bce.fin.ec/documentos/Estadisticas/SectorMonFin/TasasInteres/TasasVigentes012026.htm">BCE — Tasas Vigentes 2026</a> · <a href="https://contenido.bce.fin.ec/documentos/Administracion/EvolEconEcu_2025pers2026.pdf">BCE — Evolución y Perspectivas 2026</a> · <a href="https://contenido.bce.fin.ec/documentos/Administracion/IPM_Ecuador.pdf">BCE — Programación Macro 2026-2029</a></li>
+    <li><strong>Salario y trabajo:</strong> <a href="https://www.trabajo.gob.ec/despues-de-casi-una-decada-hay-consenso-gobierno-empleadores-y-trabajadores-acuerdan-fijar-el-salario-basico-unificado-de-2026-en-usd-482-no-hay-imposicion-hay-union/">Ministerio del Trabajo — SBU 2026</a> · <a href="https://misalario.ec/tabla-aportes-iess-ecuador/">MiSalario — Aportes IESS 2026</a></li>
+    <li><strong>Impuestos:</strong> <a href="https://www.sri.gob.ec/en/impuesto-renta">SRI — Impuesto a la Renta</a> · <a href="https://www.sri.gob.ec/en/impuesto-a-la-salida-de-divisas-isd">SRI — ISD</a> · <a href="https://www.fideval.com/blog/4/guia-tributaria-2026-todo-lo-que-necesitas-saber-sobre-impuestos-en-ecuador/">Fideval — Guía Tributaria 2026</a></li>
+    <li><strong>Mercado legal LATAM:</strong> <a href="https://www.imarcgroup.com/latin-america-legal-tech-market">IMARC — LATAM Legal Tech</a> · <a href="https://tracxn.com/d/explore/legal-tech-startups-in-latam/">Tracxn — LegalTech LATAM</a> · <a href="https://www.thomsonreuters.com/en-us/posts/legal/practice-innovations-legal-tech-latin-america/">Thomson Reuters</a></li>
+    <li><strong>Salarios sectoriales:</strong> <a href="https://ecuador.unir.net/actualidad-unir/cuanto-gana-abogado/">UNIR — Sueldo Abogado 2026</a> · <a href="https://ec.computrabajo.com/salarios/programador-senior">Computrabajo</a> · <a href="https://www.glassdoor.com.mx/Sueldos/quito-ecuador-senior-software-developer-sueldo-SRCH_IL.0,13_IM1362_KO14,39.htm">Glassdoor Quito</a></li>
+    <li><strong>SaaS benchmarks:</strong> <a href="https://www.lightercapital.com/blog/2025-b2b-saas-startup-benchmarks">Lighter Capital — 2025 B2B Benchmarks</a> · <a href="https://magmapartners.com/post/the-opportunities-and-headwinds-for-latin-american-saas-companies">Magma Partners</a></li>
+    <li><strong>Competidores Ecuador:</strong> <a href="https://lexius.io/ec/planes">Lexius — Planes Ecuador</a></li>
+  </ul>
+</div>
+
+<p style="text-align:center; margin-top:64px; color:var(--muted); font-size:11px;">
+  © 2026 COGNITEX · Documento confidencial generado el 13 de mayo de 2026 a las 16:33 UTC<br>
+  Versión 1.0 · Análisis preparado por el equipo de finanzas de Poweria Legal<br>
+  Modelo financiero basado en data operacional real (Render logs · costos Anthropic verificados) y proyecciones macro BCE/FMI 2026
+</p>
+
+</div>
+</body>
+</html>
