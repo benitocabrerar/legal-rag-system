@@ -1197,10 +1197,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
       let fullText = '';
       try {
         // Streaming para feedback en vivo
-        const stream: any = await (aiClient as any).chat.completions.create({
+        const stream: any = await aiClient.streamChat({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
           max_tokens: 8000,
-          stream: true,
         });
 
         for await (const chunk of stream) {
@@ -1476,10 +1475,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         let promptsCompleted = 0;
         let arrayStarted = false;
 
-        const stream: any = await (aiClient as any).chat.completions.create({
+        const stream: any = await aiClient.streamChat({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctx }],
           max_tokens: 8000,
-          stream: true,
         });
 
         let lastReportedPct = 28;
@@ -1803,10 +1801,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         let lastPct = 38;
         let fullText = '';
 
-        const stream: any = await (aiClient as any).chat.completions.create({
+        const stream: any = await aiClient.streamChat({
           messages: [{ role: 'system', content: sys }, { role: 'user', content: ctxBlock }],
           max_tokens: 4500,
-          stream: true,
         });
 
         for await (const chunk of stream) {
