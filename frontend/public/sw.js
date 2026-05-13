@@ -17,7 +17,7 @@
  *   cache name not in the current set.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE  = `legal-rag-static-${VERSION}`;
 const DYNAMIC_CACHE = `legal-rag-dynamic-${VERSION}`;
 const ALLOWLIST = [STATIC_CACHE, DYNAMIC_CACHE];
