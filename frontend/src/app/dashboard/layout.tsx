@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
+import { UserClock } from '@/components/common/UserClock';
 import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
@@ -174,6 +175,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Right cluster */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Reloj con nombre + fecha + hora — siempre visible en desktop */}
+              <UserClock userName={user?.name || user?.email} />
+
               {/* Cmd+K trigger */}
               <button
                 data-tour="cmdk-trigger"

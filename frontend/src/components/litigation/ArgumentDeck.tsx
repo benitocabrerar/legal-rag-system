@@ -1,13 +1,50 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Loader2, Sparkles, RefreshCcw, CheckCircle2, Circle,
-  Volume2, BookMarked, Clock, AlertTriangle, Layers,
+  Volume2, BookMarked, Clock, AlertTriangle, Layers, RefreshCw, Zap,
 } from 'lucide-react';
-import { litigationAPI, type ArgumentCard } from '@/lib/api';
+import { litigationAPI, type ArgumentCard, type LitigationFingerprint } from '@/lib/api';
 import { getAuthToken } from '@/lib/get-auth-token';
 import { cn } from '@/lib/utils';
+
+/** Devuelve la lista de razones por las que una tarjeta puede estar obsoleta
+ *  respecto al fingerprint actual del caso. Lista vacía = al día. */
+function staleReasons(card: ArgumentCard, fp: LitigationFingerprint | null): string[] {
+  if (!fp || !card.generatedAt) return [];
+  const cardTs = new Date(card.generatedAt).getTime();
+  const out: string[] = [];
+  if (fp.brain.generatedAt) {
+    const t = new Date(fp.brain.generatedAt).getTime();
+    if (t > cardTs) out.push('cerebro del caso actualizado');
+  }
+  if (fp.lastDocument) {
+    const t = new Date(fp.lastDocument.createdAt).getTime();
+    if (t > cardTs) out.push(`nuevo documento "${fp.lastDocument.title.slice(0, 35)}"`);
+  }
+  if (fp.lastAnalysis) {
+    const t = new Date(fp.lastAnalysis.createdAt).getTime();
+    if (t > cardTs) out.push('nuevo análisis IA');
+  }
+  if (fp.lastCourtFiled) {
+    const t = new Date(fp.lastCourtFiled.presentedAt).getTime();
+    if (t > cardTs) out.push(`documento presentado a juzgado`);
+  }
+  if (fp.lastTaskCompleted) {
+    const t = new Date(fp.lastTaskCompleted.completedAt).getTime();
+    if (t > cardTs) out.push('tarea completada');
+  }
+  return out;
+}
+
+function relativeTime(iso: string): string {
+  const d = Date.now() - new Date(iso).getTime();
+  if (d < 60_000) return 'hace segundos';
+  if (d < 3_600_000) return `hace ${Math.round(d / 60_000)} min`;
+  if (d < 86_400_000) return `hace ${Math.round(d / 3_600_000)} h`;
+  return `hace ${Math.round(d / 86_400_000)} d`;
+}
 
 const SLUG_STYLE: Record<string, { gradient: string; ring: string; emoji: string; tagBg: string }> = {
   APERTURA:           { gradient: 'from-violet-600 via-fuchsia-600 to-rose-600',    ring: 'ring-violet-500/40',    emoji: '🎙️', tagBg: 'bg-violet-500/15 text-violet-200 border-violet-400/30' },
@@ -39,6 +76,32 @@ export function ArgumentDeck({ caseId, onLookupArticle }: Props) {
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const [presenter, setPresenter] = useState(false);
+
+  // Fingerprint del contexto del caso — usado para detectar staleness
+  // de tarjetas (cuando hay nuevos docs, brain refrescado, tareas, etc).
+  const [fingerprint, setFingerprint] = useState<LitigationFingerprint | null>(null);
+  const [fpLoading, setFpLoading] = useState(false);
+
+  const refetchFingerprint = useCallback(async () => {
+    if (!caseId) return;
+    setFpLoading(true);
+    try {
+      const fp = await litigationAPI.fingerprint(caseId);
+      setFingerprint(fp);
+    } catch { /* silencioso — la sala sigue funcionando sin staleness check */ }
+    finally { setFpLoading(false); }
+  }, [caseId]);
+
+  // Fetch fingerprint al entrar a la sala + cuando termina de generar tarjetas
+  useEffect(() => { void refetchFingerprint(); }, [refetchFingerprint]);
+
+  // Resumen agregado: tarjetas stale + razones únicas
+  const staleness = useMemo(() => {
+    const perCard = cards.map((c) => staleReasons(c, fingerprint));
+    const staleIdx = perCard.map((r, i) => (r.length > 0 ? i : -1)).filter((i) => i >= 0);
+    const allReasons = Array.from(new Set(perCard.flat()));
+    return { perCard, staleIdx, allReasons };
+  }, [cards, fingerprint]);
 
   // Load persisted deck.
   useEffect(() => {
@@ -155,6 +218,10 @@ export function ArgumentDeck({ caseId, onLookupArticle }: Props) {
     } finally {
       setLoading(false);
       abortRef.current = null;
+      // Tras generar, el fingerprint puede haber cambiado (si la generación
+      // detonó re-síntesis del brain o creó docs ai_analysis). Lo refrescamos
+      // para que el indicador de staleness quede en cero.
+      void refetchFingerprint();
     }
   };
 
@@ -223,29 +290,92 @@ export function ArgumentDeck({ caseId, onLookupArticle }: Props) {
 
   return (
     <div className={cn('flex flex-col gap-3', presenter && 'absolute inset-0 z-50 bg-slate-950/95 backdrop-blur p-6 overflow-auto')}>
+      {/* Banner de staleness global — visible si hay tarjetas obsoletas */}
+      {staleness.staleIdx.length > 0 && (
+        <div className="rounded-xl border-2 border-amber-400/40 bg-gradient-to-r from-amber-950/40 via-orange-950/30 to-rose-950/40 backdrop-blur p-3 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/20 grid place-items-center text-amber-300 shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-amber-200">
+              {staleness.staleIdx.length} de {cards.length} tarjetas pueden estar desactualizadas
+            </div>
+            <div className="text-[11px] text-amber-100/80 mt-0.5 leading-snug">
+              Cambios detectados en el expediente: <span className="font-semibold">{staleness.allReasons.join(' · ')}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const slugs = staleness.staleIdx.map((i) => cards[i].slug);
+              void generate(slugs);
+            }}
+            disabled={loading}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition"
+            title="Regenerar solo las tarjetas obsoletas con el contexto actualizado"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            Actualizar las {staleness.staleIdx.length}
+          </button>
+          <button
+            onClick={() => generate()}
+            disabled={loading}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 disabled:opacity-50 transition"
+            title="Regenerar TODAS las tarjetas (las obsoletas y las que están al día)"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Actualizar todo
+          </button>
+        </div>
+      )}
+
+      {/* Indicador de "todas al día" cuando no hay staleness */}
+      {fingerprint && cards.length > 0 && staleness.staleIdx.length === 0 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 backdrop-blur px-3 py-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-emerald-200">
+            <CheckCircle2 className="w-4 h-4" />
+            <span><strong>{cards.length} tarjetas al día</strong> · sin cambios pendientes en el expediente</span>
+          </div>
+          <button
+            onClick={() => void refetchFingerprint()}
+            disabled={fpLoading}
+            className="text-[10px] font-semibold text-emerald-300/80 hover:text-emerald-200 disabled:opacity-50"
+            title="Re-verificar estado del expediente"
+          >
+            {fpLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+          </button>
+        </div>
+      )}
+
       {/* Card navigator strip */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {cards.map((c, i) => {
           const s = SLUG_STYLE[c.slug] ?? SLUG_STYLE.ALEGATO_FINAL;
           const isActive = i === active;
           const done = !!delivered[i];
+          const isStale = staleness.perCard[i]?.length > 0;
           return (
             <button
               key={`${c.slug}-${i}`}
               onClick={() => setActive(i)}
               className={cn(
-                'shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all',
+                'shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all relative',
                 isActive
                   ? `bg-gradient-to-br ${s.gradient} text-white border-transparent shadow-md`
                   : `${s.tagBg} hover:opacity-100 ${done ? 'opacity-50' : 'opacity-90'}`,
                 done && !isActive && 'line-through',
+                isStale && !isActive && 'ring-2 ring-amber-400/60 ring-offset-1 ring-offset-slate-900',
               )}
-              title={c.title}
+              title={isStale
+                ? `${c.title} — desactualizada: ${staleness.perCard[i].join(', ')}`
+                : c.title}
             >
               <span>{i + 1}.</span>
               <span className="leading-none">{s.emoji}</span>
               <span className="uppercase tracking-wider">{c.title}</span>
               {done && !isActive && <CheckCircle2 className="w-3 h-3" />}
+              {isStale && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse ring-2 ring-slate-900" />
+              )}
             </button>
           );
         })}
@@ -296,6 +426,45 @@ export function ArgumentDeck({ caseId, onLookupArticle }: Props) {
               </button>
             </div>
           </div>
+
+          {/* Stamp de generación + reasons de staleness */}
+          <div className="flex items-center flex-wrap gap-2 text-[10px] font-semibold text-white/70 mb-3">
+            {card.generatedAt && (
+              <span className="inline-flex items-center gap-1 bg-white/10 backdrop-blur px-2 py-0.5 rounded-full">
+                <Clock className="w-3 h-3" />
+                Generada {relativeTime(card.generatedAt)}
+              </span>
+            )}
+            {staleness.perCard[active]?.length > 0 ? (
+              <span className="inline-flex items-center gap-1 bg-amber-500/25 text-amber-100 border border-amber-400/40 px-2 py-0.5 rounded-full">
+                <AlertTriangle className="w-3 h-3" />
+                {staleness.perCard[active].length} {staleness.perCard[active].length === 1 ? 'cambio' : 'cambios'} desde su generación
+              </span>
+            ) : fingerprint && card.generatedAt ? (
+              <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="w-3 h-3" />
+                Al día
+              </span>
+            ) : null}
+            {staleness.perCard[active]?.length > 0 && (
+              <button
+                onClick={() => void generate([card.slug])}
+                disabled={loading}
+                className="inline-flex items-center gap-1 bg-amber-500/30 hover:bg-amber-500/50 text-amber-50 border border-amber-300/50 px-2 py-0.5 rounded-full transition disabled:opacity-50"
+                title="Regenerar esta tarjeta con el contexto actualizado"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                Actualizar esta
+              </button>
+            )}
+          </div>
+
+          {/* Lista de razones si hay staleness — informativo, una línea */}
+          {staleness.perCard[active]?.length > 0 && (
+            <div className="text-[11px] text-amber-100/90 mb-3 leading-snug">
+              <strong className="text-amber-200">Cambios detectados:</strong> {staleness.perCard[active].join(' · ')}
+            </div>
+          )}
 
           <p className="text-base lg:text-lg font-semibold text-white leading-snug italic mb-4 opacity-95">
             "{card.headline}"

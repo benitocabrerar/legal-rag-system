@@ -335,6 +335,11 @@ export async function litigationRoutes(fastify: FastifyInstance) {
             const json = tryParseCard(raw);
             if (json) {
               emitted += 1;
+              // Inyectar metadata de trazabilidad para que el frontend pueda
+              // detectar staleness comparando contra brain.generatedAt,
+              // último documento subido y última tarea completada.
+              (json as any).generatedAt = new Date().toISOString();
+              (json as any).model = aiClient.model;
               send('card', { index: emitted - 1, card: json });
             }
           }
@@ -364,6 +369,8 @@ export async function litigationRoutes(fastify: FastifyInstance) {
           const tail = tryParseCard(buffer.trim());
           if (tail) {
             emitted += 1;
+            (tail as any).generatedAt = new Date().toISOString();
+            (tail as any).model = aiClient.model;
             send('card', { index: emitted - 1, card: tail });
           }
         }
@@ -377,6 +384,142 @@ export async function litigationRoutes(fastify: FastifyInstance) {
       }
 
       return reply;
+    },
+  );
+
+  /**
+   * GET /cases/:id/litigation-fingerprint
+   *
+   * Devuelve los timestamps clave del contexto del caso que la Sala de
+   * Litigación usa para detectar si las tarjetas argumentales están
+   * "obsoletas" (stale).
+   *
+   * El frontend lee este endpoint al entrar a la sala y compara cada
+   * tarjeta.generatedAt vs:
+   *   - brain.generatedAt          (cerebro del caso re-sintetizado)
+   *   - lastDocumentAt             (nuevo documento subido)
+   *   - lastTaskCompletedAt        (tarea cerrada que puede cambiar estrategia)
+   *   - lastAnalysisAt             (nuevo ai_analysis post-upload)
+   *
+   * Si CUALQUIERA de esos timestamps es posterior a card.generatedAt, la
+   * tarjeta se considera stale y se muestra el badge "X cambios desde X".
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/cases/:id/litigation-fingerprint',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const caseId = request.params.id;
+
+      const ownRows = await prisma.$queryRawUnsafe<Array<{
+        id: string; title: string; metadata: any;
+      }>>(
+        `SELECT id, title, metadata
+           FROM public.cases
+          WHERE id = $1 AND user_id = $2
+          LIMIT 1`,
+        caseId, userId,
+      );
+      const own = ownRows[0];
+      if (!own) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      // Cerebro del caso (metadata.brain.generatedAt)
+      const brain = (own.metadata && typeof own.metadata === 'object' && 'brain' in own.metadata)
+        ? (own.metadata as any).brain
+        : null;
+      const brainGeneratedAt: string | null = brain?.generatedAt ?? null;
+
+      // Último documento subido (no replaced) + último ai_analysis
+      const [lastDocRow, lastAnalysisRow, lastCourtFiledRow, lastTaskRow, totalsRow] =
+        await Promise.all([
+          prisma.$queryRawUnsafe<Array<{ created_at: Date; title: string; kind: string | null }>>(
+            `SELECT created_at, title, kind
+               FROM public.documents
+              WHERE case_id = $1 AND replaced_at IS NULL
+              ORDER BY created_at DESC
+              LIMIT 1`, caseId
+          ),
+          prisma.$queryRawUnsafe<Array<{ created_at: Date; title: string }>>(
+            `SELECT created_at, title
+               FROM public.documents
+              WHERE case_id = $1 AND kind = 'ai_analysis' AND replaced_at IS NULL
+              ORDER BY created_at DESC
+              LIMIT 1`, caseId
+          ),
+          prisma.$queryRawUnsafe<Array<{ presented_at: Date; title: string }>>(
+            `SELECT presented_at, title
+               FROM public.documents
+              WHERE case_id = $1 AND kind = 'court_filed' AND presented_at IS NOT NULL
+              ORDER BY presented_at DESC
+              LIMIT 1`, caseId
+          ),
+          prisma.$queryRawUnsafe<Array<{ completed_at: Date | null; title: string }>>(
+            `SELECT completed_at, title
+               FROM public.tasks
+              WHERE case_id = $1 AND completed_at IS NOT NULL
+              ORDER BY completed_at DESC
+              LIMIT 1`, caseId
+          ).catch(() => []),
+          prisma.$queryRawUnsafe<Array<{ docs: bigint; analyses: bigint; court_filed: bigint }>>(
+            `SELECT
+                COUNT(*) FILTER (WHERE replaced_at IS NULL)::bigint AS docs,
+                COUNT(*) FILTER (WHERE kind = 'ai_analysis' AND replaced_at IS NULL)::bigint AS analyses,
+                COUNT(*) FILTER (WHERE kind = 'court_filed' AND replaced_at IS NULL)::bigint AS court_filed
+              FROM public.documents
+              WHERE case_id = $1`, caseId
+          ),
+        ]);
+
+      const lastDoc = lastDocRow[0];
+      const lastAnalysis = lastAnalysisRow[0];
+      const lastCourtFiled = lastCourtFiledRow[0];
+      const lastTask = lastTaskRow[0];
+      const totals = totalsRow[0];
+
+      // Computar el timestamp más reciente entre todos — útil para
+      // comparar contra cards.generatedAt en una sola operación.
+      const candidates = [
+        brainGeneratedAt,
+        lastDoc?.created_at?.toISOString() ?? null,
+        lastAnalysis?.created_at?.toISOString() ?? null,
+        lastCourtFiled?.presented_at?.toISOString() ?? null,
+        lastTask?.completed_at?.toISOString() ?? null,
+      ].filter(Boolean) as string[];
+      const mostRecentChangeAt = candidates.length > 0
+        ? candidates.sort().slice(-1)[0]
+        : null;
+
+      return reply.send({
+        caseId,
+        title: own.title,
+        mostRecentChangeAt,
+        brain: {
+          generatedAt: brainGeneratedAt,
+          summary: brain?.summary?.slice(0, 200) ?? null,
+        },
+        lastDocument: lastDoc ? {
+          createdAt: lastDoc.created_at.toISOString(),
+          title: lastDoc.title,
+          kind: lastDoc.kind,
+        } : null,
+        lastAnalysis: lastAnalysis ? {
+          createdAt: lastAnalysis.created_at.toISOString(),
+          title: lastAnalysis.title,
+        } : null,
+        lastCourtFiled: lastCourtFiled ? {
+          presentedAt: lastCourtFiled.presented_at.toISOString(),
+          title: lastCourtFiled.title,
+        } : null,
+        lastTaskCompleted: lastTask?.completed_at ? {
+          completedAt: lastTask.completed_at.toISOString(),
+          title: lastTask.title,
+        } : null,
+        totals: totals ? {
+          documents: Number(totals.docs),
+          aiAnalyses: Number(totals.analyses),
+          courtFiled: Number(totals.court_filed),
+        } : { documents: 0, aiAnalyses: 0, courtFiled: 0 },
+      });
     },
   );
 

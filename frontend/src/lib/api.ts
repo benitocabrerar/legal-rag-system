@@ -5,29 +5,80 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
   : 'https://poweria-legal-api.onrender.com/api/v1';
 
-// Helper function to safely handle API errors
+// Helper function to safely handle API errors.
+//
+// Maneja tres tipos de errores:
+//   1) Errores de axios (backend Render): error.response.data.error (string|array)
+//   2) Errores de Supabase Auth (AuthApiError / AuthError): error.message + error.code
+//   3) Errores de red puros (fetch failed, CORS, DNS): sin response ni message
+const SUPABASE_AUTH_ERROR_MAP: Record<string, string> = {
+  // Signup / registro
+  user_already_exists:           'Este correo ya está registrado. Iniciá sesión o usá la opción de recuperar contraseña.',
+  email_exists:                  'Este correo ya está registrado. Iniciá sesión o usá la opción de recuperar contraseña.',
+  weak_password:                 'La contraseña es muy débil. Usá al menos 8 caracteres con letras y números.',
+  email_address_invalid:         'El correo electrónico no es válido. Revisá que esté bien escrito.',
+  email_address_not_authorized:  'Este correo no está autorizado para registrarse. Contactá al administrador.',
+  over_email_send_rate_limit:    'Demasiados intentos en poco tiempo. Esperá 1 minuto e intentá de nuevo.',
+  signup_disabled:               'El registro está temporalmente deshabilitado. Contactá al equipo de Poweria Legal.',
+  // Login
+  invalid_credentials:           'Correo o contraseña incorrectos.',
+  email_not_confirmed:           'Tenés que confirmar tu correo antes de iniciar sesión. Revisá tu bandeja de entrada.',
+  // Genéricos
+  user_not_found:                'No encontramos una cuenta con ese correo.',
+  same_password:                 'La contraseña nueva debe ser distinta a la anterior.',
+};
+
 export const parseApiError = (error: any): string => {
   try {
-    const errorData = error?.response?.data;
-
-    if (!errorData) {
-      return 'Error de conexión con el servidor';
-    }
-
-    if (errorData.error) {
-      if (Array.isArray(errorData.error)) {
-        return errorData.error.map((e: any) => e.message || String(e)).join(', ');
+    // ── 1) Error de Supabase Auth (AuthApiError) ──────────────────────────
+    // Estos errores tienen `error.code` (string) + `error.message` (inglés)
+    // pero NO tienen `error.response.data`. Antes caían al genérico
+    // "Error de conexión con el servidor" sin importar el motivo real.
+    const supabaseCode: string | undefined = error?.code;
+    const supabaseName: string | undefined = error?.name;
+    if (
+      supabaseCode &&
+      (supabaseName === 'AuthApiError' || supabaseName === 'AuthError' ||
+       supabaseName === 'AuthRetryableFetchError' || error?.__isAuthError === true ||
+       SUPABASE_AUTH_ERROR_MAP[supabaseCode])
+    ) {
+      if (SUPABASE_AUTH_ERROR_MAP[supabaseCode]) {
+        return SUPABASE_AUTH_ERROR_MAP[supabaseCode];
       }
-      return String(errorData.error);
+      // Fallback: usar el mensaje en inglés de Supabase si existe.
+      if (error?.message) return String(error.message);
     }
 
-    if (errorData.message) {
-      return String(errorData.message);
+    // ── 2) Error de axios (backend Render) ────────────────────────────────
+    const errorData = error?.response?.data;
+    if (errorData) {
+      if (errorData.error) {
+        if (Array.isArray(errorData.error)) {
+          return errorData.error.map((e: any) => e.message || String(e)).join(', ');
+        }
+        return String(errorData.error);
+      }
+      if (errorData.message) {
+        return String(errorData.message);
+      }
     }
 
-    return 'Error al procesar la solicitud';
+    // ── 3) Error de red real (sin response): timeout, DNS, CORS, offline ──
+    if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+      return 'No se pudo conectar con el servidor. Revisá tu conexión a internet y reintentá.';
+    }
+    if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')) {
+      return 'El servidor tardó demasiado en responder. Reintentá en unos segundos.';
+    }
+
+    // ── 4) Último recurso: si hay message útil, mostrarlo ─────────────────
+    if (typeof error?.message === 'string' && error.message.length > 0 && error.message !== 'Error') {
+      return error.message;
+    }
+
+    return 'Error al procesar la solicitud. Intentá de nuevo o contactá soporte.';
   } catch {
-    return 'Error al procesar la solicitud';
+    return 'Error al procesar la solicitud. Intentá de nuevo o contactá soporte.';
   }
 };
 
@@ -722,6 +773,11 @@ export const litigationAPI = {
   /** Returns the absolute SSE URL — caller uses native EventSource/fetch streaming. */
   chatUrl: (caseId: string) => `/api/v1/cases/${caseId}/litigation-chat`,
   cardsUrl: (caseId: string) => `/api/v1/cases/${caseId}/litigation-cards`,
+  /** Timestamps que la Sala de Litigación usa para detectar tarjetas obsoletas. */
+  fingerprint: async (caseId: string): Promise<LitigationFingerprint> => {
+    const r = await api.get(`/cases/${caseId}/litigation-fingerprint`);
+    return r.data;
+  },
 };
 
 export interface ArgumentCard {
@@ -732,6 +788,23 @@ export interface ArgumentCard {
   key_articles: string[];
   risk?: string;
   est_seconds: number;
+  /** ISO timestamp de cuando esta tarjeta fue generada por la IA. Se usa
+   *  para detectar staleness comparando contra el fingerprint del caso. */
+  generatedAt?: string;
+  /** Modelo IA que la generó (claude-opus-4-7, etc). */
+  model?: string;
+}
+
+export interface LitigationFingerprint {
+  caseId: string;
+  title: string;
+  mostRecentChangeAt: string | null;
+  brain: { generatedAt: string | null; summary: string | null };
+  lastDocument: { createdAt: string; title: string; kind: string | null } | null;
+  lastAnalysis: { createdAt: string; title: string } | null;
+  lastCourtFiled: { presentedAt: string; title: string } | null;
+  lastTaskCompleted: { completedAt: string; title: string } | null;
+  totals: { documents: number; aiAnalyses: number; courtFiled: number };
 }
 
 export interface ConvocatoriaInfo {

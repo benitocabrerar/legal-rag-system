@@ -764,6 +764,79 @@ Genera el super-resumen en JSON.`;
     }
   });
 
+  // GET /cases/:id/deletion-summary
+  //   Devuelve contadores reales de lo que se eliminará si se borra el caso.
+  //   Usado por el modal de doble-control del frontend para mostrar al usuario
+  //   exactamente cuánto contenido se está por perder antes de confirmar.
+  fastify.get('/cases/:id/deletion-summary', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = (request.user as any).id;
+
+      // Ownership check
+      const own = await prisma.case.findFirst({
+        where: { id, userId },
+        select: { id: true, title: true, createdAt: true },
+      });
+      if (!own) return reply.code(404).send({ error: 'Case not found' });
+
+      // Conteos paralelos para minimizar latencia
+      const [docsByKind, totalDocs, totalChunks, partiesC, eventsC, tasksC, notifsC, feesC] =
+        await Promise.all([
+          prisma.$queryRawUnsafe<Array<{ kind: string | null; n: bigint }>>(
+            `SELECT COALESCE(kind, 'uploaded') AS kind, COUNT(*)::bigint AS n
+               FROM public.documents
+              WHERE case_id = $1 AND replaced_at IS NULL
+              GROUP BY 1`, id
+          ),
+          prisma.document.count({ where: { caseId: id } }),
+          prisma.documentChunk.count({ where: { document: { caseId: id } } }).catch(() => 0),
+          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n FROM public.case_parties WHERE case_id = $1`, id
+          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n FROM public.calendar_events WHERE case_id = $1`, id
+          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n FROM public.tasks WHERE case_id = $1`, id
+          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n FROM public.notifications WHERE case_id = $1`, id
+          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+          prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n FROM public.financial_records WHERE case_id = $1`, id
+          ).then((r) => Number(r[0]?.n ?? 0)).catch(() => 0),
+        ]);
+
+      const byKind: Record<string, number> = {};
+      for (const row of docsByKind) byKind[row.kind || 'uploaded'] = Number(row.n);
+
+      return reply.send({
+        caseId: id,
+        title: own.title,
+        createdAt: own.createdAt,
+        documents: {
+          total: totalDocs,
+          uploaded: byKind.uploaded ?? 0,
+          ai_generated: byKind.ai_generated ?? 0,
+          ai_analysis: byKind.ai_analysis ?? 0,
+          court_filed: byKind.court_filed ?? 0,
+        },
+        chunks: totalChunks,
+        parties: partiesC,
+        events: eventsC,
+        tasks: tasksC,
+        notifications: notifsC,
+        financialRecords: feesC,
+      });
+    } catch (error: any) {
+      fastify.log.error({ err: error?.message }, 'deletion-summary failed');
+      return reply.code(500).send({ error: 'Internal server error' });
+    }
+  });
+
   // Delete case
   fastify.delete('/cases/:id', {
     onRequest: [fastify.authenticate],

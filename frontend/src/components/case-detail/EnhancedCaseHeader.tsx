@@ -21,6 +21,10 @@ import {
   Loader2,
   Check,
   X,
+  ChevronDown,
+  ChevronUp,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 import { LegalType, Priority, legalTypeConfig } from '@/lib/design-tokens';
 import { LegalTypeBadge } from '@/components/ui/LegalTypeBadge';
@@ -71,6 +75,24 @@ export function EnhancedCaseHeader({ caseData, onUpdated }: EnhancedCaseHeaderPr
   const [shareCopied, setShareCopied] = useState(false);
   const [toast, setToast] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Toggle del resumen del caso — persistido por caso en localStorage
+  const COLLAPSE_KEY = `case-header-collapsed:${caseData.id}`;
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY);
+      if (stored === '1') setHeaderCollapsed(true);
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseData.id]);
+  const toggleHeader = () => {
+    setHeaderCollapsed((c) => {
+      const next = !c;
+      try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!showMoreMenu) return;
@@ -334,16 +356,62 @@ export function EnhancedCaseHeader({ caseData, onUpdated }: EnhancedCaseHeaderPr
         </div>
       </div>
 
-      {/* Main Header */}
+      {/* Main Header — colapsable */}
+      {headerCollapsed ? (
+        // ─── Modo compacto: solo título + chip + botón expandir ───
+        <div
+          className="p-3 border-l-4 flex items-center justify-between gap-3 print:p-6 print:border-l-4"
+          style={{
+            borderLeftColor: config.color,
+            background: `linear-gradient(135deg, ${config.color}05 0%, ${config.color}10 100%)`,
+          }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="text-2xl shrink-0">{config.icon}</div>
+            <h1 className="text-base font-bold text-gray-900 truncate" title={caseData.title}>
+              {caseData.title}
+            </h1>
+            <LegalTypeBadge legalType={legalType} size="sm" />
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap"
+              style={{
+                backgroundColor: `${config.color}15`,
+                borderColor: `${config.color}40`,
+                color: config.color,
+              }}
+            >
+              {caseData.status}
+            </span>
+          </div>
+          <button
+            onClick={toggleHeader}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 bg-white/80 hover:bg-white border border-gray-200 transition shrink-0 print:hidden"
+            title="Mostrar resumen completo del caso"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Mostrar resumen</span>
+          </button>
+        </div>
+      ) : (
       <div
-        className="p-6 border-l-4"
+        className="p-6 border-l-4 relative"
         style={{
           borderLeftColor: config.color,
           background: `linear-gradient(135deg, ${config.color}05 0%, ${config.color}10 100%)`,
         }}
       >
+        {/* Botón ocultar resumen (esquina superior derecha del header) */}
+        <button
+          onClick={toggleHeader}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-500 bg-white/70 hover:bg-white hover:text-gray-800 border border-gray-200 transition print:hidden z-10"
+          title="Ocultar resumen del caso (queda solo el título)"
+        >
+          <Minimize2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Ocultar resumen</span>
+        </button>
+
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-4 flex-1">
+          <div className="flex items-start gap-4 flex-1 pr-32">
             <div className="text-5xl">{config.icon}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-3">
@@ -431,6 +499,7 @@ export function EnhancedCaseHeader({ caseData, onUpdated }: EnhancedCaseHeaderPr
           </div>
         </div>
       </div>
+      )}
 
       {/* SHARE MODAL */}
       {showShareModal && (
@@ -516,9 +585,36 @@ function DeleteConfirmModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
+  // Contadores reales de lo que se va a borrar — fetched al montar el modal
+  interface DeletionSummary {
+    documents: { total: number; uploaded: number; ai_generated: number; ai_analysis: number; court_filed: number };
+    chunks: number;
+    parties: number;
+    events: number;
+    tasks: number;
+    notifications: number;
+    financialRecords: number;
+  }
+  const [summary, setSummary] = useState<DeletionSummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+
   // Texto que el user debe escribir literal: el título del caso
   const requiredText = caseTitle.trim();
   const isMatch = confirmText.trim() === requiredText;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.get(`/cases/${caseId}/deletion-summary`);
+        if (!cancelled) {
+          setSummary(r.data as DeletionSummary);
+        }
+      } catch { /* ignore — UI mostrará lista genérica */ }
+      finally { if (!cancelled) setLoadingSummary(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [caseId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -597,38 +693,72 @@ function DeleteConfirmModal({
               </div>
 
               <p className="text-sm text-gray-700 mb-3 font-semibold">
-                Al eliminar este caso se borrará TODO lo siguiente sin posibilidad de recuperación:
+                Al eliminar este caso se borrará <strong>TODO lo siguiente</strong> sin posibilidad de recuperación:
               </p>
-              <ul className="text-sm text-gray-700 space-y-1.5 mb-5 ml-1">
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Toda la <strong>información del caso</strong> (datos jurídicos, descripción, fechas, etapas)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Todos los <strong>documentos cargados</strong> y sus archivos originales (PDF, Word, Excel, imágenes)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Los <strong>vectores y embeddings</strong> generados por IA</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Las <strong>partes representadas</strong> vinculadas al caso (los clientes en sí no se borran)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Las <strong>notificaciones oficiales</strong> (juzgados, fiscalías, contraparte)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Los <strong>resúmenes IA</strong>, conversaciones y análisis</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-red-500 font-bold mt-0.5">✗</span>
-                  <span>Las <strong>tareas, eventos y honorarios</strong> asociados</span>
-                </li>
-              </ul>
+
+              {/* Grid de contadores reales — fetched del backend */}
+              {loadingSummary ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div key={i} className="h-16 rounded-lg bg-gray-100 animate-pulse" />
+                  ))}
+                </div>
+              ) : summary ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                  {[
+                    { label: 'Documentos', value: summary.documents.total, sub: summary.documents.uploaded > 0 ? `${summary.documents.uploaded} subidos` : null, danger: summary.documents.court_filed > 0 ? `${summary.documents.court_filed} ⚖️ presentados` : null },
+                    { label: 'Chunks IA', value: summary.chunks, sub: 'vectores RAG' },
+                    { label: 'Partes', value: summary.parties, sub: 'demandante/dem.' },
+                    { label: 'Eventos', value: summary.events, sub: 'audiencias/citas' },
+                    { label: 'Tareas', value: summary.tasks, sub: 'kanban + sub' },
+                    { label: 'Notificaciones', value: summary.notifications, sub: 'juzgado/fiscalía' },
+                    { label: 'Honorarios', value: summary.financialRecords, sub: 'facturación' },
+                    { label: 'Borradores IA', value: summary.documents.ai_generated + summary.documents.ai_analysis, sub: 'análisis + escritos' },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className={`rounded-lg border p-2.5 ${
+                        item.value > 0 ? 'border-red-200 bg-red-50/40' : 'border-gray-200 bg-gray-50/40'
+                      }`}
+                    >
+                      <div className={`text-lg font-black tabular-nums leading-none ${
+                        item.value > 0 ? 'text-red-700' : 'text-gray-400'
+                      }`}>
+                        {item.value}
+                      </div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 mt-1">
+                        {item.label}
+                      </div>
+                      {item.sub && (
+                        <div className="text-[9px] text-gray-500 mt-0.5 truncate">
+                          {item.sub}
+                        </div>
+                      )}
+                      {item.danger && (
+                        <div className="text-[9px] text-red-700 font-bold mt-0.5 truncate">
+                          {item.danger}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul className="text-sm text-gray-700 space-y-1.5 mb-5 ml-1">
+                  <li className="flex items-start gap-2"><span className="text-red-500 font-bold mt-0.5">✗</span><span>Toda la información del caso, documentos, vectores IA, partes, notificaciones, tareas, eventos y honorarios.</span></li>
+                </ul>
+              )}
+
+              {/* Aviso especial si hay court_filed */}
+              {summary && summary.documents.court_filed > 0 && (
+                <div className="mb-4 p-3 rounded-lg border-2 border-amber-300 bg-amber-50">
+                  <div className="text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                    ⚖️ AVISO LEGAL IMPORTANTE
+                  </div>
+                  <div className="text-xs text-amber-900 leading-snug">
+                    Este caso tiene <strong>{summary.documents.court_filed} documento(s) presentado(s) oficialmente</strong> a juzgado/fiscalía. Aunque elimines tu copia del expediente, las copias presentadas siguen siendo parte del proceso judicial y NO se eliminan de los registros oficiales.
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <label className="flex items-start gap-3 cursor-pointer">
