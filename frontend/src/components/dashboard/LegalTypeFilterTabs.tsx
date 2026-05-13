@@ -18,57 +18,21 @@ interface LegalTypeFilterTabsProps {
 }
 
 export function LegalTypeFilterTabs({ selected, onChange, caseCounts }: LegalTypeFilterTabsProps) {
-  const legalTypeTabs: LegalTypeTab[] = [
-    {
-      id: 'todos',
-      label: 'Todos',
-      icon: '📁',
-      count: caseCounts.todos || 0,
-      color: '#6b7280',
-    },
-    {
-      id: 'penal',
-      label: 'Penal',
-      icon: '⚖️',
-      count: caseCounts.penal || 0,
-      color: legalTypeConfig.penal.color,
-    },
-    {
-      id: 'civil',
-      label: 'Civil',
-      icon: '🏛️',
-      count: caseCounts.civil || 0,
-      color: legalTypeConfig.civil.color,
-    },
-    {
-      id: 'constitucional',
-      label: 'Constitucional',
-      icon: '📜',
-      count: caseCounts.constitucional || 0,
-      color: legalTypeConfig.constitucional.color,
-    },
-    {
-      id: 'transito',
-      label: 'Tránsito',
-      icon: '🚗',
-      count: caseCounts.transito || 0,
-      color: legalTypeConfig.transito.color,
-    },
-    {
-      id: 'administrativo',
-      label: 'Administrativo',
-      icon: '🏢',
-      count: caseCounts.administrativo || 0,
-      color: legalTypeConfig.administrativo.color,
-    },
-    {
-      id: 'laboral',
-      label: 'Laboral',
-      icon: '💼',
-      count: caseCounts.laboral || 0,
-      color: legalTypeConfig.laboral.color,
-    },
+  const orderedKeys: Array<LegalType | 'todos'> = [
+    'todos',
+    ...(Object.keys(legalTypeConfig).filter((k) => k !== 'todos') as LegalType[]),
   ];
+
+  const legalTypeTabs: LegalTypeTab[] = orderedKeys.map((id) => {
+    const cfg = legalTypeConfig[id];
+    return {
+      id,
+      label: cfg.label,
+      icon: cfg.icon,
+      count: caseCounts[id] || 0,
+      color: cfg.color,
+    };
+  });
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-2 overflow-x-auto">

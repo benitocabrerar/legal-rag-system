@@ -170,7 +170,7 @@ export async function runScan(opts: {
                 title, issuing_entity, coverage_scope, raw_text_excerpt, raw_text_length,
                 ai_summary, ai_classification, ai_relevance_score, ai_keywords,
                 ai_analysis_meta, status
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::text[], $19::jsonb, 'analyzed')
+              ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::text[], $19::jsonb, 'analyzed')
               ON CONFLICT (source, edition_number, publication_number, title) DO NOTHING`,
               scanId, 'EC', 'registro_oficial_ec',
               ed.number, ed.date, ed.pageUrl, ed.pdfUrl,
@@ -223,7 +223,7 @@ export async function runScan(opts: {
          editions_found = $3,
          publications_found = $4,
          errors = $5::jsonb
-     WHERE id = $1`,
+     WHERE id = $1::uuid`,
     scanId,
     errors.length > 0 && publicationsFound === 0 ? 'failed' : 'completed',
     editionsFound, publicationsFound, JSON.stringify(errors),
