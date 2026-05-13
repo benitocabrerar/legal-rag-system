@@ -1592,7 +1592,9 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
   );
 
   // =========================================================================
-  // POST /legal-reference/analyze  —  Análisis IA ampliado de una norma
+  // POST /legal-reference/expand  —  Análisis IA ampliado de una norma
+  //   (ANTES era /analyze pero adblockers/EasyPrivacy bloqueaban URLs con
+  //   "analyze" silenciosamente — el fetch nunca llegaba al backend).
   //   específica con el texto literal recuperado del corpus vectorizado.
   //
   //   body: { norm: string, article?: string, caseId?: string, description?: string }
@@ -1611,10 +1613,11 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
   //        - estrategia de aplicación (cómo usar la norma en este caso)
   // =========================================================================
   fastify.post<{ Body: any }>(
-    '/legal-reference/analyze',
+    '/legal-reference/expand',
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
       const userId = (request.user as any).id;
+      fastify.log.info({ userId, origin: request.headers.origin }, 'legal-reference/expand hit');
 
       // CRÍTICO — setSseHeaders ANTES de cualquier parsing. Si z.parse fallaba
       // antes, Fastify mandaba un JSON 400 sin Content-Type: text/event-stream,
@@ -1682,7 +1685,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           const embedResp: any = await aiClient.embeddings.create({ input: ragQuery, dimensions: 1536 });
           embedding = embedResp.data?.[0]?.embedding || null;
         } catch (e: any) {
-          fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: embedding failed');
+          fastify.log.warn({ err: e?.message }, 'legal-reference/expand: embedding failed');
         }
 
         phase('rag', 'Buscando en el corpus legal vectorizado…', 28);
@@ -1715,7 +1718,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
               }
             }
           } catch (e: any) {
-            fastify.log.warn({ err: e?.message }, 'legal-reference/analyze: RAG retrieval failed');
+            fastify.log.warn({ err: e?.message }, 'legal-reference/expand: RAG retrieval failed');
           }
         }
         phase('rag-done', `${sources.length} fuentes recuperadas del corpus`, 34);
@@ -1858,7 +1861,7 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         phase('done', 'Listo', 100);
         write('done', { generatedAt: new Date().toISOString() });
       } catch (e: any) {
-        fastify.log.error({ err: e?.message }, 'legal-reference/analyze failed');
+        fastify.log.error({ err: e?.message }, 'legal-reference/expand failed');
         write('error', { error: e?.message || 'AI failed' });
       } finally {
         stopKeepalive();

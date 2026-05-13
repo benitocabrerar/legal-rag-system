@@ -142,7 +142,7 @@ export default function LegalReferenceDialog({
       }, 500);
       try {
         const token = await getAuthToken();
-        const r = await fetch(`${API_URL}/api/v1/legal-reference/analyze`, {
+        const r = await fetch(`${API_URL}/api/v1/legal-reference/expand`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
