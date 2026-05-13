@@ -92,8 +92,16 @@ export function CaseAIChat({ caseId, onDocumentUploaded }: Props) {
     setLoadingSugg(true);
     try {
       const r = await caseChatAPI.suggestions(caseId);
-      setSuggestions(r.suggestions);
-    } catch {
+      if (Array.isArray(r?.suggestions) && r.suggestions.length > 0) {
+        setSuggestions(r.suggestions);
+      } else {
+        // Backend ya devuelve fallback si la IA falla; este branch solo aplica
+        // si vino realmente vacío (caso muy raro). No dejamos la UI muda.
+        console.warn('[suggestions] respuesta vacía', r);
+        setSuggestions([]);
+      }
+    } catch (err) {
+      console.error('[suggestions] error', err);
       setSuggestions([]);
     } finally {
       setLoadingSugg(false);

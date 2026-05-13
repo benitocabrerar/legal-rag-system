@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { getAiClient } from '../lib/ai-client.js';
 import { extractText } from '../lib/extract-text.js';
 import { serviceRoleClient } from '../lib/supabase.js';
+import { logActivityAsync, listCaseActivity } from '../lib/audit.js';
 
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_DOCUMENTS || 'legal-documents';
 const CHUNK_SIZE = 1000;
@@ -448,45 +449,106 @@ export async function documentRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Delete document
-  fastify.delete('/documents/:id', {
-    onRequest: [fastify.authenticate],
-  }, async (request, reply) => {
-    try {
-      const { id } = request.params as { id: string };
+  // ─────────────────────────────────────────────────────────────
+  // DELETE /documents/:id  —  borrado completo y reversible (audit)
+  //
+  // Limpia en este orden:
+  //   1. chunks vectorizados (document_chunks)
+  //   2. binario en Supabase Storage (si existe)
+  //   3. fila documents
+  //   4. (best-effort) regenera el cerebro del caso para reflejar la baja
+  //   5. registra en audit_logs
+  //
+  // Devuelve los stats de la operación para que la UI pueda mostrar feedback.
+  // ─────────────────────────────────────────────────────────────
+  fastify.delete<{ Params: { id: string }; Querystring: { refreshBrain?: string } }>(
+    '/documents/:id',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const startedAt = Date.now();
+      const { id } = request.params;
       const userId = (request.user as any).id;
+      const refreshBrain = request.query.refreshBrain !== 'false';
 
-      const document = await prisma.document.findFirst({
-        where: {
-          id,
-          userId,
-        },
-      });
+      try {
+        // Cargar con campos extra (storage_key/bucket no están en Prisma schema
+        // pero sí en la BD — usamos raw SQL).
+        const rows = await prisma.$queryRawUnsafe<Array<{
+          id: string; case_id: string | null; title: string;
+          storage_bucket: string | null; storage_key: string | null;
+          original_filename: string | null;
+        }>>(
+          `SELECT id, case_id, title, storage_bucket, storage_key, original_filename
+             FROM public.documents
+            WHERE id = $1 AND user_id = $2 LIMIT 1`,
+          id, userId,
+        );
+        if (rows.length === 0) {
+          return reply.code(404).send({ error: 'Document not found' });
+        }
+        const doc = rows[0];
 
-      if (!document) {
-        return reply.code(404).send({ error: 'Document not found' });
-      }
+        // 1) Borrar chunks
+        const chunksDel = await prisma.documentChunk.deleteMany({ where: { documentId: id } });
 
-      // Delete chunks first
-      await prisma.documentChunk.deleteMany({
-        where: {
+        // 2) Borrar binario en Storage (best-effort)
+        let storageDeleted = false;
+        if (doc.storage_bucket && doc.storage_key) {
+          try {
+            const sb = serviceRoleClient();
+            const r = await sb.storage.from(doc.storage_bucket).remove([doc.storage_key]);
+            storageDeleted = !r.error;
+            if (r.error) {
+              fastify.log.warn({ err: r.error.message, key: doc.storage_key }, 'storage delete failed');
+            }
+          } catch (e: any) {
+            fastify.log.warn({ err: e?.message }, 'storage delete exception');
+          }
+        }
+
+        // 3) Borrar fila documents
+        await prisma.document.delete({ where: { id } });
+
+        // 4) Refrescar cerebro del caso (no bloqueante — best-effort)
+        let brainRefreshed = false;
+        if (refreshBrain && doc.case_id) {
+          try {
+            await synthesizeCaseBrain(doc.case_id);
+            brainRefreshed = true;
+          } catch (e: any) {
+            fastify.log.warn({ err: e?.message }, 'brain refresh tras delete falló');
+          }
+        }
+
+        // 5) Audit log
+        logActivityAsync(userId, 'DOCUMENT_DELETED', 'document', id, {
+          caseId: doc.case_id || undefined,
+          title: doc.title,
+          filename: doc.original_filename || undefined,
+          chunksDeleted: chunksDel.count,
+          storageDeleted,
+          brainRefreshed,
+          durationMs: Date.now() - startedAt,
+          ip: (request.headers['x-forwarded-for'] as string) || request.ip,
+          userAgent: request.headers['user-agent'] || null,
+        });
+
+        return reply.send({
+          ok: true,
           documentId: id,
-        },
-      });
-
-      // Delete document
-      await prisma.document.delete({
-        where: {
-          id,
-        },
-      });
-
-      return reply.send({ message: 'Document deleted successfully' });
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.code(500).send({ error: 'Internal server error' });
-    }
-  });
+          chunksDeleted: chunksDel.count,
+          storageDeleted,
+          brainRefreshed,
+        });
+      } catch (error: any) {
+        fastify.log.error({ err: error?.message }, 'document delete failed');
+        logActivityAsync(userId, 'DOCUMENT_DELETED', 'document', id, {
+          ip: (request.headers['x-forwarded-for'] as string) || request.ip,
+        }, false, error?.message);
+        return reply.code(500).send({ error: 'Internal server error' });
+      }
+    },
+  );
 
   // =========================================================================
   // POST /documents/upload-stream  —  Upload + vectorize + synthesize brain
@@ -665,6 +727,16 @@ export async function documentRoutes(fastify: FastifyInstance) {
         },
         brain: brain ? brainSummary(brain) : null,
       });
+
+      logActivityAsync(userId, 'DOCUMENT_UPLOADED', 'document', documentId, {
+        caseId,
+        title,
+        filename: originalFilename,
+        chunks: chunksCount,
+        riskLevel: brain?.riskLevel,
+        ip: (request.headers['x-forwarded-for'] as string) || request.ip,
+        userAgent: request.headers['user-agent'] || null,
+      });
     } catch (e: any) {
       fastify.log.error({ err: e.message }, 'upload-stream falló');
       send('error', { message: e.message || 'Error inesperado' });
@@ -673,6 +745,24 @@ export async function documentRoutes(fastify: FastifyInstance) {
     }
     return reply;
   });
+
+  // =========================================================================
+  // GET /cases/:id/activity  —  log de auditoría del caso
+  // =========================================================================
+  fastify.get<{ Params: { id: string }; Querystring: { limit?: string; offset?: string } }>(
+    '/cases/:id/activity',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const own = await prisma.case.findFirst({ where: { id: request.params.id, userId }, select: { id: true } });
+      if (!own) return reply.code(404).send({ error: 'Case not found' });
+
+      const limit = Math.max(1, Math.min(parseInt(request.query.limit || '100', 10), 500));
+      const offset = Math.max(0, parseInt(request.query.offset || '0', 10));
+      const events = await listCaseActivity(request.params.id, limit, offset);
+      return reply.send({ caseId: request.params.id, events, count: events.length, limit, offset });
+    },
+  );
 
   // =========================================================================
   // GET /cases/:id/brain  —  Lee el cerebro persistido del caso
@@ -711,6 +801,11 @@ export async function documentRoutes(fastify: FastifyInstance) {
 
     try {
       const brain = await synthesizeCaseBrain(request.params.id);
+      logActivityAsync(userId, 'BRAIN_REFRESHED', 'case', request.params.id, {
+        caseId: request.params.id,
+        riskLevel: brain.riskLevel,
+        documentCount: brain.documentCount,
+      });
       return reply.send({ ok: true, brain: brainSummary(brain), full: brain });
     } catch (e: any) {
       fastify.log.error({ err: e.message }, 'brain refresh failed');

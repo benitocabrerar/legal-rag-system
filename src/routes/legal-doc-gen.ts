@@ -680,6 +680,213 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         .send(buffer);
     },
   );
+
+  // ───────────────────────────────────────────────────────────────────────
+  // POST /cases/:id/deep-analysis  (SSE)
+  //
+  // Análisis legal profundo del caso completo. NO genera un documento para
+  // firmar — produce un dictamen interno estructurado en 8 secciones que un
+  // socio senior usaría para evaluar y decidir cómo encarar el caso.
+  //
+  // Combina:
+  //   • Toda la información del caso (título, descripción, cliente, número)
+  //   • Hasta 8 documentos del expediente (excerpts de 2500 chars c/u)
+  //   • Cronología de eventos
+  //   • Cerebro del caso si existe (síntesis multi-doc previa)
+  //   • MARCO NORMATIVO con RAG sobre corpus oficial (top 20 fuentes reales)
+  //
+  // Salida: markdown estructurado streameado por SSE.
+  // ───────────────────────────────────────────────────────────────────────
+  fastify.post<{ Params: { id: string } }>(
+    '/cases/:id/deep-analysis',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const startedAt = Date.now();
+      const userId = (request.user as any).id;
+
+      const c = await loadCaseForGeneration(request.params.id, userId);
+      if (!c) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      // Cargar cerebro previo si existe (síntesis multi-doc anterior)
+      const brainRows = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT metadata->'brain' AS brain FROM public.cases WHERE id = $1 LIMIT 1`,
+        request.params.id,
+      );
+      const priorBrain = brainRows[0]?.brain ?? null;
+
+      const aiClient = await getAiClient();
+
+      // Construir query RAG enriquecido para MARCO NORMATIVO
+      const ragQuery = [
+        c.title,
+        c.description || '',
+        ...c.documents.slice(0, 3).map((d) => d.title),
+        priorBrain?.summary || '',
+      ].filter(Boolean).join(' \n ').slice(0, 2000);
+      const legalSources = await retrieveLegalContext(ragQuery, 20, c.country.code);
+
+      // System prompt del especialista legal
+      const systemPrompt = [
+        `Eres un(a) abogado(a) socio(a) senior de una firma legal de prestigio mundial, especialista en el sistema ${c.country.legalSystem === 'common_law' ? 'common law' : 'civil law'} de ${c.country.nameEs}, con 25+ años de experiencia litigando, asesorando y dictaminando.`,
+        '',
+        'TAREA: producir un DICTAMEN INTERNO de análisis profundo del caso que se te presenta. Este no es un escrito para el juzgado — es un análisis exhaustivo que el equipo del estudio jurídico usará para evaluar el caso y decidir cómo proceder. La calidad esperada es la de un memorándum que un Senior Partner firmaría.',
+        '',
+        'ESTRUCTURA OBLIGATORIA — 8 SECCIONES NUMERADAS:',
+        '',
+        '## I. RESUMEN EJECUTIVO',
+        '(2-3 párrafos densos: qué caso es, qué se busca, etapa actual, posición probable, recomendación general. Sin rodeos.)',
+        '',
+        '## II. HECHOS RELEVANTES',
+        '(Cronología numerada de los hechos PROBADOS o ALEGADOS. Cita las fuentes documentales del expediente — "según [Documento N]: …". No inventes hechos.)',
+        '',
+        '## III. MARCO NORMATIVO APLICABLE',
+        '(Lista las normas aplicables al caso, una por bloque. Para cada una: nombre exacto + número de artículo + texto/extracto + por qué aplica. CITA ÚNICAMENTE artículos presentes en el bloque "MARCO NORMATIVO" del usuario, o normas universalmente verificables — si no estás seguro de un número, usa "[CITA POR VERIFICAR]". Cubre Constitución, leyes orgánicas, códigos, reglamentos y jurisprudencia relevante.)',
+        '',
+        '## IV. ANÁLISIS JURÍDICO',
+        '(Subsunción de los hechos a cada norma de la sección III. Una sub-sección por norma: cómo encajan los hechos en el supuesto, qué consecuencia jurídica se sigue, qué doctrina o precedentes apoyan/contradicen. Argumenta — no te limites a citar.)',
+        '',
+        '## V. FORTALEZAS Y DEBILIDADES (FODA JURÍDICO)',
+        '(Cuatro sub-secciones: ### Fortalezas — argumentos sólidos a favor; ### Debilidades — puntos vulnerables propios; ### Oportunidades — palancas tácticas; ### Amenazas — riesgos del proceso o estrategia contraria probable. Lista priorizada con explicación corta.)',
+        '',
+        '## VI. RIESGOS Y PLAZOS CRÍTICOS',
+        '(Plazos procesales vigentes, prescripciones, caducidades, fechas de audiencias programadas o por programar, riesgos de costas, riesgos penales/disciplinarios. Cada riesgo con su mitigación recomendada.)',
+        '',
+        '## VII. ESTRATEGIA RECOMENDADA',
+        '(Tres horizontes: ### Corto plazo (0-30 días) — acciones inmediatas; ### Mediano plazo (1-6 meses) — desarrollo procesal; ### Largo plazo (>6 meses) — escenarios finales y salidas alternativas como mediación o transacción. Decisiones tácticas concretas con su razón legal.)',
+        '',
+        '## VIII. PLAN DE ACCIÓN INMEDIATO',
+        '(5-10 acciones priorizadas para los próximos 7 días, con responsable sugerido y deadline. Tabla o lista numerada con prioridad ALTA/MEDIA/BAJA.)',
+        '',
+        'REGLAS:',
+        '1) NO inventes nombres, fechas, montos ni precedentes. Si un dato no aparece en el expediente, no lo asumas.',
+        '2) NO uses placeholders genéricos ("NN", "[NOMBRE]"). Usa los datos reales o marca explícitamente "[DATO REQUERIDO: ...]".',
+        '3) CITA con precisión los documentos del expediente cuando los uses como fuente fáctica.',
+        '4) CITA con precisión los artículos legales — solo los confirmables — y marca "[CITA POR VERIFICAR]" si dudas.',
+        '5) NO comentarios meta-textuales. El primer carácter es la primera palabra del dictamen.',
+        '',
+        'FORMATO: Markdown profesional. "## Título" para secciones I-VIII, "### Subtítulo" para sub-secciones, **negrita** sobria, listas numeradas/bullets donde mejoren la legibilidad. Extensión esperada: 1500-3500 palabras — exhaustivo, no superficial.',
+      ].join('\n');
+
+      const docContext = c.documents
+        .map((d, i) => {
+          const excerpt = d.excerpt.slice(0, 2500);
+          return `[Documento ${i + 1}] ${d.title}\n${excerpt}`;
+        })
+        .join('\n\n');
+      const eventContext = c.events
+        .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}${e.description ? ' — ' + e.description : ''}`)
+        .join('\n');
+
+      const brainContext = priorBrain
+        ? [
+            `Síntesis previa del cerebro del caso (referencia, no la repitas literal):`,
+            `- Resumen: ${(priorBrain.summary || '').slice(0, 800)}`,
+            `- Partes: ${(priorBrain.parties || []).map((p: any) => `${p.name} (${p.role})`).slice(0, 8).join(', ')}`,
+            `- Riesgo declarado: ${priorBrain.riskLevel}`,
+            `- Vacíos identificados: ${(priorBrain.gaps || []).slice(0, 5).join(' | ')}`,
+          ].join('\n')
+        : '(sin cerebro previo)';
+
+      const userPrompt = [
+        '=== CASO ===',
+        `Título: ${c.title}`,
+        c.caseNumber ? `Número de causa: ${c.caseNumber}` : '',
+        c.clientName ? `Cliente: ${c.clientName}` : '',
+        c.description ? `Descripción inicial:\n${c.description}` : '',
+        '',
+        `=== DOCUMENTOS DEL EXPEDIENTE (${c.documents.length}) ===`,
+        docContext || '(sin documentos cargados)',
+        '',
+        `=== CRONOLOGÍA DE EVENTOS ===`,
+        eventContext || '(sin eventos)',
+        '',
+        '=== CEREBRO DEL CASO (referencia) ===',
+        brainContext,
+        '',
+        `=== MARCO NORMATIVO (${legalSources.length} extractos reales del corpus oficial de ${c.country.nameEs}) ===`,
+        formatLegalSources(legalSources),
+        '',
+        'Genera el DICTAMEN INTERNO ahora, con las 8 secciones, extensivo y riguroso. Aplica estrictamente las reglas del sistema.',
+      ].filter(Boolean).join('\n');
+
+      // Headers SSE
+      reply
+        .raw.setHeader('Content-Type', 'text/event-stream')
+        .setHeader('Cache-Control', 'no-cache, no-transform')
+        .setHeader('Connection', 'keep-alive')
+        .setHeader('X-Accel-Buffering', 'no');
+      reply.raw.flushHeaders?.();
+
+      const send = (event: string, data: any) => {
+        reply.raw.write(`event: ${event}\n`);
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      let chars = 0;
+      try {
+        send('start', {
+          caseId: c.id,
+          country: c.country.code,
+          model: aiClient.model,
+          provider: aiClient.provider,
+          documents: c.documents.length,
+          events: c.events.length,
+          legalSourcesUsed: legalSources.length,
+          hasBrain: !!priorBrain,
+        });
+        if (legalSources.length > 0) {
+          send('legal-sources', {
+            count: legalSources.length,
+            titles: legalSources.map((s) => s.normTitle).slice(0, 15),
+          });
+        }
+
+        const stream = await aiClient.streamChat({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.25,
+          max_tokens: 16000,
+        });
+        for await (const chunk of stream) {
+          const delta = chunk?.choices?.[0]?.delta?.content;
+          if (delta) {
+            chars += delta.length;
+            send('chunk', { content: delta });
+          }
+        }
+
+        send('done', {
+          ok: true,
+          chars,
+          legalSourcesUsed: legalSources.length,
+          durationMs: Date.now() - startedAt,
+        });
+
+        // Audit
+        const { logActivityAsync } = await import('../lib/audit.js');
+        logActivityAsync(userId, 'DEEP_ANALYSIS_COMPLETED', 'case', c.id, {
+          caseId: c.id,
+          documents: c.documents.length,
+          legalSourcesUsed: legalSources.length,
+          chars,
+          durationMs: Date.now() - startedAt,
+          model: aiClient.model,
+        });
+      } catch (err: any) {
+        request.log.error({ err }, 'deep-analysis failed');
+        send('error', { message: err?.message ?? 'AI error' });
+        const { logActivityAsync } = await import('../lib/audit.js');
+        logActivityAsync(userId, 'DEEP_ANALYSIS_COMPLETED', 'case', c.id, {
+          caseId: c.id, durationMs: Date.now() - startedAt,
+        }, false, err?.message);
+      } finally {
+        reply.raw.end();
+      }
+      return reply;
+    },
+  );
 }
 
 // ─── DOCX renderer (markdown-ish → Word) ────────────────────

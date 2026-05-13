@@ -16,6 +16,10 @@ import { LegalReferences } from '@/components/case-detail/LegalReferences';
 import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
 import { CaseAIChat } from '@/components/case-detail/CaseAIChat';
 import DocumentUploadProgress from '@/components/case-detail/DocumentUploadProgress';
+import DeleteDocumentConfirm from '@/components/case-detail/DeleteDocumentConfirm';
+import DeepAnalysisDialog from '@/components/case-detail/DeepAnalysisDialog';
+import CaseActivityDrawer from '@/components/case-detail/CaseActivityDrawer';
+import { History as HistoryIcon } from 'lucide-react';
 import { CollapsibleSection, SectionsToolbar, type CompletionState } from '@/components/case-detail/CollapsibleSection';
 import { Briefcase as BriefcaseIcon, Users, Scale as ScaleIcon, DollarSign as DollarSignIcon, FileWarning } from 'lucide-react';
 import {
@@ -102,6 +106,12 @@ export default function CaseDetailPage() {
   // Modal de progreso del upload + cerebro (SSE)
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  // Modal de confirmación de borrado de documento
+  const [docToDelete, setDocToDelete] = useState<Document | null>(null);
+  // Modal de análisis IA profundo
+  const [deepAnalysisOpen, setDeepAnalysisOpen] = useState(false);
+  // Drawer de actividad/audit log
+  const [activityOpen, setActivityOpen] = useState(false);
   const [querying, setQuerying] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'contracts' | 'evidence' | 'reports'>('all');
   const [showGenerateDocModal, setShowGenerateDocModal] = useState(false);
@@ -787,6 +797,15 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                         >
                           <Download className="w-4 h-4 text-gray-600" />
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setDocToDelete(doc)}
+                          className="p-1.5 hover:bg-red-100 rounded transition-colors"
+                          title="Eliminar del caso"
+                          aria-label="Eliminar documento"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-700" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -997,11 +1016,18 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
                 Exportar Caso
               </button>
               <button
-                onClick={handleRequestAnalysis}
-                className="w-full px-4 py-2.5 border-2 border-purple-600 text-purple-600 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                onClick={() => setDeepAnalysisOpen(true)}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white rounded-lg font-medium hover:scale-[1.01] hover:shadow-lg shadow-fuchsia-500/30 transition-all shadow-sm flex items-center gap-2"
               >
                 <Sparkles className="w-4 h-4" />
                 Solicitar Análisis IA
+              </button>
+              <button
+                onClick={() => setActivityOpen(true)}
+                className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 mt-1"
+              >
+                <HistoryIcon className="w-4 h-4" />
+                Actividad / Auditoría
               </button>
             </div>
           </div>
@@ -1268,6 +1294,32 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           // Refrescar la lista de documentos del expediente
           loadDocuments();
         }}
+      />
+
+      <DeleteDocumentConfirm
+        open={!!docToDelete}
+        document={docToDelete ? {
+          id: docToDelete.id,
+          title: docToDelete.title || docToDelete.filename || 'Documento',
+          filename: docToDelete.filename,
+          size: docToDelete.size,
+        } : null}
+        onClose={() => setDocToDelete(null)}
+        onDeleted={() => {
+          loadDocuments();
+        }}
+      />
+
+      <DeepAnalysisDialog
+        caseId={caseId}
+        open={deepAnalysisOpen}
+        onClose={() => setDeepAnalysisOpen(false)}
+      />
+
+      <CaseActivityDrawer
+        caseId={caseId}
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
       />
     </div>
   );

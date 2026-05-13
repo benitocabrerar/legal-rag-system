@@ -86,6 +86,17 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
         evList || '(ninguno)',
       ].filter(Boolean).join('\n');
 
+      // Sugerencias genéricas para que la UI NUNCA aparezca vacía si la IA falla.
+      // Categorías: análisis, redacción, investigación, estrategia, riesgo, cliente.
+      const fallbackSuggestions = [
+        { icon: '📋', label: 'Resumen ejecutivo',    prompt: 'Resume los hechos clave del caso en orden cronológico, identificando partes, pretensiones y etapa procesal.', category: 'analisis' as const },
+        { icon: '⚖️', label: 'Normativa aplicable',  prompt: 'Identifica las normas aplicables del corpus legal a este caso y explica por qué cada una aplica.', category: 'investigacion' as const },
+        { icon: '🎯', label: 'Estrategia procesal',  prompt: 'Propón una estrategia procesal: pretensiones, pruebas a aportar y posibles incidentes.', category: 'estrategia' as const },
+        { icon: '⚠️', label: 'Riesgos del caso',     prompt: 'Identifica los principales riesgos (plazos, prescripción, contradicciones probatorias) y cómo mitigarlos.', category: 'riesgo' as const },
+        { icon: '📝', label: 'Borrador de escrito',  prompt: 'Redacta un borrador del próximo escrito que conviene presentar dado el estado actual del caso.', category: 'redaccion' as const },
+        { icon: '💬', label: 'Explicar al cliente',  prompt: 'Explica el estado del caso al cliente en lenguaje claro, sin tecnicismos, en 1 párrafo.', category: 'cliente' as const },
+      ];
+
       try {
         const aiClient = await getAiClient();
         const completion = await aiClient.chat.completions.create({
@@ -96,23 +107,60 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
           temperature: 0.4,
           max_tokens: 800,
         });
-        const raw = completion.choices?.[0]?.message?.content?.trim() ?? '';
-        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-        let parsed: { suggestions: any[] };
-        try { parsed = JSON.parse(cleaned); } catch {
-          return reply.code(502).send({ error: 'AI_INVALID_JSON', raw: cleaned.slice(0, 200) });
+        const raw = (completion.choices?.[0]?.message?.content || '').trim();
+
+        // Capa 1: parse directo (luego de quitar fences)
+        const fenced = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        let parsed: any = null;
+        try { parsed = JSON.parse(fenced); } catch {
+          // Capa 2: primer objeto JSON balanceado
+          const start = fenced.indexOf('{');
+          if (start >= 0) {
+            let depth = 0, inString = false, escape = false;
+            for (let i = start; i < fenced.length; i++) {
+              const ch = fenced[i];
+              if (escape) { escape = false; continue; }
+              if (ch === '\\') { escape = true; continue; }
+              if (ch === '"') { inString = !inString; continue; }
+              if (inString) continue;
+              if (ch === '{') depth++;
+              else if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                  try { parsed = JSON.parse(fenced.slice(start, i + 1)); } catch {}
+                  break;
+                }
+              }
+            }
+          }
         }
-        const suggestions = (parsed.suggestions ?? []).slice(0, 6).map((s: any) => ({
-          icon: typeof s.icon === 'string' ? s.icon.slice(0, 4) : '✨',
-          label: String(s.label ?? '').slice(0, 60),
-          prompt: String(s.prompt ?? '').slice(0, 240),
-          category: ['analisis','redaccion','investigacion','estrategia','riesgo','cliente']
-            .includes(s.category) ? s.category : 'analisis',
-        }));
+
+        const VALID_CATS = ['analisis','redaccion','investigacion','estrategia','riesgo','cliente'] as const;
+        const rawList = parsed && Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+        const suggestions = rawList.slice(0, 6).map((s: any) => ({
+          icon: typeof s?.icon === 'string' && s.icon.length > 0 ? s.icon.slice(0, 4) : '✨',
+          label: String(s?.label ?? '').slice(0, 60),
+          prompt: String(s?.prompt ?? '').slice(0, 240),
+          category: VALID_CATS.includes(s?.category) ? s.category : 'analisis',
+        })).filter((s: any) => s.label && s.prompt);
+
+        // Si la IA devolvió 0-2 sugerencias, completamos con las genéricas.
+        if (suggestions.length < 3) {
+          const need = 6 - suggestions.length;
+          const seen = new Set(suggestions.map((s: any) => s.label));
+          for (const f of fallbackSuggestions) {
+            if (seen.has(f.label)) continue;
+            suggestions.push(f);
+            if (suggestions.length >= 6) break;
+            if (suggestions.length - rawList.length >= need) break;
+          }
+        }
+
         return { suggestions, country: country.code };
       } catch (err: any) {
-        request.log.error({ err }, 'chat-suggestions failed');
-        return reply.code(500).send({ error: 'AI_FAILED', message: err?.message });
+        request.log.error({ err: err?.message }, 'chat-suggestions falló — devolviendo fallback');
+        // Failsafe: que la UI nunca se vea vacía, incluso si la IA cae.
+        return { suggestions: fallbackSuggestions, country: country.code, fallback: true };
       }
     },
   );
