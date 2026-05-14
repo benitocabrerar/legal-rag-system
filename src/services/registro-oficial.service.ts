@@ -450,23 +450,86 @@ interface ScrapedEditionWithFallback extends ScrapedEdition {
 }
 
 export async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
+  return downloadAndExtractPdfWithDetails(pdfUrl).then((r) => r.text);
+}
+
+/**
+ * Versión con detalles para diagnóstico — devuelve text + error específico
+ * + meta (size, fetchMs, parseMs). El audit log puede usar esta info para
+ * saber por qué falla cada PDF específico.
+ */
+export async function downloadAndExtractPdfWithDetails(pdfUrl: string): Promise<{
+  text: string | null;
+  error: string | null;
+  size: number;
+  fetchMs: number;
+  parseMs: number;
+}> {
+  const fetchStart = Date.now();
+  let size = 0;
+  // Timeout extendido a 60s — PDFs grandes (>500KB) tardan en descargar desde
+  // sitios .gob.ec ecuatorianos cuyo CDN no siempre es óptimo.
+  const TIMEOUT_MS = 60_000;
+
+  let buf: Buffer;
   try {
     const ac = new AbortController();
-    const timeout = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => ac.abort(), TIMEOUT_MS);
     const r = await fetch(pdfUrl, {
-      headers: { 'User-Agent': USER_AGENT },
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept': 'application/pdf,*/*;q=0.8',
+      },
       signal: ac.signal,
+      redirect: 'follow',
     });
     clearTimeout(timeout);
-    if (!r.ok) return null;
-    const buf = Buffer.from(await r.arrayBuffer());
+    if (!r.ok) {
+      return { text: null, error: `HTTP ${r.status} desde ${pdfUrl}`, size: 0, fetchMs: Date.now() - fetchStart, parseMs: 0 };
+    }
+    const arr = await r.arrayBuffer();
+    buf = Buffer.from(arr);
+    size = buf.length;
+  } catch (e: any) {
+    return {
+      text: null,
+      error: `fetch failed: ${e?.message || 'unknown'} (timeout ${TIMEOUT_MS}ms)`,
+      size: 0,
+      fetchMs: Date.now() - fetchStart,
+      parseMs: 0,
+    };
+  }
+  const fetchMs = Date.now() - fetchStart;
+
+  if (size < 1000) {
+    return { text: null, error: `PDF demasiado pequeño (${size} bytes), probablemente página de error`, size, fetchMs, parseMs: 0 };
+  }
+  // Detección rápida: ¿es realmente un PDF?
+  const header = buf.slice(0, 8).toString('utf-8');
+  if (!header.startsWith('%PDF')) {
+    return { text: null, error: `Respuesta no es PDF (header: "${header.slice(0, 8)}")`, size, fetchMs, parseMs: 0 };
+  }
+
+  const parseStart = Date.now();
+  try {
     // Dynamic import para evitar el bug ENOENT de pdf-parse al cold start.
     // @ts-ignore - pdf-parse no tiene types
     const pdfParse = (await import('pdf-parse')).default;
-    const parsed = await pdfParse(buf);
-    return parsed.text || null;
-  } catch {
-    return null;
+    const parsed = await pdfParse(buf, { max: 500 });  // máximo 500 páginas para evitar OOM
+    const text = parsed?.text || null;
+    const parseMs = Date.now() - parseStart;
+    if (!text || text.length < 100) {
+      return { text: null, error: `PDF parseado pero texto vacío o muy corto (${text?.length || 0} chars). Posiblemente PDF escaneado sin OCR.`, size, fetchMs, parseMs };
+    }
+    return { text, error: null, size, fetchMs, parseMs };
+  } catch (e: any) {
+    return {
+      text: null,
+      error: `pdf-parse error: ${e?.message || 'unknown'}`,
+      size,
+      fetchMs,
+      parseMs: Date.now() - parseStart,
+    };
   }
 }
 

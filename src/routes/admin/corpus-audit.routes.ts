@@ -127,25 +127,45 @@ export async function corpusAuditRoutes(fastify: FastifyInstance) {
   );
 
   // ─── GET /admin/corpus/audit-report/:id ────────────────────────────
-  // Devuelve el HTML del informe como descarga.
+  // Devuelve el HTML del informe como descarga. Si el archivo no existe
+  // en disco (filesystem efímero de Render se reinicia en cada deploy),
+  // se regenera on-the-fly desde los datos persistidos en la DB.
   fastify.get<{ Params: { id: string } }>(
     '/admin/corpus/audit-report/:id',
     { onRequest: [fastify.authenticate] },
     async (request, reply) => {
       if (!(await requireAdmin(request, reply))) return;
-      const runs = await prisma.$queryRawUnsafe<Array<{ html_report_path: string | null }>>(
-        `SELECT html_report_path FROM public.corpus_audit_runs WHERE id = $1::uuid`,
+      const runs = await prisma.$queryRawUnsafe<Array<{ id: string; html_report_path: string | null }>>(
+        `SELECT id, html_report_path FROM public.corpus_audit_runs WHERE id = $1::uuid`,
         request.params.id,
       );
-      if (runs.length === 0 || !runs[0].html_report_path) {
-        return reply.code(404).send({ error: 'Reporte no disponible para este run' });
+      if (runs.length === 0) {
+        return reply.code(404).send({ error: 'Audit run no encontrado' });
       }
-      const filepath = runs[0].html_report_path;
-      if (!fs.existsSync(filepath)) {
-        return reply.code(404).send({ error: 'Archivo de reporte no encontrado en disco' });
+
+      const runId = runs[0].id;
+      let filepath = runs[0].html_report_path;
+      const fileExists = filepath ? fs.existsSync(filepath) : false;
+
+      // Regenerar si: no hay path en DB, o el path está pero el archivo
+      // se perdió (Render filesystem efímero).
+      if (!filepath || !fileExists) {
+        try {
+          const { generateAuditHtmlReport } = await import('../../services/corpus-audit-report.service.js');
+          filepath = await generateAuditHtmlReport(runId);
+          // Actualizar el path en DB para futuros accesos en este container
+          await prisma.$executeRawUnsafe(
+            `UPDATE public.corpus_audit_runs SET html_report_path = $2 WHERE id = $1::uuid`,
+            runId, filepath,
+          );
+        } catch (e: any) {
+          fastify.log.error({ err: e?.message }, 'audit report regeneration failed');
+          return reply.code(500).send({ error: 'No se pudo regenerar el reporte', detail: e?.message });
+        }
       }
-      const filename = path.basename(filepath);
-      const stream = fs.createReadStream(filepath);
+
+      const filename = path.basename(filepath!);
+      const stream = fs.createReadStream(filepath!);
       return reply
         .header('Content-Type', 'text/html; charset=utf-8')
         .header('Content-Disposition', `attachment; filename="${filename}"`)

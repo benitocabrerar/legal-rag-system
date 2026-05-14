@@ -17,7 +17,8 @@ import { prisma } from '../lib/prisma.js';
 import { NATIONAL_LAWS_CATALOG, type NationalLaw, CATALOG_VERSION } from '../data/national-laws-catalog.js';
 import { ingestPublicationToCorpus } from './corpus-ingestion.service.js';
 import { searchRoLive } from './norm-monitor.service.js';
-import { downloadAndExtractPdf } from './registro-oficial.service.js';
+import { downloadAndExtractPdf, downloadAndExtractPdfWithDetails } from './registro-oficial.service.js';
+void downloadAndExtractPdf; // mantenido por backward-compat para otros callers
 import { randomUUID } from 'crypto';
 
 const RO_BASE = 'https://www.registroficial.gob.ec';
@@ -279,38 +280,36 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
   // institución competente como Defensa, Función Judicial, Cancillería),
   // la usamos preferentemente — saltamos la búsqueda en RO que no
   // encuentra normas consolidadas.
+  let canonicalErrorDetail: string | null = null;
   if (law.canonicalPdfUrl) {
-    try {
-      const text = await downloadAndExtractPdf(law.canonicalPdfUrl);
-      if (text && text.length >= 500) {
-        const pubId = await createPublicationFromCanonical(law, text);
-        await sleep(300);
-        const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
+    const dl = await downloadAndExtractPdfWithDetails(law.canonicalPdfUrl);
+    if (dl.text && dl.text.length >= 500) {
+      const pubId = await createPublicationFromCanonical(law, dl.text);
+      await sleep(300);
+      const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
 
-        await updateItemStatus(runId, law, {
-          status: 'ingested_ok',
-          remotePdfUrl: law.canonicalPdfUrl,
-          chunksCreated: ing.chunksCreated,
-          embeddingsGenerated: ing.embeddingsGenerated,
-          embeddingsVectorized: ing.embeddingsVectorized,
-          matchedLegalDocId: ing.legalDocId,
-          matchSimilarity: 1.0,
-          matchMethod: 'canonical_url',
-          durationMs: Date.now() - startedAt,
-        });
+      await updateItemStatus(runId, law, {
+        status: 'ingested_ok',
+        remotePdfUrl: law.canonicalPdfUrl,
+        chunksCreated: ing.chunksCreated,
+        embeddingsGenerated: ing.embeddingsGenerated,
+        embeddingsVectorized: ing.embeddingsVectorized,
+        matchedLegalDocId: ing.legalDocId,
+        matchSimilarity: 1.0,
+        matchMethod: 'canonical_url',
+        durationMs: Date.now() - startedAt,
+      });
 
-        return {
-          success: true,
-          chunksCreated: ing.chunksCreated,
-          durationMs: Date.now() - startedAt,
-        };
-      }
-      // Si el PDF se descargó pero está vacío, dejamos seguir al fallback RO
-    } catch (e: any) {
-      // Si falla canonicalPdfUrl, también dejamos seguir al fallback
-      // eslint-disable-next-line no-console
-      console.warn(`[audit] canonicalPdfUrl failed for ${law.canonicalName}: ${e?.message}`);
+      return {
+        success: true,
+        chunksCreated: ing.chunksCreated,
+        durationMs: Date.now() - startedAt,
+      };
     }
+    // Diagnóstico específico de por qué falló — útil para depurar URLs caídas
+    canonicalErrorDetail = `canonicalPdfUrl ${law.canonicalPdfUrl} → ${dl.error || 'sin texto'} (size: ${dl.size}b, fetch: ${dl.fetchMs}ms, parse: ${dl.parseMs}ms)`;
+    // eslint-disable-next-line no-console
+    console.warn(`[audit] ${law.canonicalName}: ${canonicalErrorDetail}`);
   }
 
   // ═══ ESTRATEGIA 2: búsqueda en el buscador del RO ════════════════════
@@ -325,8 +324,8 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
       await updateItemStatus(runId, law, {
         status: 'unreachable',
         remoteSearchUrl: `${RO_BASE}/?s=${encodeURIComponent(query)}`,
-        error: law.canonicalPdfUrl
-          ? `Sin resultados en RO y canonicalPdfUrl ${law.canonicalPdfUrl} no devolvió contenido`
+        error: canonicalErrorDetail
+          ? `${canonicalErrorDetail} · Tampoco se encontró en buscador RO.`
           : 'Sin resultados en el buscador del RO',
         durationMs: Date.now() - startedAt,
       });
