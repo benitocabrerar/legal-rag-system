@@ -350,6 +350,9 @@ await app.register(summarizationStreamingRoutes, { prefix: '/api/v1/summarizatio
 // Admin: Registro Oficial scraper
 await app.register((await import('./routes/admin/registro-oficial.routes.js')).registroOficialAdminRoutes, { prefix: '/api/v1' });
 
+// Admin: Corpus audit (verifica que el catálogo de leyes nacionales esté completo en el RAG)
+await app.register((await import('./routes/admin/corpus-audit.routes.js')).corpusAuditRoutes, { prefix: '/api/v1' });
+
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 

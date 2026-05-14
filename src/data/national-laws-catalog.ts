@@ -1,0 +1,994 @@
+/**
+ * Catálogo curado de leyes nacionales vigentes del Ecuador.
+ *
+ * Fuente de verdad para la auditoría del corpus. Cada entrada
+ * representa una norma con rango de aplicación NACIONAL que la
+ * práctica jurídica considera "vigente y de uso habitual" para
+ * abogados generalistas. Excluye:
+ *   - Ordenanzas municipales / metropolitanas
+ *   - Resoluciones administrativas individuales
+ *   - Acuerdos ministeriales no estructurales
+ *
+ * Versión: cuando se actualice, incrementar CATALOG_VERSION.
+ *
+ * Fuentes verificadas:
+ *   · asambleanacional.gob.ec/es/leyes-aprobadas (canonical PDF)
+ *   · registroficial.gob.ec (RO original)
+ *   · Función Judicial del Ecuador
+ *   · Corte Constitucional del Ecuador
+ */
+
+export const CATALOG_VERSION = '2026.05.14-v2';
+
+export interface NationalLaw {
+  /** Nombre oficial completo. Es la clave de matching. */
+  canonicalName: string;
+  /** Sigla o abreviación de uso común (ej. "COIP", "LOSEP"). */
+  shortName?: string | null;
+  /** Tipo normativo (matches enum NormType de Prisma). */
+  normType:
+    | 'CONSTITUTIONAL_NORM'
+    | 'ORGANIC_LAW'
+    | 'ORDINARY_LAW'
+    | 'ORGANIC_CODE'
+    | 'ORDINARY_CODE'
+    | 'REGULATION_GENERAL'
+    | 'REGULATION_EXECUTIVE'
+    | 'INTERNATIONAL_TREATY';
+  /** Jerarquía pirámide kelseniana (matches enum LegalHierarchy). */
+  legalHierarchy:
+    | 'CONSTITUCION'
+    | 'TRATADOS_INTERNACIONALES_DDHH'
+    | 'CODIGOS_ORGANICOS'
+    | 'LEYES_ORGANICAS'
+    | 'LEYES_ORDINARIAS'
+    | 'CODIGOS_ORDINARIOS'
+    | 'REGLAMENTOS';
+  /** Ámbito principal — usado para targeting en alertas. */
+  category: string;
+  /** Fecha de publicación original en el RO (ISO YYYY-MM-DD). */
+  publicationDate?: string | null;
+  /** Última reforma conocida (ISO). */
+  lastReformDate?: string | null;
+  /** Número del RO original o de la reforma sustantiva más reciente. */
+  registroOficialNumber?: string | null;
+  /** URL directa al PDF oficial curado (preferentemente Asamblea Nacional). */
+  canonicalPdfUrl?: string | null;
+  /** Palabras clave para búsqueda en el sitio del RO si no hay PDF curado. */
+  searchKeywords: string[];
+  /** Notas internas (no se muestran al usuario). */
+  notes?: string;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CATÁLOGO
+// ────────────────────────────────────────────────────────────────────────────
+
+export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
+  // ════════════════════════════════════════════════════════════════════════
+  // CONSTITUCIÓN
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Constitución de la República del Ecuador',
+    shortName: 'Constitución',
+    normType: 'CONSTITUTIONAL_NORM',
+    legalHierarchy: 'CONSTITUCION',
+    category: 'Constitucional',
+    publicationDate: '2008-10-20',
+    registroOficialNumber: '449',
+    canonicalPdfUrl: 'https://www.registroficial.gob.ec/index.php/registro-oficial-web/publicaciones/registro-oficial/item/8538-edicion-no-449-20-de-octubre-de-2008',
+    searchKeywords: ['constitución', 'república', 'ecuador', '2008'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CÓDIGOS ORGÁNICOS (los principales)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Código Orgánico Integral Penal',
+    shortName: 'COIP',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Penal',
+    publicationDate: '2014-02-10',
+    lastReformDate: '2024-03-01',
+    registroOficialNumber: 'Suplemento 180',
+    searchKeywords: ['COIP', 'integral', 'penal'],
+  },
+  {
+    canonicalName: 'Código Orgánico General de Procesos',
+    shortName: 'COGEP',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Procesal',
+    publicationDate: '2015-05-22',
+    lastReformDate: '2024-04-12',
+    registroOficialNumber: 'Suplemento 506',
+    searchKeywords: ['COGEP', 'general', 'procesos'],
+  },
+  {
+    canonicalName: 'Código Orgánico de la Función Judicial',
+    shortName: 'COFJ',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Procesal',
+    publicationDate: '2009-03-09',
+    lastReformDate: '2023-11-22',
+    registroOficialNumber: 'Suplemento 544',
+    searchKeywords: ['COFJ', 'función', 'judicial'],
+  },
+  {
+    canonicalName: 'Código Orgánico Administrativo',
+    shortName: 'COA',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Administrativo',
+    publicationDate: '2017-07-07',
+    registroOficialNumber: 'Suplemento 31',
+    searchKeywords: ['COA', 'orgánico', 'administrativo'],
+  },
+  {
+    canonicalName: 'Código Orgánico Monetario y Financiero',
+    shortName: 'COMyF',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Financiero',
+    publicationDate: '2014-09-12',
+    lastReformDate: '2023-06-30',
+    registroOficialNumber: 'Segundo Suplemento 332',
+    searchKeywords: ['COMYF', 'monetario', 'financiero'],
+  },
+  {
+    canonicalName: 'Código Orgánico de la Producción, Comercio e Inversiones',
+    shortName: 'COPCI',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Mercantil',
+    publicationDate: '2010-12-29',
+    registroOficialNumber: 'Suplemento 351',
+    searchKeywords: ['COPCI', 'producción', 'comercio', 'inversiones'],
+  },
+  {
+    canonicalName: 'Código Orgánico de Organización Territorial, Autonomía y Descentralización',
+    shortName: 'COOTAD',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Administrativo',
+    publicationDate: '2010-10-19',
+    registroOficialNumber: 'Suplemento 303',
+    searchKeywords: ['COOTAD', 'territorial', 'autonomía', 'descentralización'],
+  },
+  {
+    canonicalName: 'Código Orgánico de Planificación y Finanzas Públicas',
+    shortName: 'COPLAFIP',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Financiero',
+    publicationDate: '2010-10-22',
+    registroOficialNumber: 'Segundo Suplemento 306',
+    searchKeywords: ['planificación', 'finanzas', 'públicas'],
+  },
+  {
+    canonicalName: 'Código Orgánico del Ambiente',
+    shortName: 'COA-Ambiental',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Ambiental',
+    publicationDate: '2017-04-12',
+    registroOficialNumber: 'Suplemento 983',
+    searchKeywords: ['código', 'orgánico', 'ambiente'],
+  },
+  {
+    canonicalName: 'Código Orgánico de la Niñez y Adolescencia',
+    shortName: 'CONA',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Familia',
+    publicationDate: '2003-01-03',
+    lastReformDate: '2017-07-07',
+    registroOficialNumber: '737',
+    searchKeywords: ['niñez', 'adolescencia', 'CONA'],
+  },
+  {
+    canonicalName: 'Código Orgánico de la Economía Social de los Conocimientos, Creatividad e Innovación',
+    shortName: 'Código Ingenios',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Propiedad Intelectual',
+    publicationDate: '2016-12-09',
+    registroOficialNumber: 'Suplemento 899',
+    searchKeywords: ['ingenios', 'economía', 'conocimientos', 'innovación'],
+  },
+  {
+    canonicalName: 'Código Orgánico de Entidades de Seguridad Ciudadana y Orden Público',
+    shortName: 'COESCOP',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Seguridad',
+    publicationDate: '2017-06-19',
+    registroOficialNumber: 'Suplemento 19',
+    searchKeywords: ['seguridad', 'ciudadana', 'orden', 'público'],
+  },
+  {
+    canonicalName: 'Código Tributario',
+    shortName: 'CT',
+    normType: 'ORGANIC_CODE',
+    legalHierarchy: 'CODIGOS_ORGANICOS',
+    category: 'Tributario',
+    publicationDate: '2005-06-14',
+    lastReformDate: '2023-06-30',
+    registroOficialNumber: 'Suplemento 38',
+    searchKeywords: ['código', 'tributario'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CÓDIGOS ORDINARIOS
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Código Civil',
+    shortName: 'CC',
+    normType: 'ORDINARY_CODE',
+    legalHierarchy: 'CODIGOS_ORDINARIOS',
+    category: 'Civil',
+    publicationDate: '2005-06-24',
+    lastReformDate: '2022-12-15',
+    registroOficialNumber: 'Suplemento 46',
+    searchKeywords: ['código', 'civil'],
+  },
+  {
+    canonicalName: 'Código de Comercio',
+    shortName: 'Cód. Comercio',
+    normType: 'ORDINARY_CODE',
+    legalHierarchy: 'CODIGOS_ORDINARIOS',
+    category: 'Mercantil',
+    publicationDate: '2019-05-29',
+    registroOficialNumber: 'Suplemento 497',
+    searchKeywords: ['código', 'comercio'],
+  },
+  {
+    canonicalName: 'Código del Trabajo',
+    shortName: 'CT-Trabajo',
+    normType: 'ORDINARY_CODE',
+    legalHierarchy: 'CODIGOS_ORDINARIOS',
+    category: 'Laboral',
+    publicationDate: '2005-12-16',
+    lastReformDate: '2024-06-12',
+    registroOficialNumber: 'Suplemento 167',
+    searchKeywords: ['código', 'trabajo'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LEYES ORGÁNICAS (las más usadas en práctica)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Ley Orgánica del Servicio Público',
+    shortName: 'LOSEP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Servicio Público',
+    publicationDate: '2010-10-06',
+    lastReformDate: '2023-10-04',
+    registroOficialNumber: 'Segundo Suplemento 294',
+    searchKeywords: ['LOSEP', 'servicio', 'público'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Educación Intercultural',
+    shortName: 'LOEI',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Educación',
+    publicationDate: '2011-03-31',
+    lastReformDate: '2023-04-12',
+    registroOficialNumber: 'Segundo Suplemento 417',
+    searchKeywords: ['LOEI', 'educación', 'intercultural'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Comunicación',
+    shortName: 'LOC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Comunicación',
+    publicationDate: '2013-06-25',
+    lastReformDate: '2019-02-20',
+    registroOficialNumber: 'Suplemento 22',
+    searchKeywords: ['LOC', 'comunicación'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Transparencia y Acceso a la Información Pública',
+    shortName: 'LOTAIP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Transparencia',
+    publicationDate: '2004-05-18',
+    registroOficialNumber: 'Suplemento 337',
+    searchKeywords: ['LOTAIP', 'transparencia', 'información'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Garantías Jurisdiccionales y Control Constitucional',
+    shortName: 'LOGJCC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Constitucional',
+    publicationDate: '2009-10-22',
+    registroOficialNumber: 'Segundo Suplemento 52',
+    searchKeywords: ['LOGJCC', 'garantías', 'jurisdiccionales'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de la Procuraduría General del Estado',
+    shortName: 'LOPGE',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2004-09-13',
+    registroOficialNumber: 'Suplemento 312',
+    searchKeywords: ['procuraduría', 'general', 'estado'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Economía Popular y Solidaria',
+    shortName: 'LOEPS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Económico',
+    publicationDate: '2011-05-10',
+    registroOficialNumber: '444',
+    searchKeywords: ['LOEPS', 'economía', 'popular', 'solidaria'],
+  },
+  {
+    canonicalName: 'Ley Orgánica del Sistema Nacional de Contratación Pública',
+    shortName: 'LOSNCP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Contratación',
+    publicationDate: '2008-08-04',
+    lastReformDate: '2024-04-22',
+    registroOficialNumber: 'Suplemento 395',
+    searchKeywords: ['LOSNCP', 'contratación', 'pública'],
+  },
+  {
+    canonicalName: 'Ley de Régimen Tributario Interno',
+    shortName: 'LRTI',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Tributario',
+    publicationDate: '2004-12-17',
+    lastReformDate: '2024-04-12',
+    registroOficialNumber: 'Suplemento 463',
+    searchKeywords: ['LRTI', 'régimen', 'tributario', 'interno'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Discapacidades',
+    shortName: 'LOD',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Servicio Público',
+    publicationDate: '2012-09-25',
+    registroOficialNumber: 'Suplemento 796',
+    searchKeywords: ['LOD', 'discapacidades'],
+  },
+  {
+    canonicalName: 'Ley Orgánica Integral para Prevenir y Erradicar la Violencia contra las Mujeres',
+    shortName: 'LOIPEVCM',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Familia',
+    publicationDate: '2018-02-05',
+    registroOficialNumber: 'Suplemento 175',
+    searchKeywords: ['violencia', 'mujeres', 'erradicar'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Salud',
+    shortName: 'LOS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Salud',
+    publicationDate: '2006-12-22',
+    registroOficialNumber: 'Suplemento 423',
+    searchKeywords: ['orgánica', 'salud'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Defensa del Consumidor',
+    shortName: 'LODC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Consumidor',
+    publicationDate: '2000-07-10',
+    registroOficialNumber: 'Suplemento 116',
+    searchKeywords: ['defensa', 'consumidor'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Empresas Públicas',
+    shortName: 'LOEP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Empresarial',
+    publicationDate: '2009-10-16',
+    registroOficialNumber: 'Suplemento 48',
+    searchKeywords: ['empresas', 'públicas'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Movilidad Humana',
+    shortName: 'LOMH',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Migración',
+    publicationDate: '2017-02-06',
+    registroOficialNumber: 'Suplemento 938',
+    searchKeywords: ['movilidad', 'humana', 'migración'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Protección de Datos Personales',
+    shortName: 'LOPDP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Tecnología',
+    publicationDate: '2021-05-26',
+    registroOficialNumber: 'Quinto Suplemento 459',
+    searchKeywords: ['protección', 'datos', 'personales'],
+  },
+  {
+    canonicalName: 'Ley Orgánica Reformatoria a la Ley Orgánica de Transporte Terrestre, Tránsito y Seguridad Vial',
+    shortName: 'LOTTTSV',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Tránsito',
+    publicationDate: '2008-08-07',
+    lastReformDate: '2023-05-15',
+    registroOficialNumber: 'Suplemento 398',
+    searchKeywords: ['transporte', 'terrestre', 'tránsito', 'seguridad', 'vial'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Ordenamiento Territorial, Uso y Gestión del Suelo',
+    shortName: 'LOOTUGS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2016-07-05',
+    registroOficialNumber: 'Suplemento 790',
+    searchKeywords: ['ordenamiento', 'territorial', 'gestión', 'suelo'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Educación Superior',
+    shortName: 'LOES',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Educación',
+    publicationDate: '2010-10-12',
+    lastReformDate: '2018-08-02',
+    registroOficialNumber: 'Suplemento 298',
+    searchKeywords: ['LOES', 'educación', 'superior'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Cultura',
+    shortName: 'LOC-Cultura',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Cultura',
+    publicationDate: '2016-12-30',
+    registroOficialNumber: 'Sexto Suplemento 913',
+    searchKeywords: ['orgánica', 'cultura'],
+  },
+  {
+    canonicalName: 'Ley Orgánica del Consejo de Participación Ciudadana y Control Social',
+    shortName: 'LOCPCCS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2009-09-09',
+    registroOficialNumber: 'Suplemento 22',
+    searchKeywords: ['participación', 'ciudadana', 'control', 'social'],
+  },
+  {
+    canonicalName: 'Ley Orgánica Electoral, Código de la Democracia',
+    shortName: 'LOEC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Electoral',
+    publicationDate: '2009-04-27',
+    registroOficialNumber: 'Suplemento 578',
+    searchKeywords: ['electoral', 'democracia', 'código'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Recursos Hídricos, Usos y Aprovechamiento del Agua',
+    shortName: 'LORHUyA',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Ambiental',
+    publicationDate: '2014-08-06',
+    registroOficialNumber: 'Segundo Suplemento 305',
+    searchKeywords: ['recursos', 'hídricos', 'aprovechamiento', 'agua'],
+  },
+  {
+    canonicalName: 'Ley Orgánica para la Optimización y Eficiencia de Trámites Administrativos',
+    shortName: 'LOET',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2018-10-23',
+    registroOficialNumber: 'Suplemento 353',
+    searchKeywords: ['optimización', 'eficiencia', 'trámites'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LEYES ORDINARIAS (selección de las más usadas)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Ley de Compañías',
+    shortName: 'LC',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Mercantil',
+    publicationDate: '1999-11-05',
+    lastReformDate: '2022-12-21',
+    registroOficialNumber: '312',
+    searchKeywords: ['compañías'],
+  },
+  {
+    canonicalName: 'Ley Notarial',
+    shortName: 'LN',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Notarial',
+    publicationDate: '1966-11-26',
+    lastReformDate: '2019-12-13',
+    registroOficialNumber: '158',
+    searchKeywords: ['notarial', 'notarios'],
+  },
+  {
+    canonicalName: 'Ley de Inquilinato',
+    shortName: 'LI',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Inquilinato',
+    publicationDate: '2000-05-30',
+    registroOficialNumber: 'Suplemento 67',
+    searchKeywords: ['inquilinato', 'arrendamiento'],
+  },
+  {
+    canonicalName: 'Ley de Mercado de Valores',
+    shortName: 'LMV',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Financiero',
+    publicationDate: '2006-02-22',
+    registroOficialNumber: 'Suplemento 215',
+    searchKeywords: ['mercado', 'valores'],
+  },
+  {
+    canonicalName: 'Ley de Propiedad Intelectual',
+    shortName: 'LPI',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Propiedad Intelectual',
+    publicationDate: '1998-05-19',
+    registroOficialNumber: '320',
+    searchKeywords: ['propiedad', 'intelectual'],
+    notes: 'Largamente reformada por el Código Orgánico de la Economía Social de los Conocimientos (Ingenios).',
+  },
+  {
+    canonicalName: 'Ley de Migración',
+    shortName: 'LM',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Migración',
+    publicationDate: '2005-08-04',
+    registroOficialNumber: 'Suplemento 100',
+    searchKeywords: ['migración', 'extranjeros'],
+  },
+  {
+    canonicalName: 'Ley de Federación Médica Ecuatoriana',
+    shortName: 'LFME',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Salud',
+    publicationDate: '2008-08-15',
+    registroOficialNumber: '410',
+    searchKeywords: ['federación', 'médica', 'ecuatoriana'],
+  },
+  {
+    canonicalName: 'Ley Reformatoria al Código del Trabajo y Ley de Seguridad Social',
+    shortName: 'LRCT-LSS',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Laboral',
+    publicationDate: '2001-11-13',
+    registroOficialNumber: '465',
+    searchKeywords: ['seguridad', 'social'],
+  },
+  {
+    canonicalName: 'Ley del Sistema Nacional de Registro de Datos Públicos',
+    shortName: 'LSNRDP',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Administrativo',
+    publicationDate: '2010-03-31',
+    registroOficialNumber: 'Suplemento 162',
+    searchKeywords: ['registro', 'datos', 'públicos'],
+  },
+  {
+    canonicalName: 'Ley de Arbitraje y Mediación',
+    shortName: 'LAM',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Procesal',
+    publicationDate: '2006-12-14',
+    registroOficialNumber: '417',
+    searchKeywords: ['arbitraje', 'mediación'],
+  },
+  {
+    canonicalName: 'Ley de Modernización del Estado, Privatización y Prestación de Servicios Públicos por parte de la Iniciativa Privada',
+    shortName: 'LME',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Administrativo',
+    publicationDate: '1993-12-31',
+    registroOficialNumber: '349',
+    searchKeywords: ['modernización', 'estado', 'privatización'],
+  },
+  {
+    canonicalName: 'Ley de Defensa del Consumidor',
+    shortName: 'LDC',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Consumidor',
+    publicationDate: '2000-07-10',
+    registroOficialNumber: 'Suplemento 116',
+    searchKeywords: ['defensa', 'consumidor'],
+    notes: 'Coexiste con la Ley Orgánica de Defensa del Consumidor. Mantenemos ambas como entradas separadas porque algunos abogados aún citan la versión ordinaria.',
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // TRATADOS INTERNACIONALES (los más invocados)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Convención Americana sobre Derechos Humanos (Pacto de San José)',
+    shortName: 'CADH',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1969-11-22',
+    notes: 'Ecuador ratificó el 28-dic-1977. Aplicación directa por bloque de constitucionalidad.',
+    searchKeywords: ['convención', 'americana', 'derechos', 'humanos', 'san josé'],
+  },
+  {
+    canonicalName: 'Pacto Internacional de Derechos Civiles y Políticos',
+    shortName: 'PIDCP',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1966-12-16',
+    searchKeywords: ['pacto', 'civiles', 'políticos'],
+  },
+  {
+    canonicalName: 'Pacto Internacional de Derechos Económicos, Sociales y Culturales',
+    shortName: 'PIDESC',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1966-12-16',
+    searchKeywords: ['económicos', 'sociales', 'culturales'],
+  },
+  {
+    canonicalName: 'Convención sobre los Derechos del Niño',
+    shortName: 'CDN',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Familia',
+    publicationDate: '1989-11-20',
+    searchKeywords: ['derechos', 'niño', 'convención'],
+  },
+  {
+    canonicalName: 'Convención sobre la Eliminación de Todas las Formas de Discriminación contra la Mujer',
+    shortName: 'CEDAW',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['CEDAW', 'discriminación', 'mujer', 'convención'],
+  },
+  {
+    canonicalName: 'Convención Interamericana para Prevenir, Sancionar y Erradicar la Violencia contra la Mujer (Belém do Pará)',
+    shortName: 'Belém do Pará',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['Belém', 'Pará', 'violencia', 'mujer', 'interamericana'],
+  },
+  {
+    canonicalName: 'Protocolo Adicional a la Convención Americana sobre Derechos Humanos en materia de Derechos Económicos, Sociales y Culturales (Protocolo de San Salvador)',
+    shortName: 'Protocolo San Salvador',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['protocolo', 'San Salvador', 'económicos', 'sociales', 'culturales'],
+  },
+  {
+    canonicalName: 'Convención contra la Tortura y Otros Tratos o Penas Crueles, Inhumanos o Degradantes',
+    shortName: 'CAT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['tortura', 'tratos', 'crueles', 'CAT', 'convención'],
+  },
+  {
+    canonicalName: 'Convención sobre los Derechos de las Personas con Discapacidad',
+    shortName: 'CDPD',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['discapacidad', 'personas', 'convención', 'CDPD'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LEYES ORGÁNICAS adicionales (agent research v2)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Ley Orgánica de la Contraloría General del Estado',
+    shortName: 'LOCGE',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2002-06-12',
+    lastReformDate: '2021-11-01',
+    registroOficialNumber: 'Suplemento 595',
+    searchKeywords: ['contraloría', 'general', 'estado', 'control', 'auditoría'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de la Función Legislativa',
+    shortName: 'LOFL',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Constitucional',
+    publicationDate: '2009-07-27',
+    registroOficialNumber: 'Suplemento 642',
+    searchKeywords: ['función', 'legislativa', 'asamblea', 'nacional'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Participación Ciudadana',
+    shortName: 'LOPC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Constitucional',
+    publicationDate: '2010-04-20',
+    registroOficialNumber: 'Suplemento 175',
+    searchKeywords: ['participación', 'ciudadana', 'consulta', 'popular'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Telecomunicaciones',
+    shortName: 'LOT',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Tecnología',
+    publicationDate: '2015-02-18',
+    registroOficialNumber: 'Tercer Suplemento 439',
+    searchKeywords: ['telecomunicaciones', 'ARCOTEL', 'espectro', 'internet'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Gestión de la Identidad y Datos Civiles',
+    shortName: 'LOGIDAC',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Civil',
+    publicationDate: '2016-02-04',
+    registroOficialNumber: 'Segundo Suplemento 684',
+    searchKeywords: ['registro', 'civil', 'identidad', 'cedulación'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de la Defensa Nacional',
+    shortName: 'LODN',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Seguridad',
+    publicationDate: '2007-01-19',
+    registroOficialNumber: '4',
+    searchKeywords: ['defensa', 'nacional', 'fuerzas', 'armadas'],
+  },
+  {
+    canonicalName: 'Ley de Seguridad Social',
+    shortName: 'LSS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Laboral',
+    publicationDate: '2001-11-30',
+    lastReformDate: '2022-11-01',
+    registroOficialNumber: 'Suplemento 465',
+    searchKeywords: ['seguridad', 'social', 'IESS', 'pensiones', 'afiliación'],
+  },
+  {
+    canonicalName: 'Ley Orgánica del Deporte, Educación Física y Recreación',
+    shortName: 'LODERF',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Servicio Público',
+    publicationDate: '2010-08-11',
+    registroOficialNumber: '255',
+    searchKeywords: ['deporte', 'educación', 'física', 'recreación'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de los Consejos Nacionales para la Igualdad',
+    shortName: 'LOCNI',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Constitucional',
+    publicationDate: '2014-07-07',
+    registroOficialNumber: 'Suplemento 283',
+    searchKeywords: ['consejos', 'igualdad', 'género', 'equidad'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Prevención Integral del Fenómeno Socio Económico de las Drogas',
+    shortName: 'LOPIFSED',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Penal',
+    publicationDate: '2015-08-20',
+    registroOficialNumber: 'Suplemento 615',
+    searchKeywords: ['drogas', 'estupefacientes', 'prevención', 'narcotráfico'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Extinción de Dominio',
+    shortName: 'LOED',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Penal',
+    publicationDate: '2021-06-21',
+    registroOficialNumber: 'Suplemento 470',
+    searchKeywords: ['extinción', 'dominio', 'bienes', 'crimen', 'organizado'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Tierras Rurales y Territorios Ancestrales',
+    shortName: 'LOTRTA',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Agrario',
+    publicationDate: '2016-03-14',
+    registroOficialNumber: 'Suplemento 711',
+    searchKeywords: ['tierras', 'rurales', 'territorios', 'ancestrales'],
+  },
+  {
+    canonicalName: 'Ley Orgánica para la Justicia Laboral y Reconocimiento del Trabajo en el Hogar',
+    shortName: 'LOJL',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Laboral',
+    publicationDate: '2015-04-20',
+    registroOficialNumber: 'Suplemento 483',
+    searchKeywords: ['justicia', 'laboral', 'trabajo', 'hogar', 'utilidades'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Solidaridad Nacional',
+    shortName: 'LOSN',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Seguridad',
+    publicationDate: '2025-06-07',
+    searchKeywords: ['solidaridad', 'nacional', 'conflicto', 'armado'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Integridad Pública',
+    shortName: 'LOIP',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Administrativo',
+    publicationDate: '2025-06-24',
+    searchKeywords: ['integridad', 'pública', 'anticorrupción', 'transparencia'],
+  },
+  {
+    canonicalName: 'Ley Orgánica de Inteligencia',
+    shortName: 'LOI',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Seguridad',
+    publicationDate: '2025-06-10',
+    searchKeywords: ['inteligencia', 'contrainteligencia', 'sistema'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LEYES ORDINARIAS adicionales
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Ley de Minería',
+    shortName: 'LMin',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Ambiental',
+    publicationDate: '2009-01-29',
+    registroOficialNumber: 'Suplemento 517',
+    searchKeywords: ['minería', 'minerales', 'concesiones', 'mineras'],
+  },
+  {
+    canonicalName: 'Ley de Hidrocarburos',
+    shortName: 'LH',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Ambiental',
+    searchKeywords: ['hidrocarburos', 'petróleo', 'gas', 'contratos', 'petroleros'],
+  },
+  {
+    canonicalName: 'Ley de Propiedad Horizontal',
+    shortName: 'LPH',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Civil',
+    searchKeywords: ['propiedad', 'horizontal', 'condominios', 'copropietarios'],
+  },
+  {
+    canonicalName: 'Ley Reformatoria para la Equidad Tributaria del Ecuador',
+    shortName: 'LRETE',
+    normType: 'ORDINARY_LAW',
+    legalHierarchy: 'LEYES_ORDINARIAS',
+    category: 'Tributario',
+    publicationDate: '2007-12-29',
+    registroOficialNumber: 'Suplemento 242',
+    searchKeywords: ['equidad', 'tributaria', 'reforma', 'ICE'],
+  },
+
+  // ════════════════════════════════════════════════════════════════════════
+  // REGLAMENTOS GENERALES (los más críticos)
+  // ════════════════════════════════════════════════════════════════════════
+  {
+    canonicalName: 'Reglamento General al Código Orgánico Integral Penal',
+    shortName: 'RCOIP',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Penal',
+    searchKeywords: ['reglamento', 'COIP', 'penal', 'aplicación'],
+  },
+  {
+    canonicalName: 'Reglamento General a la Ley Orgánica del Servicio Público',
+    shortName: 'RLOSEP',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Servicio Público',
+    lastReformDate: '2020-11-20',
+    searchKeywords: ['reglamento', 'LOSEP', 'servicio', 'público'],
+  },
+  {
+    canonicalName: 'Reglamento General al Código Orgánico de Organización Territorial, Autonomía y Descentralización',
+    shortName: 'RCOOTAD',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Administrativo',
+    searchKeywords: ['reglamento', 'COOTAD', 'GAD', 'descentralización'],
+  },
+  {
+    canonicalName: 'Reglamento General a la Ley Orgánica del Sistema Nacional de Contratación Pública',
+    shortName: 'RLOSNCP',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Contratación',
+    publicationDate: '2024-05-01',
+    searchKeywords: ['reglamento', 'LOSNCP', 'contratación', 'pública', 'SERCOP'],
+  },
+  {
+    canonicalName: 'Reglamento General a la Ley Orgánica de Educación Intercultural',
+    shortName: 'RLOEI',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Educación',
+    lastReformDate: '2023-07-01',
+    searchKeywords: ['reglamento', 'LOEI', 'educación', 'docentes'],
+  },
+  {
+    canonicalName: 'Reglamento General a la Ley Orgánica de Telecomunicaciones',
+    shortName: 'RLOT',
+    normType: 'REGULATION_GENERAL',
+    legalHierarchy: 'REGLAMENTOS',
+    category: 'Tecnología',
+    publicationDate: '2016-01-25',
+    lastReformDate: '2023-07-11',
+    registroOficialNumber: 'Suplemento 676',
+    searchKeywords: ['reglamento', 'telecomunicaciones', 'ARCOTEL'],
+  },
+];
+
+/**
+ * Categorías únicas presentes en el catálogo. Útil para agrupar
+ * resultados de auditoría por área del derecho.
+ */
+export const CATALOG_CATEGORIES = Array.from(
+  new Set(NATIONAL_LAWS_CATALOG.map((l) => l.category)),
+).sort();
+
+/**
+ * Helper: filtra el catálogo por jerarquía (Constitución, códigos, leyes).
+ */
+export function filterByHierarchy(hier: NationalLaw['legalHierarchy']): NationalLaw[] {
+  return NATIONAL_LAWS_CATALOG.filter((l) => l.legalHierarchy === hier);
+}
