@@ -123,6 +123,7 @@ interface ArchiveProgress {
   liveLog: Array<{ ts: number; type: string; text: string; detail?: string }>;
   finished?: boolean;
   error?: string;
+  reportUrl?: string;  // URL relativa al endpoint que sirve el HTML report
 }
 
 // Colores por nivel (mapa estático para Tailwind tree-shake)
@@ -379,7 +380,10 @@ export default function LegalPyramidPage() {
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Nivel principal</div>
               <div className="text-sm font-black text-amber-900">
-                {data.levels.sort((a, b) => b.count - a.count)[0]?.title.slice(0, 24) || '—'}
+                {/* CRÍTICO: usar [...] para NO mutar data.levels. Antes el .sort()
+                    in-place reordenaba el array por count desc, lo que invertía
+                    la pirámide visual (la jerarquía más poblada terminaba arriba). */}
+                {[...data.levels].sort((a, b) => b.count - a.count)[0]?.title.slice(0, 24) || '—'}
               </div>
             </div>
           </div>
@@ -517,6 +521,33 @@ function ArchiveProgressModal({ progress, onClose, running }: {
           <div className="p-4 border-t border-rose-500/20 bg-rose-500/10 text-xs text-rose-200">
             <AlertTriangle className="w-4 h-4 inline mr-1" />
             {progress.error}
+          </div>
+        )}
+        {isFinished && (
+          <div className="px-6 py-4 border-t border-violet-500/30 bg-gradient-to-r from-emerald-500/10 to-violet-500/10 flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-violet-100/80">
+              <CheckCircle2 className="w-4 h-4 inline mr-1 text-emerald-400" />
+              <strong className="text-white">Proceso completado.</strong>
+              <span className="ml-2">{progress.uploaded} archivados · {progress.failed} fallaron · {progress.noSource} sin URL · {formatBytes(progress.bytes)}</span>
+            </div>
+            <div className="flex gap-2">
+              {progress.reportUrl && (
+                <a
+                  href={progress.reportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold shadow-lg inline-flex items-center gap-2 transition-all"
+                >
+                  📄 Descargar reporte HTML
+                </a>
+              )}
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1004,7 +1035,14 @@ function updateArchiveProgress(p: ArchiveProgress, event: string, payload: any):
       };
     case 'run-complete':
     case 'done':
-      return { ...p, pct: 100, finished: true };
+      return {
+        ...p,
+        pct: 100,
+        finished: true,
+        // El backend emite reportUrl en el evento 'done' con el path relativo
+        // al endpoint de descarga. El componente muestra el botón cuando existe.
+        reportUrl: payload?.reportUrl || p.reportUrl,
+      };
     case 'error':
       return { ...p, error: payload.error };
     default:

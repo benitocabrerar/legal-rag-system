@@ -19,6 +19,8 @@
  *       Lista de country_codes con normas activas en el corpus.
  */
 import type { FastifyInstance } from 'fastify';
+import fs from 'fs';
+import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { ensurePdfStored, archiveAllPdfs } from '../../services/legal-pdf-archive.service.js';
 import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
@@ -322,7 +324,30 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
           limit: body.limit,
           onProgress: (event, data) => write(event, data),
         });
-        write('done', { ...result, finishedAt: new Date().toISOString() });
+
+        // Generar HTML report al finalizar — siempre, aunque falle parcial
+        let reportPath: string | null = null;
+        let reportUrl: string | null = null;
+        try {
+          const { generateArchiveHtmlReport } = await import('../../services/legal-pdf-archive-report.service.js');
+          reportPath = await generateArchiveHtmlReport(result.runId);
+          reportUrl = `/api/v1/admin/legal-pyramid/archive-report/${result.runId}`;
+          // Persistir path en DB (columna se agrega via migration condicional)
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE public.legal_pdf_archive_runs SET html_report_path = $2 WHERE id = $1::uuid`,
+              result.runId, reportPath,
+            );
+          } catch { /* columna podría no existir aún */ }
+        } catch (repErr: any) {
+          fastify.log.warn({ err: repErr?.message }, 'archive report generation failed');
+        }
+
+        write('done', {
+          ...result,
+          reportUrl,
+          finishedAt: new Date().toISOString(),
+        });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'archive-all-pdfs failed');
         write('error', { error: e?.message || 'Archive run failed' });
@@ -331,6 +356,44 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
         try { reply.raw.end(); } catch { /* ignore */ }
       }
       return reply;
+    },
+  );
+
+  // ─── GET /admin/legal-pyramid/archive-report/:id ───────────────────
+  // Devuelve el HTML del informe (regenera si no existe en filesystem).
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/legal-pyramid/archive-report/:id',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const runId = request.params.id;
+      const rows = await prisma.$queryRawUnsafe<Array<{ id: string; html_report_path: string | null }>>(
+        `SELECT id, html_report_path FROM public.legal_pdf_archive_runs WHERE id = $1::uuid`,
+        runId,
+      );
+      if (rows.length === 0) {
+        return reply.code(404).send({ error: 'Archive run no encontrado' });
+      }
+      let filepath = rows[0].html_report_path;
+      const fileExists = filepath ? fs.existsSync(filepath) : false;
+      if (!filepath || !fileExists) {
+        try {
+          const { generateArchiveHtmlReport } = await import('../../services/legal-pdf-archive-report.service.js');
+          filepath = await generateArchiveHtmlReport(runId);
+          await prisma.$executeRawUnsafe(
+            `UPDATE public.legal_pdf_archive_runs SET html_report_path = $2 WHERE id = $1::uuid`,
+            runId, filepath,
+          );
+        } catch (e: any) {
+          return reply.code(500).send({ error: 'No se pudo regenerar el reporte', detail: e?.message });
+        }
+      }
+      const filename = path.basename(filepath!);
+      const stream = fs.createReadStream(filepath!);
+      return reply
+        .header('Content-Type', 'text/html; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(stream);
     },
   );
 

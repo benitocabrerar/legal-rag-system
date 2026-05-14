@@ -18,7 +18,7 @@
  *   · Corte Constitucional del Ecuador
  */
 
-export const CATALOG_VERSION = '2026.05.14-v5-intl-expanded';
+export const CATALOG_VERSION = '2026.05.14-v6-supabase-storage';
 
 export interface NationalLaw {
   /** Nombre oficial completo. Es la clave de matching. */
@@ -335,7 +335,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'LEYES_ORGANICAS',
     category: 'Administrativo',
     publicationDate: '2004-09-13',
-    registroOficialNumber: 'Suplemento 312',
+    registroOficialNumber: 'Suplemento 312',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/lo-procuraduria.pdf',
     searchKeywords: ['procuraduría', 'general', 'estado'],
   },
   {
@@ -492,6 +492,18 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     searchKeywords: ['orgánica', 'cultura'],
   },
   {
+    canonicalName: 'Ley Orgánica de Economía Popular y Solidaria',
+    shortName: 'LOEPS',
+    normType: 'ORGANIC_LAW',
+    legalHierarchy: 'LEYES_ORGANICAS',
+    category: 'Servicio Público',
+    publicationDate: '2011-05-10',
+    registroOficialNumber: 'Suplemento 444',
+    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/lo-eps.pdf',
+    searchKeywords: ['LOEPS', 'economía', 'popular', 'solidaria', 'cooperativas', 'asociaciones', 'SEPS'],
+    notes: 'Regula EPS y sector financiero popular y solidario. Crea SEPS como regulador.',
+  },
+  {
     canonicalName: 'Ley Orgánica del Consejo de Participación Ciudadana y Control Social',
     shortName: 'LOCPCCS',
     normType: 'ORGANIC_LAW',
@@ -544,7 +556,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Mercantil',
     publicationDate: '1999-11-05',
     lastReformDate: '2022-12-21',
-    registroOficialNumber: '312',
+    registroOficialNumber: '312',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/ley-companias.pdf',
     searchKeywords: ['compañías'],
   },
   {
@@ -555,7 +567,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Notarial',
     publicationDate: '1966-11-26',
     lastReformDate: '2019-12-13',
-    registroOficialNumber: '158',
+    registroOficialNumber: '158',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/ley-notarial.pdf',
     searchKeywords: ['notarial', 'notarios'],
   },
   {
@@ -906,7 +918,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Administrativo',
     publicationDate: '2002-06-12',
     lastReformDate: '2021-11-01',
-    registroOficialNumber: 'Suplemento 595',
+    registroOficialNumber: 'Suplemento 595',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/lo-contraloria.pdf',
     searchKeywords: ['contraloría', 'general', 'estado', 'control', 'auditoría'],
   },
   {
@@ -916,7 +928,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'LEYES_ORGANICAS',
     category: 'Constitucional',
     publicationDate: '2009-07-27',
-    registroOficialNumber: 'Suplemento 642',
+    registroOficialNumber: 'Suplemento 642',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/lo-funcion-legislativa.pdf',
     searchKeywords: ['función', 'legislativa', 'asamblea', 'nacional'],
   },
   {
@@ -936,7 +948,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'LEYES_ORGANICAS',
     category: 'Tecnología',
     publicationDate: '2015-02-18',
-    registroOficialNumber: 'Tercer Suplemento 439',
+    registroOficialNumber: 'Tercer Suplemento 439',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/lo-telecomunicaciones.pdf',
     searchKeywords: ['telecomunicaciones', 'ARCOTEL', 'espectro', 'internet'],
   },
   {
@@ -1069,7 +1081,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'LEYES_ORDINARIAS',
     category: 'Ambiental',
     publicationDate: '2009-01-29',
-    registroOficialNumber: 'Suplemento 517',
+    registroOficialNumber: 'Suplemento 517',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/ley-mineria.pdf',
     searchKeywords: ['minería', 'minerales', 'concesiones', 'mineras'],
   },
   {
@@ -1077,7 +1089,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     shortName: 'LH',
     normType: 'ORDINARY_LAW',
     legalHierarchy: 'LEYES_ORDINARIAS',
-    category: 'Ambiental',
+    category: 'Ambiental',    canonicalPdfUrl: 'https://lmnzzcqqegqugphcnmew.supabase.co/storage/v1/object/public/legal-pdfs/ec/canonical/ley-hidrocarburos.pdf',
     searchKeywords: ['hidrocarburos', 'petróleo', 'gas', 'contratos', 'petroleros'],
   },
   {
