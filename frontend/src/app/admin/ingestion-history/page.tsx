@@ -387,7 +387,7 @@ function RunRow({ run, onDownload }: { run: IngestionRun; onDownload: () => void
           <div className="text-xs text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
             <span><strong>{run.total_succeeded}</strong>/{run.total_requested} ok</span>
             {run.total_failed > 0 && <span className="text-rose-700">✗ {run.total_failed} fallos</span>}
-            <span>📦 <strong>{run.total_chunks.toLocaleString('es-EC')}</strong> chunks</span>
+            <span>📦 <strong>{(run.total_chunks ?? 0).toLocaleString('es-EC')}</strong> chunks</span>
             <span>🔔 {run.total_notified_users} notif</span>
             <span>⏱ {formatDur(run.total_duration_ms)}</span>
           </div>
@@ -430,7 +430,7 @@ function StatCard({ icon, label, value, color }: {
     <div className={`rounded-xl border-2 ${colorMap[color]} p-3`}>
       <div className="flex items-center justify-between mb-1">
         <div className="w-8 h-8 rounded-lg bg-white/60 grid place-items-center">{icon}</div>
-        <div className="text-2xl font-black">{value.toLocaleString('es-EC')}</div>
+        <div className="text-2xl font-black">{(value ?? 0).toLocaleString('es-EC')}</div>
       </div>
       <div className="text-[10px] font-bold uppercase tracking-wide opacity-75 mt-1">{label}</div>
     </div>
@@ -591,7 +591,7 @@ function StatPill({ value, label, color }: { value: number; label: string; color
   };
   return (
     <div className={`rounded-lg p-2 ${map[color]}`}>
-      <div className="text-lg font-black tabular-nums">{value.toLocaleString('es-EC')}</div>
+      <div className="text-lg font-black tabular-nums">{(value ?? 0).toLocaleString('es-EC')}</div>
       <div className="text-[9px] font-bold uppercase tracking-wide opacity-70">{label}</div>
     </div>
   );

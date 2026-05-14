@@ -239,19 +239,22 @@ export async function corpusAuditRoutes(fastify: FastifyInstance) {
         ...params,
       );
 
-      // Stats agregados (global, no por run)
+      // Stats agregados (global, no por run).
+      // COALESCE necesario porque SUM() sobre 0 rows devuelve NULL en
+      // Postgres, lo que hace que el frontend reciba null y crashee al
+      // llamar (null).toLocaleString().
       const aggregate = await prisma.$queryRawUnsafe<Array<any>>(
         `SELECT
-           COUNT(*)::int AS total_runs,
-           SUM(total_succeeded)::int AS total_normas_incorporadas,
-           SUM(total_chunks)::int AS total_chunks_creados,
-           SUM(total_notified_users)::int AS total_notifs_emitidas,
-           SUM(count_constitucion)::int AS sum_constitucion,
-           SUM(count_codigos_organicos)::int AS sum_codigos_organicos,
-           SUM(count_leyes_organicas)::int AS sum_leyes_organicas,
-           SUM(count_codigos_ordinarios)::int AS sum_codigos_ordinarios,
-           SUM(count_leyes_ordinarias)::int AS sum_leyes_ordinarias,
-           SUM(count_reglamentos)::int AS sum_reglamentos
+           COUNT(*)::int                              AS total_runs,
+           COALESCE(SUM(total_succeeded), 0)::int     AS total_normas_incorporadas,
+           COALESCE(SUM(total_chunks), 0)::int        AS total_chunks_creados,
+           COALESCE(SUM(total_notified_users), 0)::int AS total_notifs_emitidas,
+           COALESCE(SUM(count_constitucion), 0)::int       AS sum_constitucion,
+           COALESCE(SUM(count_codigos_organicos), 0)::int  AS sum_codigos_organicos,
+           COALESCE(SUM(count_leyes_organicas), 0)::int    AS sum_leyes_organicas,
+           COALESCE(SUM(count_codigos_ordinarios), 0)::int AS sum_codigos_ordinarios,
+           COALESCE(SUM(count_leyes_ordinarias), 0)::int   AS sum_leyes_ordinarias,
+           COALESCE(SUM(count_reglamentos), 0)::int        AS sum_reglamentos
            FROM public.corpus_ingestion_runs
           WHERE status = 'completed'`,
       );

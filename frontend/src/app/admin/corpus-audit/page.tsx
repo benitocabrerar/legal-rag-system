@@ -326,7 +326,7 @@ function RunRow({ run, onDownload }: { run: AuditRun; onDownload: () => void }) 
           <span className="text-emerald-700">✓ {run.total_present} presentes</span>
           <span className="text-amber-700">+ {run.total_ingested_ok} ingestadas</span>
           {run.total_ingested_fail > 0 && <span className="text-rose-700">✗ {run.total_ingested_fail} fallaron</span>}
-          <span>📦 {run.total_chunks_added.toLocaleString('es-EC')} chunks añadidos</span>
+          <span>📦 {(run.total_chunks_added ?? 0).toLocaleString('es-EC')} chunks añadidos</span>
         </div>
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
