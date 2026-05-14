@@ -80,6 +80,7 @@ export default function LitigationPage() {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
+          body: '{}',
           signal: ac.signal,
         });
         if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);

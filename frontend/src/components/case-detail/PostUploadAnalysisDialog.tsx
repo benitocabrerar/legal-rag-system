@@ -138,6 +138,7 @@ export default function PostUploadAnalysisDialog({
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
+            body: '{}',
             signal: ac.signal,
           },
         );
