@@ -18,7 +18,7 @@
  *   · Corte Constitucional del Ecuador
  */
 
-export const CATALOG_VERSION = '2026.05.14-v4-canonical';
+export const CATALOG_VERSION = '2026.05.14-v5-intl-expanded';
 
 export interface NationalLaw {
   /** Nombre oficial completo. Es la clave de matching. */
@@ -265,7 +265,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2005-12-16',
     lastReformDate: '2024-06-12',
     registroOficialNumber: 'Suplemento 167',
-    canonicalPdfUrl: 'https://www.trabajo.gob.ec/wp-content/uploads/downloads/2012/11/C%C3%B3digo-de-Tabajo-PDF.pdf',
+    canonicalPdfUrl: 'https://www.funcionjudicial.gob.ec/resources/pdf/normativa/codigo_trabajo.pdf',
     searchKeywords: ['código', 'trabajo'],
   },
 
@@ -369,6 +369,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2004-12-17',
     lastReformDate: '2024-04-12',
     registroOficialNumber: 'Suplemento 463',
+    canonicalPdfUrl: 'https://www.sri.gob.ec/o/sri-portlet-biblioteca-alfresco-internet/descargar/c93e3e89-bd25-4406-a92b-a3c1c4a8af18/LRTI%20.pdf',
     searchKeywords: ['LRTI', 'régimen', 'tributario', 'interno'],
   },
   {
@@ -379,6 +380,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Servicio Público',
     publicationDate: '2012-09-25',
     registroOficialNumber: 'Suplemento 796',
+    canonicalPdfUrl: 'https://www.consejodiscapacidades.gob.ec/wp-content/uploads/downloads/2014/02/ley_organica_discapacidades.pdf',
     searchKeywords: ['LOD', 'discapacidades'],
   },
   {
@@ -441,6 +443,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Tecnología',
     publicationDate: '2021-05-26',
     registroOficialNumber: 'Quinto Suplemento 459',
+    canonicalPdfUrl: 'https://www.telecomunicaciones.gob.ec/wp-content/uploads/2021/06/Ley-Organica-de-Datos-Personales.pdf',
     searchKeywords: ['protección', 'datos', 'personales'],
   },
   {
@@ -669,6 +672,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Derechos Humanos',
     publicationDate: '1969-11-22',
     notes: 'Ecuador ratificó el 28-dic-1977. Aplicación directa por bloque de constitucionalidad.',
+    canonicalPdfUrl: 'https://www.oas.org/dil/esp/tratados_b-32_convencion_americana_sobre_derechos_humanos.pdf',
     searchKeywords: ['convención', 'americana', 'derechos', 'humanos', 'san josé'],
   },
   {
@@ -678,6 +682,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
     publicationDate: '1966-12-16',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/ccpr_SP.pdf',
     searchKeywords: ['pacto', 'civiles', 'políticos'],
   },
   {
@@ -687,6 +692,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
     publicationDate: '1966-12-16',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/cescr_SP.pdf',
     searchKeywords: ['económicos', 'sociales', 'culturales'],
   },
   {
@@ -704,6 +710,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     normType: 'INTERNATIONAL_TREATY',
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/cedaw_SP.pdf',
     searchKeywords: ['CEDAW', 'discriminación', 'mujer', 'convención'],
   },
   {
@@ -712,6 +719,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     normType: 'INTERNATIONAL_TREATY',
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
+    canonicalPdfUrl: 'https://www.oas.org/es/mesecvi/docs/BelemDoPara-ESPANOL.pdf',
     searchKeywords: ['Belém', 'Pará', 'violencia', 'mujer', 'interamericana'],
   },
   {
@@ -728,6 +736,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     normType: 'INTERNATIONAL_TREATY',
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/cat_SP.pdf',
     searchKeywords: ['tortura', 'tratos', 'crueles', 'CAT', 'convención'],
   },
   {
@@ -736,6 +745,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     normType: 'INTERNATIONAL_TREATY',
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/crpd_SP.pdf',
     searchKeywords: ['discapacidad', 'personas', 'convención', 'CDPD'],
   },
   // ── Instrumentos del Sistema Interamericano DDHH adicionales
@@ -764,6 +774,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
     publicationDate: '1948-12-10',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/UDHR/Documents/UDHR_Translations/spn.pdf',
     searchKeywords: ['declaración', 'universal', 'derechos', 'humanos', 'DUDH', 'ONU'],
   },
   {
@@ -773,6 +784,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
     publicationDate: '1965-12-21',
+    canonicalPdfUrl: 'https://www.ohchr.org/sites/default/files/cerd_SP.pdf',
     searchKeywords: ['discriminación', 'racial', 'eliminación', 'ICERD'],
   },
   {
@@ -828,6 +840,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derecho Internacional',
     publicationDate: '1969-05-23',
+    canonicalPdfUrl: 'https://www.oas.org/xxxivga/spanish/reference_docs/convencion_viena.pdf',
     searchKeywords: ['Viena', 'tratados', 'derecho', 'internacional', 'CVDT'],
   },
   // ── Sistema de Integración Andina
@@ -847,6 +860,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Propiedad Intelectual',
     publicationDate: '1993-12-17',
+    canonicalPdfUrl: 'https://www.comunidadandina.org/StaticFiles/DocOf/DEC351.pdf',
     searchKeywords: ['CAN', '351', 'derecho', 'autor', 'régimen común'],
   },
   {
@@ -856,6 +870,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Propiedad Intelectual',
     publicationDate: '2000-09-14',
+    canonicalPdfUrl: 'https://www.comunidadandina.org/StaticFiles/DocOf/DEC486.pdf',
     searchKeywords: ['CAN', '486', 'propiedad', 'industrial', 'marcas', 'patentes'],
   },
   {
@@ -865,6 +880,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Tributario',
     publicationDate: '2004-05-04',
+    canonicalPdfUrl: 'https://www.comunidadandina.org/StaticFiles/DocOf/DEC578.pdf',
     searchKeywords: ['CAN', '578', 'doble', 'tributación', 'IVA', 'renta'],
   },
   // ── Comercio internacional
@@ -875,6 +891,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Comercio Internacional',
     publicationDate: '1994-04-15',
+    canonicalPdfUrl: 'https://www.wto.org/spanish/docs_s/legal_s/04-wto.pdf',
     searchKeywords: ['OMC', 'WTO', 'Marrakech', 'comercio', 'mundial'],
   },
 
@@ -1079,6 +1096,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Tributario',
     publicationDate: '2007-12-29',
     registroOficialNumber: 'Suplemento 242',
+    canonicalPdfUrl: 'https://www.sri.gob.ec/o/sri-portlet-biblioteca-alfresco-internet/descargar/cfc0c8e2-87cd-4ce6-bd14-4f188b3b1c11/ley_de_equidad_tributaria.pdf',
     searchKeywords: ['equidad', 'tributaria', 'reforma', 'ICE'],
   },
 
