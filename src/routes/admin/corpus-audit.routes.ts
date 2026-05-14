@@ -11,6 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import { prisma } from '../../lib/prisma.js';
 import { runFullAudit } from '../../services/corpus-auditor.service.js';
+import { runBulkIngestion } from '../../services/bulk-ingestion-runner.service.js';
 import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 
 export async function corpusAuditRoutes(fastify: FastifyInstance) {
@@ -140,6 +141,180 @@ export async function corpusAuditRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'Reporte no disponible para este run' });
       }
       const filepath = runs[0].html_report_path;
+      if (!fs.existsSync(filepath)) {
+        return reply.code(404).send({ error: 'Archivo de reporte no encontrado en disco' });
+      }
+      const filename = path.basename(filepath);
+      const stream = fs.createReadStream(filepath);
+      return reply
+        .header('Content-Type', 'text/html; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(stream);
+    },
+  );
+
+  // ═══════════════ BULK INGESTION ENDPOINTS ════════════════════════════
+  //
+  //   POST /admin/corpus/bulk-ingest          (SSE) ingesta múltiples pubs
+  //   GET  /admin/corpus/ingestion-runs       historial
+  //   GET  /admin/corpus/ingestion-runs/:id   detalle + items
+  //   GET  /admin/corpus/ingestion-report/:id descarga HTML
+
+  // ─── POST /admin/corpus/bulk-ingest (SSE) ──────────────────────────
+  fastify.post<{ Body: { publicationIds?: string[]; allAnalyzed?: boolean } }>(
+    '/admin/corpus/bulk-ingest',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const userId = (request.user as any).id;
+      const body = request.body || {};
+
+      let publicationIds = body.publicationIds || [];
+      if (body.allAnalyzed) {
+        const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+          `SELECT id FROM public.registry_publications
+            WHERE status = 'analyzed' AND ingested_legal_doc_id IS NULL
+            ORDER BY created_at DESC LIMIT 200`,
+        );
+        publicationIds = rows.map((r) => r.id);
+      }
+      if (publicationIds.length === 0) {
+        return reply.code(400).send({ error: 'Sin publicaciones para ingestar' });
+      }
+
+      setSseHeaders(request, reply);
+      const stopKa = startSseKeepalive(reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      try {
+        const result = await runBulkIngestion({
+          publicationIds,
+          userId,
+          triggeredBy: `manual:${userId}`,
+          source: 'bulk-approve',
+          onProgress: (event, data) => write(event, data),
+        });
+        write('done', { ...result, finishedAt: new Date().toISOString() });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'bulk ingest failed');
+        write('error', { error: e?.message || 'Bulk ingest failed' });
+      } finally {
+        stopKa();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
+      return reply;
+    },
+  );
+
+  // ─── GET /admin/corpus/ingestion-runs ──────────────────────────────
+  fastify.get<{ Querystring: { limit?: string; source?: string } }>(
+    '/admin/corpus/ingestion-runs',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const limit = Math.min(100, Math.max(5, parseInt(request.query.limit || '30', 10)));
+      const conditions: string[] = ['1=1'];
+      const params: any[] = [];
+      if (request.query.source) { params.push(request.query.source); conditions.push(`source = $${params.length}`); }
+      params.push(limit);
+      const limitIdx = params.length;
+
+      const runs = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, started_at, completed_at, triggered_by, source, status,
+                total_requested, total_succeeded, total_failed,
+                total_chunks, total_embeddings, total_vectorized,
+                total_notified_users, total_duration_ms,
+                count_constitucion, count_codigos_organicos, count_leyes_organicas,
+                count_codigos_ordinarios, count_leyes_ordinarias, count_reglamentos,
+                count_otros, html_report_path
+           FROM public.corpus_ingestion_runs
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY started_at DESC
+          LIMIT $${limitIdx}`,
+        ...params,
+      );
+
+      // Stats agregados (global, no por run)
+      const aggregate = await prisma.$queryRawUnsafe<Array<any>>(
+        `SELECT
+           COUNT(*)::int AS total_runs,
+           SUM(total_succeeded)::int AS total_normas_incorporadas,
+           SUM(total_chunks)::int AS total_chunks_creados,
+           SUM(total_notified_users)::int AS total_notifs_emitidas,
+           SUM(count_constitucion)::int AS sum_constitucion,
+           SUM(count_codigos_organicos)::int AS sum_codigos_organicos,
+           SUM(count_leyes_organicas)::int AS sum_leyes_organicas,
+           SUM(count_codigos_ordinarios)::int AS sum_codigos_ordinarios,
+           SUM(count_leyes_ordinarias)::int AS sum_leyes_ordinarias,
+           SUM(count_reglamentos)::int AS sum_reglamentos
+           FROM public.corpus_ingestion_runs
+          WHERE status = 'completed'`,
+      );
+
+      return reply.send({ runs, aggregate: aggregate[0] || {} });
+    },
+  );
+
+  // ─── GET /admin/corpus/ingestion-runs/:id ──────────────────────────
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/corpus/ingestion-runs/:id',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const runs = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT * FROM public.corpus_ingestion_runs WHERE id = $1::uuid`,
+        request.params.id,
+      );
+      if (runs.length === 0) return reply.code(404).send({ error: 'Run no encontrado' });
+
+      const items = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT i.*, ld.norm_title
+           FROM public.corpus_ingestion_items i
+           LEFT JOIN public.legal_documents ld ON ld.id = i.legal_doc_id
+          WHERE i.run_id = $1::uuid
+          ORDER BY i.sequence_index ASC`,
+        request.params.id,
+      );
+
+      return reply.send({ run: runs[0], items });
+    },
+  );
+
+  // ─── GET /admin/corpus/ingestion-report/:id ────────────────────────
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/corpus/ingestion-report/:id',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const runs = await prisma.$queryRawUnsafe<Array<{ html_report_path: string | null }>>(
+        `SELECT html_report_path FROM public.corpus_ingestion_runs WHERE id = $1::uuid`,
+        request.params.id,
+      );
+      if (runs.length === 0 || !runs[0].html_report_path) {
+        // Re-generar on-demand si no existe
+        try {
+          const { generateIngestionHtmlReport } = await import('../../services/corpus-ingestion-report.service.js');
+          const newPath = await generateIngestionHtmlReport(request.params.id);
+          await prisma.$executeRawUnsafe(
+            `UPDATE public.corpus_ingestion_runs SET html_report_path = $2 WHERE id = $1::uuid`,
+            request.params.id, newPath,
+          );
+          const filename = path.basename(newPath);
+          const stream = fs.createReadStream(newPath);
+          return reply
+            .header('Content-Type', 'text/html; charset=utf-8')
+            .header('Content-Disposition', `attachment; filename="${filename}"`)
+            .send(stream);
+        } catch (e: any) {
+          return reply.code(404).send({ error: 'Reporte no disponible', detail: e?.message });
+        }
+      }
+      const filepath = runs[0].html_report_path!;
       if (!fs.existsSync(filepath)) {
         return reply.code(404).send({ error: 'Archivo de reporte no encontrado en disco' });
       }

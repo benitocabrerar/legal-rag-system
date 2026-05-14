@@ -62,16 +62,26 @@ export interface BatchIngestionResult {
   errors: Array<{ pubId: string; error: string }>;
 }
 
+export type IngestProgressCallback = (event: string, data: any) => void;
+
 /**
  * Ingesta UNA publicación al corpus completo.
  *
  * Es idempotente: si la publicación ya está marcada `ingested`, devuelve
  * el legal_doc_id existente sin reprocesar.
+ *
+ * onProgress recibe eventos granulares del pipeline:
+ *   load-publication / insert-legal-doc / chunking-start /
+ *   chunking-done / embedding-progress / embedding-done /
+ *   vector-copy / mark-ingested / broadcast / complete
  */
 export async function ingestPublicationToCorpus(
   publicationId: string,
   userId: string,
+  onProgress?: IngestProgressCallback,
 ): Promise<IngestionResult> {
+  const emit: IngestProgressCallback = onProgress || (() => {});
+  emit('load-publication', { publicationId });
   // 1) Cargar publication
   const rows = await prisma.$queryRawUnsafe<any[]>(
     `SELECT * FROM public.registry_publications WHERE id = $1::uuid`,
@@ -81,6 +91,7 @@ export async function ingestPublicationToCorpus(
   const pub = rows[0];
 
   if (pub.status === 'ingested' && pub.ingested_legal_doc_id) {
+    emit('already-ingested', { legalDocId: pub.ingested_legal_doc_id });
     return {
       legalDocId: pub.ingested_legal_doc_id,
       chunksCreated: pub.chunks_created || 0,
@@ -115,6 +126,7 @@ export async function ingestPublicationToCorpus(
 
   const docId = randomUUID();
 
+  emit('insert-legal-doc', { docId, title, contentLength: fullContent.length });
   // 4) INSERT legal_documents
   await prisma.$executeRawUnsafe(
     `INSERT INTO public.legal_documents
@@ -150,37 +162,28 @@ export async function ingestPublicationToCorpus(
     }),
   );
 
-  // 5) Generar chunks + embeddings JSONB (usando servicio existente)
-  // regenerateEmbeddings borra chunks viejos (si los hay) y crea nuevos
-  // con embedding JSON. Es síncrono y puede tardar varios segundos por chunk.
+  // 5) Generar chunks + embeddings — propaga onProgress al chunker
+  emit('chunking-start', { docId, chunkSize: 1000, overlap: 150 });
   const svc = new LegalDocumentService(prisma);
   let chunksCreated = 0;
   let embeddingsGenerated = 0;
   try {
-    // Chunks de 1000 chars con 150 chars de overlap (~15%). El overlap
-    // preserva referencias cruzadas entre fragmentos legales, evita
-    // cortar artículos a la mitad y mejora retrieval del RAG en preguntas
-    // que abarcan límites de chunk.
-    const r = await svc.regenerateEmbeddings(docId, userId, {
-      chunkSize: 1000,
-      overlap: 150,
-    });
+    const r = await svc.regenerateEmbeddings(
+      docId,
+      userId,
+      { chunkSize: 1000, overlap: 150 },
+      emit,  // forward los eventos chunking-done, embedding-progress, embedding-done
+    );
     chunksCreated = r.totalChunks;
     embeddingsGenerated = r.embeddingsGenerated;
   } catch (e: any) {
-    // Si falla la vectorización, dejamos el doc igual — el admin puede
-    // regenerar manualmente. NO abortamos el ingest porque el doc sigue
-    // siendo útil para búsqueda full-text.
+    emit('chunking-error', { error: e?.message });
     // eslint-disable-next-line no-console
     console.error('[corpus-ingestion] regenerateEmbeddings failed', e?.message);
   }
 
   // 6) Copiar embedding JSONB → embedding_v (vector pgvector)
-  // CRÍTICO: sin este paso el RAG semántico (search_legal_chunks RPC) no
-  // ve los nuevos chunks porque filtra `WHERE embedding_v IS NOT NULL`.
-  // El cast jsonb→text→vector funciona porque pgvector entiende el
-  // formato `[0.1,0.2,...]` que es exactamente como JSONB serializa
-  // un array de floats.
+  emit('vector-copy-start', { docId });
   let vectorized = 0;
   try {
     const r = await prisma.$executeRawUnsafe(
@@ -192,12 +195,15 @@ export async function ingestPublicationToCorpus(
       docId,
     );
     vectorized = Number(r) || 0;
+    emit('vector-copy-done', { docId, vectorizedCount: vectorized });
   } catch (e: any) {
+    emit('vector-copy-error', { error: e?.message });
     // eslint-disable-next-line no-console
     console.error('[corpus-ingestion] embedding_v copy failed', e?.message);
   }
 
   // 7) Marcar publication como ingested
+  emit('mark-ingested', { docId, chunksCreated });
   await prisma.$executeRawUnsafe(
     `UPDATE public.registry_publications
         SET status = 'ingested',
@@ -211,13 +217,24 @@ export async function ingestPublicationToCorpus(
   );
 
   // 8) Notificación broadcast a usuarios activos
+  emit('broadcast-start', { docId });
   let notifiedUsers = 0;
   try {
     notifiedUsers = await notifyAllActiveUsersOfNewNorm(docId);
+    emit('broadcast-done', { notifiedUsers });
   } catch (e: any) {
+    emit('broadcast-error', { error: e?.message });
     // eslint-disable-next-line no-console
     console.error('[corpus-ingestion] notify failed', e?.message);
   }
+
+  emit('complete', {
+    legalDocId: docId,
+    chunksCreated,
+    embeddingsGenerated,
+    embeddingsVectorized: vectorized,
+    notifiedUsers,
+  });
 
   return {
     legalDocId: docId,

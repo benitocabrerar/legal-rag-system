@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
   Loader2, RefreshCw, ScrollText, CheckCircle2, XCircle, Sparkles,
@@ -831,14 +832,23 @@ export default function RegistroOficialAdminPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={approveAllAnalyzed}
-                  disabled={bulkApproving}
-                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-                  {bulkApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {bulkApproving ? 'Ingestando…' : 'Aprobar todas'}
-                </button>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={approveAllAnalyzed}
+                    disabled={bulkApproving}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition"
+                  >
+                    {bulkApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {bulkApproving ? 'Ingestando…' : 'Aprobar una por una'}
+                  </button>
+                  <Link
+                    href="/admin/ingestion-history"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-violet-600 text-white hover:bg-violet-700 transition shadow"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Ingesta bulk con tracking
+                  </Link>
+                </div>
               </div>
             )}
             <div className="space-y-3 mt-3">

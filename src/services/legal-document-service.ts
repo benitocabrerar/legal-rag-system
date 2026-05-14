@@ -445,17 +445,16 @@ export class LegalDocumentService {
    * Private helper to create document chunks with embeddings (async, no transaction).
    *
    * El chunking incluye overlap configurable para preservar contexto en
-   * los bordes de chunk (evita cortar oraciones a la mitad). Para
-   * documentos legales con artículos densos un overlap de 150 chars
-   * sobre chunks de 1000 chars (15%) preserva la referencia cruzada
-   * entre fragmentos sin inflar demasiado el almacenamiento.
+   * los bordes de chunk. Acepta callback opcional `onProgress` para
+   * reportar progreso granular por chunk (útil en SSE de ingesta masiva).
    *
-   * Defaults backward-compat: { chunkSize: 1000, overlap: 0 }.
+   * Defaults backward-compat: { chunkSize: 1000, overlap: 0 }, onProgress = noop.
    */
   private async createDocumentChunksAsync(
     documentId: string,
     content: string,
-    opts: { chunkSize?: number; overlap?: number } = {}
+    opts: { chunkSize?: number; overlap?: number } = {},
+    onProgress?: (event: string, data: any) => void
   ): Promise<{
     chunks: any[];
     totalChunks: number;
@@ -483,11 +482,18 @@ export class LegalDocumentService {
     let failCount = 0;
 
     console.log(`📝 Generating embeddings for ${chunks.length} chunks...`);
+    onProgress?.('chunking-done', { totalChunks: chunks.length, chunkSize, overlap });
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
 
       let embedding = null;
+
+      onProgress?.('embedding-progress', {
+        chunkIndex: i + 1,
+        totalChunks: chunks.length,
+        chunkLength: chunk.length,
+      });
 
       // Try to generate embedding with retries
       try {
@@ -528,6 +534,14 @@ export class LegalDocumentService {
       });
 
       createdChunks.push(createdChunk);
+
+      onProgress?.('embedding-done', {
+        chunkIndex: i + 1,
+        totalChunks: chunks.length,
+        success: !!embedding,
+        successCount,
+        failCount,
+      });
     }
 
     console.log(`\n📊 Embedding generation complete:`);
@@ -633,7 +647,8 @@ export class LegalDocumentService {
   async regenerateEmbeddings(
     documentId: string,
     userId: string,
-    chunkOpts?: { chunkSize?: number; overlap?: number }
+    chunkOpts?: { chunkSize?: number; overlap?: number },
+    onProgress?: (event: string, data: any) => void
   ): Promise<{
     success: boolean;
     totalChunks: number;
@@ -677,6 +692,7 @@ export class LegalDocumentService {
       documentId,
       document.content,
       chunkOpts,
+      onProgress,
     );
 
     // 4. Create audit log
