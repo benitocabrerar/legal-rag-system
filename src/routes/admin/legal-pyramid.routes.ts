@@ -429,6 +429,18 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
           ORDER BY started_at DESC LIMIT 10`,
       );
       const s = rows[0] || ({} as any);
+      // Sanitizar BigInts → Number en recentRuns. Sin esto Fastify
+      // JSON.stringify revienta con "Do not know how to serialize a BigInt".
+      const safeRecentRuns = recentRuns.map((r) => ({
+        ...r,
+        total_requested: r.total_requested == null ? null : Number(r.total_requested),
+        total_uploaded:  r.total_uploaded  == null ? null : Number(r.total_uploaded),
+        total_skipped:   r.total_skipped   == null ? null : Number(r.total_skipped),
+        total_failed:    r.total_failed    == null ? null : Number(r.total_failed),
+        total_no_source: r.total_no_source == null ? null : Number(r.total_no_source),
+        total_bytes:     r.total_bytes     == null ? null : Number(r.total_bytes),
+        total_duration_ms: r.total_duration_ms == null ? null : Number(r.total_duration_ms),
+      }));
       return reply.send({
         stats: {
           total: Number(s.total || 0),
@@ -441,7 +453,7 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
             ? Math.round((Number(s.stored) / Number(s.total)) * 100)
             : 0,
         },
-        recentRuns,
+        recentRuns: safeRecentRuns,
       });
     },
   );

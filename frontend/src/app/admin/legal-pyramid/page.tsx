@@ -733,7 +733,7 @@ function DocumentModal({ docId, onClose, onArchiveSuccess }: {
   const [doc, setDoc] = useState<DocDetail | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'info' | 'content'>('info');
+  const [tab, setTab] = useState<'info' | 'content' | 'pdf'>('info');
   const [loadingContent, setLoadingContent] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
@@ -836,6 +836,17 @@ function DocumentModal({ docId, onClose, onArchiveSuccess }: {
                 <Eye className="w-4 h-4 inline mr-1" />
                 Contenido
               </button>
+              {doc.pdf_url && (
+                <button
+                  onClick={() => setTab('pdf')}
+                  className={`px-5 py-3 text-sm font-bold border-b-2 transition ${
+                    tab === 'pdf' ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 inline mr-1" />
+                  PDF Original
+                </button>
+              )}
             </div>
 
             {/* Body */}
@@ -876,21 +887,82 @@ function DocumentModal({ docId, onClose, onArchiveSuccess }: {
                   )}
                 </div>
               ) : (
-                <div>
-                  {loadingContent ? (
-                    <div className="text-center py-12">
-                      <Loader2 className="w-6 h-6 animate-spin text-violet-500 mx-auto" />
+                tab === 'content' ? (
+                  <div>
+                    {loadingContent ? (
+                      <div className="text-center py-12">
+                        <Loader2 className="w-6 h-6 animate-spin text-violet-500 mx-auto" />
+                      </div>
+                    ) : content ? (
+                      <pre className="text-xs text-slate-800 whitespace-pre-wrap leading-relaxed font-sans bg-slate-50 p-4 rounded-lg border border-slate-200 max-h-[500px] overflow-y-auto">
+                        {content}
+                      </pre>
+                    ) : (
+                      <div className="text-center py-12 text-slate-400 text-sm">
+                        Click para cargar el contenido…
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // tab === 'pdf' — visor PDF inline
+                  doc.pdf_url ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-100 rounded-lg px-3 py-2">
+                        <FileText className="w-4 h-4 text-violet-600" />
+                        <span className="font-semibold">{doc.norm_title || doc.title}</span>
+                        <span className="ml-auto flex items-center gap-2">
+                          <a
+                            href={doc.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-violet-600 hover:text-violet-800 font-bold inline-flex items-center gap-1"
+                            title="Abrir en nueva pestaña"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Abrir aparte
+                          </a>
+                          <a
+                            href={doc.pdf_url}
+                            download
+                            className="text-emerald-600 hover:text-emerald-800 font-bold inline-flex items-center gap-1"
+                            title="Descargar"
+                          >
+                            <Download className="w-3 h-3" />
+                            Descargar
+                          </a>
+                        </span>
+                      </div>
+                      {/* Visor inline. Para Supabase Storage URLs el browser puede renderizar el PDF
+                          nativamente. Si el browser no soporta inline (ej. Safari iOS) muestra el
+                          fallback con link. */}
+                      <object
+                        data={doc.pdf_url}
+                        type="application/pdf"
+                        className="w-full rounded-lg border border-slate-300 shadow-sm"
+                        style={{ height: 'min(75vh, 720px)' }}
+                      >
+                        <iframe
+                          src={doc.pdf_url}
+                          title={doc.norm_title || 'PDF'}
+                          className="w-full rounded-lg border border-slate-300"
+                          style={{ height: 'min(75vh, 720px)' }}
+                        >
+                          <div className="p-6 text-center text-slate-600">
+                            Tu navegador no puede mostrar el PDF inline.{' '}
+                            <a href={doc.pdf_url} target="_blank" rel="noopener noreferrer" className="text-violet-700 underline font-bold">
+                              Descargar PDF
+                            </a>
+                          </div>
+                        </iframe>
+                      </object>
                     </div>
-                  ) : content ? (
-                    <pre className="text-xs text-slate-800 whitespace-pre-wrap leading-relaxed font-sans bg-slate-50 p-4 rounded-lg border border-slate-200 max-h-[500px] overflow-y-auto">
-                      {content}
-                    </pre>
                   ) : (
                     <div className="text-center py-12 text-slate-400 text-sm">
-                      Click para cargar el contenido…
+                      <AlertTriangle className="w-6 h-6 mx-auto mb-2" />
+                      Esta norma no tiene PDF asociado.
                     </div>
-                  )}
-                </div>
+                  )
+                )
               )}
             </div>
 
