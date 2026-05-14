@@ -18,7 +18,7 @@
  *   · Corte Constitucional del Ecuador
  */
 
-export const CATALOG_VERSION = '2026.05.14-v2';
+export const CATALOG_VERSION = '2026.05.14-v3-intl';
 
 export interface NationalLaw {
   /** Nombre oficial completo. Es la clave de matching. */
@@ -714,6 +714,145 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
     category: 'Derechos Humanos',
     searchKeywords: ['discapacidad', 'personas', 'convención', 'CDPD'],
+  },
+  // ── Instrumentos del Sistema Interamericano DDHH adicionales
+  {
+    canonicalName: 'Declaración Americana de los Derechos y Deberes del Hombre',
+    shortName: 'DADDH',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1948-04-30',
+    searchKeywords: ['declaración', 'americana', 'derechos', 'deberes', 'hombre'],
+  },
+  {
+    canonicalName: 'Convención Interamericana sobre Desaparición Forzada de Personas',
+    shortName: 'CIDFP',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    searchKeywords: ['desaparición', 'forzada', 'interamericana'],
+  },
+  // ── Sistema Universal ONU
+  {
+    canonicalName: 'Declaración Universal de los Derechos Humanos',
+    shortName: 'DUDH',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1948-12-10',
+    searchKeywords: ['declaración', 'universal', 'derechos', 'humanos', 'DUDH', 'ONU'],
+  },
+  {
+    canonicalName: 'Convención Internacional sobre la Eliminación de Todas las Formas de Discriminación Racial',
+    shortName: 'ICERD',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1965-12-21',
+    searchKeywords: ['discriminación', 'racial', 'eliminación', 'ICERD'],
+  },
+  {
+    canonicalName: 'Convenio de la OIT N° 169 sobre Pueblos Indígenas y Tribales',
+    shortName: 'C169 OIT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derechos Humanos',
+    publicationDate: '1989-06-27',
+    searchKeywords: ['OIT', '169', 'pueblos', 'indígenas', 'tribales', 'consulta previa'],
+    notes: 'Ratificado por Ecuador en 1998. Base de los derechos de consulta previa.',
+  },
+  {
+    canonicalName: 'Convenio de la OIT N° 87 sobre la Libertad Sindical',
+    shortName: 'C87 OIT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Laboral',
+    publicationDate: '1948-07-09',
+    searchKeywords: ['OIT', '87', 'libertad', 'sindical', 'asociación'],
+  },
+  {
+    canonicalName: 'Convenio de la OIT N° 98 sobre el Derecho de Sindicación y Negociación Colectiva',
+    shortName: 'C98 OIT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Laboral',
+    publicationDate: '1949-07-01',
+    searchKeywords: ['OIT', '98', 'sindicación', 'negociación', 'colectiva'],
+  },
+  {
+    canonicalName: 'Convenio de la OIT N° 100 sobre Igualdad de Remuneración',
+    shortName: 'C100 OIT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Laboral',
+    publicationDate: '1951-06-29',
+    searchKeywords: ['OIT', '100', 'igualdad', 'remuneración'],
+  },
+  {
+    canonicalName: 'Convenio de la OIT N° 111 sobre la Discriminación (Empleo y Ocupación)',
+    shortName: 'C111 OIT',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Laboral',
+    publicationDate: '1958-06-25',
+    searchKeywords: ['OIT', '111', 'discriminación', 'empleo'],
+  },
+  {
+    canonicalName: 'Convención de Viena sobre el Derecho de los Tratados',
+    shortName: 'CVDT 1969',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Derecho Internacional',
+    publicationDate: '1969-05-23',
+    searchKeywords: ['Viena', 'tratados', 'derecho', 'internacional', 'CVDT'],
+  },
+  // ── Sistema de Integración Andina
+  {
+    canonicalName: 'Acuerdo de Cartagena (Sistema Andino de Integración)',
+    shortName: 'Acuerdo Cartagena',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Integración Regional',
+    publicationDate: '1969-05-26',
+    searchKeywords: ['Cartagena', 'CAN', 'comunidad', 'andina', 'integración'],
+  },
+  {
+    canonicalName: 'Decisión 351 de la CAN — Régimen Común sobre Derecho de Autor y Derechos Conexos',
+    shortName: 'CAN 351',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Propiedad Intelectual',
+    publicationDate: '1993-12-17',
+    searchKeywords: ['CAN', '351', 'derecho', 'autor', 'régimen común'],
+  },
+  {
+    canonicalName: 'Decisión 486 de la CAN — Régimen Común sobre Propiedad Industrial',
+    shortName: 'CAN 486',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Propiedad Intelectual',
+    publicationDate: '2000-09-14',
+    searchKeywords: ['CAN', '486', 'propiedad', 'industrial', 'marcas', 'patentes'],
+  },
+  {
+    canonicalName: 'Decisión 578 de la CAN — Régimen para evitar la Doble Tributación',
+    shortName: 'CAN 578',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Tributario',
+    publicationDate: '2004-05-04',
+    searchKeywords: ['CAN', '578', 'doble', 'tributación', 'IVA', 'renta'],
+  },
+  // ── Comercio internacional
+  {
+    canonicalName: 'Acuerdo de Marrakech por el que se establece la OMC',
+    shortName: 'OMC',
+    normType: 'INTERNATIONAL_TREATY',
+    legalHierarchy: 'TRATADOS_INTERNACIONALES_DDHH',
+    category: 'Comercio Internacional',
+    publicationDate: '1994-04-15',
+    searchKeywords: ['OMC', 'WTO', 'Marrakech', 'comercio', 'mundial'],
   },
 
   // ════════════════════════════════════════════════════════════════════════

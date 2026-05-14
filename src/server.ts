@@ -353,6 +353,9 @@ await app.register((await import('./routes/admin/registro-oficial.routes.js')).r
 // Admin: Corpus audit (verifica que el catálogo de leyes nacionales esté completo en el RAG)
 await app.register((await import('./routes/admin/corpus-audit.routes.js')).corpusAuditRoutes, { prefix: '/api/v1' });
 
+// Admin: Legal search (búsqueda avanzada con IA sobre corpus + fuentes externas)
+await app.register((await import('./routes/admin/legal-search.routes.js')).legalSearchRoutes, { prefix: '/api/v1' });
+
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 
