@@ -17,7 +17,7 @@ import {
   Loader2, RefreshCw, ScrollText, CheckCircle2, XCircle, Sparkles,
   FileText, Filter, Search, Calendar, Building2, Tag, Activity, TrendingUp,
   AlertTriangle, ChevronRight, Download, Brain, Database, Layers, Clock,
-  Hash, User, Globe, Zap,
+  Hash, User, Globe, Zap, BookMarked, ExternalLink, Library, Scale, Gavel,
 } from 'lucide-react';
 
 interface Stats {
@@ -129,7 +129,57 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('es-EC');
 }
 
-type Tab = 'publications' | 'ingestion-log';
+type Tab = 'publications' | 'ingestion-log' | 'norm-catalog';
+
+interface NormCatalogItem {
+  id: string;
+  title: string;
+  norm_title: string | null;
+  norm_type: string | null;
+  legal_hierarchy: string | null;
+  publication_type: string | null;
+  publication_number: string | null;
+  publication_date: string | null;
+  last_reform_date: string | null;
+  category: string | null;
+  country_code: string | null;
+  pdf_url: string | null;
+  edition_url: string | null;
+  edition_number: string | null;
+}
+
+interface NormCatalogResponse {
+  items: NormCatalogItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+interface ExternalSource {
+  label: string;
+  url: string;
+}
+
+const NORM_CATALOG_TYPES: Array<{
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+  hier: string;
+}> = [
+  { key: 'constitucion',       label: 'Constitución',       icon: '🏛️', color: 'amber',    hier: 'CONSTITUCION' },
+  { key: 'codigos_organicos',  label: 'Códigos Orgánicos',  icon: '⚖️',  color: 'violet',   hier: 'CODIGOS_ORGANICOS' },
+  { key: 'leyes_organicas',    label: 'Leyes Orgánicas',    icon: '📜', color: 'rose',     hier: 'LEYES_ORGANICAS' },
+  { key: 'leyes_ordinarias',   label: 'Leyes Ordinarias',   icon: '📄', color: 'sky',      hier: 'LEYES_ORDINARIAS' },
+];
+
+const HIER_META: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  CONSTITUCION:       { label: 'Constitución',        bg: 'bg-amber-50',  text: 'text-amber-800',  border: 'border-amber-200' },
+  CODIGOS_ORGANICOS:  { label: 'Código Orgánico',     bg: 'bg-violet-50', text: 'text-violet-800', border: 'border-violet-200' },
+  LEYES_ORGANICAS:    { label: 'Ley Orgánica',        bg: 'bg-rose-50',   text: 'text-rose-800',   border: 'border-rose-200' },
+  CODIGOS_ORDINARIOS: { label: 'Código Ordinario',    bg: 'bg-cyan-50',   text: 'text-cyan-800',   border: 'border-cyan-200' },
+  LEYES_ORDINARIAS:   { label: 'Ley Ordinaria',       bg: 'bg-sky-50',    text: 'text-sky-800',    border: 'border-sky-200' },
+};
 
 interface ScanProgress {
   pct: number;
@@ -159,6 +209,55 @@ export default function RegistroOficialAdminPage() {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
+
+  // Catálogo Normativo
+  const [normCatalog, setNormCatalog] = useState<NormCatalogResponse | null>(null);
+  const [normCatalogQuery, setNormCatalogQuery] = useState('');
+  const [normCatalogTypes, setNormCatalogTypes] = useState<string[]>([
+    'constitucion', 'codigos_organicos', 'leyes_organicas', 'leyes_ordinarias',
+  ]);
+  const [externalSources, setExternalSources] = useState<ExternalSource[]>([]);
+
+  const loadNormCatalog = async (overrides?: { q?: string; types?: string[] }) => {
+    setLoading(true);
+    setError('');
+    try {
+      const effectiveQ      = overrides?.q     ?? normCatalogQuery;
+      const effectiveTypes  = overrides?.types ?? normCatalogTypes;
+      const r = await api.get<NormCatalogResponse>('/admin/registro-oficial/norm-catalog', {
+        params: {
+          q:     effectiveQ || undefined,
+          types: effectiveTypes.join(','),
+          limit: 100,
+        },
+      });
+      setNormCatalog(r.data);
+
+      // Fallback externo: si q tiene algo, traemos también los enlaces externos
+      if (effectiveQ && effectiveQ.trim()) {
+        try {
+          const ext = await api.get<{ sources: ExternalSource[] }>(
+            '/admin/registro-oficial/norm-catalog/external',
+            { params: { q: effectiveQ } },
+          );
+          setExternalSources(ext.data?.sources || []);
+        } catch { setExternalSources([]); }
+      } else {
+        setExternalSources([]);
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.error || e?.message || 'Error al cargar catálogo');
+    } finally { setLoading(false); }
+  };
+
+  const toggleNormCatalogType = (key: string) => {
+    setNormCatalogTypes((prev) => {
+      const next = prev.includes(key) ? prev.filter((t) => t !== key) : [...prev, key];
+      // Disparar reload con el nuevo set (no esperar al useEffect)
+      void loadNormCatalog({ types: next });
+      return next;
+    });
+  };
 
   const loadIngestionLog = async () => {
     setLoading(true);
@@ -193,6 +292,7 @@ export default function RegistroOficialAdminPage() {
   useEffect(() => {
     if (tab === 'publications') void load();
     else if (tab === 'ingestion-log') void loadIngestionLog();
+    else if (tab === 'norm-catalog') void loadNormCatalog();
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [tab, statusFilter, typeFilter]);
 
@@ -390,6 +490,24 @@ export default function RegistroOficialAdminPage() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setTab('norm-catalog')}
+          className={`px-4 py-2.5 -mb-0.5 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+            tab === 'norm-catalog'
+              ? 'border-violet-600 text-violet-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+        >
+          <Library className="w-4 h-4" />
+          Catálogo Normativo · Constitución, Códigos, Leyes
+          {normCatalog && (
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              tab === 'norm-catalog' ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-600'
+            }`}>
+              {normCatalog.total}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Stats (solo en tab publications) */}
@@ -489,6 +607,20 @@ export default function RegistroOficialAdminPage() {
           q={logQuery}
           setQ={setLogQuery}
           onRefresh={loadIngestionLog}
+        />
+      )}
+
+      {/* TAB 3: Catálogo Normativo */}
+      {tab === 'norm-catalog' && (
+        <NormCatalogView
+          data={normCatalog}
+          loading={loading}
+          query={normCatalogQuery}
+          setQuery={setNormCatalogQuery}
+          types={normCatalogTypes}
+          toggleType={toggleNormCatalogType}
+          onSearch={() => loadNormCatalog()}
+          externalSources={externalSources}
         />
       )}
 
@@ -1181,6 +1313,266 @@ function PublicationCard({ pub, onApprove, onReject }: {
             ) : null}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NORM CATALOG VIEW ────────────────────────────────────────────────
+
+function NormCatalogView({
+  data, loading, query, setQuery, types, toggleType, onSearch, externalSources,
+}: {
+  data: NormCatalogResponse | null;
+  loading: boolean;
+  query: string;
+  setQuery: (v: string) => void;
+  types: string[];
+  toggleType: (key: string) => void;
+  onSearch: () => void;
+  externalSources: ExternalSource[];
+}) {
+  // Agrupa items por jerarquía para mostrarlos en secciones
+  const grouped = (data?.items || []).reduce<Record<string, NormCatalogItem[]>>((acc, it) => {
+    const h = it.legal_hierarchy || 'OTRAS';
+    if (!acc[h]) acc[h] = [];
+    acc[h].push(it);
+    return acc;
+  }, {});
+
+  const groupOrder = ['CONSTITUCION', 'CODIGOS_ORGANICOS', 'LEYES_ORGANICAS', 'CODIGOS_ORDINARIOS', 'LEYES_ORDINARIAS'];
+
+  return (
+    <div className="space-y-4">
+      {/* Header explicativo */}
+      <div className="rounded-xl bg-gradient-to-br from-amber-50 via-white to-violet-50 border border-amber-200 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-violet-600 grid place-items-center shrink-0 shadow-md">
+            <Library className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-black text-gray-900">Catálogo de Normas Fundamentales</h3>
+            <p className="text-xs text-gray-700 mt-0.5">
+              Constitución de la República, Códigos Orgánicos, Leyes Orgánicas y Ordinarias —
+              con fecha de publicación en el Registro Oficial.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros + búsqueda */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-sm">
+        <div className="flex flex-wrap gap-2">
+          {NORM_CATALOG_TYPES.map((t) => {
+            const active = types.includes(t.key);
+            const activeCls: Record<string, string> = {
+              amber:  'bg-amber-100 text-amber-800 border-amber-300 shadow-sm',
+              violet: 'bg-violet-100 text-violet-800 border-violet-300 shadow-sm',
+              rose:   'bg-rose-100 text-rose-800 border-rose-300 shadow-sm',
+              sky:    'bg-sky-100 text-sky-800 border-sky-300 shadow-sm',
+            };
+            return (
+              <button
+                key={t.key}
+                onClick={() => toggleType(t.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition border-2 flex items-center gap-1.5 ${
+                  active
+                    ? (activeCls[t.color] || activeCls.violet)
+                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-base">{t.icon}</span>
+                {t.label}
+                {active && <CheckCircle2 className="w-3 h-3" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre — ej: COIP, Código Civil, Constitución, LOSEP…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white flex-1 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+          />
+          <button
+            onClick={onSearch}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-bold hover:from-violet-700 hover:to-fuchsia-700 transition flex items-center gap-1.5 shadow-sm"
+          >
+            <Search className="w-3.5 h-3.5" />
+            Buscar
+          </button>
+        </div>
+
+        {data && (
+          <div className="text-xs text-gray-600 pt-1 border-t border-gray-100">
+            <Sparkles className="w-3 h-3 inline mr-1 text-violet-500" />
+            <strong>{data.total}</strong> norma(s) encontradas en el corpus interno
+            {query && <span> · búsqueda: <span className="font-mono text-violet-700">"{query}"</span></span>}
+          </div>
+        )}
+      </div>
+
+      {/* Resultados */}
+      {loading ? (
+        <div className="text-center py-12 text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-violet-500" />
+          Cargando catálogo…
+        </div>
+      ) : !data || data.items.length === 0 ? (
+        <div className="space-y-4">
+          <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+            <Library className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+            <p className="text-sm font-semibold">Sin resultados en el corpus interno</p>
+            <p className="text-xs mt-1">
+              {query
+                ? 'Prueba buscar en las fuentes oficiales del Registro Oficial:'
+                : 'Selecciona al menos un tipo normativo o haz una búsqueda.'}
+            </p>
+          </div>
+
+          {query && externalSources.length > 0 && (
+            <div className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <ExternalLink className="w-4 h-4 text-amber-600" />
+                <h4 className="text-sm font-bold text-gray-900">Buscar en fuentes externas</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {externalSources.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition flex items-center justify-between gap-2 group"
+                  >
+                    <span className="text-xs font-semibold text-gray-700 group-hover:text-violet-800">{s.label}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-violet-600 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {groupOrder.filter((h) => grouped[h]?.length).map((hier) => {
+            const meta = HIER_META[hier] || HIER_META.LEYES_ORDINARIAS;
+            return (
+              <section key={hier}>
+                <header className={`flex items-center gap-2 mb-2 pb-2 border-b-2 ${meta.border}`}>
+                  <Scale className={`w-4 h-4 ${meta.text}`} />
+                  <h3 className={`text-sm font-black ${meta.text}`}>{meta.label}</h3>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${meta.bg} ${meta.text}`}>
+                    {grouped[hier].length}
+                  </span>
+                </header>
+                <div className="space-y-2">
+                  {grouped[hier].map((n) => <NormRow key={n.id} norm={n} />)}
+                </div>
+              </section>
+            );
+          })}
+
+          {/* Fallback externo siempre visible cuando hay query */}
+          {query && externalSources.length > 0 && (
+            <div className="bg-amber-50/50 rounded-xl border border-amber-200 p-4 mt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ExternalLink className="w-4 h-4 text-amber-600" />
+                <h4 className="text-sm font-bold text-gray-900">¿No encontraste lo que buscabas?</h4>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                Verifica en las fuentes oficiales del Registro Oficial Ecuador:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {externalSources.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-lg border border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50 transition flex items-center justify-between gap-2 group"
+                  >
+                    <span className="text-xs font-semibold text-gray-700 group-hover:text-violet-800">{s.label}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-violet-600 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NormRow({ norm }: { norm: NormCatalogItem }) {
+  const meta = HIER_META[norm.legal_hierarchy || ''] || HIER_META.LEYES_ORDINARIAS;
+  const pubDate = norm.publication_date
+    ? new Date(norm.publication_date).toLocaleDateString('es-EC', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
+    : null;
+  const reformDate = norm.last_reform_date
+    ? new Date(norm.last_reform_date).toLocaleDateString('es-EC', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      })
+    : null;
+
+  return (
+    <div className={`rounded-lg border ${meta.border} bg-white p-3 hover:shadow-md transition`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-bold text-gray-900 leading-snug">
+            {norm.norm_title || norm.title}
+          </h4>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px]">
+            {pubDate && (
+              <span className="inline-flex items-center gap-1 text-gray-700">
+                <Calendar className="w-3 h-3" />
+                <span><strong>Publicada:</strong> {pubDate}</span>
+              </span>
+            )}
+            {norm.publication_number && (
+              <span className="inline-flex items-center gap-1 text-gray-700">
+                <Hash className="w-3 h-3" />
+                <span><strong>RO Nº</strong> {norm.publication_number}</span>
+              </span>
+            )}
+            {norm.publication_type && norm.publication_type !== 'ORDINARIO' && (
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${meta.bg} ${meta.text} font-semibold`}>
+                {norm.publication_type.replace(/_/g, ' ')}
+              </span>
+            )}
+            {reformDate && (
+              <span className="inline-flex items-center gap-1 text-amber-700">
+                <Clock className="w-3 h-3" />
+                <span>Reforma: {reformDate}</span>
+              </span>
+            )}
+            {norm.category && (
+              <span className="inline-flex items-center gap-1 text-gray-500">
+                <Tag className="w-3 h-3" />
+                {norm.category}
+              </span>
+            )}
+          </div>
+        </div>
+        {norm.pdf_url && (
+          <a
+            href={norm.pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition"
+          >
+            <Download className="w-3 h-3" />
+            PDF
+          </a>
+        )}
       </div>
     </div>
   );

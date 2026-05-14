@@ -457,4 +457,153 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
       return reply;
     },
   );
+
+  // ─── GET /admin/registro-oficial/norm-catalog ──────────────────────────
+  // Catálogo de normas fundamentales con sus fechas de publicación en RO.
+  // Busca en el corpus interno (legal_documents) filtrando por
+  // legal_hierarchy ∈ {CONSTITUCION, CODIGOS_ORGANICOS, LEYES_ORGANICAS,
+  // LEYES_ORDINARIAS, CODIGOS_ORDINARIOS}.
+  fastify.get<{
+    Querystring: { q?: string; types?: string; limit?: string; offset?: string };
+  }>(
+    '/admin/registro-oficial/norm-catalog',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const { q, types, limit, offset } = request.query;
+      const limitNum  = Math.min(100, Math.max(10, parseInt(limit  || '50', 10)));
+      const offsetNum = Math.max(0, parseInt(offset || '0', 10));
+
+      const typeMap: Record<string, string> = {
+        constitucion:       'CONSTITUCION',
+        codigos_organicos:  'CODIGOS_ORGANICOS',
+        leyes_organicas:    'LEYES_ORGANICAS',
+        leyes_ordinarias:   'LEYES_ORDINARIAS',
+        codigos_ordinarios: 'CODIGOS_ORDINARIOS',
+      };
+
+      const requestedSet = new Set<string>();
+      (types || 'constitucion,codigos_organicos,leyes_organicas,leyes_ordinarias')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .forEach((s) => {
+          if (typeMap[s]) requestedSet.add(typeMap[s]);
+        });
+      // Si pidió leyes ordinarias, incluir también códigos ordinarios (suelen
+      // confundirse en el lenguaje común).
+      if (requestedSet.has('LEYES_ORDINARIAS')) requestedSet.add('CODIGOS_ORDINARIOS');
+      const requested = Array.from(requestedSet);
+
+      if (requested.length === 0) {
+        return reply.send({ items: [], total: 0, limit: limitNum, offset: offsetNum });
+      }
+
+      const conditions: string[] = ['is_active = true'];
+      const params: any[] = [];
+
+      params.push(requested);
+      conditions.push(`legal_hierarchy::text = ANY($${params.length}::text[])`);
+
+      if (q && q.trim()) {
+        params.push(`%${q.trim()}%`);
+        conditions.push(
+          `(title ILIKE $${params.length} OR norm_title ILIKE $${params.length})`,
+        );
+      }
+
+      const baseWhere = conditions.join(' AND ');
+      const filterParams = [...params];
+
+      params.push(limitNum);
+      const limitIdx = params.length;
+      params.push(offsetNum);
+      const offsetIdx = params.length;
+
+      const [items, countRows] = await Promise.all([
+        prisma.$queryRawUnsafe<Array<any>>(
+          `SELECT id,
+                  title,
+                  norm_title,
+                  norm_type::text         AS norm_type,
+                  legal_hierarchy::text   AS legal_hierarchy,
+                  publication_type::text  AS publication_type,
+                  publication_number,
+                  publication_date,
+                  last_reform_date,
+                  category,
+                  country_code,
+                  metadata->>'editionPdfUrl' AS pdf_url,
+                  metadata->>'editionUrl'    AS edition_url,
+                  metadata->>'editionNumber' AS edition_number
+             FROM public.legal_documents
+            WHERE ${baseWhere}
+            ORDER BY
+              CASE legal_hierarchy::text
+                WHEN 'CONSTITUCION'       THEN 0
+                WHEN 'CODIGOS_ORGANICOS'  THEN 1
+                WHEN 'LEYES_ORGANICAS'    THEN 2
+                WHEN 'CODIGOS_ORDINARIOS' THEN 3
+                WHEN 'LEYES_ORDINARIAS'   THEN 4
+                ELSE 5
+              END,
+              publication_date DESC NULLS LAST,
+              title
+            LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+          ...params,
+        ),
+        prisma.$queryRawUnsafe<Array<{ n: bigint }>>(
+          `SELECT COUNT(*)::bigint AS n
+             FROM public.legal_documents
+            WHERE ${baseWhere}`,
+          ...filterParams,
+        ),
+      ]);
+
+      return reply.send({
+        items,
+        total: Number(countRows[0]?.n || 0),
+        limit: limitNum,
+        offset: offsetNum,
+      });
+    },
+  );
+
+  // ─── GET /admin/registro-oficial/norm-catalog/external ─────────────────
+  // Fallback: el buscador del Registro Oficial Ecuador no expone API JSON
+  // públicamente ni búsqueda full-text estable. Devolvemos URLs de búsqueda
+  // listas para abrir en una nueva pestaña, así el usuario puede confirmar
+  // datos en la fuente oficial cuando el corpus interno no tenga match.
+  fastify.get<{ Querystring: { q?: string } }>(
+    '/admin/registro-oficial/norm-catalog/external',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const q = (request.query.q || '').trim();
+      const encoded = encodeURIComponent(q);
+      return reply.send({
+        query: q,
+        sources: [
+          {
+            label: 'Registro Oficial Ecuador (buscador oficial)',
+            url: q
+              ? `https://www.registroficial.gob.ec/index.php/registro-oficial-web/publicaciones?searchword=${encoded}&searchphrase=all`
+              : 'https://www.registroficial.gob.ec/',
+          },
+          {
+            label: 'Lexis Finder (corpus legal Ecuador)',
+            url: q
+              ? `https://www.lexis.com.ec/buscar?q=${encoded}`
+              : 'https://www.lexis.com.ec/',
+          },
+          {
+            label: 'Google (filtrado registroficial.gob.ec)',
+            url: q
+              ? `https://www.google.com/search?q=site%3Aregistroficial.gob.ec+${encoded}`
+              : 'https://www.google.com/search?q=site%3Aregistroficial.gob.ec',
+          },
+        ],
+      });
+    },
+  );
 }
