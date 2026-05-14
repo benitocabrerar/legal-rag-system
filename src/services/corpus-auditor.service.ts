@@ -17,6 +17,7 @@ import { prisma } from '../lib/prisma.js';
 import { NATIONAL_LAWS_CATALOG, type NationalLaw, CATALOG_VERSION } from '../data/national-laws-catalog.js';
 import { ingestPublicationToCorpus } from './corpus-ingestion.service.js';
 import { searchRoLive } from './norm-monitor.service.js';
+import { downloadAndExtractPdf } from './registro-oficial.service.js';
 import { randomUUID } from 'crypto';
 
 const RO_BASE = 'https://www.registroficial.gob.ec';
@@ -272,8 +273,48 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
   error?: string;
 }> {
   const startedAt = Date.now();
+
+  // ═══ ESTRATEGIA 1: canonicalPdfUrl directo ═══════════════════════════
+  // Si el catálogo trae URL directa al PDF oficial (mantenido por la
+  // institución competente como Defensa, Función Judicial, Cancillería),
+  // la usamos preferentemente — saltamos la búsqueda en RO que no
+  // encuentra normas consolidadas.
+  if (law.canonicalPdfUrl) {
+    try {
+      const text = await downloadAndExtractPdf(law.canonicalPdfUrl);
+      if (text && text.length >= 500) {
+        const pubId = await createPublicationFromCanonical(law, text);
+        await sleep(300);
+        const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
+
+        await updateItemStatus(runId, law, {
+          status: 'ingested_ok',
+          remotePdfUrl: law.canonicalPdfUrl,
+          chunksCreated: ing.chunksCreated,
+          embeddingsGenerated: ing.embeddingsGenerated,
+          embeddingsVectorized: ing.embeddingsVectorized,
+          matchedLegalDocId: ing.legalDocId,
+          matchSimilarity: 1.0,
+          matchMethod: 'canonical_url',
+          durationMs: Date.now() - startedAt,
+        });
+
+        return {
+          success: true,
+          chunksCreated: ing.chunksCreated,
+          durationMs: Date.now() - startedAt,
+        };
+      }
+      // Si el PDF se descargó pero está vacío, dejamos seguir al fallback RO
+    } catch (e: any) {
+      // Si falla canonicalPdfUrl, también dejamos seguir al fallback
+      // eslint-disable-next-line no-console
+      console.warn(`[audit] canonicalPdfUrl failed for ${law.canonicalName}: ${e?.message}`);
+    }
+  }
+
+  // ═══ ESTRATEGIA 2: búsqueda en el buscador del RO ════════════════════
   try {
-    // 1) Búsqueda en el sitio del RO usando el nombre + keywords
     const query = buildSearchQuery(law);
     const results = await searchRoLive(query, 5);
 
@@ -284,7 +325,9 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
       await updateItemStatus(runId, law, {
         status: 'unreachable',
         remoteSearchUrl: `${RO_BASE}/?s=${encodeURIComponent(query)}`,
-        error: 'Sin resultados en el buscador del RO',
+        error: law.canonicalPdfUrl
+          ? `Sin resultados en RO y canonicalPdfUrl ${law.canonicalPdfUrl} no devolvió contenido`
+          : 'Sin resultados en el buscador del RO',
         durationMs: Date.now() - startedAt,
       });
       return { success: false, chunksCreated: 0, durationMs: Date.now() - startedAt, error: 'No matches' };
@@ -365,6 +408,57 @@ function buildSearchQuery(law: NationalLaw): string {
     return law.searchKeywords.slice(0, 3).join(' ');
   }
   return law.canonicalName.split(' ').slice(0, 6).join(' ');
+}
+
+/**
+ * Crea una registry_publications con el TEXTO COMPLETO descargado desde
+ * la canonicalPdfUrl curada (que es lo que mantienen las instituciones
+ * oficiales como Defensa, Función Judicial, etc.). El pipeline de ingest
+ * usa este texto directamente sin necesidad de buscar nada en el RO.
+ */
+async function createPublicationFromCanonical(law: NationalLaw, fullText: string): Promise<string> {
+  const id = randomUUID();
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO public.registry_publications (
+        id, country_code, source, edition_number, edition_date,
+        edition_url, edition_pdf_url, publication_type, publication_number,
+        title, issuing_entity, raw_text_excerpt, raw_text_length,
+        ai_summary, ai_classification, ai_relevance_score, ai_keywords,
+        status
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::text[], 'analyzed')`,
+    id,
+    'EC',
+    'registro_oficial_ec_canonical',           // marca: vino de URL oficial directa
+    law.registroOficialNumber || null,
+    law.publicationDate ? new Date(law.publicationDate) : new Date(),
+    law.canonicalPdfUrl || null,
+    law.canonicalPdfUrl || null,
+    mapNormTypeToPublicationType(law.normType),
+    law.registroOficialNumber || null,
+    law.canonicalName,
+    'Asamblea Nacional del Ecuador',
+    fullText.slice(0, 16000),                  // hasta 16k chars (el resto va al content via legal_documents)
+    fullText.length,
+    `[Audit canonical] ${law.canonicalName} — descargada desde URL oficial. Catálogo curado v${CATALOG_VERSION}. Tipo: ${law.normType}, jerarquía: ${law.legalHierarchy}, categoría: ${law.category}.`,
+    law.category?.toLowerCase() || 'general',
+    1.0,
+    law.searchKeywords || [],
+  );
+  return id;
+}
+
+function mapNormTypeToPublicationType(t: NationalLaw['normType']): string {
+  switch (t) {
+    case 'ORGANIC_LAW':       return 'ley_organica';
+    case 'ORDINARY_LAW':      return 'ley_ordinaria';
+    case 'ORGANIC_CODE':      return 'ley_organica';
+    case 'ORDINARY_CODE':     return 'ley_ordinaria';
+    case 'REGULATION_GENERAL':
+    case 'REGULATION_EXECUTIVE': return 'reglamento';
+    case 'CONSTITUTIONAL_NORM':  return 'ley_organica';
+    case 'INTERNATIONAL_TREATY': return 'ley_organica';
+    default: return 'general';
+  }
 }
 
 async function createSyntheticPublication(

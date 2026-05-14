@@ -449,7 +449,7 @@ interface ScrapedEditionWithFallback extends ScrapedEdition {
   categoryHint?: string | null;
 }
 
-async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
+export async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
   try {
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);

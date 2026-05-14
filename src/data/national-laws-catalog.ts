@@ -18,7 +18,7 @@
  *   · Corte Constitucional del Ecuador
  */
 
-export const CATALOG_VERSION = '2026.05.14-v3-intl';
+export const CATALOG_VERSION = '2026.05.14-v4-canonical';
 
 export interface NationalLaw {
   /** Nombre oficial completo. Es la clave de matching. */
@@ -76,7 +76,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Constitucional',
     publicationDate: '2008-10-20',
     registroOficialNumber: '449',
-    canonicalPdfUrl: 'https://www.registroficial.gob.ec/index.php/registro-oficial-web/publicaciones/registro-oficial/item/8538-edicion-no-449-20-de-octubre-de-2008',
+    canonicalPdfUrl: 'https://www.defensa.gob.ec/wp-content/uploads/downloads/2021/02/Constitucion-de-la-Republica-del-Ecuador_act_ene-2021.pdf',
     searchKeywords: ['constitución', 'república', 'ecuador', '2008'],
   },
 
@@ -92,6 +92,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2014-02-10',
     lastReformDate: '2024-03-01',
     registroOficialNumber: 'Suplemento 180',
+    canonicalPdfUrl: 'https://www.defensa.gob.ec/wp-content/uploads/downloads/2021/03/COIP_act_feb-2021.pdf',
     searchKeywords: ['COIP', 'integral', 'penal'],
   },
   {
@@ -103,6 +104,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2015-05-22',
     lastReformDate: '2024-04-12',
     registroOficialNumber: 'Suplemento 506',
+    canonicalPdfUrl: 'https://www.defensa.gob.ec/wp-content/uploads/downloads/2021/03/COGEP_act_feb-2021.pdf',
     searchKeywords: ['COGEP', 'general', 'procesos'],
   },
   {
@@ -114,6 +116,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2009-03-09',
     lastReformDate: '2023-11-22',
     registroOficialNumber: 'Suplemento 544',
+    canonicalPdfUrl: 'https://www.funcionjudicial.gob.ec/resources/pdf/normativa/codigoorganicoFJ.pdf',
     searchKeywords: ['COFJ', 'función', 'judicial'],
   },
   {
@@ -124,6 +127,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Administrativo',
     publicationDate: '2017-07-07',
     registroOficialNumber: 'Suplemento 31',
+    canonicalPdfUrl: 'https://www.gobiernoelectronico.gob.ec/wp-content/uploads/2020/11/COA.pdf',
     searchKeywords: ['COA', 'orgánico', 'administrativo'],
   },
   {
@@ -135,6 +139,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2014-09-12',
     lastReformDate: '2023-06-30',
     registroOficialNumber: 'Segundo Suplemento 332',
+    canonicalPdfUrl: 'https://www.cosede.gob.ec/wp-content/uploads/2018/08/COMF.pdf',
     searchKeywords: ['COMYF', 'monetario', 'financiero'],
   },
   {
@@ -145,6 +150,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Mercantil',
     publicationDate: '2010-12-29',
     registroOficialNumber: 'Suplemento 351',
+    canonicalPdfUrl: 'https://www.aduana.gob.ec/wp-content/uploads/2020/05/COPCI.pdf',
     searchKeywords: ['COPCI', 'producción', 'comercio', 'inversiones'],
   },
   {
@@ -155,6 +161,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Administrativo',
     publicationDate: '2010-10-19',
     registroOficialNumber: 'Suplemento 303',
+    canonicalPdfUrl: 'https://www.cpccs.gob.ec/wp-content/uploads/2020/01/cootad.pdf',
     searchKeywords: ['COOTAD', 'territorial', 'autonomía', 'descentralización'],
   },
   {
@@ -165,6 +172,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Financiero',
     publicationDate: '2010-10-22',
     registroOficialNumber: 'Segundo Suplemento 306',
+    canonicalPdfUrl: 'https://www.ecuadorencifras.gob.ec/LOTAIP/2017/DIJU/diciembre/LA2_OCT_DIJU_COPFP.pdf',
     searchKeywords: ['planificación', 'finanzas', 'públicas'],
   },
   {
@@ -175,6 +183,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Ambiental',
     publicationDate: '2017-04-12',
     registroOficialNumber: 'Suplemento 983',
+    canonicalPdfUrl: 'http://www.epmrq.gob.ec/images/servicios2020/CODIGO_ORGANICO_DEL_AMBIENTE_COAM.pdf',
     searchKeywords: ['código', 'orgánico', 'ambiente'],
   },
   {
@@ -217,6 +226,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2005-06-14',
     lastReformDate: '2023-06-30',
     registroOficialNumber: 'Suplemento 38',
+    canonicalPdfUrl: 'https://impuestosecuador.com/wp-content/uploads/2021/03/CODIGO-TRIBUTARIO.pdf',
     searchKeywords: ['código', 'tributario'],
   },
 
@@ -232,6 +242,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2005-06-24',
     lastReformDate: '2022-12-15',
     registroOficialNumber: 'Suplemento 46',
+    canonicalPdfUrl: 'https://www.gobiernoelectronico.gob.ec/wp-content/uploads/2018/10/Codigo-Civil.pdf',
     searchKeywords: ['código', 'civil'],
   },
   {
@@ -242,6 +253,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Mercantil',
     publicationDate: '2019-05-29',
     registroOficialNumber: 'Suplemento 497',
+    canonicalPdfUrl: 'https://www.supercias.gob.ec/bd_supercias/descargas/lotaip/a2/2019/JUNIO/Codigo_de_Comercio.pdf',
     searchKeywords: ['código', 'comercio'],
   },
   {
@@ -253,6 +265,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2005-12-16',
     lastReformDate: '2024-06-12',
     registroOficialNumber: 'Suplemento 167',
+    canonicalPdfUrl: 'https://www.trabajo.gob.ec/wp-content/uploads/downloads/2012/11/C%C3%B3digo-de-Tabajo-PDF.pdf',
     searchKeywords: ['código', 'trabajo'],
   },
 
@@ -268,6 +281,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2010-10-06',
     lastReformDate: '2023-10-04',
     registroOficialNumber: 'Segundo Suplemento 294',
+    canonicalPdfUrl: 'https://www.cancilleria.gob.ec/wp-content/uploads/2022/06/2022.04.05_ley_organica_del_servicio_publico_-_losep.pdf',
     searchKeywords: ['LOSEP', 'servicio', 'público'],
   },
   {
@@ -279,6 +293,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2011-03-31',
     lastReformDate: '2023-04-12',
     registroOficialNumber: 'Segundo Suplemento 417',
+    canonicalPdfUrl: 'https://educacion.gob.ec/wp-content/uploads/downloads/2017/05/Ley-Organica-Educacion-Intercultural-Codificado.pdf',
     searchKeywords: ['LOEI', 'educación', 'intercultural'],
   },
   {
@@ -310,6 +325,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Constitucional',
     publicationDate: '2009-10-22',
     registroOficialNumber: 'Segundo Suplemento 52',
+    canonicalPdfUrl: 'https://www.ecuadorencifras.gob.ec/LOTAIP/2017/DIJU/diciembre/LA2_OCT_DIJU_LeyOrgGarantiJuri.pdf',
     searchKeywords: ['LOGJCC', 'garantías', 'jurisdiccionales'],
   },
   {
@@ -341,6 +357,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2008-08-04',
     lastReformDate: '2024-04-22',
     registroOficialNumber: 'Suplemento 395',
+    canonicalPdfUrl: 'https://portal.compraspublicas.gob.ec/sercop/wp-content/uploads/2021/04/losncp_actualizada1702.pdf',
     searchKeywords: ['LOSNCP', 'contratación', 'pública'],
   },
   {
@@ -372,6 +389,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Familia',
     publicationDate: '2018-02-05',
     registroOficialNumber: 'Suplemento 175',
+    canonicalPdfUrl: 'https://www.defensoria.gob.ec/wp-content/uploads/2021/09/LEY_ORGA%CC%81NICA_INTEGRAL_PARA_PREVENIR_Y_ER.pdf',
     searchKeywords: ['violencia', 'mujeres', 'erradicar'],
   },
   {
@@ -412,6 +430,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Migración',
     publicationDate: '2017-02-06',
     registroOficialNumber: 'Suplemento 938',
+    canonicalPdfUrl: 'https://www.cancilleria.gob.ec/wp-content/uploads/2022/06/2021.05.14_ley_organica_de_movilidad_humana_-_lomh.pdf',
     searchKeywords: ['movilidad', 'humana', 'migración'],
   },
   {
@@ -433,6 +452,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2008-08-07',
     lastReformDate: '2023-05-15',
     registroOficialNumber: 'Suplemento 398',
+    canonicalPdfUrl: 'https://www.aduana.gob.ec/gacnorm/data/LEY-ORGANICA-DE-TRANSPORTE-TERRESTRE-TRANSITO-Y-SEGURIDAD-VIAL.pdf',
     searchKeywords: ['transporte', 'terrestre', 'tránsito', 'seguridad', 'vial'],
   },
   {
@@ -454,6 +474,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2010-10-12',
     lastReformDate: '2018-08-02',
     registroOficialNumber: 'Suplemento 298',
+    canonicalPdfUrl: 'https://www.educacionsuperior.gob.ec/wp-content/uploads/2021/05/LOES.pdf',
     searchKeywords: ['LOES', 'educación', 'superior'],
   },
   {
@@ -464,6 +485,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Cultura',
     publicationDate: '2016-12-30',
     registroOficialNumber: 'Sexto Suplemento 913',
+    canonicalPdfUrl: 'https://www.presidencia.gob.ec/wp-content/uploads/2017/08/a2_LEY_ORGANICA_DE_CULTURA_julio_2017.pdf',
     searchKeywords: ['orgánica', 'cultura'],
   },
   {
@@ -494,6 +516,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     category: 'Ambiental',
     publicationDate: '2014-08-06',
     registroOficialNumber: 'Segundo Suplemento 305',
+    canonicalPdfUrl: 'https://www.controlsanitario.gob.ec/wp-content/uploads/downloads/2020/06/Ley-Org%C3%A1nica-de-Recursos-H%C3%ADdricos-Usos-y-Aprovechamiento-del-Agua.pdf',
     searchKeywords: ['recursos', 'hídricos', 'aprovechamiento', 'agua'],
   },
   {
@@ -928,6 +951,7 @@ export const NATIONAL_LAWS_CATALOG: NationalLaw[] = [
     publicationDate: '2001-11-30',
     lastReformDate: '2022-11-01',
     registroOficialNumber: 'Suplemento 465',
+    canonicalPdfUrl: 'https://www.iess.gob.ec/documents/10162/33701/Ley_seguridad_social.pdf',
     searchKeywords: ['seguridad', 'social', 'IESS', 'pensiones', 'afiliación'],
   },
   {
