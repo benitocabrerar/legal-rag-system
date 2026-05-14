@@ -19,6 +19,7 @@ import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
 import { getUserCountryContext } from '../lib/country-context.js';
 import { setSseHeaders } from '../lib/sse-cors.js';
+import { retrieveLegalContextForChat } from '../services/legal-rag-retrieval.service.js';
 
 interface ChatTurn { role: 'user' | 'assistant'; content: string }
 
@@ -210,6 +211,20 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
         .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}`)
         .join('\n');
 
+      // RAG legal: combinamos la pregunta + título/descripción del caso para
+      // recuperar normativa relevante del corpus vectorizado. Filtramos por
+      // country_code del usuario (ej. 'EC') para no traer normas de otros países.
+      const ragQuery = [
+        body.message,
+        c.title,
+        c.description ? c.description.slice(0, 300) : '',
+      ].filter(Boolean).join('\n');
+      const legalRag = await retrieveLegalContextForChat(ragQuery, {
+        caseId: c.id,
+        limit: 8,
+        filterCountryCode: country.code || 'EC',
+      });
+
       const systemPrompt = [
         `Eres un(a) abogado(a) senior con 25 años de experiencia, ejerciendo en ${country.nameEs}.`,
         `Sistema legal: ${country.legalSystem === 'common_law' ? 'common law' : 'civil law'}. Idioma: ${body.language === 'en' ? 'inglés' : 'español'} jurídico.`,
@@ -217,8 +232,8 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
         LENGTH_HINTS[body.length],
         '',
         'REGLAS:',
-        '1) Cita artículos y normas con número exacto. Si no estás 100% seguro, escribe "[CITA POR VERIFICAR]" en lugar de inventar.',
-        '2) Apoya tus respuestas en el material del expediente que se te entrega abajo. Si la respuesta no está en el material, dilo.',
+        '1) Cita artículos y normas con número exacto, refiriéndote a la NORMATIVA APLICABLE abajo cuando corresponda. Si una norma no aparece ahí, escribe "[CITA POR VERIFICAR]" en lugar de inventar.',
+        '2) Apoya tus respuestas en el material del expediente y la normativa entregada. Si la respuesta no está en el material, dilo.',
         '3) Estructura con encabezados markdown (##), negritas y listas cuando ayuden.',
         '4) Cuando sugieras pasos, sé específico: documento, plazo, autoridad.',
         '5) No inventes jurisprudencia ni cita doctrinaria. Sin "NN" ni placeholders genéricos.',
@@ -234,6 +249,8 @@ export async function caseChatRoutes(fastify: FastifyInstance) {
         '',
         '=== CRONOLOGÍA ===',
         timeline || '(sin eventos)',
+        legalRag.formattedPrompt ? '' : '',
+        legalRag.formattedPrompt || '',
       ].filter(Boolean).join('\n');
 
       setSseHeaders(request, reply);
