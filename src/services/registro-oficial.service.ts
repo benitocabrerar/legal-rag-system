@@ -171,19 +171,32 @@ export async function runScan(opts: {
 
         // Si el parser no encontró headers reconocibles (caso típico cuando
         // venimos del fallback RSS — formato distinto al PDF oficial),
-        // creamos UNA entrada genérica para que la edición quede registrada
-        // y el admin pueda revisarla manualmente desde el panel.
+        // creamos UNA entrada con tipo inferido del texto (más útil que
+        // un genérico 'general' que el auto-ingest filtraría).
         if (publications.length === 0) {
+          // Inferencia rápida desde el contenido. El RSS content usa headers
+          // como "FUNCIÓN EJECUTIVA / ACUERDO: / MINISTERIO DE..." que dan
+          // pistas claras del tipo de instrumento legal.
+          const upperText = text.toUpperCase();
+          let inferredType = 'general';
+          if (/LEY\s+ORG[ÁA]NICA/.test(upperText))            inferredType = 'ley_organica';
+          else if (/DECRETO\s+EJECUTIVO/.test(upperText))     inferredType = 'decreto_ejecutivo';
+          else if (/ACUERDO\s+MINISTERIAL/.test(upperText) || /ACUERDO:/.test(upperText)) inferredType = 'acuerdo_ministerial';
+          else if (/RESOLUCI[ÓO]N:/.test(upperText) || /RESOLUCI[ÓO]N\s+N[ºO\.]/.test(upperText)) inferredType = 'resolucion';
+          else if (/REGLAMENTO\s+(GENERAL|DE|PARA|A\s)/.test(upperText)) inferredType = 'reglamento';
+          else if (/ORDENANZA\s+(MUNICIPAL|METROPOLITANA|N[ºO\.])/.test(upperText)) inferredType = 'ordenanza';
+          else if (/^\s*LEY\s+/m.test(upperText))             inferredType = 'ley_ordinaria';
+
           publications = [{
-            type: 'general',
+            type: inferredType,
             number: null,
             title: edExt.titleHint || `Registro Oficial No. ${ed.number}`,
             issuingEntity: null,
             textExcerpt: text.slice(0, 3000),
           }];
           emit('phase', {
-            phase: 'fallback-generic',
-            label: `Sin headers reconocibles — registrando como entrada genérica`,
+            phase: 'fallback-typed',
+            label: `Tipo inferido: ${inferredType} (sin headers detallados)`,
             pct: Math.round(baseProg + (nextProg - baseProg) * 0.4),
             edition: ed.number,
           });

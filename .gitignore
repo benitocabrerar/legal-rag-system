@@ -80,3 +80,4 @@ admin-upload/package-lock.json
 # Operator-only · plan de fases del módulo Fiscal y kit portable de pagos (con credenciales reales)
 /docs/PLAN_MODULO_FISCAL.md
 /payments-kit/
+tmp/

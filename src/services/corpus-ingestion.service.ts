@@ -24,11 +24,23 @@ import { LegalDocumentService } from './legal-document-service.js';
 import { notifyAllActiveUsersOfNewNorm } from './corpus-notifications.service.js';
 
 // Umbrales de auto-ingest cuando el scan llama desde el cron
-const AUTO_INGEST_MIN_RELEVANCE = 0.7;
+// Threshold permisivo — la IA asigna 0.6+ a normas con impacto legal real
+// (ej. nuevas leyes, decretos sustantivos). Por debajo de 0.6 son típicamente
+// ordenanzas municipales, resoluciones internas, acuerdos administrativos
+// menores que NO deben entrar al corpus nacional.
+const AUTO_INGEST_MIN_RELEVANCE = 0.6;
+// Tipos que califican para auto-ingest. Incluimos 'general' porque el
+// scraper actual (fallback RSS) NO categoriza finamente y termina marcando
+// publicaciones legítimas como 'general'. El filtro real ocurre por
+// ai_relevance_score (≥0.6) que la IA asigna basándose en el contenido.
 const AUTO_INGEST_QUALIFYING_TYPES = new Set([
   'ley_organica',
   'ley_ordinaria',
   'decreto_ejecutivo',
+  'acuerdo_ministerial',
+  'resolucion',
+  'reglamento',
+  'general',
 ]);
 
 export interface IngestionResult {

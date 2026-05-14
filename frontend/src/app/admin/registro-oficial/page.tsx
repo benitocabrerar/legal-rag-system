@@ -262,6 +262,8 @@ interface ScanProgress {
   finished?: {
     editionsFound: number;
     publicationsFound: number;
+    autoIngested?: number;
+    autoIngestNotified?: number;
     errors: string[];
   };
   error?: string;
@@ -546,6 +548,8 @@ export default function RegistroOficialAdminPage() {
               finished: {
                 editionsFound: payload.editionsFound,
                 publicationsFound: payload.publicationsFound,
+                autoIngested: payload.autoIngested ?? 0,
+                autoIngestNotified: payload.autoIngestNotified ?? 0,
                 errors: payload.errors || [],
               },
             } : s);
@@ -574,6 +578,36 @@ export default function RegistroOficialAdminPage() {
     } catch (e: any) {
       alert(e?.response?.data?.error || 'No se pudo aprobar');
     }
+  };
+
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ ok: number; fail: number; current: string } | null>(null);
+
+  const approveAllAnalyzed = async () => {
+    const analyzed = publications.filter((p) => p.status === 'analyzed');
+    if (analyzed.length === 0) {
+      alert('No hay publicaciones pendientes en este filtro.');
+      return;
+    }
+    if (!confirm(`Aprobar e ingestar ${analyzed.length} publicaciones al corpus? Esto puede tardar ${Math.ceil(analyzed.length * 0.5)}-${analyzed.length} minutos.`)) return;
+
+    setBulkApproving(true);
+    setBulkProgress({ ok: 0, fail: 0, current: '' });
+    let ok = 0, fail = 0;
+    for (const p of analyzed) {
+      setBulkProgress({ ok, fail, current: p.title.slice(0, 80) });
+      try {
+        await api.post(`/admin/registro-oficial/publications/${p.id}/approve`);
+        ok++;
+      } catch {
+        fail++;
+      }
+      setBulkProgress({ ok, fail, current: p.title.slice(0, 80) });
+    }
+    setBulkApproving(false);
+    await load();
+    alert(`Completado: ${ok} ingestadas, ${fail} fallaron.`);
+    setBulkProgress(null);
   };
 
   const reject = async (id: string) => {
@@ -776,11 +810,43 @@ export default function RegistroOficialAdminPage() {
             <p className="text-xs mt-1">Disparar un scan manual o cambiar filtros.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {publications.map((p) => (
-              <PublicationCard key={p.id} pub={p} onApprove={() => approve(p.id)} onReject={() => reject(p.id)} />
-            ))}
-          </div>
+          <>
+            {publications.filter((p) => p.status === 'analyzed').length > 0 && (
+              <div className="rounded-xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 grid place-items-center text-white shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-black text-amber-900">
+                    {publications.filter((p) => p.status === 'analyzed').length} publicaciones pendientes de ingestar al corpus
+                  </div>
+                  <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                    Estas publicaciones fueron detectadas y analizadas por IA, pero no calificaron para auto-ingest
+                    automático. Si son normas de interés, puedes aprobarlas en bulk para incorporarlas al corpus
+                    vectorial (chunks + embeddings + broadcast).
+                  </p>
+                  {bulkProgress && (
+                    <div className="mt-2 text-xs text-amber-900">
+                      <strong>Progreso:</strong> {bulkProgress.ok} ingestadas · {bulkProgress.fail} fallaron · procesando: <em>{bulkProgress.current}</em>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={approveAllAnalyzed}
+                  disabled={bulkApproving}
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition"
+                >
+                  {bulkApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {bulkApproving ? 'Ingestando…' : 'Aprobar todas'}
+                </button>
+              </div>
+            )}
+            <div className="space-y-3 mt-3">
+              {publications.map((p) => (
+                <PublicationCard key={p.id} pub={p} onApprove={() => approve(p.id)} onReject={() => reject(p.id)} />
+              ))}
+            </div>
+          </>
         )
       )}
 
@@ -1013,7 +1079,7 @@ function ScanProgressModal({ progress, onClose, scanning }: {
                     {progress.finished.editionsFound}
                   </div>
                   <div className="text-[10px] uppercase tracking-wider text-emerald-300/70 font-bold">
-                    Ediciones encontradas en {new Date().getFullYear()}
+                    Ediciones encontradas en RSS
                   </div>
                 </div>
                 <div>
@@ -1024,7 +1090,29 @@ function ScanProgressModal({ progress, onClose, scanning }: {
                     Normas nuevas analizadas con IA
                   </div>
                 </div>
+                <div>
+                  <div className="text-3xl font-black tabular-nums text-amber-200">
+                    {progress.finished.autoIngested ?? 0}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-amber-300/70 font-bold">
+                    Auto-ingestadas al corpus
+                  </div>
+                </div>
+                <div>
+                  <div className="text-3xl font-black tabular-nums text-violet-200">
+                    {progress.finished.autoIngestNotified ?? 0}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-violet-300/70 font-bold">
+                    Usuarios notificados
+                  </div>
+                </div>
               </div>
+              {progress.finished.publicationsFound > 0 && (progress.finished.autoIngested ?? 0) < progress.finished.publicationsFound && (
+                <div className="mt-3 text-[11px] text-amber-200 leading-relaxed bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">
+                  <strong>{progress.finished.publicationsFound - (progress.finished.autoIngested ?? 0)} publicaciones</strong> quedaron como <code>analyzed</code> sin auto-ingestar.
+                  Revísalas en la pestaña <em>Publicaciones detectadas</em> y usa el botón <strong>"Aprobar todas"</strong> si quieres incorporarlas al corpus.
+                </div>
+              )}
               {progress.finished.errors.length > 0 && (
                 <div className="mt-3 text-[11px] text-amber-300 leading-relaxed">
                   ⚠ {progress.finished.errors.length} advertencias durante el scan:
