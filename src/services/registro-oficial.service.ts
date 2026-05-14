@@ -121,33 +121,73 @@ export async function runScan(opts: {
       const nextProg = 28 + (editionIndex / totalEditions) * 64;
 
       try {
-        if (!ed.pdfUrl) {
-          errors.push(`Edición ${ed.number}: sin URL de PDF`);
-          continue;
-        }
-
+        const edExt = ed as any as { rssContent?: string | null; titleHint?: string };
         emit('phase', {
           phase: 'downloading',
-          label: `Descargando RO ${ed.number} (${editionIndex}/${totalEditions})…`,
+          label: ed.pdfUrl
+            ? `Descargando RO ${ed.number} (${editionIndex}/${totalEditions})…`
+            : `Sin PDF — usando contenido RSS de RO ${ed.number} (${editionIndex}/${totalEditions})…`,
           pct: Math.round(baseProg),
           edition: ed.number,
         });
-        emit('edition', { number: ed.number, title: `Registro Oficial ${ed.number}`, status: 'downloading' });
+        emit('edition', {
+          number: ed.number,
+          title: edExt.titleHint || `Registro Oficial ${ed.number}`,
+          status: ed.pdfUrl ? 'downloading' : 'rss-fallback',
+        });
 
-        const text = await downloadAndExtractPdf(ed.pdfUrl);
+        // 1) intentar PDF; 2) fallback al contenido del RSS si el PDF falla
+        let text: string | null = null;
+        if (ed.pdfUrl) {
+          text = await downloadAndExtractPdf(ed.pdfUrl);
+        }
         if (!text || text.length < 500) {
-          errors.push(`Edición ${ed.number}: PDF vacío o muy corto`);
+          // Fallback: HTML del RSS como texto plano. Es corto pero útil
+          // para crear al menos UNA publicación con título + resumen.
+          if (edExt.rssContent && edExt.rssContent.length > 50) {
+            text = edExt.rssContent
+              .replace(/<br\s*\/?>/gi, '\n')
+              .replace(/<\/p>/gi, '\n\n')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&nbsp;/g, ' ')
+              .replace(/&amp;/g, '&')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+        }
+        if (!text || text.length < 50) {
+          errors.push(`Edición ${ed.number}: sin PDF ni contenido RSS utilizable`);
           continue;
         }
 
         emit('phase', {
           phase: 'parsing',
-          label: `Parseando texto del PDF (${(text.length / 1024).toFixed(0)} KB)…`,
+          label: `Parseando texto (${(text.length / 1024).toFixed(0)} KB)…`,
           pct: Math.round(baseProg + (nextProg - baseProg) * 0.3),
           edition: ed.number,
         });
 
-        const publications = parsePublicationsFromText(text).slice(0, MAX_PUBLICATIONS_PER_EDITION);
+        let publications = parsePublicationsFromText(text).slice(0, MAX_PUBLICATIONS_PER_EDITION);
+
+        // Si el parser no encontró headers reconocibles (caso típico cuando
+        // venimos del fallback RSS — formato distinto al PDF oficial),
+        // creamos UNA entrada genérica para que la edición quede registrada
+        // y el admin pueda revisarla manualmente desde el panel.
+        if (publications.length === 0) {
+          publications = [{
+            type: 'general',
+            number: null,
+            title: edExt.titleHint || `Registro Oficial No. ${ed.number}`,
+            issuingEntity: null,
+            textExcerpt: text.slice(0, 3000),
+          }];
+          emit('phase', {
+            phase: 'fallback-generic',
+            label: `Sin headers reconocibles — registrando como entrada genérica`,
+            pct: Math.round(baseProg + (nextProg - baseProg) * 0.4),
+            edition: ed.number,
+          });
+        }
 
         emit('phase', {
           phase: 'analyzing',
@@ -198,6 +238,24 @@ export async function runScan(opts: {
           number: ed.number,
           publicationsCount: publications.length,
         });
+
+        // Cerrar alertas new_edition abiertas para esta edición — el monitor
+        // ya cumplió su propósito una vez que el scraper procesó la edición.
+        try {
+          await prisma.$executeRawUnsafe(
+            `UPDATE public.norm_alerts
+                SET status = 'resolved',
+                    resolved_at = now(),
+                    resolved_by = 'auto:scan',
+                    resolution_notes = COALESCE(resolution_notes,'') ||
+                                       ' [auto] Edición scrapeada por scan ' || $2::text,
+                    updated_at = now()
+              WHERE status = 'open'
+                AND alert_type = 'new_edition'
+                AND remote_edition_number = $1`,
+            ed.number, scanId,
+          );
+        } catch { /* ignore, no es crítico */ }
       } catch (e: any) {
         errors.push(`Edición ${ed.number}: ${e?.message || 'error'}`);
       }
@@ -233,53 +291,112 @@ export async function runScan(opts: {
 }
 
 /**
- * Lista las ediciones del Registro Oficial publicadas en un año.
+ * Lista ediciones recientes del Registro Oficial usando el RSS oficial
+ * de WordPress (/feed/). Reemplaza la implementación legacy que iba al
+ * listado Joomla /index.php/registro-oficial-web/... — esa URL ahora
+ * devuelve un 301 y la página destino ya no tiene los selectors
+ * esperados, por lo que el scraper viejo devolvía 0 ediciones.
  *
- * El sitio es Joomla. La URL base tiene listados por categoría que vamos
- * a scrapear con regex simple — no se justifica traer cheerio por una
- * página tan estable.
+ * El RSS expone los últimos ~23 items con: <title> (ej. "Tercer
+ * Suplemento No. 283"), <link> (URL del post WP), <pubDate>, <category>,
+ * y <content:encoded> con el índice resumido de la edición. Si no
+ * podemos extraer el PDF (vive en CDN externo opaco
+ * esacc.corteconstitucional.gob.ec), usamos el contenido del RSS como
+ * fallback — es texto en HTML simple que el parser ya sabe procesar.
+ *
+ * El parámetro `year` se mantiene por compatibilidad pero el RSS no
+ * filtra por año — devuelve siempre los más recientes.
  */
-async function listEditionsForYear(year: number): Promise<ScrapedEdition[]> {
-  // URL del listado del Registro Oficial
-  const url = `${RO_BASE}/index.php/registro-oficial-web/publicaciones/registro-oficial.html?year=${year}`;
-  const html = await fetchText(url);
-  if (!html) return [];
+async function listEditionsForYear(_year: number): Promise<ScrapedEdition[]> {
+  const xml = await fetchText(`${RO_BASE}/feed/`);
+  if (!xml) return [];
 
-  // Regex para extraer items de edición.
-  // Patrón observado: <a href="...item/NNNN-registro-oficial-no-NNNN.html">...</a>
-  const editionRegex = /href="([^"]*item\/\d+-registro-oficial-no-(\d+)[^"]*)"[^>]*>[^<]*?(\d{1,2})[\/\-\s](?:de\s+)?(\w+|\d{1,2})[\/\-\s]?(?:de\s+)?(\d{4})/gi;
-  const found = new Map<string, ScrapedEdition>();
+  // Parser RSS — extrae cada <item>
+  interface RssItem {
+    title: string;
+    link: string;
+    pubDate: Date;
+    category: string | null;
+    contentHtml: string | null;
+  }
+  const rssItems: RssItem[] = [];
+  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
   let m: RegExpExecArray | null;
-  while ((m = editionRegex.exec(html))) {
-    const pageUrl = m[1].startsWith('http') ? m[1] : `${RO_BASE}${m[1].startsWith('/') ? '' : '/'}${m[1]}`;
-    const number = m[2];
-    if (found.has(number)) continue;
-    found.set(number, {
-      number,
-      date: parseSpanishDate(m[3], m[4], m[5]),
-      pageUrl,
-      pdfUrl: null,  // se resuelve más adelante
-    });
+  while ((m = itemRegex.exec(xml)) !== null) {
+    const block = m[1];
+    const get = (tag: string): string | null => {
+      const cdata = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i');
+      const plain = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+      const mm = block.match(cdata) || block.match(plain);
+      return mm ? mm[1] : null;
+    };
+    const title    = get('title')?.trim() || '';
+    const link     = get('link')?.trim() || '';
+    const pubRaw   = get('pubDate')?.trim() || '';
+    const category = get('category')?.trim() || null;
+    const contentRaw = get('content:encoded');
+
+    if (!title || !link || !pubRaw) continue;
+    const pubDate = new Date(pubRaw);
+    if (Number.isNaN(pubDate.getTime())) continue;
+
+    rssItems.push({ title, link, pubDate, category, contentHtml: contentRaw });
   }
 
-  // Para cada edición, resolver la URL del PDF (otra request por edición)
+  // Para cada item, intentar resolver el PDF del post HTML
   const results: ScrapedEdition[] = [];
-  for (const ed of Array.from(found.values()).sort((a, b) => Number(b.number) - Number(a.number))) {
+  for (const item of rssItems) {
+    // Número de edición desde el título (ej. "Tercer Suplemento No. 283")
+    const numMatch = item.title.match(/N[ºo°\.]*\s*(\d+)/);
+    if (!numMatch) continue;
+    const number = numMatch[1];
+
+    let pdfUrl: string | null = null;
     try {
-      const detailHtml = await fetchText(ed.pageUrl);
-      if (!detailHtml) continue;
-      // Pattern: /index.php/productos/productos/[tipo]/item/download/[ID]_[hash]
-      const pdfMatch = detailHtml.match(/href="([^"]*\/productos\/productos\/[^"]*\/item\/download\/[^"]*\.pdf)"/i) ||
-                       detailHtml.match(/href="([^"]*\.pdf)"/i);
-      if (pdfMatch) {
-        ed.pdfUrl = pdfMatch[1].startsWith('http') ? pdfMatch[1] : `${RO_BASE}${pdfMatch[1].startsWith('/') ? '' : '/'}${pdfMatch[1]}`;
+      const html = await fetchText(item.link);
+      if (html) {
+        // Los PDFs viven en el CDN de la Corte Constitucional
+        // (esacc.corteconstitucional.gob.ec/storage/api/v1/10_DWL_FL/<blob>)
+        // o ocasionalmente como .pdf directo.
+        const pdfMatch =
+          html.match(/href="(https?:\/\/[^"]*esacc\.corteconstitucional\.gob\.ec[^"]+)"/i) ||
+          html.match(/href="(https?:\/\/[^"]*\/storage\/api\/v1\/10_DWL_FL\/[^"]+)"/i) ||
+          html.match(/href="(https?:\/\/[^"]+\.pdf)"/i) ||
+          html.match(/href="([^"]+\.pdf)"/i);
+        if (pdfMatch) {
+          pdfUrl = pdfMatch[1].startsWith('http')
+            ? pdfMatch[1]
+            : `${RO_BASE}${pdfMatch[1].startsWith('/') ? '' : '/'}${pdfMatch[1]}`;
+        }
       }
-      results.push(ed);
     } catch { /* skip */ }
-    // Cortesía: 1.5s entre requests al sitio gubernamental
-    await sleep(1500);
+
+    results.push({
+      number,
+      date: item.pubDate,
+      pageUrl: item.link,
+      pdfUrl,
+      // Se anexa el contenido del RSS para uso como fallback si el PDF falla
+      rssContent: item.contentHtml,
+      titleHint: item.title,
+      categoryHint: item.category,
+    } as ScrapedEditionWithFallback);
+
+    // Cortesía: 800ms entre requests
+    await sleep(800);
   }
-  return results;
+
+  // Ordenar más recientes primero (no estrictamente necesario, RSS ya viene así)
+  return results.sort((a, b) =>
+    (b.date?.getTime() || 0) - (a.date?.getTime() || 0),
+  );
+}
+
+// Variante de ScrapedEdition que adjunta fallback content del RSS
+interface ScrapedEditionWithFallback extends ScrapedEdition {
+  rssContent?: string | null;
+  titleHint?: string;
+  categoryHint?: string | null;
 }
 
 async function downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
