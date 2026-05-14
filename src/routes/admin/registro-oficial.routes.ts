@@ -14,6 +14,7 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
 import { runScan } from '../../services/registro-oficial.service.js';
+import { runMonitor, searchRoLive } from '../../services/norm-monitor.service.js';
 import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 import { randomUUID } from 'crypto';
 
@@ -604,6 +605,219 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
           },
         ],
       });
+    },
+  );
+
+  // ─── GET /admin/registro-oficial/alerts ────────────────────────────────
+  // Lista paginada de alertas del monitor.
+  fastify.get<{
+    Querystring: { status?: string; type?: string; severity?: string; limit?: string; offset?: string };
+  }>(
+    '/admin/registro-oficial/alerts',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const { status, type, severity, limit, offset } = request.query;
+      const limitNum  = Math.min(200, Math.max(10, parseInt(limit  || '50', 10)));
+      const offsetNum = Math.max(0, parseInt(offset || '0', 10));
+
+      const conditions: string[] = ['1=1'];
+      const params: any[] = [];
+      if (status)   { params.push(status);   conditions.push(`a.status = $${params.length}`); }
+      if (type)     { params.push(type);     conditions.push(`a.alert_type = $${params.length}`); }
+      if (severity) { params.push(severity); conditions.push(`a.severity = $${params.length}`); }
+
+      params.push(limitNum);
+      const limitIdx = params.length;
+      params.push(offsetNum);
+      const offsetIdx = params.length;
+
+      const [items, counts, summary] = await Promise.all([
+        prisma.$queryRawUnsafe<Array<any>>(
+          `SELECT a.id, a.alert_type, a.severity, a.status,
+                  a.legal_doc_id, a.publication_id,
+                  a.title, a.description,
+                  a.local_publication_date, a.remote_publication_date,
+                  a.remote_source_url, a.remote_edition_number, a.remote_pdf_url,
+                  a.diff_data, a.created_at, a.acknowledged_at, a.resolved_at,
+                  d.title AS legal_doc_title,
+                  d.legal_hierarchy::text AS legal_doc_hierarchy,
+                  p.title AS publication_title,
+                  p.edition_pdf_url AS publication_pdf_url,
+                  p.ai_summary AS publication_ai_summary
+             FROM public.norm_alerts a
+             LEFT JOIN public.legal_documents      d ON d.id = a.legal_doc_id
+             LEFT JOIN public.registry_publications p ON p.id = a.publication_id
+            WHERE ${conditions.join(' AND ')}
+            ORDER BY
+              CASE a.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+              a.created_at DESC
+            LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+          ...params,
+        ),
+        prisma.$queryRawUnsafe<Array<{ alert_type: string; status: string; n: bigint }>>(
+          `SELECT alert_type, status, COUNT(*)::bigint AS n
+             FROM public.norm_alerts
+            GROUP BY alert_type, status`,
+        ),
+        prisma.$queryRawUnsafe<Array<{
+          open_total: bigint; high_open: bigint; outdated_open: bigint;
+          new_law_open: bigint; new_edition_open: bigint; reform_open: bigint;
+        }>>(
+          `SELECT
+             COUNT(*) FILTER (WHERE status='open')::bigint                                 AS open_total,
+             COUNT(*) FILTER (WHERE status='open' AND severity IN ('high','critical'))::bigint AS high_open,
+             COUNT(*) FILTER (WHERE status='open' AND alert_type='outdated_doc')::bigint   AS outdated_open,
+             COUNT(*) FILTER (WHERE status='open' AND alert_type='new_law')::bigint        AS new_law_open,
+             COUNT(*) FILTER (WHERE status='open' AND alert_type='new_edition')::bigint    AS new_edition_open,
+             COUNT(*) FILTER (WHERE status='open' AND alert_type='potential_reform')::bigint AS reform_open
+             FROM public.norm_alerts`,
+        ),
+      ]);
+
+      const sum = summary[0] || ({} as any);
+      return reply.send({
+        items,
+        countsByType: counts.map((c) => ({ type: c.alert_type, status: c.status, n: Number(c.n) })),
+        summary: {
+          openTotal:      Number(sum.open_total      || 0),
+          highOpen:       Number(sum.high_open       || 0),
+          outdatedOpen:   Number(sum.outdated_open   || 0),
+          newLawOpen:     Number(sum.new_law_open    || 0),
+          newEditionOpen: Number(sum.new_edition_open|| 0),
+          reformOpen:     Number(sum.reform_open     || 0),
+        },
+        pagination: { limit: limitNum, offset: offsetNum },
+      });
+    },
+  );
+
+  // ─── POST /admin/registro-oficial/alerts/check-now ─────────────────────
+  // Dispara runMonitor() vía SSE con feedback en tiempo real.
+  fastify.post(
+    '/admin/registro-oficial/alerts/check-now',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const userId = (request.user as any).id;
+
+      setSseHeaders(request, reply);
+      const stopKeepalive = startSseKeepalive(reply);
+
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      write('connected', { startedAt: new Date().toISOString() });
+
+      try {
+        const result = await runMonitor({
+          triggeredBy: `manual:${userId}`,
+          onProgress: (event, data) => write(event, data),
+        });
+        write('done', { ...result, finishedAt: new Date().toISOString() });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'manual monitor failed');
+        write('error', { error: e?.message || 'Monitor failed' });
+      } finally {
+        stopKeepalive();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
+      return reply;
+    },
+  );
+
+  // ─── POST /admin/registro-oficial/alerts/:id/(acknowledge|dismiss|resolve) ─
+  fastify.post<{ Params: { id: string; action: string }; Body: { notes?: string } }>(
+    '/admin/registro-oficial/alerts/:id/:action',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const userId = (request.user as any).id;
+      const { id, action } = request.params;
+      const notes = (request.body?.notes || '').slice(0, 1000);
+
+      const allowedTransitions: Record<string, { status: string; tsCol: string; byCol: string }> = {
+        acknowledge: { status: 'acknowledged', tsCol: 'acknowledged_at', byCol: 'acknowledged_by' },
+        dismiss:     { status: 'dismissed',    tsCol: 'resolved_at',     byCol: 'resolved_by' },
+        resolve:     { status: 'resolved',     tsCol: 'resolved_at',     byCol: 'resolved_by' },
+      };
+      const t = allowedTransitions[action];
+      if (!t) return reply.code(400).send({ error: `Acción inválida: ${action}` });
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE public.norm_alerts
+            SET status = $2,
+                ${t.tsCol} = now(),
+                ${t.byCol} = $3,
+                resolution_notes = COALESCE($4, resolution_notes),
+                updated_at = now()
+          WHERE id = $1::uuid`,
+        id, t.status, userId, notes || null,
+      );
+      return reply.send({ ok: true, status: t.status });
+    },
+  );
+
+  // ─── GET /admin/registro-oficial/feed-live ─────────────────────────────
+  // Devuelve el RSS oficial parseado en vivo (no toca DB) — útil para
+  // mostrar "actividad reciente" en la UI sin esperar al cron.
+  fastify.get(
+    '/admin/registro-oficial/feed-live',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      try {
+        // Reusar fetchRoRss via runMonitor indirecto — pero más limpio importar
+        // directamente. Cheap: una sola request a /feed/.
+        const r = await fetch('https://www.registroficial.gob.ec/feed/', {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PoweriaLegalMonitor/1.0)' },
+        });
+        if (!r.ok) return reply.send({ items: [], error: `HTTP ${r.status}` });
+        const xml = await r.text();
+        const items: Array<{ title: string; link: string; pubDate: string; category: string | null }> = [];
+        const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+        let m: RegExpExecArray | null;
+        while ((m = itemRegex.exec(xml)) !== null) {
+          const block = m[1];
+          const get = (tag: string) => {
+            const re = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, 'i');
+            const mm = block.match(re);
+            return mm ? mm[1].replace(/<[^>]*>/g, '').trim() : '';
+          };
+          items.push({
+            title:    get('title'),
+            link:     get('link'),
+            pubDate:  get('pubDate'),
+            category: get('category') || null,
+          });
+        }
+        return reply.send({ items, total: items.length, fetchedAt: new Date().toISOString() });
+      } catch (e: any) {
+        return reply.send({ items: [], error: e?.message || 'fetch failed' });
+      }
+    },
+  );
+
+  // ─── GET /admin/registro-oficial/search-live ───────────────────────────
+  // Búsqueda en vivo en el sitio oficial (parsea HTML del buscador WP).
+  fastify.get<{ Querystring: { q?: string } }>(
+    '/admin/registro-oficial/search-live',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const q = (request.query.q || '').trim();
+      if (!q) return reply.send({ items: [], query: '' });
+      try {
+        const items = await searchRoLive(q, 12);
+        return reply.send({ items, query: q, fetchedAt: new Date().toISOString() });
+      } catch (e: any) {
+        return reply.send({ items: [], query: q, error: e?.message || 'search failed' });
+      }
     },
   );
 }

@@ -129,7 +129,78 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('es-EC');
 }
 
-type Tab = 'publications' | 'ingestion-log' | 'norm-catalog';
+type Tab = 'publications' | 'ingestion-log' | 'norm-catalog' | 'alerts';
+
+interface NormAlert {
+  id: string;
+  alert_type: 'outdated_doc' | 'potential_reform' | 'new_law' | 'new_edition' | 'manual';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'acknowledged' | 'resolved' | 'dismissed';
+  legal_doc_id: string | null;
+  publication_id: string | null;
+  title: string;
+  description: string | null;
+  local_publication_date: string | null;
+  remote_publication_date: string | null;
+  remote_source_url: string | null;
+  remote_edition_number: string | null;
+  remote_pdf_url: string | null;
+  diff_data: any;
+  created_at: string;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  legal_doc_title: string | null;
+  legal_doc_hierarchy: string | null;
+  publication_title: string | null;
+  publication_pdf_url: string | null;
+  publication_ai_summary: string | null;
+}
+
+interface AlertsResponse {
+  items: NormAlert[];
+  summary: {
+    openTotal: number;
+    highOpen: number;
+    outdatedOpen: number;
+    newLawOpen: number;
+    newEditionOpen: number;
+    reformOpen: number;
+  };
+  pagination: { limit: number; offset: number };
+}
+
+interface MonitorProgress {
+  pct: number;
+  label: string;
+  phase: string;
+  startedAt?: string;
+  finished?: boolean;
+  error?: string;
+  result?: {
+    alertsCreated: number;
+    feedItemsProcessed: number;
+    newEditionsDetected: number;
+    potentialReformsDetected: number;
+    newLawsDetected: number;
+    outdatedDocsDetected: number;
+    durationMs: number;
+  };
+}
+
+const ALERT_TYPE_META: Record<NormAlert['alert_type'], { label: string; icon: string; color: string; bg: string; text: string; border: string }> = {
+  outdated_doc:     { label: 'Documento desactualizado', icon: '⚠️', color: 'amber',  bg: 'bg-amber-50',  text: 'text-amber-800',  border: 'border-amber-200' },
+  potential_reform: { label: 'Posible reforma',          icon: '🔄', color: 'orange', bg: 'bg-orange-50', text: 'text-orange-800', border: 'border-orange-200' },
+  new_law:          { label: 'Ley nueva sin ingestar',   icon: '✨', color: 'violet', bg: 'bg-violet-50', text: 'text-violet-800', border: 'border-violet-200' },
+  new_edition:      { label: 'Edición no scrapeada',     icon: '📰', color: 'sky',    bg: 'bg-sky-50',    text: 'text-sky-800',    border: 'border-sky-200' },
+  manual:           { label: 'Manual',                   icon: '✏️', color: 'gray',   bg: 'bg-gray-50',   text: 'text-gray-800',   border: 'border-gray-200' },
+};
+
+const SEVERITY_META: Record<NormAlert['severity'], { label: string; bg: string; text: string }> = {
+  critical: { label: 'CRÍTICA', bg: 'bg-rose-600',   text: 'text-white' },
+  high:     { label: 'ALTA',    bg: 'bg-rose-500',   text: 'text-white' },
+  medium:   { label: 'MEDIA',   bg: 'bg-amber-500',  text: 'text-white' },
+  low:      { label: 'BAJA',    bg: 'bg-gray-400',   text: 'text-white' },
+};
 
 interface NormCatalogItem {
   id: string;
@@ -218,6 +289,99 @@ export default function RegistroOficialAdminPage() {
   ]);
   const [externalSources, setExternalSources] = useState<ExternalSource[]>([]);
 
+  // Alertas de monitor
+  const [alerts, setAlerts] = useState<AlertsResponse | null>(null);
+  const [alertStatusFilter, setAlertStatusFilter] = useState<string>('open');
+  const [alertTypeFilter, setAlertTypeFilter] = useState<string>('');
+  const [monitorRunning, setMonitorRunning] = useState(false);
+  const [monitorProgress, setMonitorProgress] = useState<MonitorProgress | null>(null);
+
+  const loadAlerts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const r = await api.get<AlertsResponse>('/admin/registro-oficial/alerts', {
+        params: {
+          status: alertStatusFilter || undefined,
+          type:   alertTypeFilter   || undefined,
+          limit:  100,
+        },
+      });
+      setAlerts(r.data);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || e?.message || 'Error al cargar alertas');
+    } finally { setLoading(false); }
+  };
+
+  const handleAlertAction = async (alertId: string, action: 'acknowledge' | 'dismiss' | 'resolve') => {
+    try {
+      await api.post(`/admin/registro-oficial/alerts/${alertId}/${action}`, {});
+      await loadAlerts();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || e?.message || `Error en ${action}`);
+    }
+  };
+
+  const triggerMonitor = async () => {
+    setMonitorRunning(true);
+    setMonitorProgress({ pct: 0, label: 'Conectando…', phase: 'connecting' });
+    try {
+      const { getAuthToken } = await import('@/lib/get-auth-token');
+      const token = await getAuthToken();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const r = await fetch(`${API_URL}/api/v1/admin/registro-oficial/alerts/check-now`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
+          const evLine = lines.find((l) => l.startsWith('event:'));
+          const dataLine = lines.find((l) => l.startsWith('data:'));
+          if (!dataLine) continue;
+          const event = evLine ? evLine.slice(6).trim() : 'message';
+          let payload: any = null;
+          try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { /* ignore */ }
+          if (!payload) continue;
+
+          if (event === 'connected') {
+            setMonitorProgress((p) => p ? { ...p, startedAt: payload.startedAt } : p);
+          } else if (event === 'phase') {
+            setMonitorProgress((p) => p ? { ...p, pct: payload.pct ?? p.pct, label: payload.label, phase: payload.phase } : p);
+          } else if (event === 'done') {
+            setMonitorProgress((p) => p ? { ...p, pct: 100, label: '✓ Monitor completado', phase: 'done', finished: true, result: payload } : p);
+            await loadAlerts();
+          } else if (event === 'error') {
+            setMonitorProgress((p) => p ? { ...p, error: payload.error, label: payload.error } : p);
+          }
+        }
+      }
+    } catch (e: any) {
+      setMonitorProgress((p) => p ? { ...p, error: e?.message || 'Error desconocido' } : p);
+    } finally {
+      setMonitorRunning(false);
+    }
+  };
+
+  const closeMonitorModal = () => {
+    if (!monitorRunning) setMonitorProgress(null);
+  };
+
   const loadNormCatalog = async (overrides?: { q?: string; types?: string[] }) => {
     setLoading(true);
     setError('');
@@ -293,8 +457,9 @@ export default function RegistroOficialAdminPage() {
     if (tab === 'publications') void load();
     else if (tab === 'ingestion-log') void loadIngestionLog();
     else if (tab === 'norm-catalog') void loadNormCatalog();
+    else if (tab === 'alerts') void loadAlerts();
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [tab, statusFilter, typeFilter]);
+  }, [tab, statusFilter, typeFilter, alertStatusFilter, alertTypeFilter]);
 
   const triggerScan = async () => {
     setScanning(true);
@@ -508,6 +673,26 @@ export default function RegistroOficialAdminPage() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setTab('alerts')}
+          className={`px-4 py-2.5 -mb-0.5 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+            tab === 'alerts'
+              ? 'border-rose-600 text-rose-700'
+              : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Alertas de Actualización · Monitor en vivo
+          {alerts && alerts.summary.openTotal > 0 && (
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold animate-pulse ${
+              alerts.summary.highOpen > 0
+                ? 'bg-rose-500 text-white'
+                : tab === 'alerts' ? 'bg-rose-100 text-rose-700' : 'bg-gray-200 text-gray-600'
+            }`}>
+              {alerts.summary.openTotal}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Stats (solo en tab publications) */}
@@ -621,6 +806,31 @@ export default function RegistroOficialAdminPage() {
           toggleType={toggleNormCatalogType}
           onSearch={() => loadNormCatalog()}
           externalSources={externalSources}
+        />
+      )}
+
+      {/* TAB 4: Alertas de Actualización */}
+      {tab === 'alerts' && (
+        <AlertsView
+          data={alerts}
+          loading={loading}
+          statusFilter={alertStatusFilter}
+          setStatusFilter={setAlertStatusFilter}
+          typeFilter={alertTypeFilter}
+          setTypeFilter={setAlertTypeFilter}
+          onAction={handleAlertAction}
+          onTriggerMonitor={triggerMonitor}
+          monitorRunning={monitorRunning}
+          onRefresh={loadAlerts}
+        />
+      )}
+
+      {/* Modal SSE monitor */}
+      {monitorProgress && (
+        <MonitorProgressModal
+          progress={monitorProgress}
+          onClose={closeMonitorModal}
+          running={monitorRunning}
         />
       )}
 
@@ -1573,6 +1783,431 @@ function NormRow({ norm }: { norm: NormCatalogItem }) {
             PDF
           </a>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ALERTS VIEW ─────────────────────────────────────────────────────
+
+function AlertsView({
+  data, loading, statusFilter, setStatusFilter, typeFilter, setTypeFilter,
+  onAction, onTriggerMonitor, monitorRunning, onRefresh,
+}: {
+  data: AlertsResponse | null;
+  loading: boolean;
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+  typeFilter: string;
+  setTypeFilter: (v: string) => void;
+  onAction: (id: string, action: 'acknowledge' | 'dismiss' | 'resolve') => void;
+  onTriggerMonitor: () => void;
+  monitorRunning: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Header con CTA principal */}
+      <div className="rounded-xl bg-gradient-to-br from-rose-50 via-white to-violet-50 border border-rose-200 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-600 grid place-items-center shrink-0 shadow-md">
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-black text-gray-900">Monitor del Registro Oficial Ecuador</h3>
+            <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">
+              Cruza el corpus interno (Constitución, códigos, leyes) contra el RSS oficial
+              <code className="px-1 py-0.5 mx-1 bg-gray-100 text-gray-800 rounded text-[10px] font-mono">/feed/</code>
+              de registroficial.gob.ec. Detecta nuevas ediciones, posibles reformas,
+              leyes nuevas, y documentos desactualizados. Corre automáticamente cada 30 min.
+            </p>
+          </div>
+          <button
+            onClick={onTriggerMonitor}
+            disabled={monitorRunning}
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-rose-600 to-violet-600 hover:from-rose-700 hover:to-violet-700 shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition"
+          >
+            {monitorRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {monitorRunning ? 'Chequeando…' : 'Verificar ahora'}
+          </button>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      {data && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <KpiCard
+            icon={<AlertTriangle className="w-5 h-5" />}
+            label="Total abiertas"
+            value={data.summary.openTotal}
+            color="rose"
+            highlight={data.summary.openTotal > 0}
+          />
+          <KpiCard
+            icon={<Zap className="w-5 h-5" />}
+            label="Alta prioridad"
+            value={data.summary.highOpen}
+            color="orange"
+            highlight={data.summary.highOpen > 0}
+          />
+          <KpiCard
+            icon={<ScrollText className="w-5 h-5" />}
+            label="Desactualizados"
+            value={data.summary.outdatedOpen}
+            color="amber"
+          />
+          <KpiCard
+            icon={<Sparkles className="w-5 h-5" />}
+            label="Leyes nuevas"
+            value={data.summary.newLawOpen}
+            color="violet"
+          />
+          <KpiCard
+            icon={<FileText className="w-5 h-5" />}
+            label="Ediciones nuevas"
+            value={data.summary.newEditionOpen}
+            color="sky"
+          />
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2 bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <Filter className="w-4 h-4 text-gray-500" />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+        >
+          <option value="open">Abiertas</option>
+          <option value="acknowledged">Reconocidas</option>
+          <option value="resolved">Resueltas</option>
+          <option value="dismissed">Descartadas</option>
+          <option value="">Todas</option>
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+        >
+          <option value="">Todos los tipos</option>
+          <option value="outdated_doc">⚠️ Documento desactualizado</option>
+          <option value="potential_reform">🔄 Posible reforma</option>
+          <option value="new_law">✨ Ley nueva sin ingestar</option>
+          <option value="new_edition">📰 Edición no scrapeada</option>
+        </select>
+        <button
+          onClick={onRefresh}
+          className="ml-auto text-xs px-2 py-1 rounded bg-violet-600 text-white font-bold hover:bg-violet-700 inline-flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Refrescar
+        </button>
+      </div>
+
+      {/* Lista de alertas */}
+      {loading ? (
+        <div className="text-center py-12 text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-rose-500" />
+          Cargando alertas…
+        </div>
+      ) : !data || data.items.length === 0 ? (
+        <div className="text-center py-12 text-gray-500 bg-emerald-50 rounded-xl border-2 border-dashed border-emerald-200">
+          <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
+          <p className="text-sm font-semibold text-emerald-800">Todo en orden — sin alertas pendientes</p>
+          <p className="text-xs mt-1 text-emerald-700">
+            El monitor no detectó discrepancias entre tu corpus y el sitio oficial del Registro Oficial.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.items.map((a) => (
+            <AlertCard key={a.id} alert={a} onAction={onAction} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, color, highlight }: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: 'rose' | 'orange' | 'amber' | 'violet' | 'sky';
+  highlight?: boolean;
+}) {
+  const colorMap: Record<string, { bg: string; text: string; border: string; iconBg: string }> = {
+    rose:   { bg: 'bg-rose-50',    text: 'text-rose-900',    border: 'border-rose-200',    iconBg: 'bg-rose-100 text-rose-700' },
+    orange: { bg: 'bg-orange-50',  text: 'text-orange-900',  border: 'border-orange-200',  iconBg: 'bg-orange-100 text-orange-700' },
+    amber:  { bg: 'bg-amber-50',   text: 'text-amber-900',   border: 'border-amber-200',   iconBg: 'bg-amber-100 text-amber-700' },
+    violet: { bg: 'bg-violet-50',  text: 'text-violet-900',  border: 'border-violet-200',  iconBg: 'bg-violet-100 text-violet-700' },
+    sky:    { bg: 'bg-sky-50',     text: 'text-sky-900',     border: 'border-sky-200',     iconBg: 'bg-sky-100 text-sky-700' },
+  };
+  const c = colorMap[color];
+  return (
+    <div className={`rounded-xl border ${c.border} ${c.bg} p-3 ${highlight ? 'ring-2 ring-offset-1 ring-rose-300' : ''}`}>
+      <div className="flex items-center justify-between mb-1">
+        <div className={`w-8 h-8 rounded-lg grid place-items-center ${c.iconBg}`}>{icon}</div>
+        <div className={`text-3xl font-black ${c.text}`}>{value}</div>
+      </div>
+      <div className={`text-xs font-bold ${c.text}`}>{label}</div>
+    </div>
+  );
+}
+
+function AlertCard({ alert, onAction }: {
+  alert: NormAlert;
+  onAction: (id: string, action: 'acknowledge' | 'dismiss' | 'resolve') => void;
+}) {
+  const typeMeta = ALERT_TYPE_META[alert.alert_type];
+  const sevMeta = SEVERITY_META[alert.severity];
+
+  const localDate = alert.local_publication_date
+    ? new Date(alert.local_publication_date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
+  const remoteDate = alert.remote_publication_date
+    ? new Date(alert.remote_publication_date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null;
+
+  return (
+    <div className={`rounded-xl border ${typeMeta.border} ${typeMeta.bg} p-4 hover:shadow-md transition`}>
+      <div className="flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-xl grid place-items-center text-xl shrink-0 bg-white shadow-sm border ${typeMeta.border}`}>
+          {typeMeta.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <h4 className="text-sm font-black text-gray-900 leading-snug">{alert.title}</h4>
+            <span className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded ${sevMeta.bg} ${sevMeta.text}`}>
+              {sevMeta.label}
+            </span>
+          </div>
+
+          <p className={`text-xs ${typeMeta.text} leading-relaxed mb-2`}>{alert.description}</p>
+
+          {/* Diff de fechas */}
+          {(localDate || remoteDate) && (
+            <div className="flex flex-wrap items-center gap-3 mb-2 p-2 bg-white/60 rounded-lg border border-gray-100">
+              {localDate && (
+                <div className="text-[11px]">
+                  <span className="text-gray-500 font-semibold">Local:</span>{' '}
+                  <span className="font-mono font-bold text-gray-800">{localDate}</span>
+                </div>
+              )}
+              {remoteDate && (
+                <div className="text-[11px]">
+                  <ChevronRight className="w-3 h-3 inline text-rose-500" />
+                  <span className="text-rose-700 font-semibold">Remoto (RO):</span>{' '}
+                  <span className="font-mono font-bold text-rose-800">{remoteDate}</span>
+                </div>
+              )}
+              {alert.remote_edition_number && (
+                <div className="text-[11px]">
+                  <Hash className="w-3 h-3 inline text-gray-500" />{' '}
+                  <span className="font-mono font-bold text-gray-700">RO Nº {alert.remote_edition_number}</span>
+                </div>
+              )}
+              {alert.diff_data?.similarityScore !== undefined && (
+                <div className="text-[11px]">
+                  <span className="text-gray-500">Similitud:</span>{' '}
+                  <span className="font-mono font-bold text-violet-700">
+                    {(alert.diff_data.similarityScore * 100).toFixed(0)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Doc local enlazado */}
+          {alert.legal_doc_title && (
+            <div className="text-[11px] text-gray-600 mb-1">
+              <Tag className="w-3 h-3 inline mr-1" />
+              <strong>Norma local:</strong> {alert.legal_doc_title}
+              {alert.legal_doc_hierarchy && (
+                <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-white border border-gray-200 text-gray-700">
+                  {alert.legal_doc_hierarchy.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* AI summary (cuando viene de registry_publications) */}
+          {alert.publication_ai_summary && (
+            <div className="mt-2 p-2 bg-violet-50/70 border-l-2 border-violet-400 rounded text-[11px] text-gray-800">
+              <Brain className="w-3 h-3 inline mr-1 text-violet-600" />
+              <span className="font-semibold">Análisis IA:</span> {alert.publication_ai_summary}
+            </div>
+          )}
+
+          {/* Acciones */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {alert.remote_source_url && (
+              <a
+                href={alert.remote_source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Ver en RO
+              </a>
+            )}
+            {(alert.remote_pdf_url || alert.publication_pdf_url) && (
+              <a
+                href={alert.remote_pdf_url || alert.publication_pdf_url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition"
+              >
+                <Download className="w-3 h-3" />
+                PDF
+              </a>
+            )}
+            {alert.status === 'open' && (
+              <>
+                <button
+                  onClick={() => onAction(alert.id, 'acknowledge')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition"
+                >
+                  <Activity className="w-3 h-3" />
+                  Reconocer
+                </button>
+                <button
+                  onClick={() => onAction(alert.id, 'resolve')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Resolver
+                </button>
+                <button
+                  onClick={() => onAction(alert.id, 'dismiss')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 transition"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Descartar
+                </button>
+              </>
+            )}
+            {alert.status !== 'open' && (
+              <span className={`inline-flex items-center gap-1 text-xs font-bold ${
+                alert.status === 'resolved' ? 'text-emerald-700' :
+                alert.status === 'dismissed' ? 'text-gray-500' : 'text-amber-700'
+              }`}>
+                <CheckCircle2 className="w-3 h-3" />
+                {alert.status === 'resolved' ? 'Resuelta' :
+                 alert.status === 'dismissed' ? 'Descartada' : 'Reconocida'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MONITOR PROGRESS MODAL ──────────────────────────────────────────
+
+function MonitorProgressModal({ progress, onClose, running }: {
+  progress: MonitorProgress;
+  onClose: () => void;
+  running: boolean;
+}) {
+  const isFinished = progress.finished === true;
+  const hasError = progress.error !== undefined;
+  const canClose = !running || isFinished || hasError;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => e.target === e.currentTarget && canClose && onClose()}
+    >
+      <div className="relative w-full max-w-xl bg-gradient-to-br from-slate-950 via-rose-950/80 to-slate-950 rounded-2xl shadow-2xl shadow-rose-500/20 border border-rose-500/30 overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-500" />
+
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white shadow-lg shrink-0 ${
+              isFinished && !hasError ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/30' :
+              hasError ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30' :
+              'bg-gradient-to-br from-rose-500 to-violet-600 shadow-rose-500/30 animate-pulse'
+            }`}>
+              {isFinished && !hasError ? <CheckCircle2 className="w-6 h-6" /> :
+               hasError ? <AlertTriangle className="w-6 h-6" /> :
+               <Zap className="w-6 h-6" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-black text-white flex items-center gap-2">
+                Monitor del Registro Oficial
+                {!isFinished && !hasError && <Loader2 className="w-4 h-4 animate-spin text-rose-400" />}
+              </h2>
+              <p className="text-xs text-rose-300/80 mt-0.5">{progress.label}</p>
+            </div>
+            {canClose && (
+              <button onClick={onClose} className="shrink-0 text-rose-300/60 hover:text-white transition">
+                <XCircle className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-5xl font-black bg-gradient-to-r from-rose-300 to-violet-300 bg-clip-text text-transparent leading-none">
+                {Math.round(progress.pct)}
+              </span>
+              <span className="text-2xl font-black text-rose-300/60">%</span>
+            </div>
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-rose-500 via-fuchsia-500 to-violet-500 transition-all duration-500 ease-out"
+                style={{ width: `${progress.pct}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Resultado final */}
+          {isFinished && progress.result && (
+            <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <div className="text-xs font-bold text-emerald-300 mb-2">Resumen del chequeo</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="text-emerald-100">
+                  <span className="opacity-70">RSS procesados:</span>{' '}
+                  <strong className="text-white">{progress.result.feedItemsProcessed}</strong>
+                </div>
+                <div className="text-emerald-100">
+                  <span className="opacity-70">Alertas creadas:</span>{' '}
+                  <strong className="text-white">{progress.result.alertsCreated}</strong>
+                </div>
+                <div className="text-emerald-100">
+                  <span className="opacity-70">Ediciones nuevas:</span>{' '}
+                  <strong className="text-white">{progress.result.newEditionsDetected}</strong>
+                </div>
+                <div className="text-emerald-100">
+                  <span className="opacity-70">Reformas detectadas:</span>{' '}
+                  <strong className="text-white">{progress.result.potentialReformsDetected}</strong>
+                </div>
+                <div className="text-emerald-100">
+                  <span className="opacity-70">Leyes nuevas:</span>{' '}
+                  <strong className="text-white">{progress.result.newLawsDetected}</strong>
+                </div>
+                <div className="text-emerald-100">
+                  <span className="opacity-70">Docs desactualizados:</span>{' '}
+                  <strong className="text-white">{progress.result.outdatedDocsDetected}</strong>
+                </div>
+                <div className="col-span-2 text-emerald-100/70 text-[10px] mt-1">
+                  Duración: {(progress.result.durationMs / 1000).toFixed(1)}s
+                </div>
+              </div>
+            </div>
+          )}
+
+          {hasError && (
+            <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              {progress.error}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

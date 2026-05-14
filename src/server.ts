@@ -356,6 +356,7 @@ if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {
   try {
     const cron = (await import('node-cron')).default;
     const { runScan } = await import('./services/registro-oficial.service.js');
+    const { runMonitor } = await import('./services/norm-monitor.service.js');
     // '0 7 * * *' = 07:00 UTC todos los días = 02:00 Ecuador
     cron.schedule('0 7 * * *', () => {
       app.log.info('🌙 [cron] Disparando scan diario Registro Oficial Ecuador');
@@ -364,6 +365,16 @@ if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {
         .catch((e) => app.log.error({ err: e?.message }, '✗ [cron] Scan RO falló'));
     }, { timezone: 'UTC' });
     app.log.info('📅 Cron Registro Oficial registrado para 02:00 hora Ecuador diariamente');
+
+    // Monitor del corpus: corre cada 30 min para chequear RSS oficial y
+    // detectar nuevas ediciones / reformas / leyes nuevas.
+    cron.schedule('*/30 * * * *', () => {
+      app.log.info('🔎 [cron] Disparando monitor del Registro Oficial');
+      void runMonitor({ triggeredBy: 'cron-30min' })
+        .then((r) => app.log.info({ monitor: r }, '✓ [cron] Monitor RO completado'))
+        .catch((e) => app.log.error({ err: e?.message }, '✗ [cron] Monitor RO falló'));
+    }, { timezone: 'UTC' });
+    app.log.info('📅 Cron Monitor Registro Oficial registrado cada 30 min');
   } catch (e: any) {
     app.log.warn({ err: e?.message }, 'No se pudo registrar cron Registro Oficial');
   }
