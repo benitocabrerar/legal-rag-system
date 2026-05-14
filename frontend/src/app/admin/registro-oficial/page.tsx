@@ -645,6 +645,78 @@ export default function RegistroOficialAdminPage() {
         </button>
       </div>
 
+      {/* ═══ HERRAMIENTAS AVANZADAS ═══ */}
+      <div className="rounded-xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-4">
+        <div className="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+          <Sparkles className="w-3 h-3" />
+          Herramientas avanzadas del corpus
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Link
+            href="/admin/legal-search"
+            className="group flex items-start gap-3 p-3 rounded-lg bg-white border-2 border-violet-200 hover:border-violet-500 hover:shadow-md transition"
+          >
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 grid place-items-center text-white shrink-0 shadow-md">
+              <Search className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-violet-900 leading-snug group-hover:text-violet-700">
+                🔍 Búsqueda Legal IA
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                Busca leyes en corpus + RO + 26 fuentes externas oficiales. Asistente IA reformula queries.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-violet-700 font-bold mt-1">
+                Ir a búsqueda
+                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/ingestion-history"
+            className="group flex items-start gap-3 p-3 rounded-lg bg-white border-2 border-amber-200 hover:border-amber-500 hover:shadow-md transition"
+          >
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 grid place-items-center text-white shrink-0 shadow-md">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-amber-900 leading-snug group-hover:text-amber-700">
+                📦 Historial de Ingestas
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                Tracking granular por archivo, reportes HTML profesionales, estadísticas de ingesta.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-bold mt-1">
+                Ver historial
+                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+              </span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/corpus-audit"
+            className="group flex items-start gap-3 p-3 rounded-lg bg-white border-2 border-emerald-200 hover:border-emerald-500 hover:shadow-md transition"
+          >
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 grid place-items-center text-white shrink-0 shadow-md">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-emerald-900 leading-snug group-hover:text-emerald-700">
+                ✅ Auditoría del Corpus
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                Verifica cobertura vs 108 normas vigentes Ecuador. Ingesta faltantes automáticamente.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-bold mt-1">
+                Iniciar auditoría
+                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+              </span>
+            </div>
+          </Link>
+        </div>
+      </div>
+
       {error && (
         <div className="rounded-lg border-2 border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4" />
