@@ -10,6 +10,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
+import { LegalDocumentService } from '../../services/legal-document-service.js';
+import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 
 async function requireAdmin(request: any, reply: any) {
   const user = request.user;
@@ -115,6 +117,128 @@ export async function adminEmbeddingsRoutes(fastify: FastifyInstance) {
       fastify.log.error(e);
       return reply.code(500).send({ error: e.message });
     }
+  });
+
+  // ─── POST /admin/embeddings/rechunk-corpus (SSE) ───────────────────
+  // Re-chunkea TODOS los legal_documents activos con overlap 150 chars
+  // y vectoriza desde cero. Reporta progreso por doc en tiempo real.
+  // Costo: ~$0.02/1M tokens text-embedding-3-small. Para 138 docs/36k
+  // chunks típicos ≈ $0.50-1.00 y 30-60 min.
+  //
+  // Requiere body { confirm: true } para evitar disparos accidentales
+  // (es una operación destructiva que recrea TODOS los chunks).
+  fastify.post('/admin/embeddings/rechunk-corpus', async (req, reply) => {
+    const body = (req.body || {}) as { confirm?: boolean; overlap?: number; chunkSize?: number; onlyMissingVector?: boolean };
+    if (!body.confirm) {
+      return reply.code(400).send({
+        error: 'Confirmación requerida',
+        hint: 'POST con body { "confirm": true } para iniciar. Opcional: overlap (default 150), chunkSize (default 1000), onlyMissingVector (default false → re-chunkea TODO).',
+      });
+    }
+    const overlap   = Math.max(0, Math.min(500, body.overlap   ?? 150));
+    const chunkSize = Math.max(300, Math.min(4000, body.chunkSize ?? 1000));
+    const onlyMissingVector = body.onlyMissingVector === true;
+    const userId = (req.user as any).id;
+
+    setSseHeaders(req, reply);
+    const stopKa = startSseKeepalive(reply);
+    const write = (event: string, data: any) => {
+      try {
+        reply.raw.write(`event: ${event}\n`);
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch { /* client gone */ }
+    };
+
+    write('connected', { startedAt: new Date().toISOString(), chunkSize, overlap, onlyMissingVector });
+
+    try {
+      // Listado de docs a procesar
+      const filterClause = onlyMissingVector
+        ? `WHERE is_active = true
+             AND EXISTS (SELECT 1 FROM public.legal_document_chunks ldc
+                          WHERE ldc.legal_document_id = legal_documents.id
+                            AND ldc.embedding_v IS NULL)`
+        : `WHERE is_active = true`;
+      const docs = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; norm_title: string | null }>>(
+        `SELECT id, title, norm_title
+           FROM public.legal_documents
+          ${filterClause}
+          ORDER BY updated_at DESC`,
+      );
+
+      write('phase', { phase: 'started', label: `${docs.length} documentos a procesar`, total: docs.length });
+
+      const svc = new LegalDocumentService(prisma);
+      let processed = 0;
+      let totalChunks = 0;
+      let totalVectorized = 0;
+      let failed = 0;
+      const errors: Array<{ docId: string; error: string }> = [];
+
+      for (const doc of docs) {
+        processed++;
+        const pct = Math.round((processed / docs.length) * 100);
+        try {
+          write('doc-start', {
+            index: processed,
+            total: docs.length,
+            pct,
+            docId: doc.id,
+            title: (doc.norm_title || doc.title || '').slice(0, 120),
+          });
+
+          const r = await svc.regenerateEmbeddings(doc.id, userId, { chunkSize, overlap });
+
+          // Copiar embedding JSONB → embedding_v vector (fix conocido)
+          let vec = 0;
+          try {
+            const u = await prisma.$executeRawUnsafe(
+              `UPDATE public.legal_document_chunks
+                  SET embedding_v = (embedding::text)::vector
+                WHERE legal_document_id = $1
+                  AND embedding IS NOT NULL
+                  AND embedding_v IS NULL`,
+              doc.id,
+            );
+            vec = Number(u) || 0;
+          } catch { /* non-fatal */ }
+
+          totalChunks += r.totalChunks;
+          totalVectorized += vec;
+
+          write('doc-done', {
+            index: processed,
+            total: docs.length,
+            pct,
+            docId: doc.id,
+            chunks: r.totalChunks,
+            embeddingsGenerated: r.embeddingsGenerated,
+            embeddingsVectorized: vec,
+          });
+        } catch (e: any) {
+          failed++;
+          const msg = e?.message || 'unknown error';
+          errors.push({ docId: doc.id, error: msg });
+          write('doc-error', { index: processed, total: docs.length, pct, docId: doc.id, error: msg });
+        }
+      }
+
+      write('done', {
+        processed,
+        succeeded: processed - failed,
+        failed,
+        totalChunks,
+        totalVectorized,
+        errors: errors.slice(0, 20),
+        finishedAt: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      write('error', { error: e?.message || 'Fatal error' });
+    } finally {
+      stopKa();
+      try { reply.raw.end(); } catch { /* ignore */ }
+    }
+    return reply;
   });
 
   // TEST SEARCH — proxy a /search/legal pero mantenemos un endpoint local para la UI admin
