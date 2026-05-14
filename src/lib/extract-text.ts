@@ -219,7 +219,7 @@ async function extractWithOpenAiVision(
           },
         ],
         temperature: 0,
-        max_tokens: 16000,
+        max_tokens: 32000,
       });
       const text = completion.choices?.[0]?.message?.content || '';
       return {
@@ -260,15 +260,48 @@ async function extractWithOpenAiVision(
   };
 }
 
-async function extractWithAnthropicVision(
-  buffer: Buffer,
+/**
+ * Divide un PDF en sub-PDFs de N páginas usando pdf-lib.
+ * Necesario para procesar códigos legales largos (200+ páginas) con
+ * Vision OCR, que tiene un cap efectivo de output (~32K tokens ≈ 100KB
+ * texto) por request. Sin esto, códigos enteros se truncan a las
+ * primeras ~50 páginas leídas.
+ */
+async function splitPdfIntoChunks(buffer: Buffer, pagesPerChunk: number): Promise<Buffer[]> {
+  const { PDFDocument } = await import('pdf-lib');
+  const src = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  if (total <= pagesPerChunk) return [buffer];
+
+  const chunks: Buffer[] = [];
+  for (let start = 0; start < total; start += pagesPerChunk) {
+    const end = Math.min(start + pagesPerChunk, total);
+    const dst = await PDFDocument.create();
+    const pageIndexes = Array.from({ length: end - start }, (_, i) => start + i);
+    const copied = await dst.copyPages(src, pageIndexes);
+    copied.forEach((p) => dst.addPage(p));
+    const bytes = await dst.save();
+    chunks.push(Buffer.from(bytes));
+  }
+  return chunks;
+}
+
+const ANTHROPIC_VISION_PROMPT =
+  'Extrae TODO el texto literal del documento o imagen, manteniendo orden y estructura ' +
+  '(títulos, artículos, numeración, párrafos). Si hay tablas, devuélvelas como CSV. ' +
+  'NO resumas, NO comentes, NO omitas secciones. Solo el texto literal completo.';
+
+const PAGES_PER_VISION_CALL = 5;    // 5 páginas por call → margen seguro vs 32K tokens
+const MAX_OUTPUT_TOKENS_VISION = 32000;  // máximo soportado por Claude Opus 4.x
+
+async function callAnthropicVisionOnce(
+  pdfOrImageBuffer: Buffer,
   mimeType: string,
-  _filename: string,
   apiKey: string,
-  model: string
-): Promise<ExtractResult> {
+  model: string,
+): Promise<{ text: string; status?: number; error?: string }> {
   const isPdfFile = /pdf/i.test(mimeType);
-  const b64 = buffer.toString('base64');
+  const b64 = pdfOrImageBuffer.toString('base64');
   const content: any[] = [];
   if (isPdfFile) {
     content.push({
@@ -281,11 +314,7 @@ async function extractWithAnthropicVision(
       source: { type: 'base64', media_type: mimeType, data: b64 },
     });
   }
-  content.push({
-    type: 'text',
-    text:
-      'Extrae TODO el texto literal del documento o imagen, manteniendo orden y estructura. Si hay tablas, devuélvelas como CSV. No resumas. Solo el texto.',
-  });
+  content.push({ type: 'text', text: ANTHROPIC_VISION_PROMPT });
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -296,24 +325,112 @@ async function extractWithAnthropicVision(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 16000,
+      max_tokens: MAX_OUTPUT_TOKENS_VISION,
       messages: [{ role: 'user', content }],
     }),
   });
   if (!r.ok) {
     const err = await r.text();
-    return {
-      text: '',
-      method: 'anthropic-vision-fail',
-      metadata: { status: r.status, error: err.slice(0, 300), model },
-    };
+    return { text: '', status: r.status, error: err.slice(0, 300) };
   }
   const data = await r.json() as any;
   const text = (data.content || []).map((c: any) => c.text || '').join('\n');
+  return { text };
+}
+
+async function extractWithAnthropicVision(
+  buffer: Buffer,
+  mimeType: string,
+  _filename: string,
+  apiKey: string,
+  model: string
+): Promise<ExtractResult> {
+  const isPdfFile = /pdf/i.test(mimeType);
+
+  // ─── Para imágenes individuales, un solo call (no aplica paginación) ──
+  if (!isPdfFile) {
+    const r = await callAnthropicVisionOnce(buffer, mimeType, apiKey, model);
+    if (r.error) {
+      return {
+        text: '',
+        method: 'anthropic-vision-fail',
+        metadata: { status: r.status, error: r.error, model },
+      };
+    }
+    return {
+      text: r.text,
+      method: 'anthropic-vision',
+      metadata: { model, mode: 'single' },
+    };
+  }
+
+  // ─── PDFs: paginar si supera PAGES_PER_VISION_CALL para evitar
+  //     truncamiento a max_tokens (que con códigos legales de 200+ pgs
+  //     dejaba solo ~50 páginas leídas) ─────────────────────────────────
+  let chunks: Buffer[];
+  let pagesPerChunk = PAGES_PER_VISION_CALL;
+  try {
+    chunks = await splitPdfIntoChunks(buffer, pagesPerChunk);
+  } catch (e: any) {
+    // PDF cifrado o malformado para pdf-lib — intentamos como single blob
+    chunks = [buffer];
+  }
+
+  if (chunks.length === 1) {
+    const r = await callAnthropicVisionOnce(chunks[0], mimeType, apiKey, model);
+    if (r.error) {
+      return {
+        text: '',
+        method: 'anthropic-vision-fail',
+        metadata: { status: r.status, error: r.error, model },
+      };
+    }
+    return {
+      text: r.text,
+      method: 'anthropic-vision',
+      metadata: { model, mode: 'single', pdfChunks: 1 },
+    };
+  }
+
+  // PDF largo — procesar en paralelo controlado (de 3 en 3 para no
+  // saturar la API ni el rate limit de tokens/min).
+  const PARALLEL = 3;
+  const parts: string[] = new Array(chunks.length).fill('');
+  const errors: string[] = [];
+  let totalLen = 0;
+
+  for (let i = 0; i < chunks.length; i += PARALLEL) {
+    const batch = chunks.slice(i, i + PARALLEL);
+    const results = await Promise.all(
+      batch.map((c) => callAnthropicVisionOnce(c, mimeType, apiKey, model)),
+    );
+    results.forEach((res, k) => {
+      const idx = i + k;
+      if (res.error) {
+        errors.push(`chunk ${idx + 1}/${chunks.length}: ${res.error}`);
+      } else {
+        parts[idx] = res.text;
+        totalLen += res.text.length;
+      }
+    });
+  }
+
+  const combined = parts
+    .map((t, i) => t ? `\n\n=== PÁGINAS ${i * pagesPerChunk + 1}–${Math.min((i + 1) * pagesPerChunk, parts.length * pagesPerChunk)} ===\n${t}` : '')
+    .join('');
+
   return {
-    text,
-    method: 'anthropic-vision',
-    metadata: { model },
+    text: combined.trim(),
+    method: errors.length > 0 ? 'anthropic-vision-paginated-partial' : 'anthropic-vision-paginated',
+    metadata: {
+      model,
+      pdfChunks: chunks.length,
+      pagesPerChunk,
+      successfulChunks: chunks.length - errors.length,
+      failedChunks: errors.length,
+      totalChars: totalLen,
+      errors: errors.slice(0, 3),
+    },
   };
 }
 
