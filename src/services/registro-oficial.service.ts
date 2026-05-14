@@ -455,8 +455,12 @@ export async function downloadAndExtractPdf(pdfUrl: string): Promise<string | nu
 
 /**
  * Versión con detalles para diagnóstico — devuelve text + error específico
- * + meta (size, fetchMs, parseMs). El audit log puede usar esta info para
- * saber por qué falla cada PDF específico.
+ * + meta + método usado (pdf-parse vs claude vision OCR). El audit log
+ * puede usar esta info para saber cómo se extrajo cada PDF.
+ *
+ * Cuando pdf-parse falla o devuelve texto muy corto (PDF escaneado),
+ * automáticamente hace fallback a Claude Vision con el PDF como
+ * `document` content. Esto cubre PDFs escaneados sin OCR previo.
  */
 export async function downloadAndExtractPdfWithDetails(pdfUrl: string): Promise<{
   text: string | null;
@@ -464,11 +468,10 @@ export async function downloadAndExtractPdfWithDetails(pdfUrl: string): Promise<
   size: number;
   fetchMs: number;
   parseMs: number;
+  method: 'pdf-parse' | 'claude-vision' | 'pdf+vision-rescue' | 'failed';
 }> {
   const fetchStart = Date.now();
   let size = 0;
-  // Timeout extendido a 60s — PDFs grandes (>500KB) tardan en descargar desde
-  // sitios .gob.ec ecuatorianos cuyo CDN no siempre es óptimo.
   const TIMEOUT_MS = 60_000;
 
   let buf: Buffer;
@@ -485,7 +488,7 @@ export async function downloadAndExtractPdfWithDetails(pdfUrl: string): Promise<
     });
     clearTimeout(timeout);
     if (!r.ok) {
-      return { text: null, error: `HTTP ${r.status} desde ${pdfUrl}`, size: 0, fetchMs: Date.now() - fetchStart, parseMs: 0 };
+      return { text: null, error: `HTTP ${r.status} desde ${pdfUrl}`, size: 0, fetchMs: Date.now() - fetchStart, parseMs: 0, method: 'failed' };
     }
     const arr = await r.arrayBuffer();
     buf = Buffer.from(arr);
@@ -497,40 +500,82 @@ export async function downloadAndExtractPdfWithDetails(pdfUrl: string): Promise<
       size: 0,
       fetchMs: Date.now() - fetchStart,
       parseMs: 0,
+      method: 'failed',
     };
   }
   const fetchMs = Date.now() - fetchStart;
 
   if (size < 1000) {
-    return { text: null, error: `PDF demasiado pequeño (${size} bytes), probablemente página de error`, size, fetchMs, parseMs: 0 };
+    return { text: null, error: `PDF demasiado pequeño (${size} bytes), probablemente página de error`, size, fetchMs, parseMs: 0, method: 'failed' };
   }
-  // Detección rápida: ¿es realmente un PDF?
   const header = buf.slice(0, 8).toString('utf-8');
   if (!header.startsWith('%PDF')) {
-    return { text: null, error: `Respuesta no es PDF (header: "${header.slice(0, 8)}")`, size, fetchMs, parseMs: 0 };
+    return { text: null, error: `Respuesta no es PDF (header: "${header.slice(0, 8)}")`, size, fetchMs, parseMs: 0, method: 'failed' };
   }
 
+  // ESTRATEGIA 1: pdf-parse (rápido, gratis, funciona con PDFs con OCR)
   const parseStart = Date.now();
+  let pdfParseText: string | null = null;
+  let pdfParseError: string | null = null;
   try {
-    // Dynamic import para evitar el bug ENOENT de pdf-parse al cold start.
     // @ts-ignore - pdf-parse no tiene types
     const pdfParse = (await import('pdf-parse')).default;
-    const parsed = await pdfParse(buf, { max: 500 });  // máximo 500 páginas para evitar OOM
-    const text = parsed?.text || null;
-    const parseMs = Date.now() - parseStart;
-    if (!text || text.length < 100) {
-      return { text: null, error: `PDF parseado pero texto vacío o muy corto (${text?.length || 0} chars). Posiblemente PDF escaneado sin OCR.`, size, fetchMs, parseMs };
-    }
-    return { text, error: null, size, fetchMs, parseMs };
+    const parsed = await pdfParse(buf, { max: 500 });
+    pdfParseText = parsed?.text || null;
   } catch (e: any) {
+    pdfParseError = e?.message || 'unknown';
+  }
+  const parseMs = Date.now() - parseStart;
+
+  // Si pdf-parse devolvió texto suficiente, lo usamos
+  if (pdfParseText && pdfParseText.length >= 500) {
+    return { text: pdfParseText, error: null, size, fetchMs, parseMs, method: 'pdf-parse' };
+  }
+
+  // ESTRATEGIA 2: Claude Vision OCR (fallback para PDFs escaneados)
+  // pdf-parse falló o devolvió muy poco texto. Esto ocurre cuando el PDF
+  // es 100% imagen escaneada sin capa de texto. Claude Vision puede leer
+  // el texto directamente del PDF con su modo `document` nativo.
+  try {
+    const { extractText } = await import('../lib/extract-text.js');
+    const visionResult = await extractText(buf, 'application/pdf', 'norma.pdf');
+    if (visionResult.text && visionResult.text.length > (pdfParseText?.length || 0)) {
+      // Vision dio más texto que pdf-parse → usamos vision
+      const method = pdfParseText && pdfParseText.length > 50
+        ? 'pdf+vision-rescue'   // pdf-parse dio algo, vision dio MÁS
+        : 'claude-vision';      // pdf-parse no dio nada
+      return {
+        text: visionResult.text,
+        error: null,
+        size,
+        fetchMs,
+        parseMs: parseMs + (Date.now() - parseStart - parseMs),
+        method,
+      };
+    }
+  } catch (e: any) {
+    pdfParseError = `${pdfParseError || ''} · vision fallback failed: ${e?.message || 'unknown'}`;
+  }
+
+  // Si ambos fallaron pero pdf-parse dio algo aprovechable
+  if (pdfParseText && pdfParseText.length >= 100) {
     return {
-      text: null,
-      error: `pdf-parse error: ${e?.message || 'unknown'}`,
-      size,
-      fetchMs,
-      parseMs: Date.now() - parseStart,
+      text: pdfParseText,
+      error: `Solo texto parcial extraído (${pdfParseText.length} chars). Vision tampoco lo mejoró.`,
+      size, fetchMs, parseMs,
+      method: 'pdf-parse',
     };
   }
+
+  // Todo falló
+  return {
+    text: null,
+    error: pdfParseError
+      ? `pdf-parse error: ${pdfParseError} · vision OCR tampoco extrajo texto`
+      : `PDF extracción imposible: texto vacío en ambos métodos`,
+    size, fetchMs, parseMs,
+    method: 'failed',
+  };
 }
 
 /**

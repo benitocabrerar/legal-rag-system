@@ -288,6 +288,13 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
       await sleep(300);
       const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
 
+      // matchMethod refleja cómo se obtuvo el texto: directo (pdf-parse)
+      // o via Claude Vision OCR para PDFs escaneados.
+      const matchMethodLabel =
+        dl.method === 'claude-vision'      ? 'canonical_url_vision_ocr' :
+        dl.method === 'pdf+vision-rescue'  ? 'canonical_url_vision_rescue' :
+                                              'canonical_url';
+
       await updateItemStatus(runId, law, {
         status: 'ingested_ok',
         remotePdfUrl: law.canonicalPdfUrl,
@@ -296,9 +303,12 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
         embeddingsVectorized: ing.embeddingsVectorized,
         matchedLegalDocId: ing.legalDocId,
         matchSimilarity: 1.0,
-        matchMethod: 'canonical_url',
+        matchMethod: matchMethodLabel,
         durationMs: Date.now() - startedAt,
       });
+
+      // eslint-disable-next-line no-console
+      console.log(`[audit] ✓ ${law.canonicalName} via ${dl.method} (${dl.size}b, ${dl.fetchMs}ms fetch, ${dl.parseMs}ms parse → ${ing.chunksCreated} chunks)`);
 
       return {
         success: true,
@@ -306,10 +316,10 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
         durationMs: Date.now() - startedAt,
       };
     }
-    // Diagnóstico específico de por qué falló — útil para depurar URLs caídas
-    canonicalErrorDetail = `canonicalPdfUrl ${law.canonicalPdfUrl} → ${dl.error || 'sin texto'} (size: ${dl.size}b, fetch: ${dl.fetchMs}ms, parse: ${dl.parseMs}ms)`;
+    // Diagnóstico detallado de por qué falló incluso después de Vision fallback
+    canonicalErrorDetail = `canonicalPdfUrl ${law.canonicalPdfUrl} → método=${dl.method} → ${dl.error || 'sin texto'} (size: ${dl.size}b, fetch: ${dl.fetchMs}ms, parse: ${dl.parseMs}ms)`;
     // eslint-disable-next-line no-console
-    console.warn(`[audit] ${law.canonicalName}: ${canonicalErrorDetail}`);
+    console.warn(`[audit] ✗ ${law.canonicalName}: ${canonicalErrorDetail}`);
   }
 
   // ═══ ESTRATEGIA 2: búsqueda en el buscador del RO ════════════════════
