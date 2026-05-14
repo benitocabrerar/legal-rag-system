@@ -280,6 +280,86 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
     },
   );
 
+  // ─── GET /admin/legal-pyramid/document/:id/pdf ─────────────────────
+  // Proxy del PDF original. Necesario porque muchos sitios .gob.ec
+  // bloquean iframe embed con X-Frame-Options: sameorigin, lo que
+  // impide al frontend mostrar el PDF inline. Esta ruta hace fetch
+  // del PDF y lo retransmite con headers correctos para inline.
+  //
+  // PRIORIDAD: stored_pdf_url (Supabase, mismo CDN público y rápido)
+  //  > editionPdfUrl > canonicalPdfUrl. Si la fuente bloquea hotlinking
+  //  o geo-bloquea Render, falla con 502 con detalle del problema.
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/legal-pyramid/document/:id/pdf',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const rows = await prisma.$queryRawUnsafe<Array<any>>(
+        `SELECT id, norm_title, stored_pdf_url, metadata
+           FROM public.legal_documents
+          WHERE id = $1 AND is_active = true`,
+        request.params.id,
+      );
+      if (rows.length === 0) return reply.code(404).send({ error: 'Documento no encontrado' });
+      const d = rows[0];
+      const pdfUrl: string | null =
+        d.stored_pdf_url ||
+        d.metadata?.editionPdfUrl ||
+        d.metadata?.canonicalPdfUrl ||
+        null;
+      if (!pdfUrl) return reply.code(404).send({ error: 'Esta norma no tiene URL PDF registrada' });
+
+      try {
+        const ac = new AbortController();
+        const timeout = setTimeout(() => ac.abort(), 60_000);
+        const r = await fetch(pdfUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; PoweriaLegalProxy/1.0)',
+            'Accept': 'application/pdf,*/*',
+          },
+          signal: ac.signal,
+          redirect: 'follow',
+        });
+        clearTimeout(timeout);
+        if (!r.ok) {
+          return reply.code(502).send({
+            error: `Origen devolvió HTTP ${r.status}`,
+            source: pdfUrl,
+          });
+        }
+        const buf = Buffer.from(await r.arrayBuffer());
+        // Validar que sea PDF real (no error page HTML)
+        const header = buf.slice(0, 5).toString('utf-8');
+        if (!header.startsWith('%PDF')) {
+          return reply.code(502).send({
+            error: 'Origen no devolvió un PDF',
+            source: pdfUrl,
+            preview: header,
+          });
+        }
+        // Slug seguro para Content-Disposition
+        const safeName = (d.norm_title || 'norma')
+          .normalize('NFD')
+          .replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-zA-Z0-9_-]+/g, '_')
+          .slice(0, 80);
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Length', String(buf.length))
+          .header('Content-Disposition', `inline; filename="${safeName}.pdf"`)
+          .header('Cache-Control', 'public, max-age=86400')   // 1 día cache (PDFs son inmutables por norma)
+          .header('X-Frame-Options', 'SAMEORIGIN')           // permite embed en nuestro propio frontend
+          .send(buf);
+      } catch (e: any) {
+        fastify.log.warn({ err: e?.message, pdfUrl }, 'pdf proxy fetch failed');
+        return reply.code(502).send({
+          error: e?.message || 'No se pudo obtener el PDF',
+          source: pdfUrl,
+        });
+      }
+    },
+  );
+
   // ─── POST /admin/legal-pyramid/document/:id/archive-pdf ────────────
   // Descarga el PDF original y lo sube a nuestro bucket Supabase Storage.
   // Idempotente: si ya está, retorna el URL existente.

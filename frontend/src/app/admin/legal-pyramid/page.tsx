@@ -904,58 +904,10 @@ function DocumentModal({ docId, onClose, onArchiveSuccess }: {
                     )}
                   </div>
                 ) : (
-                  // tab === 'pdf' — visor PDF inline
+                  // tab === 'pdf' — visor PDF inline (vía proxy backend
+                  // para evitar X-Frame-Options: sameorigin de sitios externos)
                   doc.pdf_url ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-100 rounded-lg px-3 py-2">
-                        <FileText className="w-4 h-4 text-violet-600" />
-                        <span className="font-semibold">{doc.norm_title || doc.title}</span>
-                        <span className="ml-auto flex items-center gap-2">
-                          <a
-                            href={doc.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-violet-600 hover:text-violet-800 font-bold inline-flex items-center gap-1"
-                            title="Abrir en nueva pestaña"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Abrir aparte
-                          </a>
-                          <a
-                            href={doc.pdf_url}
-                            download
-                            className="text-emerald-600 hover:text-emerald-800 font-bold inline-flex items-center gap-1"
-                            title="Descargar"
-                          >
-                            <Download className="w-3 h-3" />
-                            Descargar
-                          </a>
-                        </span>
-                      </div>
-                      {/* Visor inline. Para Supabase Storage URLs el browser puede renderizar el PDF
-                          nativamente. Si el browser no soporta inline (ej. Safari iOS) muestra el
-                          fallback con link. */}
-                      <object
-                        data={doc.pdf_url}
-                        type="application/pdf"
-                        className="w-full rounded-lg border border-slate-300 shadow-sm"
-                        style={{ height: 'min(75vh, 720px)' }}
-                      >
-                        <iframe
-                          src={doc.pdf_url}
-                          title={doc.norm_title || 'PDF'}
-                          className="w-full rounded-lg border border-slate-300"
-                          style={{ height: 'min(75vh, 720px)' }}
-                        >
-                          <div className="p-6 text-center text-slate-600">
-                            Tu navegador no puede mostrar el PDF inline.{' '}
-                            <a href={doc.pdf_url} target="_blank" rel="noopener noreferrer" className="text-violet-700 underline font-bold">
-                              Descargar PDF
-                            </a>
-                          </div>
-                        </iframe>
-                      </object>
-                    </div>
+                    <PdfInlineViewer docId={docId} title={doc.norm_title || doc.title || 'PDF'} externalUrl={doc.pdf_url} />
                   ) : (
                     <div className="text-center py-12 text-slate-400 text-sm">
                       <AlertTriangle className="w-6 h-6 mx-auto mb-2" />
@@ -1141,6 +1093,151 @@ function InfoField({ label, value }: { label: string; value: string | null | und
     <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
       <div className="text-[9px] font-black text-slate-500 uppercase tracking-wider mb-0.5">{label}</div>
       <div className="text-xs font-bold text-slate-800 capitalize">{value}</div>
+    </div>
+  );
+}
+
+/**
+ * Visor PDF inline robusto.
+ *
+ * Hace GET autenticado al endpoint proxy del backend
+ * (/admin/legal-pyramid/document/:id/pdf) que descarga el PDF del origen
+ * real y lo retransmite con headers correctos para embed inline. Esto es
+ * NECESARIO porque muchos sitios .gob.ec bloquean iframe con
+ * X-Frame-Options: sameorigin, lo que rompe el embed directo.
+ *
+ * El componente:
+ *   1. Hace fetch del endpoint proxy con Bearer token
+ *   2. Convierte la respuesta a Blob
+ *   3. URL.createObjectURL → object/iframe renderiza nativo
+ *   4. Limpia el blob URL en unmount para no fugar memoria
+ */
+function PdfInlineViewer({ docId, title, externalUrl }: {
+  docId: string;
+  title: string;
+  externalUrl: string | null;  // la URL del origen, solo para botón "Abrir aparte"
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl: string | null = null;
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { getAuthToken } = await import('@/lib/get-auth-token');
+        const token = await getAuthToken();
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const r = await fetch(`${API_URL}/api/v1/admin/legal-pyramid/document/${docId}/pdf`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!r.ok) {
+          let errMsg = `HTTP ${r.status}`;
+          try {
+            const errJson = await r.json();
+            if (errJson?.error) errMsg = errJson.error;
+            if (errJson?.source) errMsg += ` (origen: ${errJson.source.slice(0, 60)}…)`;
+          } catch { /* no JSON */ }
+          throw new Error(errMsg);
+        }
+        const blob = await r.blob();
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setBlobUrl(createdUrl);
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(e?.message || 'No se pudo cargar el PDF');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [docId]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-100 rounded-lg px-3 py-2">
+        <FileText className="w-4 h-4 text-violet-600" />
+        <span className="font-semibold truncate flex-1" title={title}>{title}</span>
+        {externalUrl && (
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-violet-600 hover:text-violet-800 font-bold inline-flex items-center gap-1 shrink-0"
+            title="Abrir el origen en nueva pestaña"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Origen
+          </a>
+        )}
+        {blobUrl && (
+          <a
+            href={blobUrl}
+            download={`${title.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 60)}.pdf`}
+            className="text-emerald-600 hover:text-emerald-800 font-bold inline-flex items-center gap-1 shrink-0"
+            title="Descargar PDF"
+          >
+            <Download className="w-3 h-3" />
+            Descargar
+          </a>
+        )}
+      </div>
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-16 bg-slate-50 rounded-lg border border-slate-200">
+          <Loader2 className="w-8 h-8 animate-spin text-violet-500 mb-3" />
+          <p className="text-xs text-slate-600 font-bold">Descargando PDF desde el origen…</p>
+          <p className="text-[10px] text-slate-400 mt-1">Esto puede tomar unos segundos para archivos grandes.</p>
+        </div>
+      )}
+      {error && (
+        <div className="rounded-lg border-2 border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="flex items-center gap-2 font-bold mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            No se pudo cargar el PDF
+          </div>
+          <p className="text-xs">{error}</p>
+          {externalUrl && (
+            <p className="text-xs mt-2">
+              Probá{' '}
+              <a href={externalUrl} target="_blank" rel="noopener noreferrer" className="text-violet-700 underline font-bold">
+                abrir el origen directamente
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      )}
+      {blobUrl && !error && (
+        <object
+          data={blobUrl}
+          type="application/pdf"
+          className="w-full rounded-lg border border-slate-300 shadow-sm bg-white"
+          style={{ height: 'min(75vh, 720px)' }}
+        >
+          <iframe
+            src={blobUrl}
+            title={title}
+            className="w-full rounded-lg border border-slate-300"
+            style={{ height: 'min(75vh, 720px)' }}
+          >
+            <div className="p-6 text-center text-slate-600">
+              Tu navegador no puede mostrar el PDF inline.{' '}
+              <a href={blobUrl} download className="text-violet-700 underline font-bold">
+                Descargar PDF
+              </a>
+            </div>
+          </iframe>
+        </object>
+      )}
     </div>
   );
 }
