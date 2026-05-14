@@ -273,6 +273,43 @@ export async function runScan(opts: {
 
   emit('summary', { editionsFound, publicationsFound, errors });
 
+  // Auto-ingest de publicaciones que cumplan criterios de relevancia.
+  // Convierte registry_publications → legal_documents + chunks + embeddings
+  // + notificaciones, todo dentro del mismo flujo del scan.
+  let autoIngested = 0;
+  let autoIngestNotified = 0;
+  if (publicationsFound > 0) {
+    emit('phase', {
+      phase: 'auto-ingest',
+      label: 'Auto-ingesta de leyes/decretos relevantes al corpus…',
+      pct: 97,
+    });
+    try {
+      const { autoIngestQualified } = await import('./corpus-ingestion.service.js');
+      const r = await autoIngestQualified({ scanId, triggeredBy });
+      autoIngested = r.succeeded;
+      autoIngestNotified = r.totalNotified;
+      emit('phase', {
+        phase: 'auto-ingest-done',
+        label: `Auto-ingestadas ${r.succeeded}/${r.processed} normas (${r.totalChunks} chunks, ${r.totalNotified} usuarios notificados)`,
+        pct: 99,
+      });
+      if (r.failed > 0) {
+        errors.push(`Auto-ingest: ${r.failed} fallaron — ${r.errors.map((e) => e.error.slice(0, 60)).join('; ')}`);
+      }
+    } catch (e: any) {
+      errors.push(`Auto-ingest fatal: ${e?.message || 'error'}`);
+    }
+  }
+
+  emit('summary', {
+    editionsFound,
+    publicationsFound,
+    autoIngested,
+    autoIngestNotified,
+    errors,
+  });
+
   // Cerrar scan
   await prisma.$executeRawUnsafe(
     `UPDATE public.registry_scans

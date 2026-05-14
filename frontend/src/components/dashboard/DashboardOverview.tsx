@@ -19,6 +19,7 @@ import {
   TrendingUp, Zap, Brain, ChevronRight, ListChecks, Activity,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { CorpusUpdatesCard } from './CorpusUpdatesCard';
 
 interface KPIs {
   totalCases: number;
@@ -151,6 +152,9 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-4">
+      {/* ── Card de actualizaciones del corpus legal (nuevas leyes/decretos) ── */}
+      <CorpusUpdatesCard />
+
       {/* ── Banner de cambios desde la última visita ── */}
       {data.changesSince && (data.changesSince.newDocs > 0 || data.changesSince.newAnalyses > 0 || data.changesSince.brainsRefreshed > 0) && (
         <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-fuchsia-50 p-3 flex items-center gap-3">

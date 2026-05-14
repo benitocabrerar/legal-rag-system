@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
 import { UserClock } from '@/components/common/UserClock';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
@@ -192,6 +193,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               {/* Country */}
               <CountrySelector variant="compact" />
+
+              {/* Notifications bell */}
+              <NotificationBell />
 
               {/* User dropdown */}
               <div className="relative" ref={menuRef} data-tour="user-menu">

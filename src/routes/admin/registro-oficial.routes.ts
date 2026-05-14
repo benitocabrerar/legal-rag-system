@@ -15,8 +15,13 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
 import { runScan } from '../../services/registro-oficial.service.js';
 import { runMonitor, searchRoLive } from '../../services/norm-monitor.service.js';
+import { ingestPublicationToCorpus } from '../../services/corpus-ingestion.service.js';
 import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 import { randomUUID } from 'crypto';
+
+// Suprimir warning de import no usado de randomUUID — se conserva para
+// backward-compatibility con otros endpoints que aún lo usen.
+void randomUUID;
 
 export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
   // Helper: requiere admin role
@@ -172,70 +177,19 @@ export async function registroOficialAdminRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        // Crear entrada en legal_documents
-        const docId = randomUUID();
-        const title = `${pub.publication_type === 'ley_organica' ? 'Ley Orgánica' :
-                        pub.publication_type === 'ley_ordinaria' ? 'Ley' :
-                        pub.publication_type === 'decreto_ejecutivo' ? 'Decreto Ejecutivo' :
-                        pub.publication_type === 'acuerdo_ministerial' ? 'Acuerdo Ministerial' :
-                        pub.publication_type === 'resolucion' ? 'Resolución' :
-                        pub.publication_type === 'reglamento' ? 'Reglamento' :
-                        'Norma'} ${pub.publication_number ? `Nº ${pub.publication_number}` : ''} — ${pub.title}`.slice(0, 500);
-
-        // Schema real de legal_documents: id, title, content, norm_type,
-        // norm_title, publication_type, publication_number, publication_date,
-        // jurisdiction, country_code, category, uploaded_by, metadata.
-        // NO existen: source_url, published_at. La URL del PDF y otros
-        // datos van adentro de metadata.
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO public.legal_documents
-             (id, title, norm_title, content, norm_type, publication_type,
-              publication_number, publication_date, jurisdiction, country_code,
-              category, uploaded_by, is_active, metadata, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $13::jsonb, now(), now())`,
-          docId,
-          title.trim(),
-          (pub.title || '').slice(0, 500),
-          pub.raw_text_excerpt,
-          pub.publication_type || 'general',
-          pub.publication_type,
-          pub.publication_number,
-          pub.edition_date,
-          'national',
-          'EC',
-          pub.ai_classification || 'general',
-          userId,
-          JSON.stringify({
-            source: 'registro_oficial_ec',
-            editionNumber: pub.edition_number,
-            editionUrl: pub.edition_url,
-            editionPdfUrl: pub.edition_pdf_url,
-            issuingEntity: pub.issuing_entity,
-            aiClassification: pub.ai_classification,
-            aiKeywords: pub.ai_keywords,
-            aiSummary: pub.ai_summary,
-            registryPublicationId: pub.id,
-            approvedBy: userId,
-            approvedAt: new Date().toISOString(),
-          }),
-        );
-
-        // Marcar como ingestado (la vectorización del texto se dispara aparte via job)
-        await prisma.$executeRawUnsafe(
-          `UPDATE public.registry_publications
-             SET status = 'ingested',
-                 reviewed_by = $2,
-                 reviewed_at = now(),
-                 ingested_legal_doc_id = $3,
-                 ingested_at = now()
-           WHERE id = $1`,
-          request.params.id, userId, docId,
-        );
+        // Pipeline completo: legal_documents + chunks + embeddings vector +
+        // notificación broadcast. Síncrono (puede tardar 30-90s según
+        // tamaño del texto y latencia de OpenAI embeddings).
+        const result = await ingestPublicationToCorpus(request.params.id, userId);
 
         return reply.send({
           ok: true,
-          legalDocId: docId,
-          note: 'Documento agregado al corpus. La vectorización se procesará en background.',
+          legalDocId: result.legalDocId,
+          chunksCreated: result.chunksCreated,
+          embeddingsGenerated: result.embeddingsGenerated,
+          embeddingsVectorized: result.embeddingsVectorized,
+          notifiedUsers: result.notifiedUsers,
+          note: `Norma agregada al corpus con ${result.chunksCreated} chunks vectorizados. ${result.notifiedUsers} usuarios notificados.`,
         });
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'approve publication failed');
