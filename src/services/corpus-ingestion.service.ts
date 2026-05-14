@@ -127,22 +127,29 @@ export async function ingestPublicationToCorpus(
   const docId = randomUUID();
 
   emit('insert-legal-doc', { docId, title, contentLength: fullContent.length });
+  // Mapear publication_type (string del scraper/catálogo) a los enums reales
+  // de Postgres: NormType y PublicationType. El scraper produce valores como
+  // 'ley_organica' que NO son valores válidos del enum NormType.
+  const normTypeEnum = publicationTypeToNormType(pub.publication_type);
+  const publicationTypeEnum = inferPublicationTypeFromEdition(pub.edition_number);
+
   // 4) INSERT legal_documents
   await prisma.$executeRawUnsafe(
     `INSERT INTO public.legal_documents
        (id, title, norm_title, content, norm_type, publication_type,
         publication_number, publication_date, jurisdiction, country_code,
         category, uploaded_by, is_active, metadata, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $13::jsonb, now(), now())`,
+     VALUES ($1, $2, $3, $4, $5::"NormType", $6::"PublicationType", $7, $8,
+             $9::"Jurisdiction", $10, $11, $12, true, $13::jsonb, now(), now())`,
     docId,
     title,
     (pub.title || '').slice(0, 500),
     fullContent,
-    pub.publication_type || 'general',
-    pub.publication_type,
+    normTypeEnum,
+    publicationTypeEnum,
     pub.publication_number,
     pub.edition_date,
-    'national',
+    'NACIONAL',                  // enum Jurisdiction: NACIONAL | PROVINCIAL | MUNICIPAL | INTERNACIONAL
     'EC',
     pub.ai_classification || 'general',
     userId,
@@ -159,6 +166,7 @@ export async function ingestPublicationToCorpus(
       registryPublicationId: pub.id,
       approvedBy: userId,
       approvedAt: new Date().toISOString(),
+      originalPublicationType: pub.publication_type,  // preservamos el valor original para debug
     }),
   );
 
@@ -308,4 +316,50 @@ export async function autoIngestQualified(opts: {
   }
 
   return result;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ENUM MAPPERS · NormType, PublicationType, Jurisdiction
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Mapea el publication_type del scraper/catálogo (formato 'ley_organica') al
+ * enum NormType de Postgres (ORGANIC_LAW). Los valores del scraper son
+ * heredados del parser de PDFs; los del enum siguen una convención propia.
+ */
+function publicationTypeToNormType(pt: string | null | undefined): string {
+  switch ((pt || '').toLowerCase().trim()) {
+    case 'ley_organica':         return 'ORGANIC_LAW';
+    case 'codigo_organico':      return 'ORGANIC_CODE';
+    case 'ley_ordinaria':        return 'ORDINARY_LAW';
+    case 'codigo_ordinario':     return 'ORDINARY_CODE';
+    case 'codigo':               return 'ORDINARY_CODE';
+    case 'decreto_ejecutivo':    return 'REGULATION_EXECUTIVE';
+    case 'decreto':              return 'REGULATION_EXECUTIVE';
+    case 'acuerdo_ministerial':  return 'ADMINISTRATIVE_AGREEMENT';
+    case 'acuerdo':              return 'ADMINISTRATIVE_AGREEMENT';
+    case 'resolucion':           return 'RESOLUTION_ADMINISTRATIVE';
+    case 'reglamento':           return 'REGULATION_GENERAL';
+    case 'ordenanza':            return 'ORDINANCE_MUNICIPAL';
+    case 'constitucion':
+    case 'constitucional':       return 'CONSTITUTIONAL_NORM';
+    case 'tratado':
+    case 'convenio':             return 'INTERNATIONAL_TREATY';
+    default:                     return 'ORDINARY_LAW';  // fallback razonable
+  }
+}
+
+/**
+ * Infiere el PublicationType (ORDINARIO / SUPLEMENTO / SEGUNDO_SUPLEMENTO /
+ * SUPLEMENTO_ESPECIAL / EDICION_CONSTITUCIONAL) desde el edition_number del
+ * RO. Los suplementos suelen venir con prefijo "Suplemento N°", "Segundo
+ * Suplemento", etc.
+ */
+function inferPublicationTypeFromEdition(editionNumber: string | null | undefined): string {
+  const e = (editionNumber || '').toLowerCase();
+  if (e.includes('segundo suplemento')) return 'SEGUNDO_SUPLEMENTO';
+  if (e.includes('edición constitucional') || e.includes('edicion constitucional')) return 'EDICION_CONSTITUCIONAL';
+  if (e.includes('edición especial') || e.includes('edicion especial')) return 'SUPLEMENTO_ESPECIAL';
+  if (e.includes('suplemento')) return 'SUPLEMENTO';
+  return 'ORDINARIO';
 }
