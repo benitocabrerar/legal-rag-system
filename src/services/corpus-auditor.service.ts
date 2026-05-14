@@ -89,103 +89,152 @@ export async function runFullAudit(opts: AuditOptions = {}): Promise<AuditResult
   });
 
   // 3) Iterar catálogo
+  //
+  // CADA norma corre dentro de try/catch — un error en una sola norma
+  // (PDF caído, conflict en DB, timeout, etc.) NO debe abortar el audit
+  // completo. Marcamos como ingested_fail con el error y seguimos.
+  //
+  // El try/finally exterior garantiza que el run header SIEMPRE se cierre
+  // con totales reales y status='completed' o 'failed', evitando registros
+  // huérfanos con completed_at=null y total_present=0 (que era lo que
+  // estábamos viendo en los 3 últimos runs).
   let present = 0;
   let missing = 0;
   let ingestedOk = 0;
   let ingestedFail = 0;
   let chunksAdded = 0;
-
-  for (let i = 0; i < NATIONAL_LAWS_CATALOG.length; i++) {
-    const law = NATIONAL_LAWS_CATALOG[i];
-    const pct = 10 + Math.round((i / NATIONAL_LAWS_CATALOG.length) * 80);
-
-    emit('item-start', {
-      index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-      canonicalName: law.canonicalName, shortName: law.shortName,
-      category: law.category,
-    });
-
-    // Matching contra el corpus
-    const match = findBestMatch(law, corpus);
-    if (match) {
-      present++;
-      await persistItem(runId, law, {
-        status: 'present',
-        matchedLegalDocId: match.id,
-        matchSimilarity: match.score,
-        matchMethod: match.method,
-      });
-      emit('item-present', {
-        index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-        canonicalName: law.canonicalName,
-        matchedLegalDocId: match.id,
-        similarity: match.score,
-      });
-      continue;
-    }
-
-    // No está en el corpus — intentar ingestión
-    missing++;
-    await persistItem(runId, law, { status: 'missing' });
-
-    if (opts.dryRun) {
-      emit('item-missing', {
-        index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-        canonicalName: law.canonicalName, dryRun: true,
-      });
-      continue;
-    }
-
-    // Intentar buscar en el sitio del RO
-    emit('item-searching', {
-      index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-      canonicalName: law.canonicalName,
-    });
-
-    const ingestion = await tryIngestFromRo(law, runId);
-    if (ingestion.success) {
-      ingestedOk++;
-      chunksAdded += ingestion.chunksCreated;
-      emit('item-ingested', {
-        index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-        canonicalName: law.canonicalName,
-        chunksCreated: ingestion.chunksCreated,
-        durationMs: ingestion.durationMs,
-      });
-    } else {
-      ingestedFail++;
-      emit('item-failed', {
-        index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
-        canonicalName: law.canonicalName,
-        error: ingestion.error,
-      });
-    }
-  }
-
-  // 4) Generar reporte HTML
-  emit('phase', { phase: 'generating-report', label: 'Generando reporte HTML…', pct: 92 });
+  let runStatus: 'completed' | 'failed' = 'completed';
+  let fatalError: string | null = null;
   let htmlReportPath: string | null = null;
-  try {
-    const { generateAuditHtmlReport } = await import('./corpus-audit-report.service.js');
-    htmlReportPath = await generateAuditHtmlReport(runId);
-  } catch (e: any) {
-    errors.push(`Report generation failed: ${e?.message || 'unknown'}`);
-  }
 
-  // 5) Cerrar run
-  await prisma.$executeRawUnsafe(
-    `UPDATE public.corpus_audit_runs
-        SET completed_at = now(),
-            status = 'completed',
-            total_present = $2,
-            total_missing = $3,
-            total_ingested_ok = $4,
-            total_ingested_fail = $5,
-            total_chunks_added = $6,
-            html_report_path = $7
-      WHERE id = $1::uuid`,
-    runId, present, missing, ingestedOk, ingestedFail, chunksAdded, htmlReportPath,
-  );
+  try {
+    for (let i = 0; i < NATIONAL_LAWS_CATALOG.length; i++) {
+      const law = NATIONAL_LAWS_CATALOG[i];
+      const pct = 10 + Math.round((i / NATIONAL_LAWS_CATALOG.length) * 80);
+
+      emit('item-start', {
+        index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+        canonicalName: law.canonicalName, shortName: law.shortName,
+        category: law.category,
+      });
+
+      try {
+        // Matching contra el corpus
+        const match = findBestMatch(law, corpus);
+        if (match) {
+          present++;
+          await persistItem(runId, law, {
+            status: 'present',
+            matchedLegalDocId: match.id,
+            matchSimilarity: match.score,
+            matchMethod: match.method,
+          });
+          emit('item-present', {
+            index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+            canonicalName: law.canonicalName,
+            matchedLegalDocId: match.id,
+            similarity: match.score,
+          });
+          continue;
+        }
+
+        // No está en el corpus — intentar ingestión
+        missing++;
+        await persistItem(runId, law, { status: 'missing' });
+
+        if (opts.dryRun) {
+          emit('item-missing', {
+            index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+            canonicalName: law.canonicalName, dryRun: true,
+          });
+          continue;
+        }
+
+        // Intentar buscar en el sitio del RO
+        emit('item-searching', {
+          index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+          canonicalName: law.canonicalName,
+        });
+
+        const ingestion = await tryIngestFromRo(law, runId);
+        if (ingestion.success) {
+          ingestedOk++;
+          chunksAdded += ingestion.chunksCreated;
+          emit('item-ingested', {
+            index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+            canonicalName: law.canonicalName,
+            chunksCreated: ingestion.chunksCreated,
+            durationMs: ingestion.durationMs,
+          });
+        } else {
+          ingestedFail++;
+          emit('item-failed', {
+            index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+            canonicalName: law.canonicalName,
+            error: ingestion.error,
+          });
+        }
+      } catch (perItemErr: any) {
+        // Cualquier excepción no manejada por tryIngestFromRo (p.ej. conflict
+        // en INSERT, timeout no esperado, error de Prisma) cae aquí y se
+        // contabiliza como fail individual — el audit sigue con la próxima.
+        ingestedFail++;
+        const errMsg = perItemErr?.message || 'Unknown per-item error';
+        errors.push(`${law.canonicalName}: ${errMsg}`);
+        try {
+          await updateItemStatus(runId, law, {
+            status: 'ingested_fail',
+            error: errMsg.slice(0, 1000),
+          });
+        } catch { /* ignore update failure */ }
+        // eslint-disable-next-line no-console
+        console.error(`[audit] EXCEPTION en ${law.canonicalName}: ${errMsg}`);
+        emit('item-failed', {
+          index: i + 1, total: NATIONAL_LAWS_CATALOG.length, pct,
+          canonicalName: law.canonicalName,
+          error: errMsg,
+        });
+      }
+    }
+
+    // 4) Generar reporte HTML (también aislado — no debe matar el run)
+    emit('phase', { phase: 'generating-report', label: 'Generando reporte HTML…', pct: 92 });
+    try {
+      const { generateAuditHtmlReport } = await import('./corpus-audit-report.service.js');
+      htmlReportPath = await generateAuditHtmlReport(runId);
+    } catch (e: any) {
+      errors.push(`Report generation failed: ${e?.message || 'unknown'}`);
+    }
+  } catch (fatalErr: any) {
+    // Error fatal NO esperado del loop (p.ej. error de infra antes del
+    // try/catch interno). Marcamos run como failed pero seguimos al finally
+    // para cerrar el header de la auditoría.
+    runStatus = 'failed';
+    fatalError = fatalErr?.message || 'Unknown fatal error';
+    errors.push(`Fatal: ${fatalError}`);
+    // eslint-disable-next-line no-console
+    console.error(`[audit] FATAL: ${fatalError}`);
+  } finally {
+    // 5) Cerrar run SIEMPRE — incluso si hubo error fatal — para evitar
+    // que el run quede en estado 'running' con completed_at=null.
+    try {
+      await prisma.$executeRawUnsafe(
+        `UPDATE public.corpus_audit_runs
+            SET completed_at = now(),
+                status = $2,
+                total_present = $3,
+                total_missing = $4,
+                total_ingested_ok = $5,
+                total_ingested_fail = $6,
+                total_chunks_added = $7,
+                html_report_path = $8
+          WHERE id = $1::uuid`,
+        runId, runStatus, present, missing, ingestedOk, ingestedFail, chunksAdded, htmlReportPath,
+      );
+    } catch (closeErr: any) {
+      errors.push(`Run header close failed: ${closeErr?.message || 'unknown'}`);
+    }
+  }
 
   const result: AuditResult = {
     runId,
@@ -200,7 +249,7 @@ export async function runFullAudit(opts: AuditOptions = {}): Promise<AuditResult
     errors,
   };
 
-  emit('done', { ...result, finishedAt: new Date().toISOString() });
+  emit('done', { ...result, finishedAt: new Date().toISOString(), fatalError });
 
   return result;
 }
@@ -426,15 +475,32 @@ function buildSearchQuery(law: NationalLaw): string {
  * usa este texto directamente sin necesidad de buscar nada en el RO.
  */
 async function createPublicationFromCanonical(law: NationalLaw, fullText: string): Promise<string> {
+  // IDEMPOTENTE: si un run anterior creó la registry_publications pero
+  // falló al hacer la ingesta (p.ej. por el bug previo del enum), la
+  // fila queda huérfana. ON CONFLICT DO UPDATE recicla esa fila con el
+  // texto fresco y devuelve su id existente para que ingestPublicationToCorpus
+  // termine el trabajo.
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
     `INSERT INTO public.registry_publications (
         id, country_code, source, edition_number, edition_date,
         edition_url, edition_pdf_url, publication_type, publication_number,
         title, issuing_entity, raw_text_excerpt, raw_text_length,
         ai_summary, ai_classification, ai_relevance_score, ai_keywords,
         status
-      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::text[], 'analyzed')`,
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::text[], 'analyzed')
+      ON CONFLICT (source, edition_number, publication_number, title)
+      DO UPDATE SET
+        raw_text_excerpt = EXCLUDED.raw_text_excerpt,
+        raw_text_length  = EXCLUDED.raw_text_length,
+        edition_pdf_url  = COALESCE(EXCLUDED.edition_pdf_url, public.registry_publications.edition_pdf_url),
+        edition_url      = COALESCE(EXCLUDED.edition_url,     public.registry_publications.edition_url),
+        ai_summary       = EXCLUDED.ai_summary,
+        ai_classification= EXCLUDED.ai_classification,
+        ai_keywords      = EXCLUDED.ai_keywords,
+        status           = 'analyzed',
+        updated_at       = now()
+      RETURNING id`,
     id,
     'EC',
     'registro_oficial_ec_canonical',           // marca: vino de URL oficial directa
@@ -453,7 +519,7 @@ async function createPublicationFromCanonical(law: NationalLaw, fullText: string
     1.0,
     law.searchKeywords || [],
   );
-  return id;
+  return rows[0]?.id || id;
 }
 
 function mapNormTypeToPublicationType(t: NationalLaw['normType']): string {
@@ -477,15 +543,28 @@ async function createSyntheticPublication(
   // Insertar una registry_publications con status='analyzed' para que
   // el pipeline existente la procese normalmente. Es "sintética" porque
   // viene del catálogo, no de un scan diario.
+  // Idempotente con ON CONFLICT DO UPDATE para soportar reruns.
   const id = randomUUID();
-  await prisma.$executeRawUnsafe(
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
     `INSERT INTO public.registry_publications (
         id, country_code, source, edition_number, edition_date,
         edition_url, edition_pdf_url, publication_type, publication_number,
         title, issuing_entity, raw_text_excerpt, raw_text_length,
         ai_summary, ai_classification, ai_relevance_score, ai_keywords,
         status
-      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::text[], 'analyzed')`,
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::text[], 'analyzed')
+      ON CONFLICT (source, edition_number, publication_number, title)
+      DO UPDATE SET
+        edition_pdf_url  = COALESCE(EXCLUDED.edition_pdf_url, public.registry_publications.edition_pdf_url),
+        edition_url      = COALESCE(EXCLUDED.edition_url,     public.registry_publications.edition_url),
+        raw_text_excerpt = EXCLUDED.raw_text_excerpt,
+        raw_text_length  = EXCLUDED.raw_text_length,
+        ai_summary       = EXCLUDED.ai_summary,
+        ai_classification= EXCLUDED.ai_classification,
+        ai_keywords      = EXCLUDED.ai_keywords,
+        status           = 'analyzed',
+        updated_at       = now()
+      RETURNING id`,
     id,
     'EC',
     'registro_oficial_ec_audit',
@@ -504,7 +583,7 @@ async function createSyntheticPublication(
     1.0,
     law.searchKeywords || [],
   );
-  return id;
+  return rows[0]?.id || id;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
