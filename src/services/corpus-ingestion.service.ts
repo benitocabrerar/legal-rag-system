@@ -145,7 +145,14 @@ export async function ingestPublicationToCorpus(
   let chunksCreated = 0;
   let embeddingsGenerated = 0;
   try {
-    const r = await svc.regenerateEmbeddings(docId, userId);
+    // Chunks de 1000 chars con 150 chars de overlap (~15%). El overlap
+    // preserva referencias cruzadas entre fragmentos legales, evita
+    // cortar artículos a la mitad y mejora retrieval del RAG en preguntas
+    // que abarcan límites de chunk.
+    const r = await svc.regenerateEmbeddings(docId, userId, {
+      chunkSize: 1000,
+      overlap: 150,
+    });
     chunksCreated = r.totalChunks;
     embeddingsGenerated = r.embeddingsGenerated;
   } catch (e: any) {

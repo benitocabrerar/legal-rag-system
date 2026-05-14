@@ -66,11 +66,89 @@ export function NotificationBell() {
     } catch { /* silent */ }
   };
 
-  // Polling cada 60s
+  // SSE realtime: push instantáneo de cambios. Usamos fetch+ReadableStream
+  // (no EventSource) porque permite enviar Authorization: Bearer en
+  // headers — patrón usado por litigation-warmup y scan-now en el resto
+  // del codebase. Fallback a polling 60s si la conexión falla.
   useEffect(() => {
     void refreshCount();
-    const t = setInterval(() => { void refreshCount(); }, 60_000);
-    return () => clearInterval(t);
+
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let abortController: AbortController | null = null;
+    let mounted = true;
+
+    const startPolling = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => { void refreshCount(); }, 60_000);
+    };
+
+    const startSse = async () => {
+      try {
+        const { getAuthToken } = await import('@/lib/get-auth-token');
+        const token = await getAuthToken();
+        if (!token) { startPolling(); return; }
+
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        abortController = new AbortController();
+        const r = await fetch(`${API_URL}/api/v1/notifications/stream`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+          signal: abortController.signal,
+        });
+        if (!r.ok || !r.body) {
+          startPolling();
+          return;
+        }
+
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        // Consumimos el stream en background. No bloqueamos el render.
+        (async () => {
+          try {
+            while (mounted) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              let idx;
+              while ((idx = buffer.indexOf('\n\n')) >= 0) {
+                const chunk = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
+                const evLine   = lines.find((l) => l.startsWith('event:'));
+                const dataLine = lines.find((l) => l.startsWith('data:'));
+                if (!dataLine) continue;
+                const event = evLine ? evLine.slice(6).trim() : 'message';
+                let payload: any = null;
+                try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+
+                if (event === 'count') {
+                  setCount(payload.count || 0);
+                  setHighCount(payload.highCount || 0);
+                } else if (event === 'new') {
+                  // Si dropdown abierto, refresca; sino solo actualiza count
+                  if (open) void loadItems();
+                }
+              }
+            }
+          } catch {
+            // Stream caído (network, server reboot, etc) → fallback
+            if (mounted) startPolling();
+          }
+        })();
+      } catch {
+        startPolling();
+      }
+    };
+
+    void startSse();
+
+    return () => {
+      mounted = false;
+      if (pollTimer) clearInterval(pollTimer);
+      if (abortController) abortController.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Click fuera → cerrar

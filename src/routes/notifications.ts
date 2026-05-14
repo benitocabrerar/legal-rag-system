@@ -12,6 +12,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma.js';
+import { setSseHeaders, startSseKeepalive } from '../lib/sse-cors.js';
 
 export async function notificationsRoutes(fastify: FastifyInstance) {
   // ─── GET /notifications ────────────────────────────────────────────
@@ -134,6 +135,87 @@ export async function notificationsRoutes(fastify: FastifyInstance) {
         userId,
       );
       return reply.send({ ok: true, updated: Number(result) || 0 });
+    },
+  );
+
+  // ─── GET /notifications/stream (SSE) ───────────────────────────────
+  // Push de cambios al cliente: emite 'count' cada vez que el unread
+  // cambia y 'new' cuando aparece una notificación nueva desde el último
+  // poll. Polling interno cada 5s (mucho más liviano que 60s del cliente
+  // y se ejecuta server-side donde es trivial).
+  //
+  // El cliente reemplaza su polling de /unread-count por una conexión
+  // EventSource a este endpoint. Mantiene fallback si la conexión cae.
+  fastify.get(
+    '/notifications/stream',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+
+      setSseHeaders(request, reply);
+      const stopKa = startSseKeepalive(reply);
+
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      // Estado del último snapshot enviado
+      let lastUnreadCount = -1;
+      let lastHighCount   = -1;
+      let lastCheckedAt   = new Date();
+
+      const tick = async () => {
+        try {
+          const counts = await prisma.$queryRawUnsafe<Array<{ n: bigint; high_n: bigint }>>(
+            `SELECT COUNT(*)::bigint AS n,
+                    COUNT(*) FILTER (WHERE priority IN ('high','critical'))::bigint AS high_n
+               FROM public.notifications
+              WHERE user_id = $1 AND is_read = false`,
+            userId,
+          );
+          const c  = Number(counts[0]?.n     || 0);
+          const hc = Number(counts[0]?.high_n|| 0);
+
+          if (c !== lastUnreadCount || hc !== lastHighCount) {
+            write('count', { count: c, highCount: hc });
+            lastUnreadCount = c;
+            lastHighCount   = hc;
+          }
+
+          // ¿Hay notificaciones MÁS RECIENTES que la última verificación?
+          // Sirve para emitir un 'new' que el cliente usa para refrescar
+          // su dropdown sin tener que abrirlo.
+          const newest = await prisma.$queryRawUnsafe<Array<any>>(
+            `SELECT id, type, title, priority, action_url, created_at
+               FROM public.notifications
+              WHERE user_id = $1 AND created_at > $2
+              ORDER BY created_at DESC
+              LIMIT 5`,
+            userId, lastCheckedAt,
+          );
+          if (newest.length > 0) {
+            write('new', { items: newest });
+            lastCheckedAt = new Date(newest[0].created_at);
+          }
+        } catch { /* silent — siguiente tick reintentará */ }
+      };
+
+      // Tick inicial inmediato (para que el cliente reciba el snapshot)
+      await tick();
+
+      const interval = setInterval(() => { void tick(); }, 5_000);
+
+      // Cleanup al desconectar
+      request.raw.on('close', () => {
+        clearInterval(interval);
+        stopKa();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      });
+
+      return reply;
     },
   );
 }

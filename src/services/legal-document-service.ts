@@ -442,11 +442,20 @@ export class LegalDocumentService {
   }
 
   /**
-   * Private helper to create document chunks with embeddings (async, no transaction)
+   * Private helper to create document chunks with embeddings (async, no transaction).
+   *
+   * El chunking incluye overlap configurable para preservar contexto en
+   * los bordes de chunk (evita cortar oraciones a la mitad). Para
+   * documentos legales con artículos densos un overlap de 150 chars
+   * sobre chunks de 1000 chars (15%) preserva la referencia cruzada
+   * entre fragmentos sin inflar demasiado el almacenamiento.
+   *
+   * Defaults backward-compat: { chunkSize: 1000, overlap: 0 }.
    */
   private async createDocumentChunksAsync(
     documentId: string,
-    content: string
+    content: string,
+    opts: { chunkSize?: number; overlap?: number } = {}
   ): Promise<{
     chunks: any[];
     totalChunks: number;
@@ -454,12 +463,18 @@ export class LegalDocumentService {
     embeddingsFailed: number;
     success: boolean;
   }> {
-    const chunkSize = 1000;
-    const chunks = [];
+    const chunkSize = Math.max(200, opts.chunkSize ?? 1000);
+    const overlap   = Math.max(0, Math.min(chunkSize - 100, opts.overlap ?? 0));
+    const step      = chunkSize - overlap;
+    const chunks: string[] = [];
 
-    // Split content into chunks
-    for (let i = 0; i < content.length; i += chunkSize) {
-      chunks.push(content.slice(i, i + chunkSize));
+    // Split content into chunks with overlap (sliding window)
+    for (let i = 0; i < content.length; i += step) {
+      const slice = content.slice(i, i + chunkSize);
+      if (slice.length === 0) break;
+      chunks.push(slice);
+      // Si el chunk ya alcanzó el final, no añadimos uno tail que repita
+      if (i + chunkSize >= content.length) break;
     }
 
     // Generate embeddings and store chunks
@@ -617,7 +632,8 @@ export class LegalDocumentService {
    */
   async regenerateEmbeddings(
     documentId: string,
-    userId: string
+    userId: string,
+    chunkOpts?: { chunkSize?: number; overlap?: number }
   ): Promise<{
     success: boolean;
     totalChunks: number;
@@ -659,7 +675,8 @@ export class LegalDocumentService {
     // 3. Regenerate chunks and embeddings (async, outside transaction)
     const vectorizationResult = await this.createDocumentChunksAsync(
       documentId,
-      document.content
+      document.content,
+      chunkOpts,
     );
 
     // 4. Create audit log
