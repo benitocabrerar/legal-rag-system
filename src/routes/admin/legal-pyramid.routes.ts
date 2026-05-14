@@ -20,6 +20,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../../lib/prisma.js';
+import { ensurePdfStored, archiveAllPdfs } from '../../services/legal-pdf-archive.service.js';
+import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
 
 export async function legalPyramidRoutes(fastify: FastifyInstance) {
   const requireAdmin = async (request: any, reply: any) => {
@@ -233,6 +235,8 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
                 ld.publication_number, ld.publication_date,
                 ld.last_reform_date, ld.jurisdiction, ld.country_code,
                 ld.category, ld.metadata, ld.created_at, ld.updated_at,
+                ld.stored_pdf_url, ld.stored_pdf_size_bytes,
+                ld.pdf_storage_status,
                 LENGTH(ld.content) AS content_length,
                 (SELECT COUNT(*)::int FROM public.legal_document_chunks
                   WHERE legal_document_id = ld.id) AS total_chunks,
@@ -244,15 +248,137 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
       );
       if (docs.length === 0) return reply.code(404).send({ error: 'Documento no encontrado' });
       const d = docs[0];
+      // PRIORIDAD: stored_pdf_url (nuestro bucket, link estable) >
+      //            editionPdfUrl (RO oficial) > canonicalPdfUrl (curado)
+      const pdfUrl =
+        d.stored_pdf_url ||
+        d.metadata?.editionPdfUrl ||
+        d.metadata?.canonicalPdfUrl ||
+        null;
       return reply.send({
         document: {
           ...d,
-          pdf_url: d.metadata?.editionPdfUrl || d.metadata?.canonicalPdfUrl || null,
+          pdf_url: pdfUrl,
+          pdf_source: d.stored_pdf_url
+            ? 'archived'
+            : d.metadata?.editionPdfUrl
+              ? 'registro_oficial'
+              : d.metadata?.canonicalPdfUrl
+                ? 'canonical_external'
+                : null,
+          stored_pdf_url: d.stored_pdf_url,
+          stored_pdf_size: d.stored_pdf_size_bytes,
+          pdf_storage_status: d.pdf_storage_status,
           edition_url: d.metadata?.editionUrl || null,
           ai_summary: d.metadata?.aiSummary || null,
           ai_keywords: d.metadata?.aiKeywords || [],
           source: d.metadata?.source || 'manual',
         },
+      });
+    },
+  );
+
+  // ─── POST /admin/legal-pyramid/document/:id/archive-pdf ────────────
+  // Descarga el PDF original y lo sube a nuestro bucket Supabase Storage.
+  // Idempotente: si ya está, retorna el URL existente.
+  fastify.post<{ Params: { id: string } }>(
+    '/admin/legal-pyramid/document/:id/archive-pdf',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      try {
+        const r = await ensurePdfStored(request.params.id);
+        return reply.send(r);
+      } catch (e: any) {
+        return reply.code(500).send({ error: e?.message || 'Archive failed' });
+      }
+    },
+  );
+
+  // ─── POST /admin/legal-pyramid/archive-all-pdfs (SSE) ──────────────
+  // Proceso masivo: descarga y archiva en bucket TODOS los PDFs faltantes.
+  // Cada archivo emite eventos granulares en tiempo real.
+  fastify.post<{ Body: { retryFailed?: boolean; limit?: number } }>(
+    '/admin/legal-pyramid/archive-all-pdfs',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const userId = (request.user as any).id;
+      const body = request.body || ({} as any);
+
+      setSseHeaders(request, reply);
+      const stopKa = startSseKeepalive(reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      try {
+        const result = await archiveAllPdfs({
+          triggeredBy: `manual:${userId}`,
+          retryFailed: body.retryFailed === true,
+          limit: body.limit,
+          onProgress: (event, data) => write(event, data),
+        });
+        write('done', { ...result, finishedAt: new Date().toISOString() });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'archive-all-pdfs failed');
+        write('error', { error: e?.message || 'Archive run failed' });
+      } finally {
+        stopKa();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
+      return reply;
+    },
+  );
+
+  // ─── GET /admin/legal-pyramid/pdf-archive-stats ────────────────────
+  fastify.get(
+    '/admin/legal-pyramid/pdf-archive-stats',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        total: bigint;
+        stored: bigint;
+        pending: bigint;
+        failed: bigint;
+        no_source: bigint;
+        total_bytes: bigint;
+      }>>(
+        `SELECT
+           COUNT(*)::bigint                                                    AS total,
+           COUNT(*) FILTER (WHERE pdf_storage_status = 'stored')::bigint       AS stored,
+           COUNT(*) FILTER (WHERE pdf_storage_status IS NULL OR pdf_storage_status = 'pending')::bigint AS pending,
+           COUNT(*) FILTER (WHERE pdf_storage_status = 'failed')::bigint       AS failed,
+           COUNT(*) FILTER (WHERE pdf_storage_status = 'no_source')::bigint    AS no_source,
+           COALESCE(SUM(stored_pdf_size_bytes), 0)::bigint                     AS total_bytes
+           FROM public.legal_documents
+          WHERE is_active = true`,
+      );
+      const recentRuns = await prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, started_at, completed_at, status,
+                total_requested, total_uploaded, total_skipped, total_failed,
+                total_no_source, total_bytes, total_duration_ms
+           FROM public.legal_pdf_archive_runs
+          ORDER BY started_at DESC LIMIT 10`,
+      );
+      const s = rows[0] || ({} as any);
+      return reply.send({
+        stats: {
+          total: Number(s.total || 0),
+          stored: Number(s.stored || 0),
+          pending: Number(s.pending || 0),
+          failed: Number(s.failed || 0),
+          no_source: Number(s.no_source || 0),
+          total_bytes: Number(s.total_bytes || 0),
+          coverage_pct: Number(s.total || 0) > 0
+            ? Math.round((Number(s.stored) / Number(s.total)) * 100)
+            : 0,
+        },
+        recentRuns,
       });
     },
   );

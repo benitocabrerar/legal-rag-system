@@ -16,7 +16,8 @@ import Link from 'next/link';
 import {
   Loader2, ChevronDown, ChevronRight, Download, ExternalLink, FileText,
   Search, X, BookOpen, Calendar, Hash, Tag, Eye, AlertTriangle,
-  Layers, Globe, Sparkles, ScrollText,
+  Layers, Globe, Sparkles, ScrollText, Archive, CheckCircle2, UploadCloud,
+  HardDrive,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -86,6 +87,10 @@ interface DocDetail {
   category: string | null;
   metadata: any;
   pdf_url: string | null;
+  pdf_source: 'archived' | 'registro_oficial' | 'canonical_external' | null;
+  stored_pdf_url: string | null;
+  stored_pdf_size: number | null;
+  pdf_storage_status: string | null;
   edition_url: string | null;
   ai_summary: string | null;
   ai_keywords: string[];
@@ -93,6 +98,31 @@ interface DocDetail {
   content_length: number;
   total_chunks: number;
   vectorized_chunks: number;
+}
+
+interface ArchiveStats {
+  total: number;
+  stored: number;
+  pending: number;
+  failed: number;
+  no_source: number;
+  total_bytes: number;
+  coverage_pct: number;
+}
+
+interface ArchiveProgress {
+  pct: number;
+  total: number;
+  done: number;
+  currentFile: { title: string; index: number } | null;
+  uploaded: number;
+  skipped: number;
+  failed: number;
+  noSource: number;
+  bytes: number;
+  liveLog: Array<{ ts: number; type: string; text: string; detail?: string }>;
+  finished?: boolean;
+  error?: string;
 }
 
 // Colores por nivel (mapa estático para Tailwind tree-shake)
@@ -118,6 +148,69 @@ export default function LegalPyramidPage() {
   const [loadingLevel, setLoadingLevel] = useState<string | null>(null);
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
+  const [archiveStats, setArchiveStats] = useState<ArchiveStats | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress | null>(null);
+
+  const loadArchiveStats = async () => {
+    try {
+      const r = await api.get<{ stats: ArchiveStats }>('/admin/legal-pyramid/pdf-archive-stats');
+      setArchiveStats(r.data.stats);
+    } catch { /* silent */ }
+  };
+  useEffect(() => { void loadArchiveStats(); }, []);
+
+  const startArchiveAll = async () => {
+    if (!confirm(`¿Descargar y archivar todos los PDFs faltantes al storage? Esto puede tardar 10-30 min según cuántos haya. ${archiveStats?.pending || 0} pendientes.`)) return;
+    setArchiving(true);
+    setArchiveProgress({
+      pct: 0, total: 0, done: 0, currentFile: null,
+      uploaded: 0, skipped: 0, failed: 0, noSource: 0, bytes: 0,
+      liveLog: [],
+    });
+    try {
+      const { getAuthToken } = await import('@/lib/get-auth-token');
+      const token = await getAuthToken();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const r = await fetch(`${API_URL}/api/v1/admin/legal-pyramid/archive-all-pdfs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({}),
+      });
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
+          const evLine = lines.find((l) => l.startsWith('event:'));
+          const dataLine = lines.find((l) => l.startsWith('data:'));
+          if (!dataLine) continue;
+          const event = evLine ? evLine.slice(6).trim() : 'message';
+          let payload: any = null;
+          try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+
+          setArchiveProgress((p) => p ? updateArchiveProgress(p, event, payload) : p);
+        }
+      }
+    } catch (e: any) {
+      setArchiveProgress((p) => p ? { ...p, error: e?.message || 'Error desconocido' } : p);
+    } finally {
+      setArchiving(false);
+      await loadArchiveStats();
+    }
+  };
 
   useEffect(() => {
     void (async () => {
@@ -201,6 +294,54 @@ export default function LegalPyramidPage() {
         </div>
       )}
 
+      {/* ═══ PDF ARCHIVE STATUS ═══ */}
+      {archiveStats && (
+        <div className={`rounded-xl border-2 p-4 ${
+          archiveStats.coverage_pct >= 90 ? 'border-emerald-200 bg-emerald-50' :
+          archiveStats.coverage_pct >= 50 ? 'border-amber-200 bg-amber-50' :
+          'border-rose-200 bg-rose-50'
+        }`}>
+          <div className="flex items-start gap-4 flex-wrap">
+            <div className={`w-12 h-12 rounded-xl grid place-items-center text-white shadow-md shrink-0 ${
+              archiveStats.coverage_pct >= 90 ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
+              archiveStats.coverage_pct >= 50 ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+              'bg-gradient-to-br from-rose-500 to-red-600'
+            }`}>
+              <Archive className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className={`text-sm font-black ${
+                archiveStats.coverage_pct >= 90 ? 'text-emerald-900' :
+                archiveStats.coverage_pct >= 50 ? 'text-amber-900' :
+                'text-rose-900'
+              }`}>
+                📦 Archivo de PDFs · {archiveStats.coverage_pct}% en nuestro Supabase Storage
+              </h3>
+              <p className="text-[11px] text-slate-700 mt-1 leading-relaxed">
+                <strong className="text-emerald-700">{archiveStats.stored}</strong> almacenados ·{' '}
+                <strong className="text-amber-700">{archiveStats.pending}</strong> pendientes ·{' '}
+                <strong className="text-rose-700">{archiveStats.failed}</strong> fallaron ·{' '}
+                <strong className="text-slate-600">{archiveStats.no_source}</strong> sin URL fuente ·{' '}
+                <strong className="text-violet-700">{formatBytes(archiveStats.total_bytes)}</strong> totales
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Garantizamos disponibilidad de los PDFs independientemente de que los sitios externos sigan vivos.
+              </p>
+            </div>
+            {(archiveStats.pending > 0 || archiveStats.failed > 0) && (
+              <button
+                onClick={startArchiveAll}
+                disabled={archiving}
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition"
+              >
+                {archiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                {archiving ? 'Archivando…' : `Archivar ${archiveStats.pending} pendientes`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Stats bar */}
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -276,8 +417,125 @@ export default function LegalPyramidPage() {
         <DocumentModal
           docId={selectedDoc}
           onClose={() => setSelectedDoc(null)}
+          onArchiveSuccess={loadArchiveStats}
         />
       )}
+
+      {/* Modal SSE archive masivo */}
+      {archiveProgress && (
+        <ArchiveProgressModal
+          progress={archiveProgress}
+          onClose={() => { if (!archiving) setArchiveProgress(null); }}
+          running={archiving}
+        />
+      )}
+    </div>
+  );
+}
+
+function ArchiveProgressModal({ progress, onClose, running }: {
+  progress: ArchiveProgress;
+  onClose: () => void;
+  running: boolean;
+}) {
+  const isFinished = progress.finished === true;
+  const hasError = progress.error !== undefined;
+  const canClose = !running || isFinished || hasError;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
+      onClick={(e) => e.target === e.currentTarget && canClose && onClose()}
+    >
+      <div className="w-full max-w-3xl bg-gradient-to-br from-slate-950 via-violet-950/80 to-slate-950 rounded-2xl shadow-2xl border border-violet-500/30 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
+        <div className="px-6 pt-5 pb-4 border-b border-violet-500/20">
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-2xl grid place-items-center text-white shrink-0 ${
+              isFinished && !hasError ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
+              hasError ? 'bg-gradient-to-br from-rose-500 to-red-600' :
+              'bg-gradient-to-br from-violet-500 to-fuchsia-600 animate-pulse'
+            }`}>
+              {isFinished && !hasError ? <CheckCircle2 className="w-6 h-6" /> :
+               hasError ? <AlertTriangle className="w-6 h-6" /> :
+               <UploadCloud className="w-6 h-6" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-black text-white">Archivando PDFs al storage</h3>
+              <p className="text-xs text-violet-300/80 mt-0.5">
+                {progress.done}/{progress.total} · {progress.uploaded} subidos · {progress.failed} fallaron
+              </p>
+            </div>
+            {canClose && <button onClick={onClose} className="text-violet-300/60 hover:text-white"><X className="w-5 h-5" /></button>}
+          </div>
+          <div className="mt-3">
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <span className="text-4xl font-black bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
+                {Math.round(progress.pct)}
+              </span>
+              <span className="text-xl font-black text-violet-300/50">%</span>
+              {progress.currentFile && (
+                <span className="ml-auto text-xs text-violet-300/70 truncate max-w-[280px]" title={progress.currentFile.title}>
+                  {progress.currentFile.title.slice(0, 50)}
+                </span>
+              )}
+            </div>
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 transition-all duration-500" style={{ width: `${progress.pct}%` }} />
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-2 mt-3 text-center">
+            <Pill label="Subidos" value={progress.uploaded} color="emerald" />
+            <Pill label="Skip" value={progress.skipped} color="slate" />
+            <Pill label="Fallos" value={progress.failed} color="rose" />
+            <Pill label="Sin src" value={progress.noSource} color="amber" />
+            <Pill label="Bytes" value={formatBytes(progress.bytes)} color="violet" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-3 bg-slate-950/60 font-mono">
+          <div className="text-[10px] font-bold text-violet-300/60 uppercase mb-2 font-sans">Progreso live</div>
+          {progress.liveLog.length === 0 ? (
+            <div className="text-xs text-violet-300/40 italic py-3 font-sans">Esperando primeros eventos…</div>
+          ) : (
+            <ul className="space-y-0.5">
+              {progress.liveLog.slice().reverse().map((l, i) => (
+                <li key={i} className={`text-[11px] py-0.5 ${
+                  l.type === 'start' ? 'text-violet-300 font-bold mt-2' :
+                  l.type === 'stored' ? 'text-emerald-300' :
+                  l.type === 'skip' ? 'text-slate-400' :
+                  l.type === 'fail' ? 'text-rose-300' :
+                  l.type === 'no-source' ? 'text-amber-300' :
+                  'text-violet-100/60'
+                }`}>
+                  <span className="whitespace-pre">{l.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {hasError && (
+          <div className="p-4 border-t border-rose-500/20 bg-rose-500/10 text-xs text-rose-200">
+            <AlertTriangle className="w-4 h-4 inline mr-1" />
+            {progress.error}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Pill({ label, value, color }: { label: string; value: number | string; color: 'emerald' | 'rose' | 'violet' | 'slate' | 'amber' }) {
+  const map: Record<string, string> = {
+    emerald: 'bg-emerald-500/20 text-emerald-300',
+    rose: 'bg-rose-500/20 text-rose-300',
+    violet: 'bg-violet-500/20 text-violet-300',
+    slate: 'bg-slate-500/20 text-slate-300',
+    amber: 'bg-amber-500/20 text-amber-300',
+  };
+  return (
+    <div className={`rounded-lg p-2 ${map[color]}`}>
+      <div className="text-base font-black tabular-nums">{value}</div>
+      <div className="text-[9px] font-bold uppercase tracking-wide opacity-70">{label}</div>
     </div>
   );
 }
@@ -436,22 +694,41 @@ function PyramidLevelCard({
   );
 }
 
-function DocumentModal({ docId, onClose }: { docId: string; onClose: () => void }) {
+function DocumentModal({ docId, onClose, onArchiveSuccess }: {
+  docId: string;
+  onClose: () => void;
+  onArchiveSuccess?: () => void;
+}) {
   const [doc, setDoc] = useState<DocDetail | null>(null);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'info' | 'content'>('info');
   const [loadingContent, setLoadingContent] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const r = await api.get<{ document: DocDetail }>(`/admin/legal-pyramid/document/${docId}`);
-        setDoc(r.data.document);
-      } catch { /* silent */ }
-      finally { setLoading(false); }
-    })();
-  }, [docId]);
+  const loadDoc = async () => {
+    try {
+      const r = await api.get<{ document: DocDetail }>(`/admin/legal-pyramid/document/${docId}`);
+      setDoc(r.data.document);
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { void loadDoc(); }, [docId]);
+
+  const archiveThis = async () => {
+    if (!doc) return;
+    setArchiving(true);
+    try {
+      await api.post(`/admin/legal-pyramid/document/${docId}/archive-pdf`, {});
+      await loadDoc();
+      onArchiveSuccess?.();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'No se pudo archivar el PDF');
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   const loadContent = async () => {
     if (content !== null) return;
@@ -587,47 +864,165 @@ function DocumentModal({ docId, onClose }: { docId: string; onClose: () => void 
             </div>
 
             {/* Footer con acciones */}
-            <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center gap-2">
+            <div className="px-5 py-4 border-t border-slate-200 bg-slate-50">
+              {/* Badge fuente del PDF */}
               {doc.pdf_url && (
-                <a
-                  href={doc.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow transition"
-                >
-                  <Download className="w-4 h-4" />
-                  Descargar PDF oficial
-                </a>
-              )}
-              {doc.edition_url && (
-                <a
-                  href={doc.edition_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-white border-2 border-violet-300 text-violet-700 hover:bg-violet-50 transition"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Ver en Registro Oficial
-                </a>
-              )}
-              {!doc.pdf_url && !doc.edition_url && (
-                <div className="text-xs text-slate-500 italic">
-                  <AlertTriangle className="w-3 h-3 inline mr-1" />
-                  Esta norma no tiene URL PDF registrada. Disponible solo en chunks vectoriales del corpus.
+                <div className="mb-2">
+                  {doc.pdf_source === 'archived' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <HardDrive className="w-3 h-3" />
+                      ARCHIVADO EN NUESTRO STORAGE
+                      {doc.stored_pdf_size && <span className="ml-1 font-mono">({formatBytes(doc.stored_pdf_size)})</span>}
+                    </span>
+                  )}
+                  {doc.pdf_source === 'registro_oficial' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                      <ExternalLink className="w-3 h-3" />
+                      ENLACE EXTERNO · REGISTRO OFICIAL
+                    </span>
+                  )}
+                  {doc.pdf_source === 'canonical_external' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded bg-sky-100 text-sky-800 border border-sky-300">
+                      <ExternalLink className="w-3 h-3" />
+                      ENLACE EXTERNO · CURADO
+                    </span>
+                  )}
                 </div>
               )}
-              <button
-                onClick={onClose}
-                className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-200 hover:bg-slate-300 text-slate-800 transition"
-              >
-                Cerrar
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {doc.pdf_url && (
+                  <a
+                    href={doc.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar PDF
+                  </a>
+                )}
+                {/* Si NO está archivado en nuestro storage, mostrar botón para archivar ahora */}
+                {doc.pdf_source !== 'archived' && (doc.metadata?.editionPdfUrl || doc.metadata?.canonicalPdfUrl) && (
+                  <button
+                    onClick={archiveThis}
+                    disabled={archiving}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-violet-600 text-white hover:bg-violet-700 shadow disabled:opacity-50 transition"
+                  >
+                    {archiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                    {archiving ? 'Archivando…' : 'Archivar en nuestro storage'}
+                  </button>
+                )}
+                {doc.edition_url && (
+                  <a
+                    href={doc.edition_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-white border-2 border-violet-300 text-violet-700 hover:bg-violet-50 transition"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Ver en RO
+                  </a>
+                )}
+                {!doc.pdf_url && !doc.edition_url && (
+                  <div className="text-xs text-slate-500 italic flex-1">
+                    <AlertTriangle className="w-3 h-3 inline mr-1" />
+                    Sin URL PDF registrada. Disponible solo en chunks vectoriales del corpus.
+                  </div>
+                )}
+                <button
+                  onClick={onClose}
+                  className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-200 hover:bg-slate-300 text-slate-800 transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              {doc.pdf_storage_status === 'failed' && doc.metadata?.pdfStorageError && (
+                <div className="mt-2 text-[10px] text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  Intento previo de archivado falló: <code>{doc.metadata.pdfStorageError}</code>
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
     </div>
   );
+}
+
+function updateArchiveProgress(p: ArchiveProgress, event: string, payload: any): ArchiveProgress {
+  switch (event) {
+    case 'run-start':
+      return { ...p, total: payload.total };
+    case 'file-start':
+      return {
+        ...p,
+        pct: payload.pct ?? p.pct,
+        currentFile: { title: payload.title, index: payload.index },
+        liveLog: [...p.liveLog.slice(-29), {
+          ts: Date.now(), type: 'start',
+          text: `[${payload.index}/${payload.total}] ${payload.title}`,
+        }],
+      };
+    case 'file-stored':
+      return {
+        ...p,
+        done: p.done + 1,
+        uploaded: p.uploaded + 1,
+        bytes: p.bytes + (payload.sizeBytes || 0),
+        currentFile: null,
+        liveLog: [...p.liveLog.slice(-29), {
+          ts: Date.now(), type: 'stored',
+          text: `   ✓ subido (${formatBytes(payload.sizeBytes)} · ${formatMs(payload.durationMs)})`,
+        }],
+      };
+    case 'file-skipped':
+      return {
+        ...p, done: p.done + 1, skipped: p.skipped + 1,
+        liveLog: [...p.liveLog.slice(-29), {
+          ts: Date.now(), type: 'skip',
+          text: `   ↻ ya almacenado`,
+        }],
+      };
+    case 'file-no-source':
+      return {
+        ...p, done: p.done + 1, noSource: p.noSource + 1,
+        liveLog: [...p.liveLog.slice(-29), {
+          ts: Date.now(), type: 'no-source',
+          text: `   ⊘ sin URL fuente en metadata`,
+        }],
+      };
+    case 'file-failed':
+      return {
+        ...p, done: p.done + 1, failed: p.failed + 1,
+        liveLog: [...p.liveLog.slice(-29), {
+          ts: Date.now(), type: 'fail',
+          text: `   ✗ ${payload.error?.slice(0, 100)}`,
+        }],
+      };
+    case 'run-complete':
+    case 'done':
+      return { ...p, pct: 100, finished: true };
+    case 'error':
+      return { ...p, error: payload.error };
+    default:
+      return p;
+  }
+}
+
+function formatBytes(n?: number): string {
+  if (!n) return '—';
+  if (n < 1024) return `${n}B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}KB`;
+  return `${(n / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function formatMs(ms?: number): string {
+  if (!ms) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 function InfoField({ label, value }: { label: string; value: string | null | undefined }) {
