@@ -127,12 +127,30 @@ export async function ingestPublicationToCorpus(
   const docId = randomUUID();
 
   emit('insert-legal-doc', { docId, title, contentLength: fullContent.length });
-  // Mapear publication_type (string del scraper/catálogo) a los enums reales
-  // de Postgres: NormType, PublicationType y LegalHierarchy. El scraper
-  // produce valores como 'ley_organica' que NO son valores válidos de NormType.
-  const normTypeEnum = publicationTypeToNormType(pub.publication_type);
+  // Resolución de enums NormType, PublicationType y LegalHierarchy.
+  //
+  // PREFERENCIA: tags 'canon:normType=X' y 'canon:hierarchy=X' en
+  // ai_keywords del registry_publications. El auditor los persiste así
+  // para preservar la info del catálogo (p.ej. INTERNATIONAL_TREATY +
+  // TRATADOS_INTERNACIONALES_DDHH) que se perdería pasando por mapper
+  // genérico publication_type→NormType→LegalHierarchy.
+  //
+  // FALLBACK: derivación desde publication_type/edition_number del
+  // scraper para publicaciones del scan diario que no tienen tags
+  // canónicos.
+  const aiKeywords: string[] = Array.isArray(pub.ai_keywords) ? pub.ai_keywords : [];
+  const canonNormType = extractCanonTag(aiKeywords, 'normType');
+  const canonHierarchy = extractCanonTag(aiKeywords, 'hierarchy');
+
+  const normTypeEnum = canonNormType || publicationTypeToNormType(pub.publication_type);
   const publicationTypeEnum = inferPublicationTypeFromEdition(pub.edition_number);
-  const legalHierarchyEnum = normTypeToLegalHierarchy(normTypeEnum);
+  const legalHierarchyEnum = canonHierarchy || normTypeToLegalHierarchy(normTypeEnum);
+
+  // publication_number es NOT NULL en legal_documents — fallback sintético
+  // si la publicación no trae uno (típicamente tratados internacionales
+  // sin RO number).
+  const publicationNumberSafe = pub.publication_number
+    || (pub.publication_date ? `pub-${new Date(pub.publication_date).toISOString().slice(0,10)}` : `canonical-${(pub.title || 'norma').slice(0, 40)}`);
 
   // 4) INSERT legal_documents
   // legal_hierarchy es NOT NULL (sin default) — se deriva del normType para
@@ -151,9 +169,9 @@ export async function ingestPublicationToCorpus(
     normTypeEnum,
     publicationTypeEnum,
     legalHierarchyEnum,
-    pub.publication_number,
+    publicationNumberSafe,        // NOT NULL — fallback sintético si pub.publication_number es null (tratados internacionales)
     pub.edition_date,
-    'NACIONAL',                  // enum Jurisdiction: NACIONAL | PROVINCIAL | MUNICIPAL | INTERNACIONAL
+    normTypeEnum === 'INTERNATIONAL_TREATY' ? 'INTERNACIONAL' : 'NACIONAL',  // tratados van como INTERNACIONAL
     'EC',
     pub.ai_classification || 'general',
     userId,
@@ -385,6 +403,18 @@ function inferPublicationTypeFromEdition(editionNumber: string | null | undefine
  * defecto razonable evita 23502 cuando el publication_type del scraper no
  * trae jerarquía explícita.
  */
+/**
+ * Lee tags 'canon:<key>=<value>' de ai_keywords. El auditor persiste los
+ * valores canónicos del catálogo (normType, hierarchy) como tags para que
+ * el ingest pueda restaurarlos en legal_documents sin pasarlos por mappers
+ * que pierden info (ej. INTERNATIONAL_TREATY → ley_organica → ORGANIC_LAW).
+ */
+function extractCanonTag(keywords: string[], key: string): string | null {
+  const prefix = `canon:${key}=`;
+  const match = keywords.find((k) => typeof k === 'string' && k.startsWith(prefix));
+  return match ? match.slice(prefix.length).trim() : null;
+}
+
 function normTypeToLegalHierarchy(normType: string): string {
   switch (normType) {
     case 'CONSTITUTIONAL_NORM':       return 'CONSTITUCION';

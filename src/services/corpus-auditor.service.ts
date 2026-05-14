@@ -500,7 +500,30 @@ async function createPublicationFromCanonical(law: NationalLaw, fullText: string
   // fila queda huérfana. ON CONFLICT DO UPDATE recicla esa fila con el
   // texto fresco y devuelve su id existente para que ingestPublicationToCorpus
   // termine el trabajo.
+  //
+  // CRÍTICO: persistimos canonicalNormType y canonicalLegalHierarchy en
+  // ai_keywords (array text) para que ingestPublicationToCorpus pueda
+  // restaurar los valores correctos en legal_documents en vez de derivarlos
+  // por mapper genérico que pierde la info (INTERNATIONAL_TREATY →
+  // ley_organica → ORGANIC_LAW → LEYES_ORGANICAS incorrecto).
+  //
+  // publication_number fallback: para tratados internacionales y normas
+  // sin RO number, usamos la fecha de publicación como identificador
+  // sintético no-null (ej. 'pub-1969-11-22'), porque legal_documents.
+  // publication_number es NOT NULL.
   const id = randomUUID();
+  const publicationNumber = law.registroOficialNumber
+    || (law.publicationDate ? `pub-${law.publicationDate}` : `canonical-${law.canonicalName.slice(0, 40)}`);
+
+  // Tags semánticos que el ingest leerá: 'canon:normType=...' y
+  // 'canon:hierarchy=...'. ai_keywords es text[] y permite múltiples
+  // tags sin migración de schema. Convivimos con keywords reales.
+  const canonTags = [
+    `canon:normType=${law.normType}`,
+    `canon:hierarchy=${law.legalHierarchy}`,
+  ];
+  const allKeywords = [...(law.searchKeywords || []), ...canonTags];
+
   const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
     `INSERT INTO public.registry_publications (
         id, country_code, source, edition_number, edition_date,
@@ -524,22 +547,34 @@ async function createPublicationFromCanonical(law: NationalLaw, fullText: string
     id,
     'EC',
     'registro_oficial_ec_canonical',           // marca: vino de URL oficial directa
-    law.registroOficialNumber || null,
+    law.registroOficialNumber || `Canonical-${law.canonicalName.slice(0, 40)}`, // edition_number también NOT NULL en UNIQUE
     law.publicationDate ? new Date(law.publicationDate) : new Date(),
     law.canonicalPdfUrl || null,
     law.canonicalPdfUrl || null,
     mapNormTypeToPublicationType(law.normType),
-    law.registroOficialNumber || null,
+    publicationNumber,                          // fallback no-null para tratados
     law.canonicalName,
-    'Asamblea Nacional del Ecuador',
+    inferIssuingEntity(law),                    // Asamblea Nacional para EC, organismo internacional para tratados
     fullText.slice(0, 16000),                  // hasta 16k chars (el resto va al content via legal_documents)
     fullText.length,
     `[Audit canonical] ${law.canonicalName} — descargada desde URL oficial. Catálogo curado v${CATALOG_VERSION}. Tipo: ${law.normType}, jerarquía: ${law.legalHierarchy}, categoría: ${law.category}.`,
     law.category?.toLowerCase() || 'general',
     1.0,
-    law.searchKeywords || [],
+    allKeywords,
   );
   return rows[0]?.id || id;
+}
+
+function inferIssuingEntity(law: NationalLaw): string {
+  if (law.normType === 'INTERNATIONAL_TREATY') {
+    const name = law.canonicalName.toLowerCase();
+    if (name.includes('oit')) return 'Organización Internacional del Trabajo (OIT)';
+    if (name.includes('can') || name.includes('cartagena') || name.includes('andin')) return 'Comunidad Andina (CAN)';
+    if (name.includes('omc') || name.includes('marrakech')) return 'Organización Mundial del Comercio (OMC)';
+    if (name.includes('americana') || name.includes('belém') || name.includes('interamericana')) return 'Organización de Estados Americanos (OEA)';
+    return 'Organización de las Naciones Unidas (ONU)';
+  }
+  return 'Asamblea Nacional del Ecuador';
 }
 
 function mapNormTypeToPublicationType(t: NationalLaw['normType']): string {
