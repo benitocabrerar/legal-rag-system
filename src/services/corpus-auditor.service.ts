@@ -32,6 +32,9 @@ export type AuditProgressCallback = (event: string, data: any) => void;
 
 export interface AuditOptions {
   triggeredBy?: string;
+  userId?: string;      // user id real para llenar legal_documents.uploaded_by
+                        // (FK a users.id). Si no se provee, se busca un admin
+                        // activo como fallback.
   dryRun?: boolean;     // si true, no descarga ni ingresa — solo reporta
   onlyMissing?: boolean;// si true, salta items present (más rápido en reruns)
   onProgress?: AuditProgressCallback;
@@ -59,6 +62,23 @@ export async function runFullAudit(opts: AuditOptions = {}): Promise<AuditResult
   const triggeredBy = opts.triggeredBy ?? 'manual';
   const startedAt = Date.now();
   const errors: string[] = [];
+
+  // Resolver userId para legal_documents.uploaded_by (FK a users.id).
+  // Preferencia: el que pasa el endpoint (admin que disparó el audit).
+  // Fallback: primer admin activo de la DB. Si no hay ninguno, error
+  // explícito antes de iniciar el run.
+  let effectiveUserId = opts.userId || null;
+  if (!effectiveUserId) {
+    const fallback = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM public.users
+        WHERE is_active = true AND role IN ('admin','superadmin')
+        ORDER BY created_at ASC LIMIT 1`,
+    );
+    if (fallback.length === 0) {
+      throw new Error('No admin user available for legal_documents.uploaded_by FK. Audit aborted.');
+    }
+    effectiveUserId = fallback[0].id;
+  }
 
   // 1) Crear run header
   const run = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
@@ -156,7 +176,7 @@ export async function runFullAudit(opts: AuditOptions = {}): Promise<AuditResult
           canonicalName: law.canonicalName,
         });
 
-        const ingestion = await tryIngestFromRo(law, runId);
+        const ingestion = await tryIngestFromRo(law, runId, effectiveUserId);
         if (ingestion.success) {
           ingestedOk++;
           chunksAdded += ingestion.chunksCreated;
@@ -316,7 +336,7 @@ function findBestMatch(law: NationalLaw, corpus: Array<{
 // INGESTA REMOTA
 // ────────────────────────────────────────────────────────────────────────────
 
-async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
+async function tryIngestFromRo(law: NationalLaw, runId: string, userId: string): Promise<{
   success: boolean;
   chunksCreated: number;
   durationMs: number;
@@ -335,7 +355,7 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
     if (dl.text && dl.text.length >= 500) {
       const pubId = await createPublicationFromCanonical(law, dl.text);
       await sleep(300);
-      const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
+      const ing = await ingestPublicationToCorpus(pubId, userId);
 
       // matchMethod refleja cómo se obtuvo el texto: directo (pdf-parse)
       // o via Claude Vision OCR para PDFs escaneados.
@@ -421,7 +441,7 @@ async function tryIngestFromRo(law: NationalLaw, runId: string): Promise<{
     await sleep(RO_FETCH_DELAY_MS);
 
     // 4) Ingestar al corpus (chunks + embeddings + broadcast)
-    const ing = await ingestPublicationToCorpus(pubId, 'system:audit');
+    const ing = await ingestPublicationToCorpus(pubId, userId);
 
     await updateItemStatus(runId, law, {
       status: 'ingested_ok',

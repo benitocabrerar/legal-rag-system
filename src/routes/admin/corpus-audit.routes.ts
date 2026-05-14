@@ -52,6 +52,7 @@ export async function corpusAuditRoutes(fastify: FastifyInstance) {
       try {
         const result = await runFullAudit({
           triggeredBy: `manual:${userId}`,
+          userId,                                     // FK legal_documents.uploaded_by → users.id
           dryRun: request.body.dryRun === true,
           onlyMissing: request.body.onlyMissing === true,
           onProgress: (event, data) => write(event, data),

@@ -128,25 +128,29 @@ export async function ingestPublicationToCorpus(
 
   emit('insert-legal-doc', { docId, title, contentLength: fullContent.length });
   // Mapear publication_type (string del scraper/catálogo) a los enums reales
-  // de Postgres: NormType y PublicationType. El scraper produce valores como
-  // 'ley_organica' que NO son valores válidos del enum NormType.
+  // de Postgres: NormType, PublicationType y LegalHierarchy. El scraper
+  // produce valores como 'ley_organica' que NO son valores válidos de NormType.
   const normTypeEnum = publicationTypeToNormType(pub.publication_type);
   const publicationTypeEnum = inferPublicationTypeFromEdition(pub.edition_number);
+  const legalHierarchyEnum = normTypeToLegalHierarchy(normTypeEnum);
 
   // 4) INSERT legal_documents
+  // legal_hierarchy es NOT NULL (sin default) — se deriva del normType para
+  // garantizar el INSERT incluso cuando registry_publications no lo trae.
   await prisma.$executeRawUnsafe(
     `INSERT INTO public.legal_documents
-       (id, title, norm_title, content, norm_type, publication_type,
+       (id, title, norm_title, content, norm_type, publication_type, legal_hierarchy,
         publication_number, publication_date, jurisdiction, country_code,
         category, uploaded_by, is_active, metadata, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5::"NormType", $6::"PublicationType", $7, $8,
-             $9::"Jurisdiction", $10, $11, $12, true, $13::jsonb, now(), now())`,
+     VALUES ($1, $2, $3, $4, $5::"NormType", $6::"PublicationType", $7::"LegalHierarchy",
+             $8, $9, $10::"Jurisdiction", $11, $12, $13, true, $14::jsonb, now(), now())`,
     docId,
     title,
     (pub.title || '').slice(0, 500),
     fullContent,
     normTypeEnum,
     publicationTypeEnum,
+    legalHierarchyEnum,
     pub.publication_number,
     pub.edition_date,
     'NACIONAL',                  // enum Jurisdiction: NACIONAL | PROVINCIAL | MUNICIPAL | INTERNACIONAL
@@ -362,4 +366,38 @@ function inferPublicationTypeFromEdition(editionNumber: string | null | undefine
   if (e.includes('edición especial') || e.includes('edicion especial')) return 'SUPLEMENTO_ESPECIAL';
   if (e.includes('suplemento')) return 'SUPLEMENTO';
   return 'ORDINARIO';
+}
+
+/**
+ * Deriva el LegalHierarchy desde el NormType.
+ *   ORGANIC_CODE  → CODIGOS_ORGANICOS
+ *   ORGANIC_LAW   → LEYES_ORGANICAS
+ *   ORDINARY_CODE → CODIGOS_ORDINARIOS
+ *   ORDINARY_LAW  → LEYES_ORDINARIAS
+ *   REGULATION_*  → REGLAMENTOS
+ *   ORDINANCE_*   → ORDENANZAS
+ *   RESOLUTION_*  → RESOLUCIONES
+ *   ADMINISTRATIVE_AGREEMENT → ACUERDOS_ADMINISTRATIVOS
+ *   CONSTITUTIONAL_NORM      → CONSTITUCION
+ *   INTERNATIONAL_TREATY     → TRATADOS_INTERNACIONALES_DDHH
+ *
+ * legal_hierarchy es NOT NULL en la tabla legal_documents — un valor por
+ * defecto razonable evita 23502 cuando el publication_type del scraper no
+ * trae jerarquía explícita.
+ */
+function normTypeToLegalHierarchy(normType: string): string {
+  switch (normType) {
+    case 'CONSTITUTIONAL_NORM':       return 'CONSTITUCION';
+    case 'INTERNATIONAL_TREATY':      return 'TRATADOS_INTERNACIONALES_DDHH';
+    case 'ORGANIC_CODE':              return 'CODIGOS_ORGANICOS';
+    case 'ORGANIC_LAW':               return 'LEYES_ORGANICAS';
+    case 'ORDINARY_CODE':             return 'CODIGOS_ORDINARIOS';
+    case 'ORDINARY_LAW':              return 'LEYES_ORDINARIAS';
+    case 'REGULATION_GENERAL':
+    case 'REGULATION_EXECUTIVE':      return 'REGLAMENTOS';
+    case 'ORDINANCE_MUNICIPAL':       return 'ORDENANZAS';
+    case 'RESOLUTION_ADMINISTRATIVE': return 'RESOLUCIONES';
+    case 'ADMINISTRATIVE_AGREEMENT':  return 'ACUERDOS_ADMINISTRATIVOS';
+    default:                           return 'LEYES_ORDINARIAS';
+  }
 }
