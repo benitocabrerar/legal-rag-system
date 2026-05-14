@@ -651,7 +651,28 @@ export default function RegistroOficialAdminPage() {
           <Sparkles className="w-3 h-3" />
           Herramientas avanzadas del corpus
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Link
+            href="/admin/legal-pyramid"
+            className="group flex items-start gap-3 p-3 rounded-lg bg-white border-2 border-sky-200 hover:border-sky-500 hover:shadow-md transition"
+          >
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-white shrink-0 shadow-md">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-sky-900 leading-snug group-hover:text-sky-700">
+                🔺 Pirámide de Kelsen
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                Visualización jerárquica navegable del corpus por niveles + país. Preview y descarga.
+              </p>
+              <span className="inline-flex items-center gap-1 text-[10px] text-sky-700 font-bold mt-1">
+                Explorar pirámide
+                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
+              </span>
+            </div>
+          </Link>
+
           <Link
             href="/admin/legal-search"
             className="group flex items-start gap-3 p-3 rounded-lg bg-white border-2 border-violet-200 hover:border-violet-500 hover:shadow-md transition"

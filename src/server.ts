@@ -356,6 +356,9 @@ await app.register((await import('./routes/admin/corpus-audit.routes.js')).corpu
 // Admin: Legal search (búsqueda avanzada con IA sobre corpus + fuentes externas)
 await app.register((await import('./routes/admin/legal-search.routes.js')).legalSearchRoutes, { prefix: '/api/v1' });
 
+// Admin: Legal pyramid (Kelsen multi-país navegable)
+await app.register((await import('./routes/admin/legal-pyramid.routes.js')).legalPyramidRoutes, { prefix: '/api/v1' });
+
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 
