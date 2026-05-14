@@ -1,12 +1,40 @@
+# Render Blueprint para Poweria Legal API.
+#
+# NOTA: Este archivo describe la configuración deseada, pero el servicio
+# actualmente activo (`poweria-legal-api`, srv-d7q59jhkh4rs73b0jidg) NO
+# fue creado vía Blueprint, así que esta configuración no se aplica
+# automáticamente. Para sincronizar:
+#   1. Render Dashboard → New → Blueprint → conecta este repo
+#   2. Marca "Adoptar servicio existente" cuando lo ofrezca
+# Mientras tanto, los Build Filters están configurados manualmente en
+# Settings → Build & Deploy.
 services:
   - type: web
-    name: legal-rag-api
-    env: node
+    name: poweria-legal-api
+    runtime: node
     region: oregon
     plan: starter
     branch: main
-    buildCommand: npm install && npx prisma generate && node scripts/migrate-with-resolve.js
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     startCommand: npm start
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    # Solo redeploya cuando cambien archivos del backend.
+    # Pushes de solo frontend/** no reinician el container.
+    buildFilter:
+      paths:
+        - src/**
+        - prisma/**
+        - package.json
+        - package-lock.json
+        - tsconfig.json
+        - render.yaml
+      ignoredPaths:
+        - frontend/**
+        - docs/**
+        - "*.md"
+        - .gitignore
+        - payments-kit/**
     envVars:
       - key: NODE_ENV
         value: production
