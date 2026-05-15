@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { OpenAI } from 'openai';
 import * as crypto from 'crypto';
+import { getEmbeddingProvider, getRerankerProvider } from './embeddings/factory.js';
+import type { EmbeddingProvider, RerankerProvider } from './embeddings/types.js';
 
 export interface QueryClassification {
   type: 'metadata' | 'navigation' | 'content' | 'comparison' | 'summary' | 'unknown';
@@ -860,33 +862,46 @@ export class QueryRouter {
   }
 
   private async semanticSearch(query: string, caseId: string): Promise<SearchResult[]> {
-    // Generate query embedding
+    // Generate query embedding con el provider activo (Voyage-law-2 por default)
     const embedding = await this.generateEmbedding(query);
+    if (embedding.length === 0) return [];
 
-    // Search in legal document chunks
-    const results = await this.prisma.$queryRaw<any[]>`
-      SELECT
+    const vectorText = `[${embedding.join(',')}]`;
+    const col = this.getEmbeddingColumn();  // 'embedding_voyage' o 'embedding_v'
+
+    // Buscar top 50 candidatos por similitud coseno con la columna correcta.
+    // Subimos de 20 → 50 porque el Rerank-2 luego reduce a top 10 con
+    // precisión mucho mayor (cross-encoder).
+    const results = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT
         ldc.id,
         ldc.content,
         ld.norm_title,
         ld.id as document_id,
-        1 - (ldc.embedding <=> ${embedding}::vector) as similarity
+        1 - (ldc.${col} <=> $1::vector) as similarity
       FROM legal_document_chunks ldc
       JOIN legal_documents ld ON ldc.legal_document_id = ld.id
-      WHERE ld.is_active = true
-      ORDER BY similarity DESC
-      LIMIT 20
-    `;
+      WHERE ld.is_active = true AND ldc.${col} IS NOT NULL
+      ORDER BY ldc.${col} <=> $1::vector ASC
+      LIMIT 50`,
+      vectorText
+    );
 
-    return results.map(r => ({
+    const candidates: SearchResult[] = results.map(r => ({
       id: r.document_id,
       content: r.content,
       score: r.similarity,
       type: 'semantic',
-      metadata: {
-        documentTitle: r.norm_title
-      }
+      metadata: { documentTitle: r.norm_title, chunkId: r.id }
     }));
+
+    // Reranking: Voyage Rerank-2 reordena con cross-encoder y devuelve top 10.
+    // Si el reranker no está activo, devuelve los primeros 20 por similitud.
+    const reranker = getRerankerProvider();
+    if (reranker) {
+      return await this.rerankResults(query, candidates, 10);
+    }
+    return candidates.slice(0, 20);
   }
 
   private async keywordSearch(query: string, caseId: string): Promise<SearchResult[]> {
@@ -949,21 +964,27 @@ export class QueryRouter {
   private async summarySearch(query: string, caseId: string): Promise<SearchResult[]> {
     // Search in document summaries
     const embedding = await this.generateEmbedding(query);
+    if (embedding.length === 0) return [];
 
-    const results = await this.prisma.$queryRaw<any[]>`
-      SELECT
+    // Nota: tabla legal_document_summaries todavía usa la columna 'embedding'
+    // (legacy, OpenAI 1536 dims). Si en el futuro queremos summary embeddings
+    // en Voyage, agregar embedding_voyage_summary a la tabla.
+    const vectorText = `[${embedding.join(',')}]`;
+    const results = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT
         lds.id,
         lds.summary_text as content,
         ld.norm_title,
         ld.id as document_id,
-        1 - (lds.embedding <=> ${embedding}::vector) as similarity
+        1 - (lds.embedding <=> $1::vector) as similarity
       FROM legal_document_summaries lds
       JOIN legal_documents ld ON lds.legal_document_id = ld.id
       WHERE ld.is_active = true
         AND lds.embedding IS NOT NULL
       ORDER BY similarity DESC
-      LIMIT 10
-    `;
+      LIMIT 10`,
+      vectorText
+    );
 
     return results.map(r => ({
       id: r.document_id,
@@ -1106,16 +1127,49 @@ export class QueryRouter {
     return response.choices[0].message.content || 'No se pudo generar la comparación.';
   }
 
+  /**
+   * Genera embedding de query usando el provider activo (Voyage por default).
+   * Usa input_type='query' que es semánticamente distinto de 'document'
+   * en Voyage (mejor recall en queries cortas).
+   */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: text.substring(0, 8000)
-      });
-      return response.data[0].embedding;
+      const provider = getEmbeddingProvider();
+      return await provider.generateEmbedding(text.substring(0, 8000), 'query');
     } catch (error) {
       console.error('Error generating embedding:', error);
       return [];
+    }
+  }
+
+  /** Devuelve el nombre de la columna pgvector activa según provider. */
+  private getEmbeddingColumn(): 'embedding_v' | 'embedding_voyage' {
+    return getEmbeddingProvider().dbColumn;
+  }
+
+  /**
+   * Aplica Voyage Rerank-2 (cross-encoder) sobre N candidatos para
+   * mejorar precisión del top-K. Si no hay reranker configurado o
+   * falla, devuelve los resultados originales sin reordenar.
+   */
+  private async rerankResults(query: string, results: SearchResult[], topK: number = 10): Promise<SearchResult[]> {
+    const reranker = getRerankerProvider();
+    if (!reranker || results.length === 0) return results.slice(0, topK);
+
+    try {
+      const reranked = await reranker.rerank(
+        query,
+        results.map((r) => r.content),
+        { topK }
+      );
+      return reranked.map((r) => ({
+        ...results[r.index],
+        score: r.relevanceScore,
+        type: results[r.index].type + '+reranked',
+      }));
+    } catch (error) {
+      console.error('Rerank failed, falling back to vector order:', error);
+      return results.slice(0, topK);
     }
   }
 

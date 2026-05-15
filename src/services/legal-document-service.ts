@@ -607,27 +607,30 @@ export class LegalDocumentService {
     limit: number = 10
   ): Promise<LegalDocumentResponse[]> {
     // Generate query embedding
-    const ai = await getAiClient();
-    const embeddingResponse = await ai.embeddings.create({
-      input: query,
-    });
+    // Embedding del query con el provider activo (Voyage-law-2 por default).
+    // Usa input_type='query' que es semánticamente distinto del de documentos
+    // en Voyage (mejor recall en queries cortas).
+    const { getEmbeddingProvider } = await import('./embeddings/factory.js');
+    const provider = getEmbeddingProvider();
+    const queryEmbedding = await provider.generateEmbedding(query, 'query');
+    const vectorText = `[${queryEmbedding.join(',')}]`;
+    const col = provider.dbColumn;  // 'embedding_voyage' o 'embedding_v'
 
-    const queryEmbedding = embeddingResponse.data[0].embedding;
-
-    // Perform vector similarity search
-    // Note: This requires pgvector extension in PostgreSQL
-    const results = await this.prisma.$queryRaw<any[]>`
-      SELECT
+    // Búsqueda vectorial con la columna correcta según el provider.
+    // Antes usaba 'embedding_vector' (no existe en el schema) → siempre fallaba.
+    const results = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT
         ld.*,
         ldc.content as matched_content,
-        1 - (ldc.embedding_vector <=> ${queryEmbedding}::vector) as similarity
+        1 - (ldc.${col} <=> $1::vector) as similarity
       FROM legal_document_chunks ldc
       JOIN legal_documents ld ON ld.id = ldc.legal_document_id
       WHERE ld.is_active = true
-        AND ldc.embedding_vector IS NOT NULL
-      ORDER BY similarity DESC
-      LIMIT ${limit}
-    `;
+        AND ldc.${col} IS NOT NULL
+      ORDER BY ldc.${col} <=> $1::vector ASC
+      LIMIT $2`,
+      vectorText, limit
+    );
 
     // Transform and deduplicate results
     const documentMap = new Map<string, any>();
