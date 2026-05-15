@@ -44,14 +44,15 @@ const PREF_LABELS: Array<{ key: keyof LinkPrefs; label: string; icon: string }> 
 
 async function authFetch(path: string, init?: RequestInit) {
   const token = await getAuthToken();
-  return fetch(`/api/v1${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers || {}),
-    },
-  });
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  // Solo declarar Content-Type JSON cuando realmente hay cuerpo. Fastify
+  // rechaza con 400 ("Body cannot be empty") un POST/DELETE que llega con
+  // Content-Type: application/json pero sin body.
+  if (init?.body != null) headers['Content-Type'] = 'application/json';
+  return fetch(`/api/v1${path}`, { ...init, headers });
 }
 
 export function TelegramConnectCard() {
