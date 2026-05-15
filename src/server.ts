@@ -372,6 +372,9 @@ await app.register((await import('./routes/notifications.js')).notificationsRout
 await app.register((await import('./routes/telegram-webhook.routes.js')).telegramWebhookRoutes, { prefix: '/api/v1' });
 await app.register((await import('./routes/telegram.routes.js')).telegramRoutes, { prefix: '/api/v1' });
 
+// Workflow Studio — plantillas de flujos de trabajo jurídicos encadenados
+await app.register((await import('./routes/workflows.routes.js')).workflowRoutes, { prefix: '/api/v1' });
+
 // Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
 // Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
 if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {
