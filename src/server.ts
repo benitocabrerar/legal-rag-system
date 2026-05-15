@@ -362,6 +362,9 @@ await app.register((await import('./routes/admin/legal-pyramid.routes.js')).lega
 // Admin: Corpus sync — sincronización automática RO + Asamblea Nacional
 await app.register((await import('./routes/admin/corpus-sync.routes.js')).corpusSyncRoutes, { prefix: '/api/v1' });
 
+// Internal cron endpoints — disparados por Render Cron Jobs con secret token
+await app.register((await import('./routes/internal/corpus-sync-cron.routes.js')).corpusSyncCronRoutes, { prefix: '/api/v1' });
+
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 
