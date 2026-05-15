@@ -557,7 +557,11 @@ async function createPublicationFromCanonical(law: NationalLaw, fullText: string
     inferIssuingEntity(law),                    // Asamblea Nacional para EC, organismo internacional para tratados
     fullText.slice(0, 16000),                  // hasta 16k chars (el resto va al content via legal_documents)
     fullText.length,
-    `[Audit canonical] ${law.canonicalName} — descargada desde URL oficial. Catálogo curado v${CATALOG_VERSION}. Tipo: ${law.normType}, jerarquía: ${law.legalHierarchy}, categoría: ${law.category}.`,
+    // ai_summary que se MUESTRA AL USUARIO en cards de notificación.
+    // Antes contenía metadata técnica ("[Audit canonical] ... Tipo: X, jerarquía: Y...")
+    // que es ruido para el abogado. Ahora se deja vacío y la UI muestra el
+    // norm_title y la categoría en su lugar. El metadata técnico va a metadata.auditMeta.
+    `Norma del corpus jurídico ecuatoriano · ${law.category}. Consulte el PDF oficial para el texto completo.`,
     law.category?.toLowerCase() || 'general',
     1.0,
     allKeywords,
