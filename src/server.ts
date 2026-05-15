@@ -387,6 +387,9 @@ await app.register((await import('./routes/tramites.routes.js')).tramitesRoutes,
 // Analíticas de ROI — actividad IA del usuario traducida en tiempo ahorrado (Fase 2)
 await app.register((await import('./routes/roi.routes.js')).roiRoutes, { prefix: '/api/v1' });
 
+// Traductor Jurídico — modo bilingüe real español ⇄ inglés (Fase 3)
+await app.register((await import('./routes/legal-translation.routes.js')).legalTranslationRoutes, { prefix: '/api/v1' });
+
 // Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
 // Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
 if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {

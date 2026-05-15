@@ -9,7 +9,7 @@ import CountrySelector from '@/components/CountrySelector';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { UserClock } from '@/components/common/UserClock';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles, Workflow, FileSignature, TrendingUp } from 'lucide-react';
+import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles, Workflow, FileSignature, TrendingUp, Languages } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
 import { HelpFab } from '@/components/help/HelpFab';
@@ -47,6 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/workflows', label: 'Workflows',             icon: Workflow },
     { href: '/dashboard/tramites', label: 'Trámites',              icon: FileSignature },
     { href: '/dashboard/roi',      label: 'ROI',                   icon: TrendingUp },
+    { href: '/dashboard/traductor', label: 'Traductor',            icon: Languages },
   ];
 
   // Close dropdown when clicking outside
