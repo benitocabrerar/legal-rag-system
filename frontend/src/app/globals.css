@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Mobile baseline ────────────────────────────────────────────────
+   Reglas globales para evitar overflow horizontal accidental en celular,
+   asegurar tipografía legible y respetar safe-area iOS (notch). */
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* Safe-area iOS — la app no se mete bajo el notch ni bajo la home bar */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Inputs <16px en iOS dan zoom automático al focus — lo evitamos */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Tablas que rebalsan en mobile — wrap con scroll horizontal nativo */
+@media (max-width: 640px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
 /* React-PDF Styles */
 @import 'react-pdf/dist/Page/AnnotationLayer.css';
 @import 'react-pdf/dist/Page/TextLayer.css';

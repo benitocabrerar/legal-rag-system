@@ -49,6 +49,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Scraper diario de nuevas leyes publicadas oficialmente con análisis IA',
     },
     {
+      name: 'Corpus Sync',
+      href: '/admin/corpus-sync',
+      icon: '🔄',
+      description: 'Auto-sync corpus: Registro Oficial + Asamblea Nacional · ejecuciones programadas',
+    },
+    {
       name: 'Carga Masiva',
       href: '/admin/bulk-upload',
       icon: '📤',

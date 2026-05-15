@@ -94,6 +94,14 @@ export async function notifyAllActiveUsersOfNewNorm(legalDocId: string): Promise
 
   // 6) Bulk insert
   const actionUrl = `/admin/registro-oficial?tab=norm-catalog&focus=${encodeURIComponent(legalDocId)}`;
+  // Sanea aiSummary: si contiene texto de auditoría interna, NO lo enviamos al usuario.
+  // Marcadores que NO deben llegar al abogado: "[Audit canonical]", "Catálogo curado",
+  // metadata técnica de jerarquía/tipo (ya se muestra como badge separado).
+  const rawSummary = doc.metadata?.aiSummary as string | null | undefined;
+  const safeSummary = rawSummary && !/\[Audit canonical\]|Catálogo curado v\d/i.test(rawSummary)
+    ? rawSummary
+    : null;
+
   const metadata = {
     legalDocId,
     normTitle: doc.norm_title,
@@ -102,7 +110,7 @@ export async function notifyAllActiveUsersOfNewNorm(legalDocId: string): Promise
     publicationDate: doc.publication_date,
     editionPdfUrl: doc.metadata?.editionPdfUrl || null,
     editionNumber: doc.metadata?.editionNumber || null,
-    aiSummary: doc.metadata?.aiSummary || null,
+    aiSummary: safeSummary,
   };
 
   // Construimos VALUES dinámicos para createMany — Prisma no maneja
