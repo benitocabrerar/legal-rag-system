@@ -55,6 +55,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Auto-sync corpus: Registro Oficial + Asamblea Nacional · ejecuciones programadas',
     },
     {
+      name: 'Poweria Bench',
+      href: '/admin/bench',
+      icon: '🎯',
+      description: 'Benchmark abierto de derecho ecuatoriano · evalúa la calidad del modelo de IA',
+    },
+    {
       name: 'Carga Masiva',
       href: '/admin/bulk-upload',
       icon: '📤',

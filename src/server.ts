@@ -378,6 +378,9 @@ await app.register((await import('./routes/workflows.routes.js')).workflowRoutes
 // Citations — verificación de fuentes citadas contra el corpus jurídico
 await app.register((await import('./routes/citations.routes.js')).citationsRoutes, { prefix: '/api/v1' });
 
+// Poweria Bench — benchmark abierto de derecho ecuatoriano (Fase 2)
+await app.register((await import('./routes/bench.routes.js')).benchRoutes, { prefix: '/api/v1' });
+
 // Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
 // Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
 if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {
