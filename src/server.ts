@@ -359,6 +359,9 @@ await app.register((await import('./routes/admin/legal-search.routes.js')).legal
 // Admin: Legal pyramid (Kelsen multi-país navegable)
 await app.register((await import('./routes/admin/legal-pyramid.routes.js')).legalPyramidRoutes, { prefix: '/api/v1' });
 
+// Admin: Corpus sync — sincronización automática RO + Asamblea Nacional
+await app.register((await import('./routes/admin/corpus-sync.routes.js')).corpusSyncRoutes, { prefix: '/api/v1' });
+
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 
