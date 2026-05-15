@@ -61,6 +61,12 @@ export function getAdminNavItems(user: User | null) {
       description: 'Benchmark abierto de derecho ecuatoriano · evalúa la calidad del modelo de IA',
     },
     {
+      name: 'Dominios de Corpus',
+      href: '/admin/corpus-domains',
+      icon: '🌐',
+      description: 'Corpus multi-jurisdicción · derecho ecuatoriano + inmigración federal EE.UU.',
+    },
+    {
       name: 'Carga Masiva',
       href: '/admin/bulk-upload',
       icon: '📤',

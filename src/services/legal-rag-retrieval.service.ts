@@ -12,6 +12,7 @@
  */
 import { getAiClient } from '../lib/ai-client.js';
 import { serviceRoleClient } from '../lib/supabase.js';
+import { resolveDomainCountry } from './corpus/corpus-domains.service.js';
 
 export interface RetrievedLegalChunk {
   content: string;
@@ -39,6 +40,12 @@ export interface RetrievalOptions {
   filterNormType?: string | null;
   /** Filtrar por país (ej. 'EC') */
   filterCountryCode?: string | null;
+  /**
+   * Acotar la búsqueda a un dominio de corpus (ej. 'ec-general',
+   * 'us-immigration'). Se resuelve a su país y tiene prioridad sobre
+   * filterCountryCode. Aísla el corpus EC del corpus US.
+   */
+  filterCorpusDomain?: string | null;
   /** Para logs */
   caseId?: string;
 }
@@ -71,7 +78,19 @@ export async function retrieveLegalContextForChat(
     return { chunks: [], formattedPrompt: null, citationsList: null, totalChunks: 0, durationMs: Date.now() - startedAt };
   }
 
-  // 2) RPC híbrido
+  // 2) Dominio de corpus → país. El RPC acota por país; para los dominios
+  //    actuales (EC vs US) el país discrimina exactamente el corpus.
+  let effectiveCountryCode = opts.filterCountryCode ?? null;
+  if (opts.filterCorpusDomain) {
+    try {
+      const resolved = await resolveDomainCountry(opts.filterCorpusDomain);
+      if (resolved) effectiveCountryCode = resolved;
+    } catch {
+      // Si no se puede resolver, caemos al filtro por país (o sin filtro).
+    }
+  }
+
+  // 3) RPC híbrido
   let rows: any[] = [];
   try {
     const sb = serviceRoleClient();
@@ -84,7 +103,7 @@ export async function retrieveLegalContextForChat(
       filter_doc_id: null,
       filter_norm_type: opts.filterNormType ?? null,
       filter_jurisdiction: null,
-      filter_country_code: opts.filterCountryCode ?? null,
+      filter_country_code: effectiveCountryCode,
     });
     if (error) {
       return { chunks: [], formattedPrompt: null, citationsList: null, totalChunks: 0, durationMs: Date.now() - startedAt };
@@ -109,7 +128,7 @@ export async function retrieveLegalContextForChat(
     return { chunks: [], formattedPrompt: null, citationsList: null, totalChunks: 0, durationMs: Date.now() - startedAt };
   }
 
-  // 3) Formatear para inyección en system prompt
+  // 4) Formatear para inyección en system prompt
   // Cada chunk: título de norma + identificadores + extracto. Truncamos
   // a 1500 chars por chunk para no explotar el contexto.
   const formatted = chunks.map((c, i) => {
@@ -121,7 +140,7 @@ export async function retrieveLegalContextForChat(
     return `[Norma ${i + 1}]${hier} ${c.normTitle}${idLine ? ` — ${idLine}` : ''}\n${c.content.replace(/\s+/g, ' ').slice(0, 1500)}`;
   }).join('\n\n');
 
-  // 4) Lista compacta para que el LLM tenga referencia explícita de qué citar
+  // 5) Lista compacta para que el LLM tenga referencia explícita de qué citar
   const citationsList = chunks
     .map((c, i) => `[Norma ${i + 1}] ${c.normTitle}${c.publicationNumber ? ` Nº ${c.publicationNumber}` : ''}`)
     .join('\n');
