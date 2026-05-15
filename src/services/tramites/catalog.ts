@@ -200,6 +200,96 @@ export const TRAMITE_CATALOG: TramiteType[] = [
       'precisar su alcance, fundamentar la procedencia conforme a la normativa procesal ' +
       'aplicable y solicitar que se acepte el desistimiento. Tono formal del foro.',
   },
+
+  // ─── 7. Recurso de apelación ────────────────────────────────────────
+  {
+    key: 'recurso-apelacion',
+    name: 'Recurso de apelación',
+    description: 'Interposición y fundamentación de recurso de apelación contra una resolución.',
+    icon: '⬆️',
+    category: 'Judicial',
+    useRag: true,
+    fields: [
+      { key: 'tribunal', label: 'Judicatura / Tribunal', placeholder: 'Unidad Judicial que dictó la resolución', required: true },
+      { key: 'numeroProceso', label: 'Número de proceso', placeholder: '17230-2026-01234', required: true },
+      { key: 'recurrente', label: 'Parte recurrente', placeholder: 'Nombre de quien apela', required: true },
+      { key: 'calidad', label: 'En calidad de', placeholder: 'parte actora / demandada', required: true },
+      { key: 'resolucionImpugnada', label: 'Resolución impugnada', placeholder: 'Sentencia / auto y su fecha', required: true },
+      { key: 'agravios', label: 'Agravios', placeholder: 'Por qué la resolución causa agravio: errores de hecho y de derecho', required: true, multiline: true },
+      { key: 'pretensionRecurso', label: 'Pretensión del recurso', placeholder: 'Qué se solicita al superior (revocar, reformar, etc.)', required: true },
+    ],
+    systemPrompt: SYS_JUDICIAL,
+    promptTemplate:
+      'Redactá un RECURSO DE APELACIÓN para presentar ante {{tribunal}}, dentro del ' +
+      'proceso Nº {{numeroProceso}}.\n' +
+      'Recurrente: {{recurrente}}, en calidad de {{calidad}}.\n' +
+      'Resolución impugnada: {{resolucionImpugnada}}.\n\n' +
+      'AGRAVIOS:\n{{agravios}}\n\n' +
+      'PRETENSIÓN DEL RECURSO: {{pretensionRecurso}}\n' +
+      '{{rag}}\n' +
+      'El escrito debe interponer el recurso en plazo, identificar la resolución ' +
+      'impugnada, fundamentar punto por punto los agravios (errores de hecho y de ' +
+      'derecho), citar la normativa procesal aplicable y formular la petición concreta ' +
+      'al órgano superior. Tono formal del foro.',
+  },
+
+  // ─── 8. Solicitud de señalamiento de audiencia ──────────────────────
+  {
+    key: 'solicitud-audiencia',
+    name: 'Solicitud de audiencia',
+    description: 'Petición de señalamiento de día y hora para una audiencia.',
+    icon: '📅',
+    category: 'Judicial',
+    useRag: false,
+    fields: [
+      { key: 'tribunal', label: 'Judicatura / Tribunal', placeholder: 'Unidad Judicial competente', required: true },
+      { key: 'numeroProceso', label: 'Número de proceso', placeholder: '17230-2026-01234', required: true },
+      { key: 'compareciente', label: 'Quien comparece', placeholder: 'Nombre de la parte', required: true },
+      { key: 'calidad', label: 'En calidad de', placeholder: 'parte actora / demandada', required: true },
+      { key: 'tipoAudiencia', label: 'Tipo de audiencia', placeholder: 'preliminar / de juicio / única', required: true },
+      { key: 'motivo', label: 'Motivo de la solicitud', placeholder: 'Por qué corresponde señalar la audiencia', required: false, multiline: true },
+    ],
+    systemPrompt: SYS_JUDICIAL,
+    promptTemplate:
+      'Redactá una SOLICITUD DE SEÑALAMIENTO DE AUDIENCIA para presentar ante ' +
+      '{{tribunal}}, dentro del proceso Nº {{numeroProceso}}.\n' +
+      'Comparece: {{compareciente}}, en calidad de {{calidad}}.\n' +
+      'Tipo de audiencia: {{tipoAudiencia}}.\n' +
+      'Motivo: {{motivo}}\n\n' +
+      'El escrito debe ser breve y formal: encabezado, identificación del proceso, ' +
+      'solicitud de que se señale día y hora para la audiencia indicada, y la ' +
+      'justificación de su procedencia. Tono formal del foro.',
+  },
+
+  // ─── 9. Solicitud de oficio (prueba) ────────────────────────────────
+  {
+    key: 'oficio-prueba',
+    name: 'Solicitud de oficio',
+    description: 'Petición de que se oficie a una entidad para requerir información o documentación como prueba.',
+    icon: '✉️',
+    category: 'Judicial',
+    useRag: false,
+    fields: [
+      { key: 'tribunal', label: 'Judicatura / Tribunal', placeholder: 'Unidad Judicial competente', required: true },
+      { key: 'numeroProceso', label: 'Número de proceso', placeholder: '17230-2026-01234', required: true },
+      { key: 'compareciente', label: 'Quien comparece', placeholder: 'Nombre de la parte', required: true },
+      { key: 'calidad', label: 'En calidad de', placeholder: 'parte actora / demandada', required: true },
+      { key: 'entidadDestino', label: 'Entidad destinataria', placeholder: 'Institución a la que se debe oficiar', required: true },
+      { key: 'informacionRequerida', label: 'Información requerida', placeholder: 'Qué documentación o información se solicita', required: true, multiline: true },
+      { key: 'finalidad', label: 'Finalidad probatoria', placeholder: 'Qué se busca acreditar con esa información', required: true },
+    ],
+    systemPrompt: SYS_JUDICIAL,
+    promptTemplate:
+      'Redactá una SOLICITUD DE OFICIO para presentar ante {{tribunal}}, dentro del ' +
+      'proceso Nº {{numeroProceso}}.\n' +
+      'Comparece: {{compareciente}}, en calidad de {{calidad}}.\n' +
+      'Entidad a oficiar: {{entidadDestino}}.\n\n' +
+      'INFORMACIÓN REQUERIDA:\n{{informacionRequerida}}\n\n' +
+      'FINALIDAD PROBATORIA: {{finalidad}}\n\n' +
+      'El escrito debe solicitar que se oficie a la entidad indicada para que remita ' +
+      'la información o documentación detallada, fundamentar su pertinencia y ' +
+      'conducencia como prueba, y precisar la finalidad probatoria. Tono formal del foro.',
+  },
 ];
 
 export function getTramiteType(key: string): TramiteType | undefined {

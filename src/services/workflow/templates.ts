@@ -203,6 +203,73 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       },
     ],
   },
+
+  // ─── 6. Revisión de contrato ────────────────────────────────────────
+  {
+    key: 'revision-contrato',
+    name: 'Revisión de contrato',
+    description: 'Analiza un contrato e identifica riesgos, cláusulas faltantes y recomendaciones.',
+    icon: '📑',
+    category: 'Contractual',
+    inputLabel: 'Texto o descripción del contrato',
+    inputPlaceholder: 'Pegá el contrato o describí sus cláusulas principales, las partes y el objeto…',
+    steps: [
+      {
+        id: 'normativa',
+        name: 'Buscar marco normativo aplicable',
+        type: 'rag_search',
+        queryTemplate: '{{input}}',
+        ragLimit: 10,
+      },
+      {
+        id: 'revision',
+        name: 'Revisar el contrato',
+        type: 'llm_generate',
+        systemPrompt: RAG_SYSTEM,
+        maxTokens: 2400,
+        promptTemplate:
+          'MARCO NORMATIVO:\n{{steps.normativa}}\n\n' +
+          'CONTRATO A REVISAR:\n{{input}}\n\n' +
+          'Revisá el contrato y entregá: (1) Riesgos jurídicos detectados, ' +
+          '(2) Cláusulas faltantes o débiles, (3) Ambigüedades a precisar, ' +
+          '(4) Conformidad con la normativa aplicable, (5) Recomendaciones concretas de redacción.',
+      },
+    ],
+  },
+
+  // ─── 7. Liquidación laboral explicada ───────────────────────────────
+  {
+    key: 'liquidacion-laboral',
+    name: 'Liquidación laboral explicada',
+    description: 'A partir de los datos de la relación laboral, detalla y fundamenta cada rubro de la liquidación.',
+    icon: '🧮',
+    category: 'Laboral',
+    inputLabel: 'Datos de la relación laboral',
+    inputPlaceholder: 'Tiempo de servicio, última remuneración, motivo y fecha de terminación, beneficios pendientes…',
+    steps: [
+      {
+        id: 'normativa',
+        name: 'Localizar normativa laboral aplicable',
+        type: 'rag_search',
+        queryTemplate: 'liquidación laboral indemnización {{input}}',
+        ragLimit: 10,
+      },
+      {
+        id: 'liquidacion',
+        name: 'Detallar la liquidación',
+        type: 'llm_generate',
+        systemPrompt: RAG_SYSTEM,
+        maxTokens: 2200,
+        promptTemplate:
+          'NORMATIVA APLICABLE:\n{{steps.normativa}}\n\n' +
+          'DATOS DE LA RELACIÓN LABORAL:\n{{input}}\n\n' +
+          'Detallá la liquidación: (1) Enumerá cada rubro que corresponde, ' +
+          '(2) Explicá el fundamento normativo de cada uno, (3) Indicá la fórmula o ' +
+          'base de cálculo, (4) Señalá los datos que faltan para el monto final entre ' +
+          '[CORCHETES]. No inventés cifras: el cálculo final lo confirma el abogado.',
+      },
+    ],
+  },
 ];
 
 export function getTemplateByKey(key: string): WorkflowTemplate | undefined {
