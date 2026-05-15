@@ -368,6 +368,10 @@ await app.register((await import('./routes/internal/corpus-sync-cron.routes.js')
 // In-app notifications del usuario actual (feed, unread count, mark-as-read)
 await app.register((await import('./routes/notifications.js')).notificationsRoutes, { prefix: '/api/v1' });
 
+// Telegram — webhook entrante + gestión (admin) y rutas de vinculación (usuario)
+await app.register((await import('./routes/telegram-webhook.routes.js')).telegramWebhookRoutes, { prefix: '/api/v1' });
+await app.register((await import('./routes/telegram.routes.js')).telegramRoutes, { prefix: '/api/v1' });
+
 // Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
 // Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
 if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {

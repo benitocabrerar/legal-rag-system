@@ -167,6 +167,27 @@ export async function runFullSync(opts: {
     status,
   };
 
+  // Alerta al operador vía Telegram — solo si hay algo digno de avisar:
+  // normas nuevas detectadas o un fallo. Best-effort, no rompe el run.
+  try {
+    if (status === 'failed' || newDetected > 0) {
+      const { notifyOperatorViaTelegram } = await import('./telegram-notify.service.js');
+      if (status === 'failed') {
+        await notifyOperatorViaTelegram(
+          'Sync de corpus falló',
+          `El run ${runId.slice(0, 8)} terminó con estado "failed".\n${errors.slice(0, 3).join('\n') || 'Sin detalle.'}`,
+          { level: 'error' },
+        );
+      } else {
+        await notifyOperatorViaTelegram(
+          'Sync de corpus — normas nuevas',
+          `Se detectaron ${newDetected} norma(s) nueva(s). Ingestadas: ${ingestedOk}. Revisá el panel para aprobar las pendientes.`,
+          { level: 'success' },
+        );
+      }
+    }
+  } catch { /* non-critical */ }
+
   emit('run-complete', result);
   return result;
 }

@@ -149,6 +149,21 @@ export async function notifyAllActiveUsersOfNewNorm(legalDocId: string): Promise
     ...params,
   );
 
+  // Canal adicional: Telegram. Best-effort — un fallo acá no afecta la
+  // notificación in-app (que ya quedó persistida arriba).
+  try {
+    const { notifyNewNormViaTelegram } = await import('./telegram-notify.service.js');
+    await notifyNewNormViaTelegram({
+      normTitle: doc.norm_title || doc.title,
+      legalHierarchy: doc.legal_hierarchy,
+      publicationDate: doc.publication_date,
+      category: doc.category,
+      actionUrl,
+    });
+  } catch (e: any) {
+    console.error('[corpus-notifications] envío a Telegram falló:', e?.message);
+  }
+
   return targets.length;
 }
 

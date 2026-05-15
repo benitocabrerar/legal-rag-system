@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getAuthToken } from '@/lib/get-auth-token';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
+import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 
 interface TwoFactorStatus {
   enabled: boolean;
@@ -209,6 +210,11 @@ export default function SettingsPage() {
         >
           {t('common.edit')}
         </a>
+      </div>
+
+      {/* Telegram integration */}
+      <div className="mb-6">
+        <TelegramConnectCard />
       </div>
 
       {/* Password Section */}
