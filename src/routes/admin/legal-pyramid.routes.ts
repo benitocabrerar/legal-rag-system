@@ -92,7 +92,12 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
         `SELECT legal_hierarchy::text AS legal_hierarchy,
                 id, title, norm_title,
                 publication_date, publication_number, category,
-                (metadata->>'editionPdfUrl' IS NOT NULL
+                -- has_pdf chequea TODAS las fuentes posibles de PDF:
+                -- 1) stored_pdf_url (Supabase Storage propio, prioritario)
+                -- 2) metadata.editionPdfUrl (RO original)
+                -- 3) metadata.canonicalPdfUrl (URL canónica externa)
+                (stored_pdf_url IS NOT NULL
+                 OR metadata->>'editionPdfUrl' IS NOT NULL
                  OR metadata->>'canonicalPdfUrl' IS NOT NULL) AS has_pdf
            FROM (
              SELECT *,
@@ -197,7 +202,13 @@ export async function legalPyramidRoutes(fastify: FastifyInstance) {
                 publication_type::text AS publication_type,
                 publication_date, publication_number, category,
                 last_reform_date,
-                COALESCE(metadata->>'editionPdfUrl', metadata->>'canonicalPdfUrl') AS pdf_url,
+                -- PDF URL con prioridad: stored_pdf_url (Supabase propio) >
+                -- editionPdfUrl (RO oficial) > canonicalPdfUrl (canónica externa).
+                -- ANTES: solo metadata.* — los docs solo con stored_pdf_url
+                -- aparecían como "Sin PDF" aunque tuvieran archivo.
+                COALESCE(stored_pdf_url,
+                         metadata->>'editionPdfUrl',
+                         metadata->>'canonicalPdfUrl') AS pdf_url,
                 metadata->>'editionUrl' AS edition_url,
                 metadata->>'aiSummary' AS ai_summary
            FROM public.legal_documents
