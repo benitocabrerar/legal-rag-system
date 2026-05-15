@@ -2,6 +2,13 @@
 
 import { useTranslation, SUPPORTED_LOCALES, type Locale } from '@/lib/i18n';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+// Rutas con header sticky propio (logo + campana + acciones). El
+// LanguageSwitcher 'fixed' se solapaba con la campana de notificaciones
+// en mobile, así que no se renderiza ahí — el dashboard monta el
+// switcher 'inline' dentro del menú de usuario.
+const ROUTES_WITH_OWN_HEADER = ['/dashboard', '/admin'];
 
 interface LanguageSwitcherProps {
   /** 'fixed' shows the switcher anchored to top-right of viewport.
@@ -16,6 +23,7 @@ export default function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   const { locale, setLocale } = useTranslation();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname() ?? '';
 
   // Prevenir hidration mismatch (locale persistido en localStorage no
   // existe en el render del servidor).
@@ -29,6 +37,12 @@ export default function LanguageSwitcher({
   }, [locale]);
 
   if (!mounted) return null;
+
+  // El variant 'fixed' no se renderiza en rutas con header propio: ahí
+  // el switcher 'inline' va dentro del menú de usuario.
+  if (variant === 'fixed' && ROUTES_WITH_OWN_HEADER.some((r) => pathname.startsWith(r))) {
+    return null;
+  }
 
   const handleSwitch = (next: Locale) => {
     if (next !== locale) {

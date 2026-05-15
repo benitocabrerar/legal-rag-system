@@ -127,7 +127,8 @@ export function CorpusUpdatesCard() {
                     <Calendar className="w-3 h-3" />
                     Publicada {dateLabel}
                   </span>
-                  {n.metadata?.editionNumber && (
+                  {n.metadata?.editionNumber
+                    && !/^(canonical-|pub-)/i.test(n.metadata.editionNumber.trim()) && (
                     <span className="text-slate-500">
                       RO Nº {n.metadata.editionNumber}
                     </span>

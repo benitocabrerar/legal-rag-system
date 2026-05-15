@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import CountrySelector from '@/components/CountrySelector';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { UserClock } from '@/components/common/UserClock';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles } from 'lucide-react';
@@ -283,6 +284,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <span>{t('navigation.pricing')}</span>
                         <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full">Pro</span>
                       </Link>
+                    </div>
+
+                    {/* Idioma — el switcher fixed se oculta en /dashboard,
+                        así que el control de idioma vive acá. */}
+                    <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium text-slate-500">Idioma / Language</span>
+                      <LanguageSwitcher variant="inline" />
                     </div>
 
                     <div className="border-t border-slate-100">

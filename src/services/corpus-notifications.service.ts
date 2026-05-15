@@ -102,6 +102,15 @@ export async function notifyAllActiveUsersOfNewNorm(legalDocId: string): Promise
     ? rawSummary
     : null;
 
+  // Sanea editionNumber: el corpus-auditor genera identificadores sintéticos
+  // ("Canonical-<titulo>", "pub-YYYY-MM-DD") cuando la norma no tiene número
+  // de Registro Oficial real. Esos valores son internos — NO se muestran como
+  // "RO Nº ..." al abogado. Solo se propaga un número de RO genuino.
+  const rawEdition = doc.metadata?.editionNumber as string | null | undefined;
+  const safeEdition = rawEdition && !/^(canonical-|pub-)/i.test(rawEdition.trim())
+    ? rawEdition
+    : null;
+
   const metadata = {
     legalDocId,
     normTitle: doc.norm_title,
@@ -109,7 +118,7 @@ export async function notifyAllActiveUsersOfNewNorm(legalDocId: string): Promise
     legalHierarchy: doc.legal_hierarchy,
     publicationDate: doc.publication_date,
     editionPdfUrl: doc.metadata?.editionPdfUrl || null,
-    editionNumber: doc.metadata?.editionNumber || null,
+    editionNumber: safeEdition,
     aiSummary: safeSummary,
   };
 
