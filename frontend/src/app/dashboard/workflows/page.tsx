@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import {
   Workflow, Loader2, Play, CheckCircle2, XCircle, Clock, Copy, Check,
   ChevronRight, AlertTriangle, History, ArrowLeft, Sparkles,
+  ShieldCheck, FileSearch, ExternalLink,
 } from 'lucide-react';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────
@@ -43,6 +44,23 @@ interface StepProgress {
   durationMs?: number;
   preview?: string;
   error?: string;
+}
+interface VerifiedNorm {
+  title: string;
+  hierarchy: string | null;
+  docId: string;
+  pdfUrl: string | null;
+}
+interface ArticleRef { raw: string; }
+interface Verification {
+  normsVerified: VerifiedNorm[];
+  articleRefs: ArticleRef[];
+  summary: {
+    normsFound: number;
+    articleRefsCount: number;
+    confidence: 'alta' | 'media' | 'baja';
+    message: string;
+  };
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -79,6 +97,8 @@ export default function WorkflowsPage() {
   const [result, setResult] = useState<string | null>(null);
   const [runError, setRunError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [verification, setVerification] = useState<Verification | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   // ─── LOAD ─────────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
@@ -106,6 +126,7 @@ export default function WorkflowsPage() {
     setSteps([]);
     setResult(null);
     setRunError('');
+    setVerification(null);
   };
 
   const backToCatalog = () => {
@@ -114,7 +135,21 @@ export default function WorkflowsPage() {
     setSteps([]);
     setResult(null);
     setRunError('');
+    setVerification(null);
     loadAll();
+  };
+
+  // Verifica las fuentes del resultado contra el corpus jurídico.
+  const verifyResult = async (text: string) => {
+    setVerifying(true);
+    try {
+      const r = await api.post<Verification>('/citations/verify', { text });
+      setVerification(r.data);
+    } catch {
+      setVerification(null);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   // ─── RUN WORKFLOW (SSE) ───────────────────────────────────────────────
@@ -123,6 +158,7 @@ export default function WorkflowsPage() {
     setRunning(true);
     setRunError('');
     setResult(null);
+    setVerification(null);
     setSteps(selected.steps.map((s) => ({ stepId: s.id, stepName: s.name, status: 'pending' })));
 
     try {
@@ -175,7 +211,10 @@ export default function WorkflowsPage() {
               i === payload.stepIndex ? { ...s, status: 'failed', error: payload.error } : s));
           } else if (event === 'run-complete') {
             if (payload.status === 'completed') {
-              setResult(payload.result || '');
+              const finalText = payload.result || '';
+              setResult(finalText);
+              // Verificar las fuentes citadas contra el corpus.
+              if (finalText.length > 10) void verifyResult(finalText);
             } else {
               setRunError('El workflow no se completó. Revisá los pasos.');
             }
@@ -406,8 +445,104 @@ export default function WorkflowsPage() {
               </div>
             </div>
           )}
+
+          {/* Verificación de fuentes contra el corpus */}
+          {result && verifying && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 px-1">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Verificando las fuentes citadas contra el corpus jurídico…
+            </div>
+          )}
+          {result && verification && (
+            <CitationVerificationPanel v={verification} />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── PANEL DE VERIFICACIÓN DE FUENTES ─────────────────────────────────────
+function CitationVerificationPanel({ v }: { v: Verification }) {
+  const conf = v.summary.confidence;
+  const confMeta = {
+    alta:  { label: 'Confianza alta',  cls: 'bg-emerald-100 text-emerald-800', bar: 'border-emerald-200' },
+    media: { label: 'Confianza media', cls: 'bg-amber-100 text-amber-800',     bar: 'border-amber-200' },
+    baja:  { label: 'Confianza baja',  cls: 'bg-gray-100 text-gray-700',       bar: 'border-gray-200' },
+  }[conf];
+
+  return (
+    <div className={`bg-white rounded-xl border ${confMeta.bar} overflow-hidden`}>
+      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-gray-600" />
+          <h3 className="font-semibold text-gray-900 text-sm">Verificación de fuentes</h3>
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${confMeta.cls}`}>
+          {confMeta.label}
+        </span>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-sm text-gray-600">{v.summary.message}</p>
+
+        {/* Normas confirmadas en el corpus */}
+        {v.normsVerified.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Normas confirmadas en el corpus ({v.normsVerified.length})
+            </h4>
+            <div className="space-y-1.5">
+              {v.normsVerified.map((n) => (
+                <div key={n.docId} className="flex items-start gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900">{n.title}</div>
+                    {n.hierarchy && (
+                      <div className="text-[11px] text-gray-500">{n.hierarchy.replace(/_/g, ' ')}</div>
+                    )}
+                  </div>
+                  {n.pdfUrl && (
+                    <a
+                      href={n.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-900 flex-shrink-0"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      PDF oficial
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Referencias a artículos — requieren contraste manual */}
+        {v.articleRefs.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Referencias a artículos ({v.articleRefs.length}) — verificá contra la norma
+            </h4>
+            <div className="flex flex-wrap gap-1.5">
+              {v.articleRefs.map((a, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-800"
+                >
+                  <FileSearch className="h-3 w-3" />
+                  {a.raw}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-[11px] text-gray-400 border-t border-gray-100 pt-3">
+          La verificación contrasta las normas citadas con el corpus de Poweria Legal.
+          No reemplaza tu revisión profesional: confirmá siempre el texto vigente en la fuente oficial.
+        </p>
+      </div>
     </div>
   );
 }
