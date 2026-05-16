@@ -14,6 +14,7 @@ import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
 import { HelpFab } from '@/components/help/HelpFab';
 import DeployBadge from '@/components/DeployBadge';
+import { TrialBanner } from '@/components/TrialBanner';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -377,6 +378,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           TourProvider envuelve para que cualquier descendiente pueda llamar useTour(). */}
       <TourProvider>
         <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          <TrialBanner />
           {children}
         </main>
         <HelpFab />

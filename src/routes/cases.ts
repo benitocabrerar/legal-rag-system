@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { getAiClient } from '../lib/ai-client.js';
+import { assertCanCreateCase, EntitlementError } from '../services/entitlements/entitlements.service.js';
 
 const extraFields = {
   legalMatter: z.string().max(80).optional().nullable(),
@@ -111,6 +112,9 @@ export async function caseRoutes(fastify: FastifyInstance) {
       const body = createCaseSchema.parse(request.body);
       const userId = (request.user as any).id;
 
+      // Enforcement de entitlements: prueba vigente + cuota de casos del plan.
+      await assertCanCreateCase(userId);
+
       // Prisma client siempre maneja las columnas core (compatibilidad)
       const baseCase = await prisma.case.create({
         data: {
@@ -171,6 +175,9 @@ export async function caseRoutes(fastify: FastifyInstance) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({ error: error.errors });
+      }
+      if (error instanceof EntitlementError) {
+        return reply.code(error.httpStatus).send({ error: error.message, code: error.code });
       }
       fastify.log.error(error);
       return reply.code(500).send({ error: 'Internal server error' });

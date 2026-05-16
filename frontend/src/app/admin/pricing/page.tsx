@@ -16,13 +16,14 @@
  * Cada cambio queda en el historial de precios del plan.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { isSuperAdmin } from '@/lib/admin-middleware';
 import {
   AlertTriangle, BarChart3, Check, ChevronDown, ChevronRight, Clock, DollarSign,
   Layers, Loader2, Lock, Percent, RefreshCw, Sparkles, Star, TrendingUp, Wand2,
+  SlidersHorizontal, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────
@@ -160,6 +161,9 @@ export default function AdminPricingPage() {
       {/* ─── AJUSTE MASIVO ───────────────────────────────────────── */}
       <BulkAdjustPanel onApplied={(msg) => { flash(msg); load(); }} />
 
+      {/* ─── MATRIZ DE CAPACIDADES ───────────────────────────────── */}
+      <EntitlementsMatrix onChanged={flash} />
+
       {/* ─── LISTA DE PLANES ─────────────────────────────────────── */}
       <div className="space-y-3">
         {plans.map((plan) => (
@@ -253,6 +257,138 @@ function BulkAdjustPanel({ onApplied }: { onApplied: (msg: string) => void }) {
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
             Aplicar a todos los planes
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MATRIZ DE CAPACIDADES ────────────────────────────────────────────────
+interface EntDef { key: string; kind: 'feature' | 'limit'; category: string; labelEs: string; labelEn: string }
+interface EntPlan { id: string; code: string; name: string; isActive: boolean; entitlements: Record<string, number | boolean> }
+
+function EntitlementsMatrix({ onChanged }: { onChanged: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [catalog, setCatalog] = useState<EntDef[]>([]);
+  const [plans, setPlans] = useState<EntPlan[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [busyCell, setBusyCell] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setErr('');
+    try {
+      const r = await api.get<{ catalog: EntDef[]; plans: EntPlan[] }>('/admin/pricing/entitlements');
+      setCatalog(r.data.catalog ?? []);
+      setPlans(r.data.plans ?? []);
+      setLoaded(true);
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || 'Error al cargar la matriz');
+    }
+  }, []);
+
+  useEffect(() => { if (open && !loaded) load(); }, [open, loaded, load]);
+
+  const patchCell = async (planId: string, key: string, value: number | boolean) => {
+    setBusyCell(planId + key);
+    setErr('');
+    try {
+      const r = await api.patch<{ entitlements: Record<string, number | boolean> }>(
+        `/admin/pricing/plans/${planId}/entitlements`, { [key]: value },
+      );
+      setPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, entitlements: r.data.entitlements } : p)));
+      onChanged('Capacidad actualizada');
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || e?.message || 'No se pudo guardar');
+    } finally {
+      setBusyCell(null);
+    }
+  };
+
+  const categories = [...new Set(catalog.map((c) => c.category))];
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition text-left">
+        <div className="p-2 rounded-lg bg-violet-100 text-violet-700"><SlidersHorizontal className="h-5 w-5" /></div>
+        <div className="flex-1">
+          <div className="font-semibold text-gray-900 text-sm">Matriz de capacidades</div>
+          <div className="text-xs text-gray-500">Activá features y editá cuotas por plan — mové capacidades entre planes para cobrar distinto</div>
+        </div>
+        {open ? <ChevronDown className="h-5 w-5 text-gray-400" /> : <ChevronRight className="h-5 w-5 text-gray-400" />}
+      </button>
+      {open && (
+        <div className="border-t border-gray-100 p-4">
+          {err && <p className="text-xs text-rose-600 mb-2">{err}</p>}
+          {!loaded ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="text-left p-2 sticky left-0 bg-white text-[11px] uppercase tracking-wider text-gray-500">Capacidad</th>
+                      {plans.map((p) => (
+                        <th key={p.id} className="p-2 text-center min-w-[88px] text-xs font-bold text-gray-700">{p.name}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories.map((cat) => (
+                      <Fragment key={cat}>
+                        <tr>
+                          <td colSpan={plans.length + 1} className="bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-500 px-2 py-1.5">{cat}</td>
+                        </tr>
+                        {catalog.filter((c) => c.category === cat).map((def) => (
+                          <tr key={def.key} className="border-b border-gray-100">
+                            <td className="p-2 sticky left-0 bg-white text-gray-700 font-medium text-xs">{def.labelEs}</td>
+                            {plans.map((p) => {
+                              const val = p.entitlements[def.key];
+                              const busy = busyCell === p.id + def.key;
+                              return (
+                                <td key={p.id} className="p-2 text-center">
+                                  {def.kind === 'feature' ? (
+                                    <button
+                                      disabled={busy}
+                                      onClick={() => patchCell(p.id, def.key, !(val === true))}
+                                      className="inline-flex disabled:opacity-50"
+                                      title={val === true ? 'Incluido' : 'No incluido'}
+                                    >
+                                      {val === true
+                                        ? <ToggleRight className="h-5 w-5 text-emerald-600" />
+                                        : <ToggleLeft className="h-5 w-5 text-gray-300" />}
+                                    </button>
+                                  ) : (
+                                    <input
+                                      key={`${p.id}-${def.key}-${val}`}
+                                      type="number"
+                                      defaultValue={Number(val)}
+                                      disabled={busy}
+                                      onBlur={(e) => {
+                                        const n = parseInt(e.target.value, 10);
+                                        if (Number.isFinite(n) && n !== Number(val)) patchCell(p.id, def.key, n);
+                                      }}
+                                      className="w-16 px-1 py-0.5 text-center text-xs border border-gray-300 rounded disabled:opacity-50"
+                                    />
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-3">
+                En las cuotas, <code className="bg-gray-100 px-1 rounded">-1</code> = ilimitado. Los cambios se
+                guardan al instante y rigen para todos los usuarios del plan. El plan Gratis usa
+                <code className="bg-gray-100 px-1 rounded">trial_days</code> como límite de la prueba.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>
