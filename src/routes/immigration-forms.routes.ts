@@ -11,6 +11,7 @@
  * la revisión de un abogado de inmigración con licencia es obligatoria.
  */
 import type { FastifyInstance } from 'fastify';
+import { assertFeature, EntitlementError } from '../services/entitlements/entitlements.service.js';
 import {
   listImmigrationCatalog,
   generateFormPacket,
@@ -49,9 +50,13 @@ export async function immigrationFormsRoutes(fastify: FastifyInstance) {
       }
 
       try {
+        await assertFeature(userId, 'immigration_forms');
         const packet = await generateFormPacket({ userId, caseId, formKey, clientName, inputs });
         return reply.send({ packet });
       } catch (e: any) {
+        if (e instanceof EntitlementError) {
+          return reply.code(e.httpStatus).send({ error: e.message, code: e.code });
+        }
         fastify.log.error({ err: e?.message }, 'immigration form generate failed');
         return reply.code(400).send({ error: e?.message || 'No se pudo generar el paquete.' });
       }

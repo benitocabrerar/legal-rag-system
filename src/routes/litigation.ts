@@ -18,6 +18,7 @@ import { getAiClient } from '../lib/ai-client.js';
 import { parseConvocatoria, detectProvider } from '../lib/convocatoria.js';
 import { setSseHeaders, startSseKeepalive } from '../lib/sse-cors.js';
 import { synthesizeCaseBrain } from './documents.js';
+import { assertFeature, EntitlementError } from '../services/entitlements/entitlements.service.js';
 
 interface LitigationDocument {
   id: string;
@@ -231,6 +232,14 @@ export async function litigationRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const userId = (request.user as any).id;
       const caseId = request.params.id;
+
+      // Entitlement: la Sala de Litigación es un feature de plan.
+      try {
+        await assertFeature(userId, 'litigation_room');
+      } catch (e: any) {
+        const status = e instanceof EntitlementError ? e.httpStatus : 403;
+        return reply.code(status).send({ error: e?.message || 'Feature no disponible', code: e?.code });
+      }
 
       const body = z.object({
         slugs: z.array(z.string()).optional(),

@@ -11,6 +11,7 @@
  * la revisión humana es obligatoria antes de aprobarlo.
  */
 import type { FastifyInstance } from 'fastify';
+import { assertFeature, EntitlementError } from '../services/entitlements/entitlements.service.js';
 import { listTramiteCatalog } from '../services/tramites/tramites.service.js';
 import {
   generateTramite,
@@ -46,9 +47,13 @@ export async function tramitesRoutes(fastify: FastifyInstance) {
       }
 
       try {
+        await assertFeature(userId, 'tramites_agent');
         const run = await generateTramite({ userId, caseId, tramiteKey, inputs });
         return reply.send({ run });
       } catch (e: any) {
+        if (e instanceof EntitlementError) {
+          return reply.code(e.httpStatus).send({ error: e.message, code: e.code });
+        }
         fastify.log.error({ err: e?.message }, 'tramite generate failed');
         return reply.code(400).send({ error: e?.message || 'No se pudo generar el trámite.' });
       }

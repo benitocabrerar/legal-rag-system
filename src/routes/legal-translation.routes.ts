@@ -9,6 +9,7 @@
  * Todas requieren JWT de usuario.
  */
 import type { FastifyInstance } from 'fastify';
+import { assertFeature, EntitlementError } from '../services/entitlements/entitlements.service.js';
 import {
   TRANSLATION_DOC_TYPES,
   translateLegalText,
@@ -48,6 +49,7 @@ export async function legalTranslationRoutes(fastify: FastifyInstance) {
       }
 
       try {
+        await assertFeature(userId, 'legal_translator');
         const translation = await translateLegalText({
           userId,
           caseId: request.body?.caseId || null,
@@ -58,6 +60,9 @@ export async function legalTranslationRoutes(fastify: FastifyInstance) {
         });
         return reply.send({ translation });
       } catch (e: any) {
+        if (e instanceof EntitlementError) {
+          return reply.code(e.httpStatus).send({ error: e.message, code: e.code });
+        }
         fastify.log.error({ err: e?.message }, 'legal translation failed');
         return reply.code(400).send({ error: e?.message || 'No se pudo traducir el texto.' });
       }
