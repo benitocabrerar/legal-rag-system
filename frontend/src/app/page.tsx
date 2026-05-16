@@ -121,27 +121,27 @@ const CONTENT: Record<Lang, any> = {
       sub: 'Sin sorpresas. Cancelas cuando quieras. Datos siempre tuyos. En el plan anual te llevas 2 meses de regalo.',
       monthly: 'Mensual', yearly: 'Anual', save: '−2 meses', perMonth: '/ mes',
       popularLabel: 'Más popular',
-      freeNote: 'Sin tarjeta de crédito',
+      freeNote: '3 días · sin tarjeta de crédito',
       billedYear: (y: number) => `$${y}/año facturado · 2 meses gratis`,
       billedMonth: (m: number) => `$${m} facturado mensual`,
       compare: 'Comparación detallada y opciones de pago',
       plans: [
-        { name: 'Gratis', desc: 'Para probar la plataforma — sin tarjeta de crédito.', cta: 'Empezar gratis',
-          features: ['1 caso activo', 'Consultas IA básicas', 'Base legal pública Ecuador', 'Calendario y tareas'] },
+        { name: 'Gratis', desc: 'Prueba la plataforma 3 días — sin tarjeta de crédito.', cta: 'Empezar prueba',
+          features: ['3 días de acceso completo', '2 casos activos', 'Base legal pública Ecuador', 'Asistente IA con citas'] },
         { name: 'Starter', desc: 'Abogado independiente que empieza a digitalizar su práctica.', cta: 'Probar Starter',
-          features: ['10 casos activos', 'Generación de documentos', 'OCR Vision', 'Resúmenes ejecutivos IA', 'Soporte por email'] },
+          features: ['5 casos activos', 'Generación de documentos', 'OCR Vision', 'Resúmenes ejecutivos IA', 'Soporte por email'] },
         { name: 'Pro', desc: 'Recomendado para abogados con práctica activa.', cta: 'Probar Pro',
-          features: ['50 casos activos', 'Sala de Litigación + Tarjetas IA', 'Trámites + Traductor jurídico', 'Módulo Finanzas con CFO virtual', 'Soporte chat 24h'] },
-        { name: 'Pro Max', desc: 'Para abogados de alto volumen — el doble que Pro.', cta: 'Probar Pro Max',
-          features: ['200 casos activos', 'Modo de razonamiento premium', 'Prioridad en cola IA', 'API access', 'Reportes avanzados'] },
+          features: ['20 casos activos', 'Sala de Litigación + Tarjetas IA', 'Trámites + Traductor jurídico', 'Módulo Finanzas con CFO virtual', 'Soporte chat 24h'] },
+        { name: 'Pro Max', desc: 'Para abogados de alto volumen.', cta: 'Probar Pro Max',
+          features: ['35 casos activos', 'Modo de razonamiento premium', 'Prioridad en cola IA', 'API access', 'Reportes avanzados'] },
         { name: 'Studio', desc: 'Firmas de 2-5 abogados con colaboración real-time.', cta: 'Probar Studio',
-          features: ['5 usuarios incluidos', 'Cuota de IA de equipo', 'Roles, permisos y workspace', 'Panel de administración', 'Reportes consolidados'] },
+          features: ['5 usuarios incluidos', '50 casos activos (equipo)', 'Cuota de IA de equipo', 'Roles, permisos y workspace', 'Reportes consolidados'] },
       ],
       institutional: {
-        kicker: 'Institucional · cotización personalizada',
-        title: '¿Firma de 10+ abogados o institución pública?',
-        body: 'SSO / SAML, white-label, despliegue privado, SLA 99.9%, capacitación in-house y onboarding asistido.',
-        cta: 'Hablar con ventas',
+        kicker: 'Institucional · plan negociado',
+        title: '¿Estudio jurídico, firma o institución?',
+        body: 'Tu plan se negocia con el departamento comercial — comercial@cognitex.app. SSO/SAML, white-label, despliegue privado, SLA 99.9%, capacitación in-house y onboarding asistido.',
+        cta: 'Escribir a ventas',
       },
     },
     company: {
@@ -245,27 +245,27 @@ const CONTENT: Record<Lang, any> = {
       sub: 'No surprises. Cancel anytime. Your data is always yours. On the annual plan you get 2 months free.',
       monthly: 'Monthly', yearly: 'Annual', save: '−2 months', perMonth: '/ mo',
       popularLabel: 'Most popular',
-      freeNote: 'No credit card',
+      freeNote: '3 days · no credit card',
       billedYear: (y: number) => `$${y}/yr billed · 2 months free`,
       billedMonth: (m: number) => `$${m} billed monthly`,
       compare: 'Detailed comparison and payment options',
       plans: [
-        { name: 'Free', desc: 'To try the platform — no credit card.', cta: 'Start free',
-          features: ['1 active case', 'Basic AI queries', 'Ecuador public legal base', 'Calendar and tasks'] },
+        { name: 'Free', desc: 'Try the platform for 3 days — no credit card.', cta: 'Start trial',
+          features: ['3 days full access', '2 active cases', 'Ecuador public legal base', 'AI assistant with citations'] },
         { name: 'Starter', desc: 'Independent lawyer starting to digitize their practice.', cta: 'Try Starter',
-          features: ['10 active cases', 'Document generation', 'OCR Vision', 'AI executive summaries', 'Email support'] },
+          features: ['5 active cases', 'Document generation', 'OCR Vision', 'AI executive summaries', 'Email support'] },
         { name: 'Pro', desc: 'Recommended for lawyers with an active practice.', cta: 'Try Pro',
-          features: ['50 active cases', 'Litigation Room + AI Cards', 'Filings + Legal Translator', 'Finance module with virtual CFO', '24h chat support'] },
-        { name: 'Pro Max', desc: 'For high-volume lawyers — twice the capacity of Pro.', cta: 'Try Pro Max',
-          features: ['200 active cases', 'Premium reasoning mode', 'AI queue priority', 'API access', 'Advanced reports'] },
+          features: ['20 active cases', 'Litigation Room + AI Cards', 'Filings + Legal Translator', 'Finance module with virtual CFO', '24h chat support'] },
+        { name: 'Pro Max', desc: 'For high-volume lawyers.', cta: 'Try Pro Max',
+          features: ['35 active cases', 'Premium reasoning mode', 'AI queue priority', 'API access', 'Advanced reports'] },
         { name: 'Studio', desc: 'Firms of 2-5 lawyers with real-time collaboration.', cta: 'Try Studio',
-          features: ['5 users included', 'Team AI quota', 'Roles, permissions and workspace', 'Admin panel', 'Consolidated reports'] },
+          features: ['5 users included', '50 active cases (team)', 'Team AI quota', 'Roles, permissions and workspace', 'Consolidated reports'] },
       ],
       institutional: {
-        kicker: 'Institutional · custom quote',
-        title: 'A firm of 10+ lawyers or a public institution?',
-        body: 'SSO / SAML, white-label, private deployment, 99.9% SLA, in-house training and assisted onboarding.',
-        cta: 'Talk to sales',
+        kicker: 'Institutional · negotiated plan',
+        title: 'A law firm or an institution?',
+        body: 'Your plan is negotiated with the sales department — comercial@cognitex.app. SSO/SAML, white-label, private deployment, 99.9% SLA, in-house training and assisted onboarding.',
+        cta: 'Email sales',
       },
     },
     company: {
@@ -688,7 +688,7 @@ export default function Home() {
             <div data-reveal className="lg:col-span-3"><InstitutionalContact /></div>
             <div className="lg:col-span-2 space-y-3">
               <ContactCard icon={Phone} label={t.contact.phone} value="+593 98 396 4333" href="https://wa.me/593983964333" tint="from-emerald-500 to-teal-500" />
-              <ContactCard icon={Mail} label={t.contact.email} value="francisecuador1@gmail.com" href="mailto:francisecuador1@gmail.com" tint="from-violet-500 to-fuchsia-500" />
+              <ContactCard icon={Mail} label={t.contact.email} value="comercial@cognitex.app" href="mailto:comercial@cognitex.app" tint="from-violet-500 to-fuchsia-500" />
               <ContactCard icon={MessageCircle} label={t.contact.person} value="Ing. Francisco Jacome — COGNITEX" tint="from-amber-500 to-orange-500" />
               <ContactCard icon={MapPin} label={t.contact.location} value={t.contact.locationValue} tint="from-sky-500 to-cyan-500" />
             </div>
@@ -899,7 +899,7 @@ function PricingDeck({ t }: { t: any }) {
           <h3 className="text-lg sm:text-xl font-black text-white mt-0.5">{t.institutional.title}</h3>
           <p className="text-sm text-slate-300 mt-1">{t.institutional.body}</p>
         </div>
-        <a href="#contacto"
+        <a href="mailto:comercial@cognitex.app"
           className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 text-white font-bold text-sm shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] transition-all">
           {t.institutional.cta}
           <ArrowRight className="w-3.5 h-3.5" />

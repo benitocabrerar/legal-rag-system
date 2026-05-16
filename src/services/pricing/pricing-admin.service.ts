@@ -450,7 +450,9 @@ export async function updatePlanMeta(planId: string, meta: PlanMetaInput): Promi
   if (meta.description !== undefined) push('description', String(meta.description).trim().slice(0, 1000));
   if (meta.features !== undefined) {
     const feats = meta.features.map((f) => String(f).trim()).filter(Boolean).slice(0, 30);
-    push('features', feats);
+    // features es jsonb — se pasa como texto JSON con cast explícito.
+    sets.push(`features = $${i++}::jsonb`);
+    vals.push(JSON.stringify(feats));
   }
   if (meta.isPopular !== undefined) push('is_popular', meta.isPopular === true);
   if (meta.isActive !== undefined) push('is_active', meta.isActive === true);
