@@ -15,7 +15,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import {
   Brain, Sparkles, RefreshCw, X, Scale, ChevronRight, Loader2, BookOpenCheck,
+  Plus, PenLine,
 } from 'lucide-react';
+import CaseReasoningRoom from './CaseReasoningRoom';
 
 interface Analysis {
   id: string;
@@ -24,6 +26,8 @@ interface Analysis {
   norm: string | null;
   article: string | null;
   model: string | null;
+  origin?: 'ai' | 'lawyer';
+  entryLabel?: string | null;
   createdAt: string;
 }
 
@@ -35,11 +39,12 @@ function fmtDate(iso: string): string {
   }
 }
 
-export function AdvancedLegalAnalysis({ caseId }: { caseId: string }) {
+export function AdvancedLegalAnalysis({ caseId, caseTitle }: { caseId: string; caseTitle?: string }) {
   const [items, setItems] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [open, setOpen] = useState<Analysis | null>(null);
+  const [roomOpen, setRoomOpen] = useState(false);
 
   const load = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
@@ -93,11 +98,17 @@ export function AdvancedLegalAnalysis({ caseId }: { caseId: string }) {
         <p className="mt-2 text-[12px] text-violet-900/70 leading-relaxed flex items-start gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-violet-500 shrink-0 mt-0.5" />
           <span>
-            Análisis IA de normas guardados en el caso. Forman parte del{' '}
-            <strong>cerebro del expediente</strong> — mientras más investigás, mejores
-            argumentos tiene la IA para redactar documentos e informes.
+            Análisis jurídicos guardados en el caso —generados por IA o razonados por vos
+            en la Sala—. Forman parte del <strong>cerebro del expediente</strong>: mientras
+            más investigás, mejores argumentos tiene la IA para redactar documentos.
           </span>
         </p>
+        <button
+          onClick={() => setRoomOpen(true)}
+          className="mt-3 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shadow-sm transition"
+        >
+          <Plus className="w-4 h-4" /> Abrir Sala de Razonamiento
+        </button>
       </div>
 
       {/* Lista */}
@@ -116,28 +127,36 @@ export function AdvancedLegalAnalysis({ caseId }: { caseId: string }) {
             </p>
           </div>
         ) : (
-          items.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => setOpen(a)}
-              className="w-full text-left p-3.5 hover:bg-violet-50/60 transition-colors group flex items-start gap-3"
-            >
-              <div className="w-8 h-8 rounded-lg bg-violet-100 grid place-items-center text-violet-700 shrink-0">
-                <Scale className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 transition-colors leading-snug">
-                  {a.norm || a.title}
-                  {a.article && <span className="ml-1.5 text-violet-600">{a.article}</span>}
+          items.map((a) => {
+            const isLawyer = a.origin === 'lawyer';
+            const Icon = isLawyer ? PenLine : Scale;
+            return (
+              <button
+                key={a.id}
+                onClick={() => setOpen(a)}
+                className="w-full text-left p-3.5 hover:bg-violet-50/60 transition-colors group flex items-start gap-3"
+              >
+                <div className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${
+                  isLawyer ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-violet-100 text-violet-700'}`}>
+                  <Icon className="w-4 h-4" />
                 </div>
-                <div className="mt-0.5 text-[11px] text-gray-400">
-                  {fmtDate(a.createdAt)}
-                  {a.model && <span className="ml-1.5">· {a.model}</span>}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 transition-colors leading-snug">
+                    {a.norm || a.title}
+                    {a.article && <span className="ml-1.5 text-violet-600">{a.article}</span>}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${
+                      isLawyer ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-violet-100 text-violet-700'}`}>
+                      {isLawyer ? (a.entryLabel || 'Tu razonamiento') : 'Análisis IA'}
+                    </span>
+                    <span className="text-[11px] text-gray-400">{fmtDate(a.createdAt)}</span>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 transition-colors shrink-0 mt-1" />
-            </button>
-          ))
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-violet-500 transition-colors shrink-0 mt-1" />
+              </button>
+            );
+          })
         )}
       </div>
 
@@ -190,6 +209,13 @@ export function AdvancedLegalAnalysis({ caseId }: { caseId: string }) {
           </div>
         </div>
       )}
+
+      <CaseReasoningRoom
+        open={roomOpen}
+        caseId={caseId}
+        caseTitle={caseTitle}
+        onClose={() => setRoomOpen(false)}
+      />
     </div>
   );
 }

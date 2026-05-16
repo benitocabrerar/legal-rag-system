@@ -1101,8 +1101,8 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
           {/* Legal References */}
           <LegalReferences legalType={legalType} caseId={caseId} />
 
-          {/* Fundamentación Jurídica Avanzada — análisis IA guardados */}
-          <AdvancedLegalAnalysis caseId={caseId} />
+          {/* Fundamentación Jurídica Avanzada — análisis IA + Sala de Razonamiento */}
+          <AdvancedLegalAnalysis caseId={caseId} caseTitle={caseData?.title} />
         </div>
       </div>
 

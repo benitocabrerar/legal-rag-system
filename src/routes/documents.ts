@@ -1974,13 +1974,16 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
 
       const rows = await prisma.$queryRawUnsafe<Array<any>>(
         `SELECT id, title, content, created_at,
-                metadata->>'norm'           AS norm,
-                metadata->>'article'        AS article,
+                metadata->>'norm'            AS norm,
+                metadata->>'article'         AS article,
+                metadata->>'generator'       AS generator,
+                metadata->>'entryLabel'      AS entry_label,
+                metadata->>'entryType'       AS entry_type,
                 ai_generation_meta->>'model' AS model
            FROM public.documents
           WHERE case_id = $1
             AND kind = 'ai_analysis'
-            AND metadata->>'generator' = 'legal_reference_expand'
+            AND metadata->>'generator' IN ('legal_reference_expand','lawyer_reasoning')
           ORDER BY created_at DESC`,
         caseId,
       );
@@ -1993,6 +1996,10 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
           norm: r.norm,
           article: r.article,
           model: r.model,
+          // origin: 'ai' (análisis IA de una norma) | 'lawyer' (razonamiento del abogado)
+          origin: r.generator === 'lawyer_reasoning' ? 'lawyer' : 'ai',
+          entryLabel: r.entry_label || null,
+          entryType: r.entry_type || null,
           createdAt: r.created_at,
         })),
         total: rows.length,
