@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import InstitutionalContact from '@/components/landing/InstitutionalContact';
 import { useI18n } from '@/lib/i18n';
+import { api } from '@/lib/api';
 
 type Lang = 'es' | 'en';
 
@@ -36,13 +37,18 @@ const FEATURE_META = [
   { id: 'bench',       icon: Gauge,         gradient: 'from-rose-500 to-pink-500',       accent: 'shadow-rose-500/30' },
 ] as const;
 
-const PLAN_META = [
+interface PlanPrice { code: string; monthly: number; yearly: number; popular: boolean }
+
+// Precios de respaldo: si la API no responde, se usan estos. La landing
+// intenta primero leer los precios en vivo desde /payhub/plans, de modo que
+// un cambio en el panel super-admin se refleje acá sin tocar el código.
+const PLAN_META: PlanPrice[] = [
   { code: 'free',    monthly: 0,   yearly: 0,    popular: false },
-  { code: 'starter', monthly: 29,  yearly: 290,  popular: false },
-  { code: 'pro',     monthly: 69,  yearly: 690,  popular: true },
-  { code: 'pro_max', monthly: 129, yearly: 1290, popular: false },
-  { code: 'studio',  monthly: 299, yearly: 2990, popular: false },
-] as const;
+  { code: 'starter', monthly: 87,  yearly: 870,  popular: false },
+  { code: 'pro',     monthly: 207, yearly: 2070, popular: true },
+  { code: 'pro_max', monthly: 387, yearly: 3870, popular: false },
+  { code: 'studio',  monthly: 897, yearly: 8970, popular: false },
+];
 
 const CONTENT: Record<Lang, any> = {
   es: {
@@ -114,6 +120,7 @@ const CONTENT: Record<Lang, any> = {
       title: ['Empieza gratis. ', 'Crece cuando estés listo.'],
       sub: 'Sin sorpresas. Cancelas cuando quieras. Datos siempre tuyos. En el plan anual te llevas 2 meses de regalo.',
       monthly: 'Mensual', yearly: 'Anual', save: '−2 meses', perMonth: '/ mes',
+      popularLabel: 'Más popular',
       freeNote: 'Sin tarjeta de crédito',
       billedYear: (y: number) => `$${y}/año facturado · 2 meses gratis`,
       billedMonth: (m: number) => `$${m} facturado mensual`,
@@ -237,6 +244,7 @@ const CONTENT: Record<Lang, any> = {
       title: ['Start free. ', 'Grow when you’re ready.'],
       sub: 'No surprises. Cancel anytime. Your data is always yours. On the annual plan you get 2 months free.',
       monthly: 'Monthly', yearly: 'Annual', save: '−2 months', perMonth: '/ mo',
+      popularLabel: 'Most popular',
       freeNote: 'No credit card',
       billedYear: (y: number) => `$${y}/yr billed · 2 months free`,
       billedMonth: (m: number) => `$${m} billed monthly`,
@@ -828,6 +836,36 @@ function FeatureCard({ id, meta, text }: {
 
 function PricingDeck({ t }: { t: any }) {
   const [yearly, setYearly] = useState(false);
+  const [plans, setPlans] = useState<PlanPrice[]>(PLAN_META);
+
+  // Precios en vivo: leídos de /payhub/plans (subscription_plans). Si la API
+  // no responde, se mantienen los precios de respaldo de PLAN_META.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [m, y] = await Promise.all([
+          api.get('/payhub/plans', { params: { cycle: 'monthly' } }),
+          api.get('/payhub/plans', { params: { cycle: 'yearly' } }),
+        ]);
+        if (cancelled) return;
+        const mMap = new Map<string, any>((m.data?.plans ?? []).map((p: any) => [p.code, p]));
+        const yMap = new Map<string, any>((y.data?.plans ?? []).map((p: any) => [p.code, p]));
+        setPlans(PLAN_META.map((meta) => {
+          const mp = mMap.get(meta.code);
+          const yp = yMap.get(meta.code);
+          return {
+            code: meta.code,
+            monthly: mp ? Number(mp.price_cents) / 100 : meta.monthly,
+            yearly: yp ? Number(yp.price_cents) / 100 : meta.yearly,
+            popular: mp ? mp.is_popular === true : meta.popular,
+          };
+        }));
+      } catch { /* se mantienen los precios de respaldo */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <>
       <div className="mt-10 flex items-center justify-center">
@@ -847,7 +885,7 @@ function PricingDeck({ t }: { t: any }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mt-10">
-        {PLAN_META.map((meta, i) => (
+        {plans.map((meta, i) => (
           <PlanCard key={meta.code} meta={meta} text={t.plans[i]} yearly={yearly} t={t} />
         ))}
       </div>
@@ -872,7 +910,7 @@ function PricingDeck({ t }: { t: any }) {
 }
 
 function PlanCard({ meta, text, yearly, t }: {
-  meta: typeof PLAN_META[number]; text: any; yearly: boolean; t: any;
+  meta: PlanPrice; text: any; yearly: boolean; t: any;
 }) {
   const monthlyEquiv = yearly ? meta.yearly / 12 : meta.monthly;
   const showFree = meta.monthly === 0;
@@ -888,7 +926,7 @@ function PlanCard({ meta, text, yearly, t }: {
       {meta.popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-violet-500/40">
           <Sparkles className="w-3 h-3" />
-          {t.plans[2].name === text.name ? (t.monthly === 'Mensual' ? 'Más popular' : 'Most popular') : ''}
+          {t.popularLabel}
         </div>
       )}
       <h3 className="text-lg font-bold text-white">{text.name}</h3>
