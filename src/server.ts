@@ -455,6 +455,35 @@ const start = async () => {
       alertingService.startMonitoring(60);
       console.log('✅ Automated alerting started');
     }
+
+    // Telegram — registrar el webhook al arrancar, para que su secret quede
+    // siempre sincronizado con TELEGRAM_WEBHOOK_SECRET. Sin esto, si la config
+    // derivó, Telegram envía updates con un secret viejo y el server los
+    // descarta ("webhook con secret inválido") — y nadie puede vincular su
+    // cuenta. Re-registrar en cada deploy hace que el desfase se auto-corrija.
+    if (process.env.DISABLE_TELEGRAM_WEBHOOK_AUTOSET !== '1') {
+      void (async () => {
+        try {
+          const tg = await import('./services/telegram.service.js');
+          if (!tg.isTelegramConfigured()) {
+            console.log('ℹ️ Telegram: sin TELEGRAM_BOT_TOKEN — webhook no registrado');
+            return;
+          }
+          const base = (process.env.PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL
+            || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+          if (!base) {
+            console.warn('⚠️ Telegram: sin URL pública (PUBLIC_API_URL / RENDER_EXTERNAL_URL) — webhook no registrado');
+            return;
+          }
+          const url = `${base}/api/v1/telegram/webhook`;
+          const r = await tg.setTelegramWebhook(url);
+          if (r.ok) console.log(`✅ Telegram webhook registrado: ${url}`);
+          else console.warn(`⚠️ Telegram: setWebhook falló: ${r.description}`);
+        } catch (e: any) {
+          console.warn('⚠️ Telegram: auto-registro de webhook falló:', e?.message);
+        }
+      })();
+    }
   } catch (err) {
     app.log.error(err instanceof Error ? err : new Error(String(err)));
     process.exit(1);
