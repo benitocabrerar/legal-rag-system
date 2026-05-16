@@ -23,13 +23,12 @@ import { useEffect, useRef, useState } from 'react';
 import {
   X, Scale, Loader2, AlertCircle, BookOpen, ListChecks, ShieldAlert, Target,
   Sparkles, FileText, Copy, Check, ChevronDown, ChevronRight, Gavel, Library,
-  Link2, BookMarked, ShieldCheck,
+  Link2, BookMarked, ShieldCheck, CheckCircle2,
 } from 'lucide-react';
 import { getAuthToken } from '@/lib/get-auth-token';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const ANALYZE_PATH = '/api/v1/legal-reference/expand';
-const BUILD_SHA = (process.env.NEXT_PUBLIC_GIT_SHA || 'dev').slice(0, 7);
 
 interface PenaltyOrEffect {
   type?: string;
@@ -88,15 +87,7 @@ export default function LegalReferenceDialog({
   const [copied, setCopied] = useState<string | null>(null);
   const [progressPct, setProgressPct] = useState(0);
   const [progressLabel, setProgressLabel] = useState('');
-  const [tokensReceived, setTokensReceived] = useState(0);
-  const [diag, setDiag] = useState<{
-    status?: number;
-    contentType?: string;
-    ttfb?: number;
-    bytesReceived?: number;
-    eventsReceived?: number;
-    elapsed?: number;
-  }>({});
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const reset = ({ abort = true }: { abort?: boolean } = {}) => {
@@ -111,7 +102,7 @@ export default function LegalReferenceDialog({
     setCopied(null);
     setProgressPct(0);
     setProgressLabel('');
-    setTokensReceived(0);
+    setSavedDocId(null);
   };
 
   useEffect(() => {
@@ -138,12 +129,6 @@ export default function LegalReferenceDialog({
       reset({ abort: false });
       setLoading(true);
       armWatchdog();
-      const startTs = Date.now();
-      let bytes = 0;
-      let events = 0;
-      const tickElapsed = setInterval(() => {
-        setDiag((d) => ({ ...d, elapsed: Math.round((Date.now() - startTs) / 1000), bytesReceived: bytes, eventsReceived: events }));
-      }, 500);
       try {
         const token = await getAuthToken();
         const r = await fetch(`${API_URL}${ANALYZE_PATH}`, {
@@ -156,9 +141,7 @@ export default function LegalReferenceDialog({
           signal: ac.signal,
         });
         bumpActivity();
-        const ttfb = Date.now() - startTs;
         const contentType = (r.headers.get('content-type') || '').toLowerCase();
-        setDiag((d) => ({ ...d, status: r.status, contentType, ttfb }));
         if (!r.ok || !r.body) {
           const txt = await r.text().catch(() => '');
           throw new Error(`HTTP ${r.status}: ${txt.slice(0, 250)}`);
@@ -172,6 +155,10 @@ export default function LegalReferenceDialog({
           setAnalysis(data?.analysis || null);
           setSources(Array.isArray(data?.sources) ? data.sources : []);
           setModel(data?.model || '');
+          if (data?.analysisDocumentId) {
+            setSavedDocId(data.analysisDocumentId);
+            window.dispatchEvent(new CustomEvent('poweria:legal-analysis-saved', { detail: { caseId } }));
+          }
           setProgressPct(100);
           setProgressLabel('Listo');
           setLoading(false);
@@ -181,13 +168,11 @@ export default function LegalReferenceDialog({
         const reader = r.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let tokens = 0;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           if (ac.signal.aborted) return;
           bumpActivity();
-          if (value) bytes += value.byteLength;
           buffer += decoder.decode(value, { stream: true });
           let idx;
           while ((idx = buffer.indexOf('\n\n')) >= 0) {
@@ -198,24 +183,25 @@ export default function LegalReferenceDialog({
             const evLine = lines.find((l) => l.startsWith('event:'));
             const dataLine = lines.find((l) => l.startsWith('data:'));
             if (!dataLine) continue;
-            events += 1;
             const event = evLine ? evLine.slice(6).trim() : 'message';
             let payload: any = null;
             try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { /* ignore */ }
             if (event === 'phase' && payload) {
               if (typeof payload.pct === 'number') setProgressPct(payload.pct);
               if (typeof payload.label === 'string') setProgressLabel(payload.label);
-            } else if (event === 'token' && payload?.delta) {
-              tokens += 1;
-              setTokensReceived(tokens);
             } else if (event === 'structured' && payload) {
               setAnalysis(payload.analysis || null);
               setSources(Array.isArray(payload.sources) ? payload.sources : []);
               setModel(payload.model || '');
+              if (payload.analysisDocumentId) setSavedDocId(payload.analysisDocumentId);
             } else if (event === 'done') {
               setProgressPct(100);
               setProgressLabel('Listo');
               setLoading(false);
+              if (payload?.analysisDocumentId) {
+                setSavedDocId(payload.analysisDocumentId);
+                window.dispatchEvent(new CustomEvent('poweria:legal-analysis-saved', { detail: { caseId } }));
+              }
             } else if (event === 'error') {
               setError(payload?.error || 'AI failed');
               setLoading(false);
@@ -227,9 +213,7 @@ export default function LegalReferenceDialog({
           setError(e?.message || 'No se pudo analizar la referencia');
         }
       } finally {
-        clearInterval(tickElapsed);
         if (watchdog) clearTimeout(watchdog);
-        setDiag((d) => ({ ...d, elapsed: Math.round((Date.now() - startTs) / 1000), bytesReceived: bytes, eventsReceived: events }));
         if (!ac.signal.aborted) setLoading(false);
       }
     };
@@ -298,15 +282,14 @@ export default function LegalReferenceDialog({
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 bg-gradient-to-b from-white to-gray-50/60">
           {loading && (
             <div className="p-5 rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50">
-              <div className="flex items-center gap-2 mb-3">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-700" />
+              <div className="flex items-center gap-3 mb-3">
+                <Loader2 className="w-5 h-5 animate-spin text-indigo-700 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold text-indigo-900 truncate">
-                    {progressLabel || 'Iniciando…'}
+                    {progressLabel || 'Iniciando análisis…'}
                   </div>
                   <div className="text-[11px] text-indigo-700/80">
-                    Claude Opus 4.7
-                    {tokensReceived > 0 && ` · ${tokensReceived} chunks recibidos`}
+                    Análisis jurídico con inteligencia artificial
                   </div>
                 </div>
                 <div className="text-2xl font-black text-indigo-700 tabular-nums shrink-0">
@@ -319,57 +302,46 @@ export default function LegalReferenceDialog({
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 transition-all duration-300 ease-out rounded-full"
                   style={{ width: `${Math.max(2, Math.min(100, progressPct))}%` }}
                 />
-                {/* Pulse overlay para sensación de actividad */}
                 <div
                   className="absolute inset-y-0 w-12 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-pulse rounded-full"
-                  style={{
-                    left: `${Math.max(0, Math.min(95, progressPct - 5))}%`,
-                  }}
+                  style={{ left: `${Math.max(0, Math.min(95, progressPct - 5))}%` }}
                 />
               </div>
-              {/* Diagnostic line — útil si SSE se cuelga, el usuario puede copiar/pegar */}
-              <div className="mt-2 space-y-0.5 text-[10px] font-mono text-indigo-700/70">
-                <div className="truncate text-indigo-900 font-bold">→ {ANALYZE_PATH}</div>
-                <div className="grid grid-cols-2 gap-x-3">
-                  <div>HTTP {diag.status ?? '—'}</div>
-                  <div>{diag.contentType || 'pendiente'}</div>
-                  <div>TTFB {diag.ttfb != null ? `${diag.ttfb}ms` : '—'}</div>
-                  <div>{diag.elapsed != null ? `${diag.elapsed}s elapsed` : '—'}</div>
-                  <div>{(diag.bytesReceived ?? 0).toLocaleString()} bytes</div>
-                  <div>{diag.eventsReceived ?? 0} events</div>
-                </div>
-                <div className="text-[9px] opacity-70">build {BUILD_SHA} · {API_URL.replace(/^https?:\/\//, '')}</div>
-              </div>
-
-              {/* Steps mini timeline */}
-              <div className="mt-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider">
-                {[
-                  { label: 'Contexto', threshold: 10 },
-                  { label: 'Embedding', threshold: 22 },
-                  { label: 'RAG', threshold: 35 },
-                  { label: 'Análisis IA', threshold: 60 },
-                  { label: 'Estrategia', threshold: 88 },
-                  { label: 'Listo', threshold: 100 },
-                ].map((s, i, arr) => {
-                  const reached = progressPct >= s.threshold;
-                  const isCurrent = progressPct < s.threshold && (i === 0 || progressPct >= arr[i - 1].threshold);
+              {/* Etapas — píldoras, sin jerga técnica */}
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                {[15, 32, 48, 68, 86, 100].map((threshold, i, arr) => {
+                  const reached = progressPct >= threshold;
+                  const isCurrent = !reached && (i === 0 || progressPct >= arr[i - 1]);
                   return (
-                    <div key={s.label} className="flex flex-col items-center flex-1 min-w-0">
-                      <div className={`w-2 h-2 rounded-full mb-1 transition-all ${
+                    <span
+                      key={threshold}
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
                         reached
-                          ? 'bg-indigo-600 scale-110'
+                          ? 'w-7 bg-indigo-600'
                           : isCurrent
-                            ? 'bg-indigo-400 animate-pulse scale-125'
-                            : 'bg-gray-300'
-                      }`} />
-                      <span className={`truncate ${
-                        reached ? 'text-indigo-800' : isCurrent ? 'text-indigo-600' : 'text-gray-400'
-                      }`}>
-                        {s.label}
-                      </span>
-                    </div>
+                            ? 'w-7 bg-indigo-400 animate-pulse'
+                            : 'w-2.5 bg-indigo-200'
+                      }`}
+                    />
                   );
                 })}
+              </div>
+              <p className="mt-2.5 text-center text-[11px] text-indigo-700/75 leading-relaxed">
+                Cruzamos el corpus legal con el razonamiento de la IA. El resultado se
+                guarda automáticamente en el caso — puede tardar hasta un minuto.
+              </p>
+            </div>
+          )}
+
+          {/* Confirmación de guardado */}
+          {!loading && savedDocId && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl border border-emerald-200 bg-emerald-50">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-emerald-900">
+                <strong>Guardado en el caso.</strong> Este análisis ya forma parte de la
+                <strong> Fundamentación Jurídica Avanzada</strong> del expediente y
+                enriquece el cerebro del caso — la IA lo usará para redactar mejores
+                documentos e informes.
               </div>
             </div>
           )}

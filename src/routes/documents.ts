@@ -1921,6 +1921,11 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
               norm: body.norm,
               article: body.article || null,
             });
+
+            // El análisis guardado pasa a formar parte del cerebro del caso —
+            // fire-and-forget para no demorar la respuesta al usuario.
+            synthesizeCaseBrain(body.caseId).catch((err: any) =>
+              fastify.log.warn({ err: err?.message }, 'legal-reference/expand: brain re-sync failed'));
           } catch (e: any) {
             analysisDocumentId = null;
             fastify.log.warn({ err: e?.message }, 'legal-reference/expand: failed to persist analysis document');
@@ -1947,6 +1952,51 @@ SALIDA ESTRICTA (un único objeto JSON, primer carácter '{', último '}'):
         try { reply.raw.end(); } catch { /* ignore */ }
       }
       return reply;
+    },
+  );
+
+  // =========================================================================
+  // GET /cases/:id/legal-analyses — Fundamentación Jurídica Avanzada
+  //   Lista los análisis IA de referencias legales guardados en el caso.
+  //   Cada uno es un documento kind='ai_analysis' generado por el expand y
+  //   ya forma parte del cerebro del caso.
+  // =========================================================================
+  fastify.get<{ Params: { id: string } }>(
+    '/cases/:id/legal-analyses',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any).id;
+      const caseId = request.params.id;
+      const owned = await prisma.case.findFirst({
+        where: { id: caseId, userId }, select: { id: true },
+      });
+      if (!owned) return reply.code(404).send({ error: 'CASE_NOT_FOUND' });
+
+      const rows = await prisma.$queryRawUnsafe<Array<any>>(
+        `SELECT id, title, content, created_at,
+                metadata->>'norm'           AS norm,
+                metadata->>'article'        AS article,
+                ai_generation_meta->>'model' AS model
+           FROM public.documents
+          WHERE case_id = $1
+            AND kind = 'ai_analysis'
+            AND metadata->>'generator' = 'legal_reference_expand'
+          ORDER BY created_at DESC`,
+        caseId,
+      );
+
+      return reply.send({
+        analyses: rows.map((r) => ({
+          id: r.id,
+          title: r.title,
+          content: r.content,
+          norm: r.norm,
+          article: r.article,
+          model: r.model,
+          createdAt: r.created_at,
+        })),
+        total: rows.length,
+      });
     },
   );
 }

@@ -13,6 +13,7 @@ import { FinancePanel } from '@/components/case-detail/FinancePanel';
 import { ProcessPipeline } from '@/components/case-detail/ProcessPipeline';
 import { SpecializedPrompts } from '@/components/case-detail/SpecializedPrompts';
 import { LegalReferences } from '@/components/case-detail/LegalReferences';
+import { AdvancedLegalAnalysis } from '@/components/case-detail/AdvancedLegalAnalysis';
 import { LegalDocGenDialog } from '@/components/case-detail/LegalDocGenDialog';
 import { CaseAIChat } from '@/components/case-detail/CaseAIChat';
 import DocumentUploadProgress from '@/components/case-detail/DocumentUploadProgress';
@@ -1099,6 +1100,9 @@ Por favor, basa tu análisis en la información disponible y en los documentos d
 
           {/* Legal References */}
           <LegalReferences legalType={legalType} caseId={caseId} />
+
+          {/* Fundamentación Jurídica Avanzada — análisis IA guardados */}
+          <AdvancedLegalAnalysis caseId={caseId} />
         </div>
       </div>
 
