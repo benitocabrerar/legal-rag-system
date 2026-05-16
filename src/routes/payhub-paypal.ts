@@ -8,6 +8,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createClient } from '@supabase/supabase-js';
 import { createOrder, captureOrder, getOrder, verifyWebhookSignature } from '../lib/payhub-paypal.js';
+import { resolvePlanPrice } from '../lib/plan-pricing.js';
 
 const PAYHUB_URL = process.env.PAYHUB_SUPABASE_URL;
 const PAYHUB_KEY = process.env.PAYHUB_SUPABASE_SERVICE_ROLE_KEY;
@@ -49,6 +50,7 @@ export async function payhubPaypalRoutes(app: FastifyInstance) {
 
     const body = request.body as {
       planCode?: string;
+      billingCycle?: 'monthly' | 'yearly';
       addonCode?: string;
       amountCents?: number;
       currency?: string;
@@ -65,8 +67,7 @@ export async function payhubPaypalRoutes(app: FastifyInstance) {
       // Si no hay paymentId, lo creamos vía record_payment con provider=paypal
       if (!paymentId) {
         if (body.planCode) {
-          const { data: plans } = await sb.rpc('payhub_list_plans', { p_app_slug: APP_SLUG, p_billing_cycle: null });
-          const plan = (plans as any[])?.find((p) => p.code === body.planCode);
+          const plan = await resolvePlanPrice(body.planCode, body.billingCycle);
           if (!plan) return reply.code(404).send({ error: `Plan '${body.planCode}' no existe` });
           amountCents = plan.price_cents;
           currency = plan.currency;

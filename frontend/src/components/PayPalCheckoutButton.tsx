@@ -10,8 +10,10 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 
 interface PayPalCheckoutButtonProps {
-  /** Si pasás planCode, el backend resuelve el monto contra el catálogo del Hub. */
+  /** Si pasás planCode, el backend resuelve el monto contra subscription_plans. */
   planCode?: string;
+  /** Ciclo de facturación del plan — define si se cobra el precio mensual o anual. */
+  billingCycle?: 'monthly' | 'yearly';
   /** Si planCode no se pasa, debés pasar amountCents + currency. */
   amountCents?: number;
   currency?: string;
@@ -55,6 +57,7 @@ function loadPaypalSdk(): Promise<void> {
 
 export default function PayPalCheckoutButton({
   planCode,
+  billingCycle,
   amountCents,
   currency = 'USD',
   paymentId: existingPaymentId,
@@ -91,6 +94,7 @@ export default function PayPalCheckoutButton({
             try {
               const res = await api.post('/payhub/paypal/orders/init', {
                 planCode,
+                billingCycle,
                 amountCents,
                 currency,
                 paymentId: existingPaymentId,
@@ -154,7 +158,7 @@ export default function PayPalCheckoutButton({
     })();
 
     return () => { cancelled = true; void createdPaymentId; };
-  }, [planCode, amountCents, currency, existingPaymentId, onSuccess, onError]);
+  }, [planCode, billingCycle, amountCents, currency, existingPaymentId, onSuccess, onError]);
 
   return (
     <div className="space-y-2">

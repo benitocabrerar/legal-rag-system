@@ -23,6 +23,17 @@ export function isAdmin(user: User | null): boolean {
 }
 
 /**
+ * Super-administrador — acceso exclusivo a la gestión de precios.
+ * Se identifica por correo (debe coincidir con SUPER_ADMIN_EMAILS del backend).
+ */
+const SUPER_ADMIN_EMAILS = ['benitocabrerar@gmail.com'];
+
+export function isSuperAdmin(user: User | null): boolean {
+  const email = (user?.email || '').trim().toLowerCase();
+  return !!email && SUPER_ADMIN_EMAILS.includes(email);
+}
+
+/**
  * Check if user has lawyer or admin role
  */
 export function isLawyer(user: User | null): boolean {
@@ -35,7 +46,7 @@ export function isLawyer(user: User | null): boolean {
 export function getAdminNavItems(user: User | null) {
   if (!isAdmin(user)) return [];
 
-  return [
+  const items = [
     {
       name: 'Biblioteca Legal',
       href: '/admin/legal-library',
@@ -151,4 +162,16 @@ export function getAdminNavItems(user: User | null) {
       description: 'Respaldos y restauración de la BD',
     },
   ];
+
+  // Gestión de Precios — exclusiva del super-administrador.
+  if (isSuperAdmin(user)) {
+    items.push({
+      name: 'Gestión de Precios',
+      href: '/admin/pricing',
+      icon: '🏷️',
+      description: 'Precios, planes y subscripciones · super-admin · historial y enlace en vivo',
+    });
+  }
+
+  return items;
 }

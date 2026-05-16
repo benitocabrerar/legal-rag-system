@@ -396,6 +396,9 @@ await app.register((await import('./routes/corpus-domains.routes.js')).corpusDom
 // Agente de Formularios de Inmigración — la cuña de inmigración EE.UU. (Fase 4)
 await app.register((await import('./routes/immigration-forms.routes.js')).immigrationFormsRoutes, { prefix: '/api/v1' });
 
+// Gestión de Precios — panel exclusivo del super-administrador
+await app.register((await import('./routes/admin/pricing.routes.js')).adminPricingRoutes, { prefix: '/api/v1' });
+
 // Cron diario: scrapea el Registro Oficial a las 02:00 hora Ecuador (UTC-5 = 07:00 UTC)
 // Se puede deshabilitar con DISABLE_REGISTRO_OFICIAL_CRON=1
 if (process.env.DISABLE_REGISTRO_OFICIAL_CRON !== '1') {

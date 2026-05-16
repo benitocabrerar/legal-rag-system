@@ -16,7 +16,7 @@ interface HubPlan {
   price_cents: number;
   currency: string;
   trial_days: number;
-  features: Record<string, unknown>;
+  features: string[];
   is_popular: boolean;
   display_order: number;
 }
@@ -96,6 +96,7 @@ export default function PricingPage() {
     try {
       const response = await api.post('/payhub/payments', {
         planCode: plan.code,
+        billingCycle,
         provider: 'bank_transfer',
         type: 'subscription',
         metadata: { from: 'pricing_page' },
@@ -183,7 +184,7 @@ export default function PricingPage() {
           {plans.map((plan) => {
             const isPopular = plan.is_popular;
             const isFree = plan.price_cents === 0;
-            const features = plan.features as Record<string, number | boolean | string>;
+            const features = Array.isArray(plan.features) ? plan.features : [];
 
             return (
               <div
@@ -216,43 +217,14 @@ export default function PricingPage() {
                   </div>
 
                   <ul className="space-y-3 mb-8 text-sm">
-                    {Object.entries(features).map(([k, v]) => {
-                      // Booleans con valor false → no se muestran
-                      if (typeof v === 'boolean' && !v) return null;
-                      const featureLabel = t(`features.${k}`);
-                      const labelText = featureLabel === `features.${k}` ? k.replace(/_/g, ' ') : featureLabel;
-
-                      // Valores: -1 → ∞, true → solo label sin número, número → "N label"
-                      let displayValue: React.ReactNode;
-                      if (typeof v === 'boolean') {
-                        // Solo true llega acá; mostrar label sin número
-                        displayValue = <span className="text-gray-700">✓ {labelText}</span>;
-                      } else if (v === -1) {
-                        displayValue = (
-                          <span className="text-gray-700">
-                            <strong>{t('features.unlimited')}</strong>{' '}
-                            <span className="text-gray-500">{labelText}</span>
-                          </span>
-                        );
-                      } else {
-                        const numFmt = typeof v === 'number' && v >= 1000 ? v.toLocaleString('es-EC') : String(v);
-                        displayValue = (
-                          <span className="text-gray-700">
-                            <strong>{numFmt}</strong>{' '}
-                            <span className="text-gray-500">{labelText}</span>
-                          </span>
-                        );
-                      }
-
-                      return (
-                        <li key={k} className="flex items-start">
-                          <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-                          </svg>
-                          {displayValue}
-                        </li>
-                      );
-                    })}
+                    {features.map((feat, i) => (
+                      <li key={i} className="flex items-start">
+                        <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span className="text-gray-700">{feat}</span>
+                      </li>
+                    ))}
                   </ul>
 
                   <button
@@ -340,6 +312,7 @@ export default function PricingPage() {
                 <p className="text-xs text-gray-600 mb-3">Tarjeta o cuenta PayPal · cobro instantáneo</p>
                 <PayPalCheckoutButton
                   planCode={methodModal.code}
+                  billingCycle={billingCycle}
                   onSuccess={({ paymentId }) => {
                     setMethodModal(null);
                     router.push(`/payment/${paymentId}?paypal=success`);

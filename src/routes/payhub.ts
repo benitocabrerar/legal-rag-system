@@ -13,6 +13,7 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createClient } from '@supabase/supabase-js';
+import { listPublicPlans, resolvePlanPrice } from '../lib/plan-pricing.js';
 
 const PAYHUB_URL = process.env.PAYHUB_SUPABASE_URL;
 const PAYHUB_KEY = process.env.PAYHUB_SUPABASE_SERVICE_ROLE_KEY;
@@ -59,7 +60,8 @@ async function sendResend(opts: { to: string; subject: string; html: string; rep
 }
 
 interface CreatePaymentBody {
-  planCode?: string;       // del catálogo payhub.plans
+  planCode?: string;       // del catálogo subscription_plans
+  billingCycle?: 'monthly' | 'yearly';
   addonCode?: string;      // del catálogo payhub.addons
   customAmountCents?: number;
   currency?: string;
@@ -83,16 +85,12 @@ export async function payhubRoutes(app: FastifyInstance) {
   });
 
   // ============ GET /payhub/plans ============
+  // Lee subscription_plans (fuente única editada desde el panel de precios).
   app.get('/payhub/plans', async (request, reply) => {
     const cycle = (request.query as any)?.cycle ?? null;
     try {
-      const sb = payhub();
-      const { data, error } = await sb.rpc('payhub_list_plans', {
-        p_app_slug: APP_SLUG,
-        p_billing_cycle: cycle,
-      });
-      if (error) throw error;
-      return reply.send({ plans: data || [] });
+      const plans = await listPublicPlans(cycle);
+      return reply.send({ plans });
     } catch (err: any) {
       request.log.error({ err }, 'payhub list plans failed');
       return reply.code(500).send({ error: err?.message || 'failed' });
@@ -121,11 +119,7 @@ export async function payhubRoutes(app: FastifyInstance) {
       const metadata: Record<string, unknown> = { ...(body.metadata || {}) };
 
       if (body.planCode) {
-        const { data: plans } = await sb.rpc('payhub_list_plans', {
-          p_app_slug: APP_SLUG,
-          p_billing_cycle: null,
-        });
-        const plan = (plans as any[])?.find((p) => p.code === body.planCode);
+        const plan = await resolvePlanPrice(body.planCode, body.billingCycle);
         if (!plan) return reply.code(404).send({ error: `Plan '${body.planCode}' no existe` });
         amountCents = plan.price_cents;
         currency = plan.currency;
