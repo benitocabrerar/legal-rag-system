@@ -86,7 +86,7 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
       }}
     >
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl
+        className="relative w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl
                    bg-gradient-to-br from-emerald-50 via-green-50 to-lime-50
                    border-2 border-emerald-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
       >
@@ -94,7 +94,7 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-400 via-green-500 to-lime-400" />
 
         {/* Header */}
-        <div className="px-6 sm:px-8 pt-7 pb-4 border-b border-emerald-200 bg-white/40 backdrop-blur-sm">
+        <div className="shrink-0 px-6 sm:px-8 pt-7 pb-4 border-b border-emerald-200 bg-white/40 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 shadow-md">
@@ -145,8 +145,9 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
           )}
         </div>
 
-        {/* Body */}
-        <div className="overflow-y-auto px-6 sm:px-8 py-6 space-y-6" style={{ maxHeight: 'calc(90vh - 220px)' }}>
+        {/* Body — flex-1 + min-h-0 para que ocupe el espacio restante y haga
+            scroll interno; el header y el footer quedan siempre visibles. */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 sm:px-8 py-6 space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 text-sm">
               <strong className="block mb-1">No se pudo generar el resumen.</strong>
@@ -261,19 +262,20 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 sm:px-8 py-4 border-t border-emerald-200 bg-white/60 backdrop-blur-sm flex items-center justify-between gap-3">
+        {/* Footer — shrink-0 para que nunca se recorte. En móvil las acciones
+            se apilan (la primaria arriba) y ocupan todo el ancho. */}
+        <div className="shrink-0 px-6 sm:px-8 py-4 border-t border-emerald-200 bg-white/60 backdrop-blur-sm flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           <button
             onClick={() => generate(true)}
             disabled={loading || refreshing}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 hover:text-emerald-900 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 hover:text-emerald-900 disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Regenerando...' : 'Regenerar resumen'}
           </button>
           <Link
             href={`/dashboard/cases/${caseId}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold text-sm shadow-md transition-all"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold text-sm shadow-md transition-all"
             onClick={onClose}
           >
             Ver caso completo
