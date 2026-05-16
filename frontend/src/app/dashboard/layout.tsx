@@ -15,6 +15,7 @@ import { TourProvider } from '@/components/help/TourProvider';
 import { HelpFab } from '@/components/help/HelpFab';
 import DeployBadge from '@/components/DeployBadge';
 import { TrialBanner } from '@/components/TrialBanner';
+import { FeatureDevNotice } from '@/components/FeatureDevNotice';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -392,6 +393,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Deploy info badge — esquina inferior izquierda más abajo */}
       <DeployBadge />
+
+      {/* Aviso global "función en desarrollo" — escucha poweria:feature-dev */}
+      <FeatureDevNotice />
     </div>
   );
 }

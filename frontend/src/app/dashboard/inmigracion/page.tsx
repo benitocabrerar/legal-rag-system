@@ -136,7 +136,10 @@ export default function InmigracionPage() {
       setSaved(false);
       setView('result');
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'No se pudo generar el paquete');
+      // El aviso "función en desarrollo" lo muestra FeatureDevNotice (global).
+      if (e?.response?.data?.code !== 'feature_in_development') {
+        setError(e?.response?.data?.error || e?.message || 'No se pudo generar el paquete');
+      }
     } finally {
       setGenerating(false);
     }

@@ -122,7 +122,10 @@ export default function TramitesPage() {
       setSaved(false);
       setView('result');
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'No se pudo generar el trámite');
+      // El aviso "función en desarrollo" lo muestra FeatureDevNotice (global).
+      if (e?.response?.data?.code !== 'feature_in_development') {
+        setError(e?.response?.data?.error || e?.message || 'No se pudo generar el trámite');
+      }
     } finally {
       setGenerating(false);
     }

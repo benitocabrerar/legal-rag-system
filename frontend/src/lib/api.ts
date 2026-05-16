@@ -120,6 +120,16 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Feature en desarrollo: el backend responde 501 con code
+    // 'feature_in_development'. Se emite un evento global para que un aviso
+    // amable lo muestre, en lugar de un error rojo. (Ver FeatureDevNotice.)
+    if (error.response?.data?.code === 'feature_in_development' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('poweria:feature-dev', {
+        detail: {
+          message: error.response?.data?.error || 'Esta función está en desarrollo.',
+        },
+      }));
+    }
     if (error.response?.status === 401) {
       if (USE_SUPABASE_AUTH) {
         try {

@@ -186,10 +186,14 @@ export async function assertFeature(userId: string, featureKey: string): Promise
   }
   const u = await assertActiveAccess(userId);
   if (u.entitlements[featureKey] !== true) {
+    // El feature no está habilitado para el plan del usuario. En vez de un
+    // 403 "tu plan no lo incluye", se comunica como una función en desarrollo
+    // — más amable durante la fase de adopción. Status 501 (Not Implemented).
     throw new EntitlementError(
-      'feature_locked',
-      `Tu plan ${u.planName} no incluye "${def.labelEs}". Subí de plan para activarlo.`,
-      403,
+      'feature_in_development',
+      `«${def.labelEs}» está en desarrollo. Estamos afinando los últimos detalles ` +
+      `y estará disponible muy pronto.`,
+      501,
     );
   }
 }

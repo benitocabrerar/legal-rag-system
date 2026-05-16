@@ -93,7 +93,10 @@ export default function TraductorPage() {
       setResult(r.data.translation);
       setHistory((prev) => [r.data.translation, ...prev]);
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'No se pudo traducir el texto');
+      // El aviso "función en desarrollo" lo muestra FeatureDevNotice (global).
+      if (e?.response?.data?.code !== 'feature_in_development') {
+        setError(e?.response?.data?.error || e?.message || 'No se pudo traducir el texto');
+      }
     } finally {
       setTranslating(false);
     }
