@@ -407,7 +407,7 @@ async function checkNewLawsFromInternal(corpus: MonitorableDoc[]): Promise<{ ale
          remote_publication_date, remote_source_url, remote_edition_number, remote_pdf_url,
          diff_data
        )
-       VALUES ('new_law', $1, 'open', $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+       VALUES ('new_law', $1, 'open', $2::uuid, $3, $4, $5, $6, $7, $8, $9::jsonb)
        ON CONFLICT (alert_type, COALESCE(legal_doc_id,''), COALESCE(remote_edition_number,''), lower(title))
          WHERE status = 'open'
          DO NOTHING
@@ -472,7 +472,7 @@ async function checkOutdatedDocsFromInternal(corpus: MonitorableDoc[]): Promise<
            remote_source_url, remote_edition_number, remote_pdf_url,
            diff_data
          )
-         VALUES ('outdated_doc', $1, 'open', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)
+         VALUES ('outdated_doc', $1, 'open', $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)
          ON CONFLICT (alert_type, COALESCE(legal_doc_id,''), COALESCE(remote_edition_number,''), lower(title))
            WHERE status = 'open'
            DO NOTHING
