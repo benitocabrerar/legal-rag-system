@@ -11,6 +11,7 @@
  */
 import { prisma } from '../lib/prisma.js';
 import { getAiClient } from '../lib/ai-client.js';
+import { POWERIA_FEATURES_KB, POWERIA_MODULES_SHORT } from '../lib/app-knowledge.js';
 import { retrieveLegalContextForChat } from './legal-rag-retrieval.service.js';
 import {
   sendTelegramMessage,
@@ -57,19 +58,36 @@ export interface TelegramUpdate {
 
 // ─── RAG — RESPUESTA A PREGUNTAS JURÍDICAS ─────────────────────────────────
 
-const BOT_SYSTEM_PROMPT = `Sos el asistente jurídico de Poweria Legal, especializado en derecho ecuatoriano.
-Respondés consultas de abogados del Ecuador con precisión técnica.
+const BOT_SYSTEM_PROMPT = `Sos el asistente de Poweria Legal. Tenés DOS funciones y elegís según la pregunta:
 
-REGLAS:
-- Respondé SIEMPRE en español, en tono profesional pero claro.
-- Basá tu respuesta ÚNICAMENTE en la normativa del contexto provisto. Si el
-  contexto no alcanza, decílo explícitamente y sugerí consultar la fuente oficial.
+(A) CONSULTA JURÍDICA — preguntas sobre derecho ecuatoriano (normas, plazos,
+    procedimientos, artículos). Respondé con el CONTEXTO NORMATIVO provisto.
+(B) AYUDA SOBRE LA APP — preguntas sobre qué hace Poweria Legal o cómo usar un
+    módulo ("¿cómo genero una demanda?", "¿qué es la Sala de Litigación?",
+    "¿para qué sirve el ROI?"). Respondé con la BASE DE CONOCIMIENTO DEL
+    PRODUCTO que tenés abajo.
+
+REGLAS GENERALES:
+- Respondé SIEMPRE en español, profesional pero claro.
+- Sé conciso: Telegram es un chat. Máximo ~250 palabras salvo que la pregunta
+  lo exija. Usá viñetas cuando ayuden.
+
+REGLAS PARA (A) CONSULTA JURÍDICA:
+- Basá la respuesta ÚNICAMENTE en la normativa del contexto provisto. Si el
+  contexto no alcanza, decílo y sugerí consultar la fuente oficial.
 - Citá los artículos y normas concretas (ej. "Art. 76 del COIP").
 - NO inventes artículos ni números de ley. Si no estás seguro, aclaralo.
-- Sé conciso: Telegram es un chat. Máximo ~250 palabras salvo que la
-  pregunta exija más. Usá viñetas cuando ayude.
-- No des asesoría que reemplace el criterio del abogado: ofrecé el marco
-  normativo, la decisión es del profesional.`;
+- Ofrecé el marco normativo; la decisión es del abogado.
+
+REGLAS PARA (B) AYUDA SOBRE LA APP:
+- Usá SOLO la base de conocimiento del producto de abajo. NO inventes módulos,
+  botones ni precios que no figuren ahí.
+- Explicá dónde está la función y los pasos para usarla.
+- Si preguntan algo de la app que no está en la base, decílo y sugerí el
+  Centro de ayuda (/help dentro de la app).
+
+═══════════ BASE DE CONOCIMIENTO DEL PRODUCTO ═══════════
+${POWERIA_FEATURES_KB}`;
 
 /**
  * Responde una pregunta jurídica usando el corpus (RAG).
@@ -84,10 +102,12 @@ export async function answerLegalQuestion(query: string): Promise<string> {
   // 1) Recuperar contexto normativo del corpus
   const ctx = await retrieveLegalContextForChat(clean, { limit: 8, filterCountryCode: 'EC' });
 
-  // 2) Construir mensajes para el LLM
+  // 2) Construir mensajes para el LLM. Si hay contexto del corpus, es una
+  //    consulta jurídica; si no, puede ser una pregunta sobre la app — el
+  //    system prompt sabe responder ambos casos.
   const userContent = ctx.formattedPrompt
-    ? `CONTEXTO NORMATIVO (corpus jurídico ecuatoriano):\n${ctx.formattedPrompt}\n\nCONSULTA DEL ABOGADO:\n${clean}`
-    : `No se encontró contexto normativo específico en el corpus para esta consulta.\n\nCONSULTA DEL ABOGADO:\n${clean}`;
+    ? `CONTEXTO NORMATIVO (corpus jurídico ecuatoriano):\n${ctx.formattedPrompt}\n\nCONSULTA:\n${clean}`
+    : `No se recuperó contexto normativo del corpus para esta consulta. Si es una pregunta sobre cómo usar Poweria Legal, respondé con la base de conocimiento del producto; si es jurídica y no tenés base, decílo.\n\nCONSULTA:\n${clean}`;
 
   // 3) Generar respuesta
   let answer = '';
@@ -122,7 +142,11 @@ export async function answerLegalQuestion(query: string): Promise<string> {
   if (ctx.citationsList) {
     html += `\n\n<b>📎 Fuentes del corpus:</b>\n${escapeHtml(ctx.citationsList)}`;
   }
-  html += '\n\n<i>Respuesta orientativa basada en el corpus de Poweria Legal. Verificá siempre la fuente oficial.</i>';
+  // El descargo del corpus solo aplica a consultas jurídicas; las preguntas
+  // sobre la app (sin contexto del corpus) no lo necesitan.
+  if (ctx.formattedPrompt) {
+    html += '\n\n<i>Respuesta orientativa basada en el corpus de Poweria Legal. Verificá siempre la fuente oficial.</i>';
+  }
 
   return html;
 }
@@ -133,19 +157,38 @@ function helpText(): string {
   return [
     '<b>🤖 Asistente Poweria Legal</b>',
     '',
-    'Soy tu asistente jurídico para derecho ecuatoriano. Esto es lo que puedo hacer:',
+    'Soy el asistente de Poweria Legal. Esto es lo que puedo hacer:',
     '',
-    '💬 <b>Consultas</b> — escribime cualquier pregunta jurídica en lenguaje natural y te respondo con base en el corpus legal (leyes, códigos, normativa del Registro Oficial).',
+    '💬 <b>Consultas jurídicas</b> — escribime cualquier pregunta de derecho ecuatoriano en lenguaje natural y te respondo con base en el corpus legal (leyes, códigos, Registro Oficial).',
+    '',
+    '🧭 <b>Ayuda sobre la app</b> — preguntame qué hace Poweria Legal o cómo usar cualquier módulo (casos, Sala de Litigación, generador de documentos, finanzas, ROI, trámites, etc.) y te explico.',
     '',
     '🔔 <b>Notificaciones</b> — si vinculás tu cuenta, te aviso acá cuando se publican normas nuevas, hay novedades en tus casos, audiencias en agenda o tareas por vencer.',
     '',
     '<b>Comandos:</b>',
+    '/funciones — ver todo lo que hace la aplicación',
     '/estado — ver si tu cuenta está vinculada',
     '/vincular — instrucciones para vincular tu cuenta',
     '/desvincular — desconectar este chat',
     '/ayuda — mostrar esta ayuda',
     '',
-    '<i>Ejemplo: «¿Cuál es el plazo para apelar una sentencia en materia penal?»</i>',
+    '<i>Ejemplos: «¿Cuál es el plazo para apelar en materia penal?» · «¿Cómo genero una demanda en la app?»</i>',
+  ].join('\n');
+}
+
+/** Lista los módulos de la aplicación — comando /funciones. */
+function funcionesText(): string {
+  const lines = POWERIA_MODULES_SHORT.map(
+    (m) => `${m.emoji} <b>${escapeHtml(m.name)}</b> — ${escapeHtml(m.desc)}`,
+  );
+  return [
+    '<b>🧭 Qué hace Poweria Legal</b>',
+    '',
+    'La plataforma de IA jurídica de COGNITEX. Sus módulos:',
+    '',
+    ...lines,
+    '',
+    'Preguntame por cualquiera de ellos (ej. «¿cómo funciona la Sala de Litigación?») y te explico cómo usarlo. Para la guía completa, abrí el Centro de ayuda dentro de la app.',
   ].join('\n');
 }
 
@@ -307,6 +350,8 @@ async function handleMessage(msg: TgMessage): Promise<void> {
       case '/start':       await handleStart(msg, arg); return;
       case '/ayuda':
       case '/help':        await sendTelegramMessage(chatId, helpText(), { logKind: 'command' }); return;
+      case '/funciones':
+      case '/features':    await sendTelegramMessage(chatId, funcionesText(), { logKind: 'command', disablePreview: true }); return;
       case '/estado':      await handleEstado(msg); return;
       case '/vincular':    await handleVincular(msg); return;
       case '/desvincular': await handleDesvincular(msg); return;
