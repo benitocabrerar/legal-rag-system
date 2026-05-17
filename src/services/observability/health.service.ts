@@ -192,30 +192,34 @@ export class HealthService {
     const memoryUsage = process.memoryUsage();
     const cpuUsage = process.cpuUsage();
 
-    const memoryUsedMB = memoryUsage.heapUsed / 1024 / 1024;
-    const memoryTotalMB = memoryUsage.heapTotal / 1024 / 1024;
-    const memoryPercentage = (memoryUsedMB / memoryTotalMB) * 100;
+    // Medimos RSS (memoria residente real del proceso dentro del contenedor),
+    // NO el ratio heapUsed/heapTotal. El heap de V8 vive de forma natural
+    // pegado al 100% (heapTotal crece justo por encima de heapUsed), así que
+    // usar ese ratio como señal de salud marcaba el sistema como 'down' con
+    // el servicio perfectamente sano → /observability/health devolvía 503 de
+    // forma permanente. RSS contra el límite del contenedor sí es real.
+    const rssMB = memoryUsage.rss / 1024 / 1024;
+    const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+    // Límite de memoria del contenedor (Render starter = 512 MB). Configurable.
+    const limitMB = Number(process.env.MEMORY_LIMIT_MB) || 512;
+    const memoryPercentage = (rssMB / limitMB) * 100;
 
-    let status: 'up' | 'degraded' | 'down' = 'up';
-
-    // Mark as degraded if memory usage > 80%
-    if (memoryPercentage > 80) {
-      status = 'degraded';
-    }
-
-    // Mark as down if memory usage > 95%
-    if (memoryPercentage > 95) {
-      status = 'down';
-    }
+    // La presión de memoria SOLO puede degradar, nunca marcar 'down': un
+    // proceso con la memoria alta sigue atendiendo tráfico con normalidad.
+    // 'down' se reserva para fallos reales (DB/Redis caídos). Así el health
+    // check no vuelve a tumbar al servicio (503 → Render lo da por muerto)
+    // por un falso positivo de memoria.
+    const status: 'up' | 'degraded' | 'down' = memoryPercentage > 85 ? 'degraded' : 'up';
 
     return {
       status,
-      message: `Memory usage: ${memoryUsedMB.toFixed(2)}MB / ${memoryTotalMB.toFixed(2)}MB (${memoryPercentage.toFixed(2)}%)`,
+      message: `Memory RSS: ${rssMB.toFixed(2)}MB / ${limitMB}MB (${memoryPercentage.toFixed(2)}%)`,
       details: {
         memory: {
-          used: memoryUsedMB,
-          total: memoryTotalMB,
+          used: rssMB,
+          total: limitMB,
           percentage: memoryPercentage,
+          heapUsed: heapUsedMB,
         },
         cpu: {
           user: cpuUsage.user,
