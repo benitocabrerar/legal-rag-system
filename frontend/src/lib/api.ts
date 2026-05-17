@@ -1,9 +1,11 @@
 // Version: 3.0.0 - Complete rebuild with defensive error handling
 import axios from 'axios';
 
+// Backend en Render región Virginia (us-east, junto a la DB Supabase).
+// El fallback solo aplica si NEXT_PUBLIC_API_URL no está seteada.
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
-  : 'https://poweria-legal-api.onrender.com/api/v1';
+  : 'https://poweria-legal-api-va.onrender.com/api/v1';
 
 // Helper function to safely handle API errors.
 //
