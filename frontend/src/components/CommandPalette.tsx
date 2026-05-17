@@ -47,7 +47,13 @@ const COMMANDS: CommandItemDef[] = [
     const id = p.startsWith('/dashboard/calendar') ? 'calendar'
              : p.startsWith('/dashboard/tasks') ? 'tasks'
              : p.startsWith('/dashboard/finance') ? 'finance'
+             : p.startsWith('/dashboard/workflows') ? 'workflows'
+             : p.startsWith('/dashboard/tramites') ? 'tramites'
+             : p.startsWith('/dashboard/roi') ? 'roi'
+             : p.startsWith('/dashboard/traductor') ? 'traductor'
+             : p.startsWith('/dashboard/inmigracion') ? 'inmigracion'
              : p.includes('/litigation') ? 'litigation'
+             : /\/dashboard\/cases\/[^/]+$/.test(p) ? 'case-detail'
              : 'dashboard';
     window.dispatchEvent(new CustomEvent('poweria-start-tour', { detail: { id } }));
   } },

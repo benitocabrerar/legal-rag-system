@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { HelpCircle, BookOpen, Map, Keyboard, X, Play } from 'lucide-react';
 import { useTour, TOURS } from './TourProvider';
+import { HELP_ARTICLES } from '@/lib/help-content';
 import { cn } from '@/lib/utils';
 
 /** FAB inferior-derecho con menú de ayuda. */
@@ -74,7 +75,7 @@ export function HelpFab() {
               </span>
               <div className="min-w-0">
                 <div className="text-[12px] font-bold text-slate-900">Centro de ayuda</div>
-                <div className="text-[11px] text-slate-500">22 artículos sobre todo el producto</div>
+                <div className="text-[11px] text-slate-500">{HELP_ARTICLES.length} artículos sobre todo el producto</div>
               </div>
             </Link>
 
@@ -137,6 +138,11 @@ function pickTourForRoute(pathname: string): string | null {
   if (pathname.startsWith('/dashboard/calendar')) return 'calendar';
   if (pathname.startsWith('/dashboard/tasks')) return 'tasks';
   if (pathname.startsWith('/dashboard/finance')) return 'finance';
+  if (pathname.startsWith('/dashboard/workflows')) return 'workflows';
+  if (pathname.startsWith('/dashboard/tramites')) return 'tramites';
+  if (pathname.startsWith('/dashboard/roi')) return 'roi';
+  if (pathname.startsWith('/dashboard/traductor')) return 'traductor';
+  if (pathname.startsWith('/dashboard/inmigracion')) return 'inmigracion';
   if (pathname.includes('/litigation')) return 'litigation';
   if (/\/dashboard\/cases\/[^/]+$/.test(pathname)) return 'case-detail';
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) return 'dashboard';

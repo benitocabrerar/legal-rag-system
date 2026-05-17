@@ -5,7 +5,7 @@
 export interface HelpArticle {
   id: string;
   title: string;
-  category: 'inicio' | 'casos' | 'litigacion' | 'productividad' | 'finanzas' | 'cuenta' | 'admin' | 'troubleshooting' | 'avanzado';
+  category: 'inicio' | 'casos' | 'litigacion' | 'productividad' | 'finanzas' | 'modulos' | 'cuenta' | 'admin' | 'troubleshooting' | 'avanzado';
   description: string;
   keywords: string[];
   icon: string;
@@ -19,6 +19,7 @@ export const HELP_CATEGORIES: Record<HelpArticle['category'], { label: string; e
   litigacion:      { label: 'Litigación',      emoji: '⚖️', color: 'text-fuchsia-700' },
   productividad:   { label: 'Productividad',   emoji: '🗓️', color: 'text-sky-700' },
   finanzas:        { label: 'Finanzas',        emoji: '💼', color: 'text-emerald-700' },
+  modulos:         { label: 'Módulos avanzados', emoji: '🧰', color: 'text-teal-700' },
   cuenta:          { label: 'Cuenta y datos',  emoji: '🔐', color: 'text-slate-700' },
   admin:           { label: 'Administración',  emoji: '🛠️', color: 'text-rose-700' },
   troubleshooting: { label: 'Solución de problemas', emoji: '🆘', color: 'text-orange-700' },
@@ -43,6 +44,8 @@ Poweria Legal es una plataforma de IA jurídica creada por **COGNITEX** (Ecuador
 - **Calendario y tareas**: mes/semana/día/agenda con drag-and-drop, kanban con sub-tareas y plantillas legales.
 - **Finanzas con CFO virtual**: aging de cobranza, forecast 4 semanas, factura desde tareas en un click, PDF al vuelo.
 - **Buscador jurídico instantáneo**: cita "Art. 76 Constitución" o "234 COIP" y ves el contenido del artículo en un segundo.
+- **Módulos avanzados** (menú "Más"): Workflow Studio, Agente de Trámites, Analíticas de ROI, Traductor Jurídico bilingüe y Agente de Formularios de Inmigración (USCIS).
+- **Asistente en Telegram**: consultá y recibí notificaciones desde el chat, vinculando tu cuenta.
 
 ## Por qué confiar
 
@@ -906,6 +909,290 @@ Si nada de lo anterior funciona:
 3. **Limpiar Storage**: DevTools → Application → Storage → "Clear site data".
 
 A partir de la versión de mayo 2026, el Service Worker **NUNCA cachea HTML** — solo recursos versionados (CSS/JS hasheados, imágenes). Eso elimina el problema de raíz.
+`,
+  },
+  {
+    id: 'workflow-studio',
+    title: 'Workflow Studio: flujos de trabajo jurídicos',
+    category: 'modulos',
+    description: 'Plantillas que encadenan búsqueda en el corpus y generación con IA, con progreso en vivo y verificación de fuentes.',
+    keywords: ['workflow', 'workflows', 'studio', 'flujo', 'plantilla', 'automatización', 'sse'],
+    icon: '⚙️',
+    body: `## Qué es
+
+**Workflow Studio** (menú **Más → Workflows**) ejecuta flujos de trabajo jurídicos que encadenan varios pasos automáticos: típicamente una búsqueda en el corpus legal seguida de una generación con IA. En vez de pedir cosas sueltas al chat, eliges una plantilla y el motor corre los pasos por vos.
+
+## Flujo
+
+1. **Catálogo** — verás tarjetas de plantillas, cada una con su categoría (Investigación, Redacción, Litigación) y la cadena de pasos que ejecuta.
+2. Elige una plantilla y se abre su formulario.
+3. Escribe tu **entrada** en el campo de texto (el label y el placeholder te dicen qué espera esa plantilla). Mínimo 5 caracteres.
+4. Click **Ejecutar workflow**.
+5. El panel **Progreso** muestra cada paso en vivo (vía SSE): pendiente → corriendo → completado, con su duración y una vista previa.
+6. Al terminar aparece el **Resultado** en una card verde, con botón **Copiar**.
+
+## Verificación de fuentes
+
+Apenas hay resultado, el sistema contrasta automáticamente las normas citadas contra el corpus:
+
+- **Normas confirmadas en el corpus** — con link al PDF oficial.
+- **Referencias a artículos** — chips ámbar que debes contrastar manualmente contra la norma.
+- Un badge de **confianza** (alta / media / baja) resume la verificación.
+
+La verificación no reemplaza tu revisión profesional: confirmá siempre el texto vigente en la fuente oficial.
+
+## Historial
+
+Bajo el catálogo está **Ejecuciones recientes** con las últimas 15 corridas, su estado, duración y cuándo se ejecutaron.
+`,
+  },
+  {
+    id: 'agente-tramites',
+    title: 'Agente de Trámites',
+    category: 'modulos',
+    description: 'Autocompleta escritos tipo del foro ecuatoriano desde campos estructurados. El borrador siempre exige revisión del abogado.',
+    keywords: ['trámites', 'tramites', 'escrito', 'foro', 'borrador', 'revisión', 'agente'],
+    icon: '📄',
+    body: `## Qué es
+
+El **Agente de Trámites** (menú **Más → Trámites**) autocompleta escritos y trámites tipo del foro ecuatoriano a partir de campos estructurados. El ciclo es siempre el mismo:
+
+\`catálogo → formulario → borrador + revisión obligatoria → aprobado\`
+
+## Flujo
+
+1. **Catálogo** — los trámites están agrupados por categoría. Cada tarjeta tiene un ícono, nombre y descripción.
+2. Elige un trámite y llena el **formulario**: campos de texto y de área, los obligatorios marcados con \`*\`. Cada campo trae su placeholder y a veces una pista.
+3. Click **Generar borrador**. El agente busca normativa aplicable y redacta el escrito (tarda algunos segundos).
+4. Se abre la vista de **resultado**.
+
+## Revisión obligatoria
+
+El borrador **nace siempre como \`BORRADOR\`** (badge ámbar). Una banda ámbar te recuerda que es un texto generado por IA y **no debe presentarse sin la revisión de un abogado**.
+
+- Editá el contenido directamente en el editor (también podés **Copiar** o **Descargar .txt**).
+- **Normas verificadas contra el corpus** — lista las normas del corpus que se detectaron citadas, con link al PDF. Si está vacía, verificá los fundamentos de derecho a mano.
+- **Guardar revisión** — guarda tus cambios manteniendo el estado borrador.
+- **Aprobar trámite** — tras revisarlo, lo marca como \`APROBADO\` (badge verde). Pide confirmación. Podés seguir editándolo y re-aprobarlo.
+
+## Historial
+
+En el catálogo, **Trámites recientes** lista todo lo generado con su estado. Click para reabrir cualquiera.
+`,
+  },
+  {
+    id: 'analiticas-roi',
+    title: 'Analíticas de ROI',
+    category: 'modulos',
+    description: 'Traduce tu actividad asistida por IA en tiempo ahorrado y, con tu tarifa horaria, en dinero.',
+    keywords: ['roi', 'retorno', 'tiempo', 'ahorro', 'tarifa', 'valor', 'productividad'],
+    icon: '📈',
+    body: `## Qué es
+
+**Analíticas de ROI** (menú **Más → ROI**) hace visible el retorno de Poweria Legal: cuánto tiempo te ahorró el trabajo asistido por IA y, con la tarifa que vos definas, cuánto vale ese tiempo en dinero.
+
+## Los 3 indicadores principales
+
+- **Tiempo ahorrado** — total de horas, con el número de actividades IA detrás.
+- **Valor estimado** — el tiempo ahorrado multiplicado por tu tarifa horaria.
+- **Tu tarifa por hora** — campo editable (default $35). Ajustala a tu realidad; el cálculo se actualiza solo y la tarifa se guarda en tu navegador.
+
+## Desglose por actividad
+
+Una sección detalla el ahorro estimado por cada tipo de tarea asistida por IA — consultas (🔎), conversaciones (💬), workflows (⚙️), trámites (📄) y documentos (📑) — con cuántas veces la usaste, los minutos estimados por uso y una barra comparativa.
+
+## Tendencia mensual
+
+Un gráfico de barras muestra el tiempo ahorrado en los **últimos 6 meses**.
+
+## Notas
+
+- Si todavía no usaste funciones de IA, el panel te invita a empezar — no hay nada para medir aún.
+- Las estimaciones de tiempo son **referenciales**: reflejan cuánto tomaría cada tarea sin IA. El valor en dinero usa siempre la tarifa que vos elegís.
+`,
+  },
+  {
+    id: 'traductor-juridico',
+    title: 'Traductor Jurídico bilingüe',
+    category: 'modulos',
+    description: 'Traducción legal español ⇄ inglés que preserva el sentido jurídico, con glosario de términos.',
+    keywords: ['traductor', 'traducción', 'inglés', 'español', 'bilingüe', 'glosario'],
+    icon: '🌐',
+    body: `## Qué es
+
+El **Traductor Jurídico** (menú **Más → Traductor**) traduce texto legal **español ⇄ inglés** preservando el sentido jurídico. Es la pieza del modo bilingüe, pensada para el abogado que atiende clientes hispanos en EE.UU.
+
+## Cómo usarlo
+
+1. En la barra de controles ves la dirección (ej. **Español → Inglés**). El botón de doble flecha **invierte la dirección**.
+2. Elige el **Tipo de documento** en el select — da contexto a la traducción.
+3. Pegá el texto en el panel izquierdo (**original**).
+4. Click **Traducir**. El panel derecho muestra la **traducción**, con botón **Copiar**.
+
+## Glosario de términos
+
+Si la traducción usó equivalencias jurídicas, aparece una tabla **Glosario de términos jurídicos** con el término en cada idioma y una nota de contexto. Verificá que cada equivalencia se ajuste a tu caso.
+
+## Historial
+
+**Traducciones recientes** guarda tus últimas 20 traducciones; click en cualquiera para recargarla.
+
+## Importante
+
+La traducción asistida por IA es un **borrador de trabajo**. Para presentaciones oficiales puede requerirse una **traducción certificada**.
+`,
+  },
+  {
+    id: 'formularios-inmigracion',
+    title: 'Agente de Formularios de Inmigración (USCIS)',
+    category: 'modulos',
+    description: 'Arma paquetes de preparación de formularios USCIS: borrador, lista de documentos y guía de presentación.',
+    keywords: ['inmigración', 'inmigracion', 'uscis', 'i-130', 'i-485', 'n-400', 'formulario', 'visa'],
+    icon: '🛂',
+    body: `## Qué es
+
+El **Agente de Formularios de Inmigración** (menú **Más → Inmigración**) arma un paquete de preparación para un formulario **USCIS** (I-130, I-485, N-400, etc.) a partir de los datos del cliente.
+
+Cada paquete reúne tres entregables:
+
+1. **Borrador del formulario**.
+2. **Lista de documentos de respaldo** (checklist).
+3. **Guía de presentación**.
+
+\`catálogo → admisión → paquete + revisión obligatoria → revisado\`
+
+## Flujo
+
+1. **Catálogo** — los formularios están agrupados por categoría, cada tarjeta con su código USCIS, nombre y descripción.
+2. Elige un formulario y llena el **formulario de admisión**: el nombre del cliente (obligatorio) más los campos propios del trámite. Verás también una nota de tasas (\`feeNote\`).
+3. Click **Generar paquete**. El agente arma el borrador, el checklist y la guía (tarda algunos segundos).
+4. Se abre la vista del paquete.
+
+## Revisión obligatoria
+
+El paquete **nace siempre como \`BORRADOR\`**. Una banda ámbar lo deja claro: es un borrador generado por IA, **no asesoría legal**, y debe revisarlo un **abogado de inmigración con licencia en EE.UU.** Nada se presenta automáticamente ante USCIS.
+
+- Editá el borrador en el editor; podés **Copiar** o **Descargar** el paquete completo en \`.txt\`.
+- **Documentos de respaldo** — checklist marcable; los opcionales están etiquetados.
+- **Guía de presentación** — instrucciones de envío.
+- **Guardar revisión** mantiene el borrador; **Marcar como revisado** (pide confirmación de que un abogado con licencia lo revisó) lo pasa a estado \`REVISADO\`.
+
+## Alcance
+
+Es una herramienta de **preparación**, no de asesoría legal ni de presentación. La responsabilidad profesional es siempre del abogado.
+`,
+  },
+  {
+    id: 'integracion-telegram',
+    title: 'Integración con Telegram',
+    category: 'cuenta',
+    description: 'Vinculá tu cuenta para recibir notificaciones y consultar al asistente jurídico desde Telegram.',
+    keywords: ['telegram', 'bot', 'notificaciones', 'vincular', 'chat', 'asistente'],
+    icon: '✈️',
+    body: `## Qué es
+
+Poweria Legal tiene un **bot de Telegram** que te permite, desde tu celular:
+
+- 💬 Hacer **consultas jurídicas** de derecho ecuatoriano en lenguaje natural — el bot responde con base en el corpus legal.
+- 🧭 Preguntar **cómo usar la app** — el bot conoce todos los módulos y te explica.
+- 🔔 Recibir **notificaciones**: normas nuevas del corpus, novedades de tus casos, agenda/audiencias y tareas.
+
+## Vincular tu cuenta
+
+1. Andá a **Configuración → Telegram** (\`/dashboard/settings\`).
+2. Tocá **Conectar Telegram**. Se abre el chat con el bot en otra pestaña.
+3. En Telegram, tocá **«Iniciar» / «Start»** para confirmar.
+4. La página de configuración se actualiza sola y muestra **Vinculado**.
+
+El código de vinculación vale 15 minutos; si expira, generá uno nuevo.
+
+## Elegir qué recibir
+
+Una vez vinculado, en la misma tarjeta activás o desactivás cada tipo de aviso con un interruptor:
+
+- 📚 Normas nuevas del corpus
+- ⚖️ Novedades en casos
+- 📅 Agenda y audiencias
+- ✅ Tareas
+
+## Comandos del bot
+
+En el chat de Telegram: \`/funciones\` (qué hace la app), \`/ayuda\`, \`/estado\` (ver si estás vinculado), \`/vincular\`, \`/desvincular\`.
+
+## Desvincular
+
+Desde **Configuración → Telegram → Desvincular**, o enviando \`/desvincular\` al bot. Dejás de recibir notificaciones; podés volver a conectarte cuando quieras.
+`,
+  },
+  {
+    id: 'busqueda-agregar-caso',
+    title: 'Buscador jurídico y "Agregar a mi caso"',
+    category: 'casos',
+    description: 'Busca normas en el corpus ecuatoriano y adjunta una norma a tu caso: descarga el PDF, lo vectoriza y lo suma al expediente.',
+    keywords: ['búsqueda', 'buscador', 'corpus', 'norma', 'agregar', 'adjuntar', 'caso', 'pdf'],
+    icon: '🔎',
+    body: `## El buscador jurídico
+
+Poweria Legal indexa un corpus de leyes y códigos ecuatorianos (cientos de normas vectorizadas). Podés buscarlas:
+
+- Desde el **buscador de la app** (\`/search\`) — filtrá por tipo de documento (Constitución, Ley, Código, Reglamento, Jurisprudencia) y por jurisdicción.
+- Desde la **Sala de Litigación**, pestaña *Buscar artículo* — citá "Art. 76 Constitución" o "234 COIP" y obtené el contenido al instante.
+- La **búsqueda jurídica avanzada** permite filtrar por jerarquía normativa (Constitución, tratados, códigos orgánicos, leyes, reglamentos, resoluciones, ordenanzas) y por ámbito (nacional, intermedio, local, internacional).
+
+## Agregar una norma a tu caso
+
+Cuando encontrás una norma relevante, podés sumarla al expediente con **"Agregar a mi caso"**. El sistema:
+
+1. **Descarga el PDF oficial** de la norma.
+2. **Extrae y vectoriza** su texto en chunks.
+3. Lo **adjunta como documento del caso** que elijas.
+
+A partir de ahí esa norma forma parte del **cerebro del expediente**: el chat IA del caso, el generador de documentos y los análisis la tienen disponible como fuente.
+
+## Diferencia con subir un documento
+
+- *Subir documento* incorpora un archivo tuyo (evidencia, contrato, providencia).
+- *Agregar a mi caso* trae una **norma del corpus** ya identificada — no subís nada, el sistema la descarga y la indexa por vos.
+
+## Nota
+
+Adjuntar una norma no toca el resto del expediente: es aditivo. Si la norma ya estaba en el caso, no se duplica.
+`,
+  },
+  {
+    id: 'sala-razonamiento',
+    title: 'Fundamentación Jurídica Avanzada y Sala de Razonamiento',
+    category: 'litigacion',
+    description: 'Debatí tu tesis con la IA y guardá análisis que alimentan el cerebro del caso para mejores documentos.',
+    keywords: ['fundamentación', 'razonamiento', 'sala', 'tesis', 'estrategia', 'deliberación', 'cerebro', 'análisis'],
+    icon: '🧠',
+    body: `## Fundamentación Jurídica Avanzada
+
+En la página de detalle del caso, el panel **Fundamentación Jurídica Avanzada** lista todos los **análisis jurídicos guardados** del expediente. Cada análisis es un documento \`ai_analysis\` que ya forma parte del **cerebro del caso**: cuanto más analiza el abogado, mejores son los argumentos que la IA tiene para redactar documentos e informes.
+
+Cada entrada muestra su origen: **IA** (ícono balanza, violeta) o **abogado** (ícono pluma, fucsia), con la norma y la fecha. Click en cualquiera para leer el análisis completo. El panel se actualiza solo cuando se guarda un análisis nuevo.
+
+## Sala de Razonamiento Jurídico
+
+Desde ese panel abrís la **Sala de Razonamiento Jurídico**: el espacio donde el abogado escribe su propio análisis y lo **debate con la IA**. La IA pone el planteamiento a prueba con argumentos jurídicos; si el abogado insiste, todo queda registrado y el resultado se incorpora al cerebro del caso como un documento fechado.
+
+### Los 4 modos
+
+- ⚖️ **Tesis del Caso** — sostené una posición jurídica; la IA la pone a prueba con la objeción más fuerte.
+- ✍️ **Razonamiento del Abogado** — pensá en voz alta; la IA acompaña y afina tu razonamiento.
+- 🎯 **Mesa de Estrategia** — evaluá una diligencia o decisión (pericia, investigación) con la IA.
+- ⚔️ **Deliberación Jurídica** — debatí un punto controvertido; la IA hace de abogado del diablo.
+
+### Flujo
+
+1. **Elegí el modo** según lo que necesites.
+2. **Debatí** — escribí tu planteamiento, la IA responde; podés ir y venir.
+3. **Generá el documento** — la conversación se condensa en un documento editable.
+4. **Agregalo al cerebro del caso** — queda guardado como análisis del expediente y aparece en la Fundamentación Jurídica Avanzada.
+
+## Por qué importa
+
+Cada análisis guardado mejora todo lo que la IA produce después en ese caso: un cerebro de expediente más rico significa demandas, alegatos e informes mejor fundados.
 `,
   },
 ];

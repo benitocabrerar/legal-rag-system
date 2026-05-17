@@ -320,6 +320,118 @@ export const TOURS: Record<string, Tour> = {
         placement: 'center' },
     ],
   },
+
+  // ─── Tours de módulos avanzados (menú "Más") ──────────────────────────
+  'workflows': {
+    id: 'workflows',
+    label: 'Tour de Workflow Studio',
+    steps: [
+      { title: '⚙️ Workflow Studio',
+        body: 'Flujos de trabajo jurídicos que encadenan búsqueda en el corpus y generación con IA. Eliges una plantilla y el motor corre los pasos por vos.',
+        placement: 'center' },
+      { title: 'Catálogo de plantillas',
+        body: 'Cada tarjeta muestra su categoría (Investigación, Redacción, Litigación) y la cadena de pasos que ejecuta. Elegí una para empezar.',
+        placement: 'center' },
+      { title: 'Ejecución en vivo',
+        body: 'Escribís tu entrada y pulsás "Ejecutar workflow". El panel Progreso muestra cada paso vía SSE: pendiente → corriendo → completado, con duración y vista previa.',
+        placement: 'center' },
+      { title: 'Verificación de fuentes',
+        body: 'Al terminar, el sistema contrasta las normas citadas contra el corpus: confirmadas (con PDF oficial) vs. referencias a artículos por verificar. Un badge resume la confianza.',
+        placement: 'center' },
+    ],
+  },
+
+  'tramites': {
+    id: 'tramites',
+    label: 'Tour del Agente de Trámites',
+    steps: [
+      { title: '📄 Agente de Trámites',
+        body: 'Autocompletá escritos tipo del foro ecuatoriano desde campos estructurados: catálogo → formulario → borrador → revisión → aprobado.',
+        placement: 'center' },
+      { title: 'Elegí y completá',
+        body: 'Elegís un trámite del catálogo (agrupado por categoría) y llenás el formulario. Los campos obligatorios van marcados con *.',
+        placement: 'center' },
+      { title: 'Revisión obligatoria',
+        body: 'El borrador nace siempre como BORRADOR. Es texto generado por IA — no se presenta sin la revisión de un abogado. Editalo en el editor.',
+        placement: 'center' },
+      { title: 'Normas verificadas y aprobación',
+        body: 'Verás las normas del corpus citadas en el borrador. "Guardar revisión" conserva el borrador; "Aprobar trámite" lo marca como versión final.',
+        placement: 'center' },
+    ],
+  },
+
+  'roi': {
+    id: 'roi',
+    label: 'Tour de Analíticas de ROI',
+    steps: [
+      { title: '📈 Analíticas de ROI',
+        body: 'Hace visible el retorno de Poweria Legal: cuánto tiempo te ahorró la IA y, con tu tarifa, cuánto vale en dinero.',
+        placement: 'center' },
+      { title: 'Tres indicadores',
+        body: 'Tiempo ahorrado (horas), Valor estimado ($) y Tu tarifa por hora. La tarifa es editable y el cálculo se actualiza solo.',
+        placement: 'center' },
+      { title: 'Desglose y tendencia',
+        body: 'El desglose por actividad estima el ahorro de cada tipo de tarea IA; el gráfico muestra el tiempo ahorrado en los últimos 6 meses.',
+        placement: 'center' },
+    ],
+  },
+
+  'traductor': {
+    id: 'traductor',
+    label: 'Tour del Traductor Jurídico',
+    steps: [
+      { title: '🌐 Traductor Jurídico',
+        body: 'Traducción legal español ⇄ inglés que preserva el sentido jurídico. La pieza del modo bilingüe para clientes hispanos en EE.UU.',
+        placement: 'center' },
+      { title: 'Dirección y tipo',
+        body: 'El botón de doble flecha invierte la dirección. Elegí el tipo de documento para dar contexto a la traducción.',
+        placement: 'center' },
+      { title: 'Traducí y revisá',
+        body: 'Pegás el texto en el panel izquierdo y pulsás Traducir. Si se usaron equivalencias jurídicas, aparece un glosario de términos para que verifiques.',
+        placement: 'center' },
+      { title: 'Borrador de trabajo',
+        body: 'La traducción asistida por IA es un borrador. Para presentaciones oficiales puede requerirse una traducción certificada.',
+        placement: 'center' },
+    ],
+  },
+
+  'inmigracion': {
+    id: 'inmigracion',
+    label: 'Tour de Formularios de Inmigración',
+    steps: [
+      { title: '🛂 Formularios de Inmigración',
+        body: 'Arma paquetes de preparación para formularios USCIS (I-130, I-485, N-400…): borrador del formulario + checklist de documentos + guía de presentación.',
+        placement: 'center' },
+      { title: 'Catálogo y admisión',
+        body: 'Elegís un formulario y llenás el formulario de admisión: nombre del cliente más los campos del trámite. Verás también la nota de tasas.',
+        placement: 'center' },
+      { title: 'Revisión obligatoria',
+        body: 'El paquete nace como BORRADOR. Es preparación, no asesoría legal: debe revisarlo un abogado de inmigración con licencia en EE.UU. Nada se presenta solo ante USCIS.',
+        placement: 'center' },
+      { title: 'Checklist y guía',
+        body: 'El paquete trae un checklist marcable de documentos de respaldo y una guía de presentación. "Marcar como revisado" lo pasa a versión final.',
+        placement: 'center' },
+    ],
+  },
+
+  'reasoning-room': {
+    id: 'reasoning-room',
+    label: 'Tour de la Sala de Razonamiento',
+    steps: [
+      { title: '🧠 Fundamentación Jurídica Avanzada',
+        body: 'En el detalle del caso, este panel lista los análisis jurídicos guardados. Cada uno forma parte del cerebro del expediente.',
+        placement: 'center' },
+      { title: 'Sala de Razonamiento',
+        body: 'Desde el panel abrís la Sala: escribís tu propio análisis y lo debatís con la IA, que pone tu planteamiento a prueba con argumentos jurídicos.',
+        placement: 'center' },
+      { title: 'Cuatro modos',
+        body: 'Tesis del Caso · Razonamiento del Abogado · Mesa de Estrategia · Deliberación Jurídica. Elegís según lo que necesites trabajar.',
+        placement: 'center' },
+      { title: 'Al cerebro del caso',
+        body: 'El debate se condensa en un documento editable que agregás al expediente. Cada análisis guardado mejora todo lo que la IA produce después en ese caso.',
+        placement: 'center' },
+    ],
+  },
 };
 
 // ─── Provider ───────────────────────────────────────────────
