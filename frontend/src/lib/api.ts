@@ -737,7 +737,9 @@ export interface LegalDocPreflight {
   docType: string;
   docLabel: string;
   missing: Array<{ key: string; label: string; hint?: string }>;
-  present: Array<{ key: string; label: string; value: string }>;
+  present: Array<{ key: string; label: string; value: string; autoDetected?: boolean }>;
+  /** Campos que la IA extrajo del expediente; el frontend los siembra en `supplied`. */
+  autoFilled?: Record<string, string>;
   country: { code: string; name: string; flag?: string };
   caseHasDocuments: number;
 }

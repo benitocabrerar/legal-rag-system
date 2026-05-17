@@ -123,6 +123,12 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
     try {
       const r = await legalDocGenAPI.preflight(caseId, docType, supplied);
       setPreflight(r);
+      // La IA pre-llenó campos desde el expediente → los sembramos en
+      // `supplied` para que fluyan a la generación y persistan. Lo que el
+      // usuario ya escribió manualmente gana sobre la extracción IA.
+      if (r.autoFilled && Object.keys(r.autoFilled).length > 0) {
+        setSupplied((s) => ({ ...r.autoFilled, ...s }));
+      }
       setStep('preflight');
     } catch (e: any) {
       setError(e?.response?.data?.error ?? 'No pude validar los datos del caso.');
@@ -537,13 +543,22 @@ export function LegalDocGenDialog({ isOpen, onClose, caseId }: Props) {
               </div>
 
               {preflight.present.length > 0 && (
-                <details className="rounded-xl bg-slate-50 border border-slate-200">
+                <details open className="rounded-xl bg-slate-50 border border-slate-200">
                   <summary className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 cursor-pointer">
                     {preflight.present.length} datos detectados ✓
                   </summary>
-                  <ul className="px-3 pb-3 space-y-1 text-[12px] text-slate-600">
+                  <ul className="px-3 pb-3 space-y-1.5 text-[12px] text-slate-600">
                     {preflight.present.map((f) => (
-                      <li key={f.key}><strong>{f.label}:</strong> {f.value}</li>
+                      <li key={f.key} className="flex flex-wrap items-baseline gap-x-1.5">
+                        <strong className="text-slate-700">{f.label}:</strong>
+                        <span className="flex-1 min-w-[8rem]">{f.value}</span>
+                        {f.autoDetected && (
+                          <span className="shrink-0 inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-700 bg-violet-100 rounded px-1.5 py-0.5">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            IA
+                          </span>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 </details>

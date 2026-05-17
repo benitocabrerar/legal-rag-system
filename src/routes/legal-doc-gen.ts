@@ -335,6 +335,83 @@ async function loadCaseForGeneration(caseId: string, userId: string): Promise<Ca
   };
 }
 
+/**
+ * Extracción asistida por IA de los campos requeridos a partir del material
+ * del caso (descripción + documentos del expediente + eventos).
+ *
+ * El preflight original solo "detectaba" el título y el nombre del cliente,
+ * así que los campos de fondo (demandante, hechos, pretensión, etc.) SIEMPRE
+ * salían como faltantes aunque estuvieran escritos en la descripción del
+ * caso. Esto los recupera de verdad. Fail-soft: si la IA falla, devuelve {}
+ * y el preflight sigue comportándose como antes.
+ */
+async function extractCaseFields(
+  c: CaseSummary,
+  fields: RequiredField[],
+): Promise<Record<string, string>> {
+  // Solo los campos específicos del tipo de documento — título y cliente ya
+  // se conocen de la fila del caso.
+  const target = fields.filter((f) => f.key !== 'case_title' && f.key !== 'client_name');
+  if (target.length === 0) return {};
+
+  const docExcerpts = c.documents
+    .map((d, i) => `[Documento ${i + 1}] ${d.title} (${d.kind})\n${d.excerpt}`)
+    .join('\n\n');
+  const eventLines = c.events
+    .map((e) => `- ${new Date(e.startTime).toISOString().slice(0, 10)} ${e.type}: ${e.title}`)
+    .join('\n');
+  const material = [
+    `Título del caso: ${c.title}`,
+    c.clientName ? `Cliente: ${c.clientName}` : '',
+    c.caseNumber ? `Número de causa: ${c.caseNumber}` : '',
+    c.description ? `Descripción del caso:\n${c.description}` : '',
+    docExcerpts ? `\nDocumentos del expediente:\n${docExcerpts}` : '',
+    eventLines ? `\nEventos:\n${eventLines}` : '',
+  ].filter(Boolean).join('\n');
+
+  const fieldList = target.map((f) => `  - "${f.key}": ${f.label}`).join('\n');
+
+  const systemPrompt =
+    'Sos un asistente jurídico. Recibís el material de un caso legal y una lista de campos. ' +
+    'Extraé el valor de cada campo ÚNICAMENTE a partir del material provisto. NUNCA inventes ' +
+    'datos: si un campo no aparece de forma razonablemente clara en el material, devolvé null ' +
+    'para ese campo. Para campos narrativos (hechos, agravios, controversia, objeto, consulta) ' +
+    'podés sintetizar y parafrasear el material en una redacción ordenada. Para nombres, cédulas, ' +
+    'tribunales, montos y fechas, devolvé el dato textual solo si aparece.\n\n' +
+    'Respondé EXCLUSIVAMENTE con un objeto JSON minificado de la forma ' +
+    '{ "clave_del_campo": "valor" | null, ... }. Sin markdown, sin explicación.';
+  const userPrompt =
+    `=== MATERIAL DEL CASO ===\n${material}\n\n` +
+    `=== CAMPOS A EXTRAER ===\n${fieldList}\n\n` +
+    'Devolvé el JSON ahora, con una clave por cada campo de la lista.';
+
+  try {
+    const ai = await getAiClient();
+    const completion = await ai.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.1,
+      max_tokens: 1800,
+    });
+    const raw = completion.choices?.[0]?.message?.content?.trim() ?? '';
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const f of target) {
+      const v = parsed?.[f.key];
+      if (typeof v === 'string' && !isMissing(v)) {
+        out[f.key] = v.trim();
+      }
+    }
+    return out;
+  } catch (e: any) {
+    console.warn('[extractCaseFields] extracción IA falló (fail-soft):', e?.message);
+    return {};
+  }
+}
+
 /** Etiqueta visible que la IA verá para distinguir el "status legal" del doc. */
 function kindLabel(kind: DocKind, presentedTo?: string | null): string {
   switch (kind) {
@@ -516,11 +593,19 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
 
       const supplied = body.supplied ?? {};
       const fields = requiredFieldsFor(body.docType);
+
+      // Extracción asistida por IA: lee la descripción del caso y el
+      // expediente e intenta llenar los campos de fondo. Sin esto, el
+      // preflight solo "detectaba" título y cliente y marcaba como
+      // faltantes campos que SÍ estaban escritos en el caso.
+      const aiExtracted = await extractCaseFields(c, fields);
+
       const detected: Record<string, string> = {
         case_title:  c.title,
         client_name: c.clientName ?? '',
+        ...aiExtracted,
       };
-      // Fold supplied user-provided values; supplied wins over detected.
+      // Lo que el usuario escribió manualmente (supplied) gana sobre la IA.
       for (const [k, v] of Object.entries(supplied)) {
         if (!isMissing(v)) detected[k] = v;
       }
@@ -531,7 +616,11 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
 
       const present = fields
         .filter((f) => !isMissing(detected[f.key]))
-        .map((f) => ({ ...f, value: detected[f.key] }));
+        .map((f) => ({
+          ...f,
+          value: detected[f.key],
+          autoDetected: f.key in aiExtracted && isMissing(supplied[f.key]),
+        }));
 
       return {
         status: missing.length === 0 ? 'ok' : 'incomplete',
@@ -539,6 +628,7 @@ export async function legalDocGenRoutes(fastify: FastifyInstance) {
         docLabel: DOC_LABELS[body.docType],
         missing,
         present,
+        autoFilled: aiExtracted,
         country: { code: c.country.code, name: c.country.nameEs, flag: c.country.flagEmoji },
         caseHasDocuments: c.documents.length,
       };
