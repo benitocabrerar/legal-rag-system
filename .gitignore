@@ -81,3 +81,10 @@ admin-upload/package-lock.json
 /docs/PLAN_MODULO_FISCAL.md
 /payments-kit/
 tmp/
+
+# Operator-only · PDFs descargados localmente (pesados) + scripts de carga puntuales
+# (Estas reglas estaban por error en frontend/.gitignore, donde no aplicaban.)
+/pdfs-leyes/
+/scripts/download-missing-laws*.mjs
+/scripts/upload-pdfs-to-supabase.mjs
+/scripts/patch-catalog-with-supabase-urls.mjs
