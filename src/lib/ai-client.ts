@@ -26,11 +26,20 @@ import { prisma } from './prisma.js';
 const ENC_KEY = process.env.AI_SETTINGS_ENCRYPTION_KEY || process.env.JWT_SECRET || 'dev-fallback-key';
 const CACHE_TTL_MS = 30_000;
 
+/** Lee un entero de env respetando el 0 explícito (evita el bug de `|| def`,
+ *  que descarta un `ANTHROPIC_MAX_RETRIES=0` puesto a propósito). */
+function envInt(name: string, def: number): number {
+  const v = process.env[name];
+  if (v === undefined || v === '') return def;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+}
+
 /** Timeout (ms) de la llamada HTTP a Anthropic. Cubre conexión + tiempo hasta
  *  los headers de respuesta; un stream que ya empezó a fluir NO se aborta. */
-const ANTHROPIC_TIMEOUT_MS = Number(process.env.ANTHROPIC_TIMEOUT_MS) || 90_000;
+const ANTHROPIC_TIMEOUT_MS = envInt('ANTHROPIC_TIMEOUT_MS', 90_000);
 /** Reintentos ante sobrecarga del upstream (429/500/502/503/529) o red caída. */
-const ANTHROPIC_MAX_RETRIES = Number(process.env.ANTHROPIC_MAX_RETRIES) || 3;
+const ANTHROPIC_MAX_RETRIES = envInt('ANTHROPIC_MAX_RETRIES', 3);
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
