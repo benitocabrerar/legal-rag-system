@@ -53,10 +53,22 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
     if (force) setRefreshing(true); else setLoading(true);
     setError('');
     try {
-      const res = await api.post(`/cases/${caseId}/ai-summary${force ? '?force=true' : ''}`);
+      // Timeout explícito: sin él, axios espera indefinidamente y el modal
+      // gira para siempre si el backend o el servicio de IA se cuelgan.
+      const res = await api.post(
+        `/cases/${caseId}/ai-summary${force ? '?force=true' : ''}`,
+        undefined,
+        { timeout: 110_000 },
+      );
       setSummary(res.data.summary);
     } catch (e: any) {
-      setError(e?.response?.data?.error || e?.message || 'Error al generar resumen');
+      const isTimeout =
+        e?.code === 'ECONNABORTED' || /timeout/i.test(String(e?.message || ''));
+      setError(
+        isTimeout
+          ? 'El análisis está tardando más de lo normal. El servicio de IA puede estar congestionado — cerrá esta ventana y volvé a intentar en unos minutos.'
+          : e?.response?.data?.error || e?.message || 'Error al generar resumen',
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);

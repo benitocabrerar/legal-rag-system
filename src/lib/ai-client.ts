@@ -26,6 +26,81 @@ import { prisma } from './prisma.js';
 const ENC_KEY = process.env.AI_SETTINGS_ENCRYPTION_KEY || process.env.JWT_SECRET || 'dev-fallback-key';
 const CACHE_TTL_MS = 30_000;
 
+/** Timeout (ms) de la llamada HTTP a Anthropic. Cubre conexión + tiempo hasta
+ *  los headers de respuesta; un stream que ya empezó a fluir NO se aborta. */
+const ANTHROPIC_TIMEOUT_MS = Number(process.env.ANTHROPIC_TIMEOUT_MS) || 90_000;
+/** Reintentos ante sobrecarga del upstream (429/500/502/503/529) o red caída. */
+const ANTHROPIC_MAX_RETRIES = Number(process.env.ANTHROPIC_MAX_RETRIES) || 3;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * POST a la API de Anthropic con timeout (AbortController) y reintentos con
+ * backoff exponencial. Antes esta llamada era un `fetch` pelado sin timeout:
+ * si Anthropic se ponía lento o devolvía 529 (Overloaded), el request del
+ * usuario quedaba colgado para siempre (modal "Analizando…" girando sin fin).
+ *
+ * Reintenta ante 429/500/502/503/529 y errores de red. NO reintenta ante
+ * timeout (un timeout = lentitud real; reintentar solo multiplica la espera)
+ * ni ante 4xx de cliente (400/401/404 — reintentar no los arregla).
+ */
+async function anthropicFetch(
+  body: Record<string, unknown>,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const RETRYABLE = new Set([429, 500, 502, 503, 529]);
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= ANTHROPIC_MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (r.ok) return r;
+
+      if (RETRYABLE.has(r.status) && attempt < ANTHROPIC_MAX_RETRIES) {
+        const retryAfter = Number(r.headers.get('retry-after'));
+        const backoffMs = retryAfter > 0
+          ? retryAfter * 1000
+          : Math.min(2 ** attempt * 1000, 8000);
+        await r.text().catch(() => {}); // drena el body para liberar la conexión
+        await sleep(backoffMs);
+        continue;
+      }
+
+      const errText = await r.text().catch(() => '');
+      throw new Error(`Anthropic ${r.status}: ${errText.slice(0, 300)}`);
+    } catch (err: any) {
+      lastError = err;
+      if (err?.name === 'AbortError') {
+        throw new Error(
+          `Anthropic: la solicitud superó el tiempo límite de ${ANTHROPIC_TIMEOUT_MS}ms`,
+        );
+      }
+      // Error de red (fetch failed / ECONNRESET / DNS): reintentable.
+      const isNetwork =
+        err instanceof TypeError ||
+        /fetch failed|network|ECONNRESET|ENOTFOUND|EAI_AGAIN/i.test(String(err?.message));
+      if (isNetwork && attempt < ANTHROPIC_MAX_RETRIES) {
+        await sleep(Math.min(2 ** attempt * 1000, 8000));
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Anthropic: fallo tras agotar los reintentos');
+}
+
 interface AiSettings {
   provider: 'openai' | 'anthropic';
   model: string;
@@ -392,15 +467,7 @@ function buildAnthropicClient(s: AiSettings): AiClient {
       completions: {
         create: async (req) => {
           const { body, headers } = buildAnthropicCall(req, false);
-          const r = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-          });
-          if (!r.ok) {
-            const err = await r.text();
-            throw new Error(`Anthropic ${r.status}: ${err.slice(0, 300)}`);
-          }
+          const r = await anthropicFetch(body, headers);
           const data = (await r.json()) as any;
           const text = (data.content || []).map((c: any) => c.text || '').join('');
           return {
@@ -420,15 +487,7 @@ function buildAnthropicClient(s: AiSettings): AiClient {
     },
     streamChat: async (req) => {
       const { body, headers } = buildAnthropicCall(req, true);
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) {
-        const err = await r.text();
-        throw new Error(`Anthropic ${r.status}: ${err.slice(0, 300)}`);
-      }
+      const r = await anthropicFetch(body, headers);
       return anthropicStreamToOpenAiChunks(r, String(body.model));
     },
     embeddings: {
