@@ -9,7 +9,7 @@ import CountrySelector from '@/components/CountrySelector';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { UserClock } from '@/components/common/UserClock';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles, Workflow, FileSignature, TrendingUp, Languages, Stamp } from 'lucide-react';
+import { User, Settings, CreditCard, LogOut, ChevronDown, Calendar, CheckSquare, DollarSign, Briefcase, Command as CommandIcon, Menu, X, Scale, Shield, Sparkles, Workflow, FileSignature, TrendingUp, Languages, Stamp, MoreHorizontal } from 'lucide-react';
 import { CommandPaletteProvider } from '@/components/CommandPalette';
 import { TourProvider } from '@/components/help/TourProvider';
 import { HelpFab } from '@/components/help/HelpFab';
@@ -25,7 +25,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { t } = useTranslation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   // Highlight active section. /dashboard exact, lo demás por prefix.
   const isActive = (href: string) => {
@@ -53,16 +55,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/inmigracion', label: 'Inmigración',        icon: Stamp },
   ];
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside (menú de usuario y menú "Más")
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
-      }
+      const target = event.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) setShowUserMenu(false);
+      if (moreRef.current && !moreRef.current.contains(target)) setShowMoreMenu(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // El nav de escritorio muestra inline solo los 4 módulos núcleo; el resto
+  // vive en el desplegable "Más" para que la barra no se desborde. El drawer
+  // móvil sigue usando la lista completa (navItems).
+  const primaryNav = navItems.slice(0, 4);
+  const moreNav = navItems.slice(4);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -96,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {/* Mobile hamburger */}
               <button
                 onClick={() => setShowMobileNav((v) => !v)}
-                className="md:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+                className="xl:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
                 aria-label="Abrir navegación"
               >
                 {showMobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -113,9 +121,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
               </Link>
 
-              {/* Primary nav */}
-              <div className="hidden md:flex items-center gap-0.5 ml-2">
-                {navItems.map((item) => {
+              {/* Primary nav — escritorio (xl+). Inline van solo los 4 módulos
+                  núcleo; el resto va al desplegable "Más". Debajo de xl, el
+                  drawer hamburguesa. Antes se mostraban 9+ ítems desde `md` y
+                  se desbordaban encimándose con el cluster derecho. */}
+              <div className="hidden xl:flex items-center gap-0.5 ml-2">
+                {primaryNav.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   // Atributos data-tour para que el tour engine pueda anclar tooltips.
@@ -145,40 +156,90 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   );
                 })}
 
-                {user.role === 'admin' && (
-                  <div className="ml-1.5 pl-2 border-l border-slate-200 flex items-center gap-0.5">
-                    <Link
-                      href="/admin"
-                      className={cn(
-                        'group/adm relative inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors',
-                        isActive('/admin') && !isActive('/admin/payhub')
-                          ? 'text-slate-900'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80',
+                {/* "Más" — agrupa los módulos avanzados y la zona admin en un
+                    desplegable, de modo que la barra nunca se desborde. */}
+                {(() => {
+                  const moreActive = moreNav.some((i) => isActive(i.href))
+                    || (user.role === 'admin' && isActive('/admin'));
+                  return (
+                    <div className="relative" ref={moreRef}>
+                      <button
+                        onClick={() => { setShowMoreMenu((v) => !v); setShowUserMenu(false); }}
+                        className={cn(
+                          'group/more relative inline-flex items-center gap-1.5 pl-3 pr-2 py-2 rounded-lg text-[13px] font-semibold transition-colors',
+                          moreActive || showMoreMenu
+                            ? 'text-slate-900'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80',
+                        )}
+                        aria-haspopup="menu"
+                        aria-expanded={showMoreMenu}
+                      >
+                        <MoreHorizontal className={cn('w-4 h-4', moreActive ? 'text-indigo-600' : 'text-slate-400 group-hover/more:text-slate-500')} strokeWidth={2.2} />
+                        Más
+                        <ChevronDown className={cn('w-3.5 h-3.5 text-slate-400 transition-transform', showMoreMenu && 'rotate-180')} />
+                        {moreActive && (
+                          <span className="absolute -bottom-[10px] left-3 right-5 h-[2px] rounded-full bg-gradient-to-r from-indigo-600 to-violet-600" />
+                        )}
+                      </button>
+
+                      {showMoreMenu && (
+                        <div
+                          role="menu"
+                          className="absolute left-0 mt-2 w-60 bg-white rounded-xl shadow-2xl ring-1 ring-slate-900/5 border border-slate-200/70 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 py-1"
+                        >
+                          {moreNav.map((item) => {
+                            const Icon = item.icon;
+                            const active = isActive(item.href);
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setShowMoreMenu(false)}
+                                className={cn(
+                                  'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors',
+                                  active ? 'bg-slate-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50',
+                                )}
+                              >
+                                <Icon className={cn('w-4 h-4', active ? 'text-indigo-600' : 'text-slate-400')} strokeWidth={2.2} />
+                                {item.label}
+                              </Link>
+                            );
+                          })}
+
+                          {user.role === 'admin' && (
+                            <>
+                              <div className="my-1 border-t border-slate-100" />
+                              <Link
+                                href="/admin"
+                                onClick={() => setShowMoreMenu(false)}
+                                className={cn(
+                                  'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors',
+                                  isActive('/admin') && !isActive('/admin/payhub')
+                                    ? 'bg-amber-50 text-amber-900' : 'text-slate-700 hover:bg-slate-50',
+                                )}
+                              >
+                                <Shield className="w-4 h-4 text-amber-600" strokeWidth={2.2} />
+                                {t('navigation.admin')}
+                              </Link>
+                              <Link
+                                href="/admin/payhub"
+                                onClick={() => setShowMoreMenu(false)}
+                                className={cn(
+                                  'flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors',
+                                  isActive('/admin/payhub')
+                                    ? 'bg-emerald-50 text-emerald-900' : 'text-slate-700 hover:bg-slate-50',
+                                )}
+                              >
+                                <CreditCard className="w-4 h-4 text-emerald-600" strokeWidth={2.2} />
+                                Payhub
+                              </Link>
+                            </>
+                          )}
+                        </div>
                       )}
-                    >
-                      <Shield className={cn('w-4 h-4', isActive('/admin') && !isActive('/admin/payhub') ? 'text-amber-600' : 'text-slate-400 group-hover/adm:text-slate-500')} strokeWidth={2.2} />
-                      {t('navigation.admin')}
-                      {isActive('/admin') && !isActive('/admin/payhub') && (
-                        <span className="absolute -bottom-[10px] left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-amber-500 to-rose-500" />
-                      )}
-                    </Link>
-                    <Link
-                      href="/admin/payhub"
-                      className={cn(
-                        'group/adm relative inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors',
-                        isActive('/admin/payhub')
-                          ? 'text-slate-900'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80',
-                      )}
-                    >
-                      <CreditCard className={cn('w-4 h-4', isActive('/admin/payhub') ? 'text-emerald-600' : 'text-slate-400 group-hover/adm:text-slate-500')} strokeWidth={2.2} />
-                      Payhub
-                      {isActive('/admin/payhub') && (
-                        <span className="absolute -bottom-[10px] left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-                      )}
-                    </Link>
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -323,7 +384,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile drawer — más limpio, con sección activa resaltada. */}
       {showMobileNav && (
-        <div className="md:hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowMobileNav(false)}>
+        <div className="xl:hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowMobileNav(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
             className="absolute top-14 sm:top-16 left-0 right-0 bg-white border-b border-slate-200 shadow-2xl py-2 px-3 space-y-0.5 max-h-[calc(100vh-3.5rem)] overflow-y-auto"
