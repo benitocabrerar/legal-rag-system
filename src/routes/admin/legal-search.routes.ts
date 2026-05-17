@@ -27,6 +27,25 @@ import {
   ECUADOR_JUDICIAL_TYPES,
 } from '../../services/ecuador-judicial-sources.service.js';
 import { setSseHeaders, startSseKeepalive } from '../../lib/sse-cors.js';
+import { vectorizeDocument, synthesizeCaseBrain } from '../documents.js';
+import { extractText } from '../../lib/extract-text.js';
+
+/** Convierte HTML crudo a texto plano legible (para fuentes que no sirven PDF). */
+function stripHtml(html: string): string {
+  return (html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_m, n) => {
+      try { return String.fromCharCode(Number(n)); } catch { return ' '; }
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export async function legalSearchRoutes(fastify: FastifyInstance) {
   const requireAdmin = async (request: any, reply: any) => {
@@ -195,6 +214,142 @@ export async function legalSearchRoutes(fastify: FastifyInstance) {
       } catch (e: any) {
         fastify.log.error({ err: e?.message }, 'download-and-ingest failed');
         write('error', { error: e?.message || 'Ingest failed' });
+      } finally {
+        stopKa();
+        try { reply.raw.end(); } catch { /* ignore */ }
+      }
+      return reply;
+    },
+  );
+
+  // ─── POST /admin/legal-search/attach-to-case (SSE) ─────────────────
+  // Agrega una norma encontrada en la búsqueda a un CASO del usuario:
+  // resuelve su texto (corpus interno o descarga externa), crea un
+  // Document en el caso y lo vectoriza con el pipeline de documentos de
+  // caso. Distinto de download-and-ingest, que va al corpus global —
+  // este endpoint NO toca el corpus ni los endpoints existentes.
+  fastify.post<{
+    Body: {
+      caseId: string;
+      kind: 'internal' | 'external';
+      title: string;
+      legalDocId?: string;
+      sourceUrl?: string;
+      pdfUrl?: string;
+    };
+  }>(
+    '/admin/legal-search/attach-to-case',
+    { onRequest: [fastify.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const userId = (request.user as any).id;
+      const body = request.body || ({} as any);
+
+      if (!body.caseId || !body.kind || !body.title) {
+        return reply.code(400).send({ error: 'caseId, kind y title requeridos' });
+      }
+
+      // El caso destino debe pertenecer al usuario que hace la búsqueda.
+      const ownedCase = await prisma.case.findFirst({
+        where: { id: body.caseId, userId },
+        select: { id: true, title: true },
+      });
+      if (!ownedCase) return reply.code(404).send({ error: 'Caso no encontrado' });
+
+      setSseHeaders(request, reply);
+      const stopKa = startSseKeepalive(reply);
+      const write = (event: string, data: any) => {
+        try {
+          reply.raw.write(`event: ${event}\n`);
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch { /* client gone */ }
+      };
+
+      try {
+        write('connected', { startedAt: new Date().toISOString() });
+
+        // 1) Resolver el texto de la norma
+        write('phase', { phase: 'resolving', label: 'Obteniendo el texto de la norma…', pct: 12 });
+        let text = '';
+        let provenance = '';
+
+        if (body.kind === 'internal') {
+          if (!body.legalDocId) throw new Error('legalDocId requerido para un resultado del corpus');
+          const rows = await prisma.$queryRawUnsafe<Array<{ content: string | null }>>(
+            `SELECT content FROM public.legal_documents WHERE id = $1::uuid LIMIT 1`,
+            body.legalDocId,
+          );
+          if (rows.length === 0 || !rows[0].content) {
+            throw new Error('La norma no se encontró en el corpus');
+          }
+          text = rows[0].content;
+          provenance = 'Corpus jurídico interno';
+        } else {
+          const fetchUrl = body.pdfUrl || body.sourceUrl;
+          if (!fetchUrl) throw new Error('sourceUrl o pdfUrl requerido para un resultado externo');
+          write('phase', { phase: 'downloading', label: 'Descargando el documento…', pct: 28 });
+          const resp = await fetch(fetchUrl, { redirect: 'follow' });
+          if (!resp.ok) throw new Error(`No se pudo descargar el documento (HTTP ${resp.status})`);
+          const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+          const buf = Buffer.from(await resp.arrayBuffer());
+          const isPdf = ctype.includes('pdf') || buf.subarray(0, 5).toString('latin1') === '%PDF-';
+          write('phase', { phase: 'extracting', label: 'Extrayendo el texto…', pct: 42 });
+          if (isPdf) {
+            const ext = await extractText(buf, 'application/pdf', 'norma.pdf');
+            text = ext.text || '';
+          } else {
+            text = stripHtml(buf.toString('utf8'));
+          }
+          provenance = fetchUrl;
+        }
+
+        text = (text || '').trim();
+        if (text.length < 40) throw new Error('El documento no contiene texto legible');
+
+        // 2) Crear el Document en el caso (kind 'uploaded' por defecto del esquema)
+        write('phase', { phase: 'saving', label: 'Guardando en el expediente…', pct: 55 });
+        const header =
+          `Fuente: ${provenance}\n` +
+          `Incorporado vía Búsqueda Legal IA — ${new Date().toLocaleDateString('es-EC')}.\n\n`;
+        const content = header + text;
+        const doc = await prisma.document.create({
+          data: {
+            caseId: body.caseId,
+            userId,
+            title: body.title.slice(0, 300),
+            content,
+          },
+          select: { id: true },
+        });
+
+        // 3) Vectorizar — reusa el pipeline EXISTENTE de documentos de caso
+        write('phase', { phase: 'vectorizing', label: 'Vectorizando para el cerebro del caso…', pct: 65 });
+        const chunksCreated = await vectorizeDocument(
+          doc.id,
+          content,
+          (msg, extra) => fastify.log.info({ msg, ...extra }, 'attach-to-case'),
+          ({ processed, total }) => write('step', {
+            step: 'embedding',
+            processed,
+            total,
+            label: `Generando embeddings · ${processed}/${total}`,
+            pct: 65 + Math.round((processed / Math.max(total, 1)) * 30),
+          }),
+        );
+
+        // 4) Re-sintetizar el cerebro del caso (fire-and-forget, no bloquea)
+        synthesizeCaseBrain(body.caseId).catch(() => { /* best-effort */ });
+
+        write('done', {
+          documentId: doc.id,
+          caseId: body.caseId,
+          caseTitle: ownedCase.title,
+          chunksCreated,
+          finishedAt: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        fastify.log.error({ err: e?.message }, 'attach-to-case failed');
+        write('error', { error: e?.message || 'No se pudo agregar la norma al caso' });
       } finally {
         stopKa();
         try { reply.raw.end(); } catch { /* ignore */ }

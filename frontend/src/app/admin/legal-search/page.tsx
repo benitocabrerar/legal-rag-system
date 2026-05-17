@@ -13,7 +13,7 @@ import {
   Search, Loader2, Sparkles, Brain, ChevronDown, ChevronRight,
   Download, ExternalLink, CheckCircle2, AlertTriangle, BookOpen,
   Filter, X, Zap, Lightbulb, FileText, Hash, Calendar,
-  Clock, ArrowRight, Star, History,
+  Clock, ArrowRight, Star, History, FolderPlus, Briefcase,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -133,6 +133,15 @@ export default function LegalSearchPage() {
     step?: string;
     result?: any;
     error?: string;
+  } | null>(null);
+
+  // Norma seleccionada para agregar a un caso (abre AttachToCaseModal).
+  const [attachTarget, setAttachTarget] = useState<{
+    kind: 'internal' | 'external';
+    title: string;
+    legalDocId?: string;
+    sourceUrl?: string;
+    pdfUrl?: string;
   } | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -466,13 +475,28 @@ export default function LegalSearchPage() {
           <div className="space-y-3">
             {results.results.map((r, i) => (
               r.source === 'internal' ? (
-                <InternalResultCard key={`int-${i}`} result={r} query={query} />
+                <InternalResultCard
+                  key={`int-${i}`}
+                  result={r}
+                  query={query}
+                  onAttach={() => setAttachTarget({
+                    kind: 'internal',
+                    title: r.normTitle || r.title,
+                    legalDocId: r.legalDocId,
+                  })}
+                />
               ) : (
                 <ExternalResultCard
                   key={`ext-${i}`}
                   result={r}
                   onIngest={() => downloadAndIngest(r)}
                   ingesting={ingesting === r.url}
+                  onAttach={() => setAttachTarget({
+                    kind: 'external',
+                    title: r.title,
+                    sourceUrl: r.url,
+                    pdfUrl: r.pdfUrl || undefined,
+                  })}
                 />
               )
             ))}
@@ -608,6 +632,11 @@ export default function LegalSearchPage() {
           running={!!ingesting}
         />
       )}
+
+      {/* Modal · agregar una norma a un caso */}
+      {attachTarget && (
+        <AttachToCaseModal target={attachTarget} onClose={() => setAttachTarget(null)} />
+      )}
     </div>
   );
 }
@@ -630,7 +659,7 @@ function stepLabel(step: string): string {
   return map[step] || step;
 }
 
-function InternalResultCard({ result, query }: { result: InternalResult; query: string }) {
+function InternalResultCard({ result, query, onAttach }: { result: InternalResult; query: string; onAttach: () => void }) {
   const hierLabel = HIERARCHY_OPTIONS.find((h) => h.value === result.legalHierarchy);
   return (
     <div className="rounded-xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/40 to-white p-4 hover:shadow-md hover:border-emerald-300 transition">
@@ -674,8 +703,8 @@ function InternalResultCard({ result, query }: { result: InternalResult; query: 
           <p className="text-xs text-slate-700 leading-relaxed bg-white/60 p-2 rounded border border-emerald-100 italic">
             {highlightTerms(result.topSnippet, query)}
           </p>
-          {result.metadata?.editionPdfUrl && (
-            <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {result.metadata?.editionPdfUrl && (
               <a
                 href={result.metadata.editionPdfUrl}
                 target="_blank"
@@ -685,18 +714,26 @@ function InternalResultCard({ result, query }: { result: InternalResult; query: 
                 <Download className="w-3 h-3" />
                 PDF
               </a>
-            </div>
-          )}
+            )}
+            <button
+              onClick={onAttach}
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow transition"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              Agregar a mi caso
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function ExternalResultCard({ result, onIngest, ingesting }: {
+function ExternalResultCard({ result, onIngest, ingesting, onAttach }: {
   result: ExternalResult;
   onIngest: () => void;
   ingesting: boolean;
+  onAttach: () => void;
 }) {
   return (
     <div className={`rounded-xl border-2 p-4 hover:shadow-md transition ${
@@ -767,6 +804,13 @@ function ExternalResultCard({ result, onIngest, ingesting }: {
                 PDF
               </a>
             )}
+            <button
+              onClick={onAttach}
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shadow transition"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              Agregar a mi caso
+            </button>
             {!result.isInCorpus && (
               <button
                 onClick={onIngest}
@@ -871,6 +915,214 @@ function IngestProgressModal({ progress, onClose, running }: {
             <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-200">
               <AlertTriangle className="w-4 h-4 inline mr-1" />
               {progress.error}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Modal · agregar una norma encontrada a un caso del usuario.
+ * Elige un caso, descarga/resuelve el texto de la norma, lo vectoriza y lo
+ * adjunta al expediente. Consume el endpoint SSE /admin/legal-search/attach-to-case.
+ */
+function AttachToCaseModal({ target, onClose }: {
+  target: { kind: 'internal' | 'external'; title: string; legalDocId?: string; sourceUrl?: string; pdfUrl?: string };
+  onClose: () => void;
+}) {
+  const [cases, setCases] = useState<Array<{ id: string; title: string; clientName?: string | null; caseNumber?: string | null }>>([]);
+  const [loadingCases, setLoadingCases] = useState(true);
+  const [selectedCase, setSelectedCase] = useState('');
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ pct: number; label: string; result?: any; error?: string } | null>(null);
+
+  useEffect(() => {
+    api.get('/cases')
+      .then((r: any) => {
+        const list = (r?.data?.cases ?? r?.data ?? []) as any[];
+        setCases(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCases([]))
+      .finally(() => setLoadingCases(false));
+  }, []);
+
+  const run = async () => {
+    if (!selectedCase || running) return;
+    setRunning(true);
+    setProgress({ pct: 0, label: 'Conectando…' });
+    try {
+      const { getAuthToken } = await import('@/lib/get-auth-token');
+      const token = await getAuthToken();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const r = await fetch(`${API_URL}/api/v1/admin/legal-search/attach-to-case`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ caseId: selectedCase, ...target }),
+      });
+      if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = chunk.split('\n').filter((l) => !l.startsWith(':'));
+          const evLine = lines.find((l) => l.startsWith('event:'));
+          const dataLine = lines.find((l) => l.startsWith('data:'));
+          if (!dataLine) continue;
+          const event = evLine ? evLine.slice(6).trim() : 'message';
+          let payload: any = null;
+          try { payload = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+
+          if (event === 'phase' || event === 'step') {
+            setProgress((p) => (p ? { ...p, pct: payload.pct ?? p.pct, label: payload.label ?? p.label } : p));
+          } else if (event === 'done') {
+            setProgress((p) => (p ? { ...p, pct: 100, label: '✓ Norma agregada al caso', result: payload } : p));
+          } else if (event === 'error') {
+            setProgress((p) => (p ? { ...p, error: payload.error } : p));
+          }
+        }
+      }
+    } catch (e: any) {
+      setProgress((p) => (p
+        ? { ...p, error: e?.message || 'Error desconocido' }
+        : { pct: 0, label: '', error: e?.message || 'Error desconocido' }));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const finished = !!progress?.result;
+  const hasError = !!progress?.error;
+  const canClose = !running;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md"
+      onClick={(e) => e.target === e.currentTarget && canClose && onClose()}
+    >
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-violet-200 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500" />
+        <div className="px-6 pt-5 pb-5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 grid place-items-center text-white shrink-0">
+              <FolderPlus className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-black text-slate-900">Agregar norma a un caso</h3>
+              <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{target.title}</p>
+            </div>
+            {canClose && (
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Selección de caso */}
+          {!progress && (
+            <>
+              {loadingCases ? (
+                <div className="py-8 text-center text-slate-400 text-sm">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                  Cargando tus casos…
+                </div>
+              ) : cases.length === 0 ? (
+                <div className="py-6 text-center text-slate-500 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  No tenés casos. Creá un caso primero para poder agregarle normas.
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                  {cases.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCase(c.id)}
+                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 transition ${
+                        selectedCase === c.id
+                          ? 'border-violet-500 bg-violet-50'
+                          : 'border-slate-200 hover:border-violet-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Briefcase className={`w-4 h-4 shrink-0 ${selectedCase === c.id ? 'text-violet-600' : 'text-slate-400'}`} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold text-slate-900 truncate">{c.title}</span>
+                        {(c.clientName || c.caseNumber) && (
+                          <span className="block text-[11px] text-slate-500 truncate">
+                            {[c.caseNumber, c.clientName].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
+                      {selectedCase === c.id && <CheckCircle2 className="w-4 h-4 text-violet-600 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={run}
+                disabled={!selectedCase}
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shadow disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <FolderPlus className="w-4 h-4" />
+                Descargar, vectorizar y agregar
+              </button>
+              <p className="mt-2 text-[11px] text-slate-400 text-center">
+                Se descarga el texto de la norma, se vectoriza y se adjunta al cerebro del caso.
+              </p>
+            </>
+          )}
+
+          {/* Progreso */}
+          {progress && (
+            <div>
+              <div className="flex items-baseline gap-2 mb-1.5">
+                <span className="text-3xl font-black text-violet-700">{Math.round(progress.pct)}</span>
+                <span className="text-lg font-black text-violet-300">%</span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${hasError ? 'bg-rose-500' : 'bg-gradient-to-r from-violet-500 to-fuchsia-500'}`}
+                  style={{ width: `${progress.pct}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-600 mt-2">{progress.label}</p>
+
+              {finished && !hasError && (
+                <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+                  <div className="font-bold flex items-center gap-1.5 mb-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Agregada al caso «{progress.result.caseTitle}»
+                  </div>
+                  <div>
+                    {progress.result.chunksCreated} fragmento(s) vectorizado(s) · ya disponible
+                    para el chat y la generación de documentos del caso.
+                  </div>
+                </div>
+              )}
+              {hasError && (
+                <div className="mt-3 rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 flex items-start gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{progress.error}</span>
+                </div>
+              )}
+              {canClose && (finished || hasError) && (
+                <button
+                  onClick={onClose}
+                  className="mt-3 w-full px-4 py-2 rounded-lg text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+                >
+                  Cerrar
+                </button>
+              )}
             </div>
           )}
         </div>

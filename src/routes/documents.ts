@@ -86,7 +86,9 @@ function chunkText(text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): st
   return out;
 }
 
-async function vectorizeDocument(
+// Exportada para reuso por otras rutas (p.ej. agregar una norma de la
+// búsqueda legal a un caso). NO cambia su comportamiento — solo visibilidad.
+export async function vectorizeDocument(
   documentId: string,
   text: string,
   log: (msg: string, extra?: any) => void,
