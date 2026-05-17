@@ -76,8 +76,12 @@ export function CaseAiSummaryModal({ caseId, caseTitle, initialSummary, onClose 
   };
 
   useEffect(() => {
-    if (!summary && !loading) generate();
-    // si initialSummary existía, no hacemos fetch
+    // Si el caso NO trae un resumen cacheado, generarlo.
+    // Bug anterior: el guard `!summary && !loading` nunca se cumplía cuando
+    // no había initialSummary — `loading` arranca en `true` (línea de arriba),
+    // así que `!loading` era false y generate() jamás corría → el modal
+    // mostraba el spinner "Analizando…" para siempre y nunca pedía nada.
+    if (!initialSummary) generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
